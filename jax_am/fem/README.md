@@ -5,8 +5,6 @@ A differentiable 3D finite element solver for automatic inverse design and mecha
 
 ## To-do
 
-If I have time...
-
 1. Higher-order elements
 2. Cauchy boundary conditions
 3. Periodic boundary conditions (linear constraints)

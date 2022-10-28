@@ -58,7 +58,7 @@ def linear_poisson(N):
     print(f"max of sol = {np.max(uh.x.array)}")
     print(f"min of sol = {np.min(uh.x.array)}") 
     uh.name = 'sol'
-    file = io.VTKFile(msh.comm, "src/fem/tests/linear_poisson/fenicsx/sol.pvd", "w")  
+    file = io.VTKFile(msh.comm, "jax_fem/fem/tests/linear_poisson/fenicsx/sol.pvd", "w")  
     file.write_function(uh, 0) 
     return solve_time
 
@@ -112,7 +112,7 @@ def nonlinear_poisson(N):
     print(f"min of sol = {np.min(uh.x.array)}") 
 
     uh.name = 'sol'
-    file = io.VTKFile(msh.comm, "src/fem/tests/nonlinear_poisson/fenicsx/sol.pvd", "w")  
+    file = io.VTKFile(msh.comm, "jax_fem/fem/tests/nonlinear_poisson/fenicsx/sol.pvd", "w")  
     file.write_function(uh, 0) 
     return solve_time
 
@@ -175,7 +175,7 @@ def linear_elasticity_cube(N):
     print(f"min of sol = {np.min(uh.x.array)}") 
 
     uh.name = 'sol'
-    file = io.VTKFile(msh.comm, "src/fem/tests/linear_elasticity_cube/fenicsx/sol.pvd", "w")  
+    file = io.VTKFile(msh.comm, "jax_fem/fem/tests/linear_elasticity_cube/fenicsx/sol.pvd", "w")  
     file.write_function(uh, 0) 
     return solve_time
 
@@ -185,7 +185,7 @@ def linear_elasticity_cylinder():
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
-    xdmf_file = f"src/fem/data/msh/cylinder.xdmf"
+    xdmf_file = f"jax_fem/fem/data/msh/cylinder.xdmf"
     out_mesh.write(xdmf_file)
     mesh_xdmf_file = io.XDMFFile(MPI.COMM_WORLD, xdmf_file, 'r')
     msh = mesh_xdmf_file.read_mesh(name="Grid")
@@ -248,13 +248,13 @@ def linear_elasticity_cylinder():
     print(f"max of sol = {np.max(uh.x.array)}")
     print(f"min of sol = {np.min(uh.x.array)}") 
 
-    file = io.VTKFile(msh.comm, "src/fem/tests/linear_elasticity_cylinder/fenicsx/sol.pvd", "w")  
+    file = io.VTKFile(msh.comm, "jax_fem/fem/tests/linear_elasticity_cylinder/fenicsx/sol.pvd", "w")  
     file.write_function(uh, 0) 
 
     uh = fem.Function(V)
     uh.x.array[:] = 1.
     surface_area = fem.assemble_scalar(fem.form(uh[0]*ds(2)))
-    np.save(f"src/fem/tests/linear_elasticity_cylinder/fenicsx/surface_area.npy", surface_area)
+    np.save(f"jax_fem/fem/tests/linear_elasticity_cylinder/fenicsx/surface_area.npy", surface_area)
 
     return solve_time
 
@@ -264,7 +264,7 @@ def hyperelasticity():
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
-    xdmf_file = f"src/fem/data/msh/cylinder.xdmf"
+    xdmf_file = f"jax_fem/fem/data/msh/cylinder.xdmf"
     out_mesh.write(xdmf_file)
     mesh_xdmf_file = io.XDMFFile(MPI.COMM_WORLD, xdmf_file, 'r')
     msh = mesh_xdmf_file.read_mesh(name="Grid")
@@ -347,10 +347,10 @@ def hyperelasticity():
 
     traction = fem.assemble_scalar(fem.form(ufl.dot(P, normal)[2]*ds(2)))
     print(f"traction = {traction}")
-    np.save(f"src/fem/tests/hyperelasticity/fenicsx/traction.npy", traction)
+    np.save(f"jax_fem/fem/tests/hyperelasticity/fenicsx/traction.npy", traction)
 
     uh.name = 'sol'
-    file = io.VTKFile(msh.comm, "src/fem/tests/hyperelasticity/fenicsx/sol.pvd", "w")  
+    file = io.VTKFile(msh.comm, "jax_fem/fem/tests/hyperelasticity/fenicsx/sol.pvd", "w")  
     file.write_function(uh, 0) 
     return solve_time
 
@@ -360,7 +360,7 @@ def plasticity(disps, path, case):
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
-    xdmf_file = f"src/fem/data/msh/cylinder.xdmf"
+    xdmf_file = f"jax_fem/fem/data/msh/cylinder.xdmf"
     out_mesh.write(xdmf_file)
     mesh_xdmf_file = io.XDMFFile(MPI.COMM_WORLD, xdmf_file, 'r')
     msh = mesh_xdmf_file.read_mesh(name="Grid")
@@ -526,7 +526,7 @@ def generate_ground_truth_results_for_tests():
     linear_elasticity_cube(10)
     linear_elasticity_cylinder()
     hyperelasticity()
-    plasticity(np.array([0., 0.05, 0.1, 0.05, 0.]), f"src/fem/tests/plasticity/fenicsx/", 'test')
+    plasticity(np.array([0., 0.05, 0.1, 0.05, 0.]), f"jax_fem/fem/tests/plasticity/fenicsx/", 'test')
 
 
 if __name__ == "__main__":

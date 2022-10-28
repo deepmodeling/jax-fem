@@ -119,11 +119,6 @@ def cylinder_mesh(R=5, H=10, circle_mesh=5, hight_mesh=20, rect_ratio=0.4):
     points = onp.vstack((points[1:14], points[15:]))
     cells = onp.where(cells > 14, cells - 2, cells - 1)
 
-    # print(points[:10])
-    # print(f"Number of total vertices = {len(points)}")
-    # print(f"Number of total cells = {len(cells)}")
-    # print(onp.take(points, cells[:3], axis=0))
-
     out_mesh = meshio.Mesh(points=points, cells={'hexahedron': cells})
     return out_mesh
 

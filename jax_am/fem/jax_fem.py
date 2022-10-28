@@ -9,9 +9,10 @@ import time
 import meshio
 import matplotlib.pyplot as plt
 from functools import partial
-import gc
+import basix
 from jax_am.fem.generate_mesh import box_mesh, cylinder_mesh
 
+from jax_am.fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grads
 
 from jax.config import config
 config.update("jax_enable_x64", True)
@@ -21,11 +22,8 @@ onp.set_printoptions(threshold=sys.maxsize, linewidth=1000, suppress=True, preci
 
 
 class FEM:
-    def __init__(self, mesh, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
-        """Currently, only hexahedron first-order finite element is supported.
-        # TODO: higher-order basis function
-        # TODO: simplicial elements
-
+    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+        """
         Attributes
         ----------
         self.mesh: Mesh object
@@ -48,19 +46,26 @@ class FEM:
         self.points = self.mesh.points
         self.cells = self.mesh.cells
         self.dim = 3
-        self.num_quads = 8
-        self.num_nodes = 8
-        self.num_faces = 6
         self.num_cells = len(self.cells)
         self.num_total_nodes = len(self.mesh.points)
         self.num_total_dofs = self.num_total_nodes*self.vec
 
+        # print(self.mesh.points[self.cells[0]])
+        # exit()
+
         start = time.time()
 
         # Some re-used quantities can be pre-computed and stored for better performance.
-        self.shape_vals = self.get_shape_vals()
+        # self.quad_points = get_quad_points()
+        self.shape_vals, self.shape_grads_ref, self.quad_weights = get_shape_vals_and_grads(ele_type, lag_order)
+        self.face_shape_vals, self.face_shape_grads_ref, self.face_quad_weights, self.face_normals, self.face_inds \
+        = get_face_shape_vals_and_grads(ele_type, lag_order)
+
+        self.num_quads = self.shape_vals.shape[0]
+        self.num_nodes = self.shape_vals.shape[1]
+        self.num_faces = self.face_shape_vals.shape[0]
+
         self.shape_grads, self.JxW = self.get_shape_grads()
-        self.face_shape_vals = self.get_face_shape_vals()
 
         # Note: Assume Dirichlet B.C. must be provided. This is probably true for all the problems we will encounter.
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(dirichlet_bc_info)
@@ -70,96 +75,6 @@ class FEM:
         print(f"\nDone pre-computations, took {compute_time} [s]")
         print(f"Solving a problem with {len(self.cells)} cells, {self.num_total_nodes}x{self.vec} = {self.num_total_dofs} dofs.")
 
-    def get_shape_val_functions(self):
-        """Hard-coded first order shape functions in the reference domain.
-        Important: f1-f8 order must match "self.cells" by gmsh file!
-        """
-        f1 = lambda x: -1./8.*(x[0] - 1)*(x[1] - 1)*(x[2] - 1)
-        f2 = lambda x: 1./8.*(x[0] + 1)*(x[1] - 1)*(x[2] - 1)
-        f3 = lambda x: -1./8.*(x[0] + 1)*(x[1] + 1)*(x[2] - 1) 
-        f4 = lambda x: 1./8.*(x[0] - 1)*(x[1] + 1)*(x[2] - 1)
-        f5 = lambda x: 1./8.*(x[0] - 1)*(x[1] - 1)*(x[2] + 1)
-        f6 = lambda x: -1./8.*(x[0] + 1)*(x[1] - 1)*(x[2] + 1)
-        f7 = lambda x: 1./8.*(x[0] + 1)*(x[1] + 1)*(x[2] + 1)
-        f8 = lambda x: -1./8.*(x[0] - 1)*(x[1] + 1)*(x[2] + 1)
-        return [f1, f2, f3, f4, f5, f6, f7, f8]
-
-    def get_shape_grad_functions(self):
-        """Shape gradient functions
-        """
-        shape_fns = self.get_shape_val_functions()
-        return [jax.grad(f) for f in shape_fns]
-
-    def get_quad_points(self):
-        """Pre-compute quadrature points
-
-        Returns
-        -------
-        shape_vals: ndarray
-            (8, 3) = (num_quads, dim)  
-        """
-        quad_degree = 2
-        quad_points = []
-        for i in range(quad_degree):
-            for j in range(quad_degree):
-                for k in range(quad_degree):
-                   quad_points.append([(2*(k % 2) - 1) * onp.sqrt(1./3.), 
-                                       (2*(j % 2) - 1) * onp.sqrt(1./3.), 
-                                       (2*(i % 2) - 1) * onp.sqrt(1./3.)])
-        quad_points = onp.array(quad_points) # (quad_degree^dim, dim)
-        return quad_points
-
-    def get_face_quad_points(self):
-        """Pre-compute face quadrature points
-
-        Returns
-        -------
-        face_quad_points: ndarray
-            (6, 4, 3) = (num_faces, num_face_quads, dim)  
-        face_normals: ndarray
-            (6, 3) = (num_faces, dim)  
-        """
-        face_quad_degree = 2
-        face_quad_points = []
-        face_normals = []
-        face_extremes = onp.array([-1., 1.])
-        for d in range(self.dim):
-            for s in face_extremes:
-                s_quad_points = []
-                for i in range(face_quad_degree):
-                    for j in range(face_quad_degree):
-                        items = onp.array([s, (2*(j % 2) - 1) * onp.sqrt(1./3.), (2*(i % 2) - 1) * onp.sqrt(1./3.)])
-                        s_quad_points.append(list(np.roll(items, d)))            
-                face_quad_points.append(s_quad_points)
-                face_normals.append(list(onp.roll(onp.array([s, 0., 0.]), d)))
-        face_quad_points = onp.array(face_quad_points)
-        face_normals = onp.array(face_normals)
-        return face_quad_points, face_normals
-
-    def get_shape_vals(self):
-        """Pre-compute shape function values
-
-        Returns
-        -------
-        shape_vals: ndarray
-           (8, 8) = (num_quads, num_nodes)  
-        """
-        shape_val_fns = self.get_shape_val_functions()
-        quad_points = self.get_quad_points()
-        shape_vals = []
-        for quad_point in quad_points:
-            physical_shape_vals = []
-            for shape_val_fn in shape_val_fns:
-                physical_shape_val = shape_val_fn(quad_point) 
-                physical_shape_vals.append(physical_shape_val)
-     
-            shape_vals.append(physical_shape_vals)
-
-        shape_vals = onp.array(shape_vals)
-        assert shape_vals.shape == (self.num_quads, self.num_nodes)
-        return shape_vals
-
-    # @partial(jax.jit, static_argnums=(0))
     def get_shape_grads(self):
         """Pre-compute shape function gradient value
         The gradient is w.r.t physical coordinates.
@@ -173,56 +88,18 @@ class FEM:
         JxW: ndarray
             (num_cells, num_quads)
         """
-        shape_grad_fns = self.get_shape_grad_functions()
-        quad_points = self.get_quad_points()
-        shape_grads_reference = []
-        for quad_point in quad_points:
-            shape_grads_ref = []
-            for shape_grad_fn in shape_grad_fns:
-                shape_grad = shape_grad_fn(quad_point)
-                shape_grads_ref.append(shape_grad)
-            shape_grads_reference.append(shape_grads_ref)
-        shape_grads_reference = onp.array(shape_grads_reference) # (num_quads, num_nodes, dim)
-        assert shape_grads_reference.shape == (self.num_quads, self.num_nodes, self.dim)
-
+        assert self.shape_grads_ref.shape == (self.num_quads, self.num_nodes, self.dim)
         physical_coos = onp.take(self.points, self.cells, axis=0) # (num_cells, num_nodes, dim)
         # (num_cells, num_quads, num_nodes, dim, dim) -> (num_cells, num_quads, 1, dim, dim)
-        jacobian_dx_deta = onp.sum(physical_coos[:, None, :, :, None] * shape_grads_reference[None, :, :, None, :], axis=2, keepdims=True)
+        jacobian_dx_deta = onp.sum(physical_coos[:, None, :, :, None] * self.shape_grads_ref[None, :, :, None, :], axis=2, keepdims=True)
         jacobian_det = onp.linalg.det(jacobian_dx_deta)[:, :, 0] # (num_cells, num_quads)
         jacobian_deta_dx = onp.linalg.inv(jacobian_dx_deta)
         # (1, num_quads, num_nodes, 1, dim) @ (num_cells, num_quads, 1, dim, dim) 
         # (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, dim)
-        shape_grads_physical = (shape_grads_reference[None, :, :, None, :] @ jacobian_deta_dx)[:, :, :, 0, :]
-
-        # For first order FEM with 8 quad points, those quad weights are all equal to one
-        quad_weights = 1.
-        JxW = jacobian_det * quad_weights
+        shape_grads_physical = (self.shape_grads_ref[None, :, :, None, :] @ jacobian_deta_dx)[:, :, :, 0, :]
+        JxW = jacobian_det * self.quad_weights[None, :]
         return shape_grads_physical, JxW
 
-    def get_face_shape_vals(self):
-        """Pre-compute face shape function values
-
-        Returns
-        -------
-        face_shape_vals: ndarray
-           (6, 4, 8) = (num_faces, num_face_quads, num_nodes)  
-        """
-        shape_val_fns = self.get_shape_val_functions()
-        face_quad_points, _ = self.get_face_quad_points()
-        face_shape_vals = []
-        for f_quad_points in face_quad_points:
-            f_shape_vals = []
-            for quad_point in f_quad_points:
-                physical_shape_vals = []
-                for shape_val_fn in shape_val_fns:
-                    physical_shape_val = shape_val_fn(quad_point) 
-                    physical_shape_vals.append(physical_shape_val)
-                f_shape_vals.append(physical_shape_vals)
-            face_shape_vals.append(f_shape_vals)
-        face_shape_vals = onp.array(face_shape_vals)
-        return face_shape_vals
-
-    # @partial(jax.jit, static_argnums=(0))
     def get_face_shape_grads(self, boundary_inds):
         """Face shape function gradients and JxW (for surface integral)
         Nanson's formula is used to map physical surface ingetral to reference domain
@@ -240,25 +117,10 @@ class FEM:
         nanson_scale: ndarray
             (num_selected_faces, num_face_quads)
         """
-        shape_grad_fns = self.get_shape_grad_functions()
-        face_quad_points, face_normals = self.get_face_quad_points() # _, (num_faces, dim)
-
-        face_shape_grads_reference = []
-        for f_quad_points in face_quad_points:
-            f_shape_grads_ref = []
-            for f_quad_point in f_quad_points:
-                f_shape_grads = []
-                for shape_grad_fn in shape_grad_fns:
-                    f_shape_grad = shape_grad_fn(f_quad_point)
-                    f_shape_grads.append(f_shape_grad)
-                f_shape_grads_ref.append(f_shape_grads)
-            face_shape_grads_reference.append(f_shape_grads_ref)
-
-        face_shape_grads_reference = onp.array(face_shape_grads_reference) # (num_faces, num_face_quads, num_nodes, dim)
         physical_coos = onp.take(self.points, self.cells, axis=0) # (num_cells, num_nodes, dim)
         selected_coos = physical_coos[boundary_inds[:, 0]] # (num_selected_faces, num_nodes, dim)
-        selected_f_shape_grads_ref = face_shape_grads_reference[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes, dim)
-        selected_f_normals = face_normals[boundary_inds[:, 1]] # (num_selected_faces, dim)
+        selected_f_shape_grads_ref = self.face_shape_grads_ref[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes, dim)
+        selected_f_normals = self.face_normals[boundary_inds[:, 1]] # (num_selected_faces, dim)
 
         # (num_selected_faces, 1, num_nodes, dim, 1) * (num_selected_faces, num_face_quads, num_nodes, 1, dim)
         # (num_selected_faces, num_face_quads, num_nodes, dim, dim) -> (num_selected_faces, num_face_quads, dim, dim)
@@ -273,8 +135,8 @@ class FEM:
         # (num_selected_faces, 1, 1, dim) @ (num_selected_faces, num_face_quads, dim, dim)
         # (num_selected_faces, num_face_quads, 1, dim) -> (num_selected_faces, num_face_quads)
         nanson_scale = onp.linalg.norm((selected_f_normals[:, None, None, :] @ jacobian_deta_dx)[:, :, 0, :], axis=-1)
-        quad_weights = 1.
-        nanson_scale = nanson_scale * jacobian_det * quad_weights
+        selected_weights = self.face_quad_weights[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads)
+        nanson_scale = nanson_scale * jacobian_det * selected_weights
         return face_shape_grads_physical, nanson_scale
 
     def get_physical_quad_points(self):
@@ -355,32 +217,6 @@ class FEM:
         # TODO: use getter and setter!
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(dirichlet_bc_info)
 
-    def get_face_inds(self):
-        """Hard-coded reference node points.
-        Important: order must match "self.cells" by gmsh file!
-
-        Returns
-        ------- 
-        face_inds: ndarray
-            (6, 4) = (num_faces, num_face_quads)
-        """
-        # TODO: Hard-coded
-        node_points = onp.array([[-1., -1., -1.],
-                                [1., -1, -1.],
-                                [1., 1., -1.],
-                                [-1., 1., -1.],
-                                [-1., -1., 1.],
-                                [1., -1, 1.],
-                                [1., 1., 1.],
-                                [-1., 1., 1.]])
-        face_inds = []
-        face_extremes = onp.array([-1., 1.])
-        for d in range(self.dim):
-            for s in face_extremes:
-                face_inds.append(onp.argwhere(onp.isclose(node_points[:, d], s)).reshape(-1))
-        face_inds = onp.array(face_inds)
-        return face_inds
-
     def Neuman_boundary_conditions_inds(self, location_fns):
         """Given location functions, compute which faces satisfy the condition. 
 
@@ -394,11 +230,11 @@ class FEM:
         ------- 
         boundary_inds_list: list[ndarray]
             ndarray shape: (num_selected_faces, 2)
-            boundary_inds_list[i, j] returns the index of face j of cell i
+            boundary_inds_list[k][i, j] returns the index of face j of cell i of surface k
         """
-        face_inds = self.get_face_inds()
-        cell_points = onp.take(self.points, self.cells, axis=0)
-        cell_face_points = onp.take(cell_points, face_inds, axis=1) # (num_cells, num_faces, num_face_nodes, dim)
+        # face_inds = get_face_inds()
+        cell_points = onp.take(self.points, self.cells, axis=0) # (num_cells, num_nodes, dim)
+        cell_face_points = onp.take(cell_points, self.face_inds, axis=1) # (num_cells, num_faces, num_face_nodes, dim)
         boundary_inds_list = []
         for i in range(len(location_fns)):
             vmap_location_fn = jax.vmap(location_fns[i])
@@ -448,8 +284,9 @@ class Laplace(FEM):
         - Plasticity
         ...
     """
-    def __init__(self, mesh, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
-        super().__init__(mesh, dirichlet_bc_info, neumann_bc_info, source_info) 
+    # TODO: Better way to write this __ini__ thing?
+    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info) 
         # Some pre-computations   
         self.body_force = self.compute_body_force(source_info)
         self.neumann = self.compute_Neumann_integral(neumann_bc_info)
@@ -673,20 +510,20 @@ class Laplace(FEM):
 
 
 class LinearPoisson(Laplace):
-    def __init__(self, name, mesh, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
         self.name = name
         self.vec = 1
-        super().__init__(mesh, dirichlet_bc_info, neumann_bc_info, source_info) 
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info) 
 
     def get_tensor_map(self):
         return lambda x: x
  
 
 class LinearElasticity(Laplace):
-    def __init__(self, name, mesh, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, dirichlet_bc_info, neumann_bc_info, source_info) 
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info) 
     
     def get_tensor_map(self):
         def stress(u_grad):
@@ -735,10 +572,10 @@ class LinearElasticity(Laplace):
 
 
 class HyperElasticity(Laplace):
-    def __init__(self, name, mesh, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, dirichlet_bc_info, neumann_bc_info, source_info)
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info)
 
     def get_tensor_map(self):
         def psi(F):
@@ -786,10 +623,10 @@ class HyperElasticity(Laplace):
 
 
 class Plasticity(Laplace):
-    def __init__(self, name, mesh, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, dirichlet_bc_info, neumann_bc_info, source_info)
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info)
         self.epsilons_old = onp.zeros((len(self.cells), self.num_quads, self.vec, self.dim))
         self.sigmas_old = onp.zeros_like(self.epsilons_old)
 

@@ -11,9 +11,10 @@ from jax_am.fem.generate_mesh import cylinder_mesh
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
+data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
 def linear_elasticity_dogbone(disp, index):
-    abaqus_root = f"applications/fem/fem_examples/data/abaqus" 
+    abaqus_root = os.path.join(data_dir, f'abaqus')
     abaqus_files = ['DogBone_mesh6_disp10.inp',
                     'DogBone_mesh2_disp10.inp',
                     'DogBone_mesh1_disp10.inp',
@@ -54,14 +55,14 @@ def linear_elasticity_dogbone(disp, index):
     end_time = time.time()
     solve_time = end_time - start_time
     print(f"Wall time elapsed {solve_time}")
-    vtu_path = f"applications/fem/fem_examples/data/vtk/{problem.name}/u_{index}.vtu"
+    vtu_path = os.path.join(data_dir, f'vtk/{problem.name}/u_{index}.vtu')
     save_sol(problem, sol, vtu_path)
     num_total_dofs = problem.num_total_nodes*problem.vec
     return solve_time, num_total_dofs
 
 
 def linear_elasticity_cylinder(disps):
-    meshio_mesh = cylinder_mesh()
+    meshio_mesh = cylinder_mesh(data_dir)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def bottom(point):
@@ -96,7 +97,7 @@ def linear_elasticity_cylinder(disps):
 
 
 def hyperelasticity_cylinder(disps):
-    meshio_mesh = cylinder_mesh()
+    meshio_mesh = cylinder_mesh(data_dir)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def bottom(point):
@@ -127,7 +128,7 @@ def hyperelasticity_cylinder(disps):
         traction = problem.compute_traction(top, sol)
         tractions.append(traction[2])
     tractions = np.array(tractions)
-    np.save(f"applications/fem/fem_examples/data/numpy/hyperelasticity/jax_fem/forces.npy", tractions)
+    np.save(os.path.join(data_dir, f'numpy/hyperelasticity/jax_fem/forces.npy'), tractions)
 
 
 def plasticity():
@@ -200,15 +201,15 @@ def performance_test():
     solve_time = np.array(solve_time)
     num_dofs = np.array(num_dofs)
     platform = jax.lib.xla_bridge.get_backend().platform
-    onp.savetxt(f"applications/fem/fem_examples/data/txt/jax_fem_{platform}_time.txt", solve_time[::-1], fmt='%.3f')
-    onp.savetxt(f"applications/fem/fem_examples/data/txt/jax_fem_{platform}_dof.txt", num_dofs[::-1], fmt='%.3f')
+    onp.savetxt(os.path.join(data_dir, f'/txt/jax_fem_{platform}_time.txt'), solve_time[::-1], fmt='%.3f')
+    onp.savetxt(os.path.join(data_dir, f'txt/jax_fem_{platform}_dof.txt'), num_dofs[::-1], fmt='%.3f')
 
 
 def generate_fem_examples():
     plasticity()
-    linear_elasticity_disps = np.load(f'applications/fem/fem_examples/data/numpy/linear_elasticity/fenicsx/disps.npy')
+    linear_elasticity_disps = np.load(os.path.join(data_dir, f'numpy/linear_elasticity/fenicsx/disps.npy'))
     linear_elasticity_cylinder(linear_elasticity_disps)
-    hyperelasticity_disps = np.load(f'applications/fem/fem_examples/data/numpy/hyperelasticity/fenicsx/disps.npy')
+    hyperelasticity_disps = np.load(os.path.join(data_dir, f'numpy/hyperelasticity/fenicsx/disps.npy'))
     hyperelasticity_cylinder(hyperelasticity_disps)
 
 

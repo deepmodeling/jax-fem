@@ -63,7 +63,8 @@ def human_design():
     """
     linear_flag = True
     problem_name = 'human_design'
-    root_path = f'applications/fem/top_opt/data'
+    root_path = os.path.join(os.path.dirname(__file__), 'data') 
+
     files = glob.glob(os.path.join(root_path, f'vtk/{problem_name}/*'))
     for f in files:
         os.remove(f)
@@ -98,7 +99,7 @@ def computer_design():
     """
     linear_flag = True
     problem_name = 'computer_design'
-    root_path = f'applications/fem/top_opt/data'
+    root_path = os.path.join(os.path.dirname(__file__), 'data') 
     files = glob.glob(os.path.join(root_path, f'vtk/{problem_name}/*'))
     for f in files:
         os.remove(f)

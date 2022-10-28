@@ -142,13 +142,13 @@ def compute_periodic_inds(location_fns_A, location_fns_B, mappings, vecs, mesh):
     return p_node_inds_list_A, p_node_inds_list_B, p_vec_inds_list
 
 
-def rve_problem(problem_name='rve'):
+def rve_problem(problem_name, data_dir):
     args.units_x = 1
     args.units_y = 1
     args.units_z = 1
     L = args.L
     meshio_mesh = box_mesh(args.num_hex*args.units_x, args.num_hex*args.units_y, args.num_hex*args.units_z,
-                           L*args.units_x, L*args.units_y, L*args.units_z)
+                           L*args.units_x, L*args.units_y, L*args.units_z, data_dir)
     jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def corner(point):
@@ -206,7 +206,8 @@ def rve_problem(problem_name='rve'):
 def exp():
     """Do not delete. We use this to generate RVE demo.
     """
-    problem = rve_problem('rve_debug')
+    data_dir = os.path.join(os.path.dirname(__file__), 'data')
+    problem = rve_problem('rve_debug', data_dir)
     H_bar = np.array([[-0.009, 0., 0.],
                       [0., -0.009, 0.],
                       [0., 0., 0.025]])
@@ -220,8 +221,9 @@ def exp():
     energy = problem.compute_energy(sol_fluc_ini)
     print(f"Initial energy = {energy}")
 
+
     sol_disp_ini = problem.fluc_to_disp(sol_fluc_ini)
-    jax_vtu_path = f"applications/fem/multi_scale/data/vtk/{problem.name}/sol_disp_ini.vtu"
+    jax_vtu_path = os.path.join(data_dir, f'vtk/{problem.name}/sol_disp_ini.vtu')
     save_sol(problem, sol_disp_ini, jax_vtu_path, [("E", problem.E.reshape((problem.num_cells, problem.num_quads))[:, 0])])
 
     sol_fluc = aug_solve(problem)
@@ -235,10 +237,10 @@ def exp():
     print(f"Final energy = {energy}")
 
     sol_disp = problem.fluc_to_disp(sol_fluc)
-    jax_vtu_path = f"applications/fem/multi_scale/data/vtk/{problem.name}/sol_disp.vtu"
+    jax_vtu_path = os.path.join(data_dir, f'vtk/{problem.name}/sol_disp.vtu')
     save_sol(problem, sol_disp, jax_vtu_path)
 
-    jax_vtu_path = f"applications/fem/multi_scale/data/vtk/{problem.name}/sol_fluc.vtu"
+    jax_vtu_path = os.path.join(data_dir, f'vtk/{problem.name}/sol_fluc.vtu')
     save_sol(problem, sol_fluc, jax_vtu_path)
 
     p_node_inds_list_A, p_node_inds_list_B, p_vec_inds_list = problem.periodic_bc_info
@@ -279,13 +281,15 @@ def generate_samples():
  
 
 def collect_data():
-    problem = rve_problem()
+    data_dir = os.path.join(os.path.dirname(__file__), 'data')
+    problem = rve_problem('rve', data_dir)
     date = f"10102022"
-    root_numpy = os.path.join(f"applications/fem/multi_scale/data/numpy/training", date)
+    root_numpy = os.path.join(data_dir, 'numpy/training', date)
+ 
     if not os.path.exists(root_numpy):
         os.makedirs(root_numpy)
 
-    root_vtk = os.path.join(f"applications/fem/multi_scale/data/vtk/training", date)
+    root_vtk = os.path.join(data_dir, 'vtk/training', date)
     if not os.path.exists(root_vtk):
         os.makedirs(root_vtk)
 

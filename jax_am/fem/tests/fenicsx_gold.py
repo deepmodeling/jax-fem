@@ -20,6 +20,8 @@ from jax_am.fem.generate_mesh import cylinder_mesh
 
 np.set_printoptions(threshold=sys.maxsize, linewidth=1000, suppress=True, precision=5)
 
+data_dir = os.path.join(os.path.dirname(__file__), 'data')
+
 
 def linear_poisson(N):
     L = 1.
@@ -181,7 +183,7 @@ def linear_elasticity_cube(N):
 
 
 def linear_elasticity_cylinder():
-    meshio_mesh = cylinder_mesh()
+    meshio_mesh = cylinder_mesh(data_dir)
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
@@ -260,7 +262,7 @@ def linear_elasticity_cylinder():
 
 
 def hyperelasticity():
-    meshio_mesh = cylinder_mesh()
+    meshio_mesh = cylinder_mesh(data_dir)
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
@@ -356,7 +358,7 @@ def hyperelasticity():
 
 
 def plasticity(disps, path, case):
-    meshio_mesh = cylinder_mesh()
+    meshio_mesh = cylinder_mesh(data_dir)
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})

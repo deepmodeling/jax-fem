@@ -11,9 +11,11 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 def problem():
     """Can be used to test the memory limit of JAX-FEM
     """
+    data_dir = os.path.join(os.path.dirname(__file__), 'data')
+
     problem_name = f'linear_elasticity'
-    # meshio_mesh = box_mesh(100, 100, 100)
-    meshio_mesh = box_mesh(300, 100, 100)
+    # meshio_mesh = box_mesh(100, 100, 100, 1., 1., 1., data_dir)
+    meshio_mesh = box_mesh(300, 100, 100, 1., 1., 1., data_dir)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def left(point):
@@ -35,10 +37,9 @@ def problem():
  
     problem = LinearElasticity(problem_name, mesh, dirichlet_bc_info=dirichlet_bc_info)
     sol = solver(problem, linear=True, precond=True)
-    vtk_path = f"jax_am/fem/data/vtk/{problem_name}/u.vtu"
+    vtk_path = os.path.join(data_dir, f'vtk/{problem_name}/u.vtu')
     save_sol(problem, sol, vtk_path)
-
-    jax.profiler.save_device_memory_profile(f"jax_am/fem/data/prof/memory.prof")
+    jax.profiler.save_device_memory_profile(os.path.join(data_dir, f'prof/memory.prof'))
 
 
 if __name__ == "__main__":

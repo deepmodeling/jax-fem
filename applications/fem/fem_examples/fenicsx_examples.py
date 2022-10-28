@@ -17,6 +17,9 @@ from jax_am.fem.generate_mesh import cylinder_mesh
 
 comm = MPI.COMM_WORLD
 
+data_dir = os.path.join(os.path.dirname(__file__), 'data')
+
+
 def mpi_print(msg):
     if comm.rank == 0:
         print(f"Rank {comm.rank} print: {msg}")
@@ -24,14 +27,14 @@ def mpi_print(msg):
 
 
 def get_dog_bone_file_path(file_type, index):
-    abaqus_root = f"applications/fem/fem_examples/data/abaqus" 
+    abaqus_root = os.path.join(data_dir, f'abaqus')
     abaqus_files = ['DogBone_mesh6_disp10.inp',
                     'DogBone_mesh2_disp10.inp',
                     'DogBone_mesh1_disp10.inp',
                     'DogBone_mesh05_disp10.inp',
                     'DogBone_mesh03_disp10.inp']
 
-    xdmf_root = f"applications/fem/fem_examples/data/xdmf" 
+    xdmf_root = os.path.join(data_dir, f'xdmf')
     xdmf_files = ['DogBone_mesh6_disp10.xdmf',
                   'DogBone_mesh2_disp10.xdmf',
                   'DogBone_mesh1_disp10.xdmf',
@@ -57,7 +60,7 @@ def generate_xdmf():
         out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
         xdmf_file = get_dog_bone_file_path('xdmf', i) 
         out_mesh.write(xdmf_file)
-    meshio_mesh = cylinder_mesh()
+    meshio_mesh = cylinder_mesh(data_dir)
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
     xdmf_file = get_cylinder_file_path()
@@ -239,7 +242,7 @@ def hyperelasticity(disp):
 
 
 def plasticity(disps, path):
-    meshio_mesh = cylinder_mesh()
+    meshio_mesh = cylinder_mesh(data_dir)
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
@@ -405,7 +408,7 @@ def performance_test():
         wall_time = linear_elasticity(10., 'dog_bone', i)
         solve_time.append(wall_time)
     solve_time = np.array(solve_time)
-    np.savetxt(f"applications/fem/fem_examples/data/txt/fenicsx_fem_time.txt", solve_time, fmt='%.3f')
+    np.savetxt(os.path.join(data_dir, f"txt/fenicsx_fem_time.txt"), solve_time, fmt='%.3f')
 
 
 def generate_fem_examples():
@@ -419,8 +422,8 @@ def generate_fem_examples():
         traction = linear_elasticity(disp, 'cylinder')
         tractions.append(traction)
     tractions = np.array(tractions)
-    np.save(f'applications/fem/fem_examples/data/numpy/linear_elasticity/fenicsx/disps.npy', linear_elasticity_disps)
-    np.save(f'applications/fem/fem_examples/data/numpy/linear_elasticity/fenicsx/forces.npy', tractions)
+    np.save(os.path.join(data_dir, f'numpy/linear_elasticity/fenicsx/disps.npy'), linear_elasticity_disps)
+    np.save(os.path.join(data_dir, f'numpy/linear_elasticity/fenicsx/forces.npy'), tractions)
 
     hyperelasticity_disps = np.linspace(0., 2., 11)
     tractions = []
@@ -428,8 +431,8 @@ def generate_fem_examples():
         traction = hyperelasticity(disp)
         tractions.append(traction)
     tractions = np.array(tractions)
-    np.save(f'applications/fem/fem_examples/data/numpy/hyperelasticity/fenicsx/disps.npy', hyperelasticity_disps)
-    np.save(f'applications/fem/fem_examples/data/numpy/hyperelasticity/fenicsx/forces.npy', tractions)
+    np.save(os.path.join(data_dir, f'numpy/hyperelasticity/fenicsx/disps.npy'), hyperelasticity_disps)
+    np.save(os.path.join(data_dir, f'numpy/hyperelasticity/fenicsx/forces.npy'), tractions)
 
 
 def exp():

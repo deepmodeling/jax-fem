@@ -75,11 +75,13 @@ class Thermal(Laplace):
 
 def problem():
     ts = np.arange(0., 1e-3, dt)
-    root_path = f"jax_am/fem/apps/thermal/data/vtk"
+    data_dir = os.path.join(os.path.dirname(__file__), 'data') 
+    vtk_dir = os.path.join(data_dir, 'vtk')
+
     problem_name = f'thermal'
     Nx, Ny, Nz = 300, 50, 30
     Lx, Ly, Lz = 6e-3, 1e-3, 6e-4
-    meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz)
+    meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def top(point):
@@ -92,18 +94,18 @@ def problem():
     neumann_bc_info = [[top], [neumann_val]]
     problem = Thermal(problem_name, mesh, dt, neumann_bc_info=neumann_bc_info)
 
-    files = glob.glob(os.path.join(root_path, f'{problem_name}/*'))
+    files = glob.glob(os.path.join(vtk_dir, f'{problem_name}/*'))
     for f in files:
         os.remove(f)
 
     problem.old_sol = T0*np.ones((problem.num_total_nodes, problem.vec))
-    vtk_path = os.path.join(root_path, f"{problem_name}/u_{0:05d}.vtu")
+    vtk_path = os.path.join(vtk_dir, f"{problem_name}/u_{0:05d}.vtu")
     save_sol(problem, problem.old_sol, vtk_path)
 
     for i in range(len(ts)):
         print(f"\nStep {i}, total step = {len(ts)}")
         problem.old_sol = solver(problem)
-        vtk_path = os.path.join(root_path, f"{problem_name}/u_{i:05d}.vtu")
+        vtk_path = os.path.join(vtk_dir, f"{problem_name}/u_{i:05d}.vtu")
         save_sol(problem, problem.old_sol, vtk_path)
 
 

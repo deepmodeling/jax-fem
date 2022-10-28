@@ -11,8 +11,8 @@ plt.rcParams.update({
 
 
 def plot_results():
-    root_path = f"applications/fem/full_field_infer/data/"
-    obj_val, rel_error_sol, rel_error_force = onp.load(os.path.join(root_path, f"numpy/outputs.npy"))
+    data_dir = os.path.join(os.path.dirname(__file__), 'data')
+    obj_val, rel_error_sol, rel_error_force = onp.load(os.path.join(data_dir, f"numpy/outputs.npy"))
     truncate = 21
     obj_val, rel_error_sol, rel_error_force = obj_val[:truncate], rel_error_sol[:truncate], rel_error_force[:truncate]
     steps = onp.arange(len(obj_val))
@@ -24,7 +24,7 @@ def plot_results():
     plt.ylabel("Objective value", fontsize=20)
     plt.tick_params(labelsize=20)
     plt.tick_params(labelsize=20)
-    plt.savefig(os.path.join(root_path, f'pdf/loss.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(data_dir, f'pdf/loss.pdf'), bbox_inches='tight')
 
     plt.figure(figsize=(8, 6))
     plt.plot(steps, rel_error_sol, linestyle='-', marker='o', markersize=10, linewidth=2, color='black')
@@ -32,10 +32,10 @@ def plot_results():
     plt.ylabel("Inference error", fontsize=20)
     plt.tick_params(labelsize=20)
     plt.tick_params(labelsize=20)
-    plt.savefig(os.path.join(root_path, f'pdf/error.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(data_dir, f'pdf/error.pdf'), bbox_inches='tight')
 
 
-    hs, res_zero, res_first = onp.load(os.path.join(root_path, f"numpy/res.npy"))
+    hs, res_zero, res_first = onp.load(os.path.join(data_dir, f"numpy/res.npy"))
 
     ref_zero = [1/5.*res_zero[-1]/hs[-1] * h for h in hs]
     ref_first = [1/5.*res_first[-1]/hs[-1]**2 * h**2 for h in hs]
@@ -53,11 +53,10 @@ def plot_results():
     plt.tick_params(labelsize=20)
     plt.legend(fontsize=20, frameon=False)   
 
-    plt.savefig(os.path.join(root_path, f'pdf/res.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(data_dir, f'pdf/res.pdf'), bbox_inches='tight')
 
 
 
 if __name__=="__main__":
     plot_results()
     plt.show()
-

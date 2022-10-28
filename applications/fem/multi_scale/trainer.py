@@ -18,6 +18,7 @@ config.update("jax_enable_x64", True)
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device)
 
+data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
 def H_to_C(H_flat):
     H = flat_to_tensor(H_flat)
@@ -34,7 +35,7 @@ def transform_data(H, energy_density):
 
 
 def load_data():
-    file_path = f"applications/fem/multi_scale/data/numpy/training"
+    file_path = os.path.join(data_dir, 'numpy/training')
     data_files = glob.glob(f"{file_path}/09052022/*.npy")
     assert len(data_files) > 0, f"No data file found in {file_path}!"
     data_xy = onp.stack([onp.load(f) for f in data_files])
@@ -176,21 +177,21 @@ def polynomial_hyperelastic():
 
 
 def get_path_pickle(hyperparam):
-    root_pickle = f"applications/fem/multi_scale/data/pickle"
+    root_pickle = os.path.join(data_dir, f'pickle')
     os.makedirs(root_pickle, exist_ok=True)
     path_pickle = os.path.join(root_pickle, f"{hyperparam}_weights.pkl")
     return path_pickle
 
 
 def get_path_loss(hyperparam):
-    root_loss = f"applications/fem/multi_scale/data/numpy/training/losses"
+    root_loss = os.path.join(data_dir, f'numpy/training/losses')
     os.makedirs(root_loss, exist_ok=True)
     path_loss = os.path.join(root_loss, f"{hyperparam}.npy")
     return path_loss
 
 
 def get_root_pdf():
-    root_pdf = f"applications/fem/multi_scale/data/pdf/training"
+    root_pdf = os.path.join(data_dir, f'pdf/training')
     os.makedirs(root_pdf, exist_ok=True)
     return root_pdf
 
@@ -305,7 +306,7 @@ def show_yy_plot(partial_data, train_data, hyperparam):
     plt.ylabel(f"Predicted Energy", fontsize=20)
     plt.tick_params(labelsize=18)
     plt.axis('equal')
-    root_pdf = f"applications/fem/multi_scale/data/pdf/training"
+    root_pdf = os.path.join(data_dir, f'pdf/training')
     plt.savefig(os.path.join(root_pdf, f"pred_true_{hyperparam}.pdf"), bbox_inches='tight')
 
 

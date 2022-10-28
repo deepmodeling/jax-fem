@@ -14,24 +14,25 @@ def get_full_integration_poly_degree(ele_type, lag_order, dim):
         return 2 * (dim*(lag_order - 1) - 1)
 
 def get_elements(ele_type, lag_order):
-    """Order is different for basix and meshio
-    References
-    https://github.com/FEniCS/basix
-    http://www.manpagez.com/info/gmsh/gmsh-2.2.6/gmsh_65.php
+    """Mesh dof node ordering is important.
+    If the input mesh file is gmsh .msh or Abaqus .inp, meshio would convert it to
+    its own ordering. My experience shows that meshio ordering is the same as Abaqus.
+    For example, for a 10-node tetrahedron element, the ordering of meshio is the following
+    https://web.mit.edu/calculix_v2.7/CalculiX/ccx_2.7/doc/ccx/node33.html
+    The troublesome thing is that basix has a different ordering. As shown below
+    https://defelement.com/elements/lagrange.html
+    The consequence is that we need to define this "re_order" variable to make sure the 
+    ordering is correct.
     """
     if (ele_type, lag_order) == ('hexahedron', 1):
         re_order = [0, 1, 3, 2, 4, 5, 7, 6]
         basix_ele = basix.CellType.hexahedron
         basix_face_ele = basix.CellType.quadrilateral
-        gauss_order = 2 # 2x2x2
+        gauss_order = 2 # 2x2x2, TODO: is this full integration?
     elif (ele_type, lag_order) == ('hexahedron', 2):
-
-        # re_order = [0, 1, 3, 2, 4, 5, 7, 6, 8, 9, 10, 11, 12, 13, 15, 
-        #             14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
-
+        print(f"27-node hexahedron is rarely used in practice and not recommended.")
         re_order = [0, 1, 3, 2, 4, 5, 7, 6, 8, 11, 13, 9, 16, 18, 19, 
                     17, 10, 12, 15, 14, 22, 23, 21, 24, 20, 25, 26]
-
         basix_ele = basix.CellType.hexahedron
         basix_face_ele = basix.CellType.quadrilateral
         gauss_order = 10 # 6x6x6, full integration
@@ -41,7 +42,6 @@ def get_elements(ele_type, lag_order):
         basix_face_ele = basix.CellType.triangle
         gauss_order = 0 # 1, full integration
     elif (ele_type, lag_order) == ('tetrahedron', 2):
-        # re_order = [0, 1, 2, 3, 9, 6, 8, 7, 4, 5]
         re_order = [0, 1, 2, 3, 9, 6, 8, 7, 5, 4]
         basix_ele = basix.CellType.tetrahedron
         basix_face_ele = basix.CellType.triangle
@@ -136,11 +136,5 @@ def get_face_shape_vals_and_grads(ele_type, lag_order):
     face_shape_vals = vals_and_grads[0, :, :, 0].reshape(num_faces, num_face_quads, -1)
     face_shape_grads_ref = vals_and_grads[1:, :, :, 0].reshape(dim, num_faces, num_face_quads, -1)
     face_shape_grads_ref = onp.transpose(face_shape_grads_ref, axes=(1, 2, 3, 0))
-
     print(f"face_quad_points.shape = {face_quad_points.shape}")
-
     return face_shape_vals, face_shape_grads_ref, face_weights, face_normals, face_inds
-
-
-if __name__ == "__main__":
-    pass

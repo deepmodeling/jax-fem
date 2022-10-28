@@ -9,8 +9,6 @@ import time
 import meshio
 import matplotlib.pyplot as plt
 from functools import partial
-import basix
-from jax_am.fem.generate_mesh import box_mesh, cylinder_mesh
 
 from jax_am.fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grads
 
@@ -49,9 +47,6 @@ class FEM:
         self.num_cells = len(self.cells)
         self.num_total_nodes = len(self.mesh.points)
         self.num_total_dofs = self.num_total_nodes*self.vec
-
-        # print(self.mesh.points[self.cells[0]])
-        # exit()
 
         start = time.time()
 

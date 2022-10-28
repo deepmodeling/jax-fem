@@ -33,7 +33,7 @@ def debug():
 
 
 def homogenization_problem(case, dns_info=None):
-    root_path = f"applications/fem/multi_scale/data/"
+    data_dir = os.path.join(crt_file_path, 'data')
     problem_name = case if dns_info is None else case + "_" + dns_info
     args.num_units_x = 10
     args.num_units_y = 2
@@ -93,10 +93,10 @@ def homogenization_problem(case, dns_info=None):
         traction = problem.compute_traction(top, sol)
         energies.append(energy)
         forces.append(traction[-1])
-        vtu_path = os.path.join(root_path, f"vtk/deploy/{problem_name}/u_{i + 1:03d}.vtu")
+        vtu_path = os.path.join(data_dir, f"vtk/deploy/{problem_name}/u_{i + 1:03d}.vtu")
         save_sol(problem, sol, vtu_path)
 
-    numpy_dir = os.path.join(root_path, f'numpy/deploy/{problem_name}')
+    numpy_dir = os.path.join(data_dir, f'numpy/deploy/{problem_name}')
     os.makedirs(numpy_dir, exist_ok=True)
     print(f"energies = {energies}")
     print(f"forces = {forces}")
@@ -114,7 +114,7 @@ def run_tensile():
 
 
 def plot_results():
-    root_path = f"applications/fem/multi_scale/data/"
+    data_dir = os.path.join(crt_file_path, 'data')
     problem_names = ['dns_in', 'nn', 'dns', 'dns_out']
     colors = ['orange', 'red', 'blue', 'green']
     markers = ['^', 'o', 's', 'v']
@@ -122,25 +122,25 @@ def plot_results():
 
     fig = plt.figure(figsize=(8, 6)) 
     for i in range(len(problem_names)):
-        rel_disps, energies, _ = onp.load(os.path.join(root_path, f'numpy/deploy/{problem_names[i]}/tensile.npy'))
+        rel_disps, energies, _ = onp.load(os.path.join(data_dir, f'numpy/deploy/{problem_names[i]}/tensile.npy'))
         plt.plot(rel_disps, energies, color=colors[i], marker=markers[i], markersize=10, linestyle='-', linewidth=2, label=labels[i])  
         plt.xlabel("Relative displacement", fontsize=20)
         plt.ylabel(r"Energy [$\mu$J]", fontsize=20)
         plt.tick_params(labelsize=20)
         plt.tick_params(labelsize=20)
         plt.legend(fontsize=20, frameon=False)   
-    plt.savefig(os.path.join(root_path, f'pdf/energy.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(data_dir, f'pdf/energy.pdf'), bbox_inches='tight')
 
     fig = plt.figure(figsize=(8, 6)) 
     for i in range(len(problem_names)):
-        rel_disps, _, forces = onp.load(os.path.join(root_path, f'numpy/deploy/{problem_names[i]}/tensile.npy'))
+        rel_disps, _, forces = onp.load(os.path.join(data_dir, f'numpy/deploy/{problem_names[i]}/tensile.npy'))
         plt.plot(rel_disps, forces, color=colors[i], marker=markers[i], markersize=10, linestyle='-', linewidth=2, label=labels[i])  
         plt.xlabel("Relative displacement", fontsize=20)
         plt.ylabel(r"Force [mN]", fontsize=20)
         plt.tick_params(labelsize=20)
         plt.tick_params(labelsize=20)
         plt.legend(fontsize=20, frameon=False) 
-    plt.savefig(os.path.join(root_path, f'pdf/force.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(data_dir, f'pdf/force.pdf'), bbox_inches='tight')
 
 
 if __name__=="__main__":

@@ -4,45 +4,66 @@ import numpy as onp
 import meshio
 
 
-def box_mesh(Nx, Ny, Nz, Lx=1., Ly=1., Lz=1.):
+def get_meshio_cell_type(ele_type, lag_order):
+    if ele_type == 'tetrahedron' and lag_order == 1:
+        cell_type = 'tetra'
+    elif ele_type == 'tetrahedron' and lag_order == 2:
+        cell_type = 'tetra10'
+    elif ele_type == 'hexahedron' and lag_order == 1:
+        cell_type = 'hexahedron'
+    elif ele_type == 'hexahedron' and lag_order == 2:
+        cell_type = 'hexahedron27'
+    else:
+        raise NotImplementedError
+    return cell_type
+
+
+def box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir, ele_type='hexahedron', lag_order=1):
     """References:
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/master/examples/api/hex.py
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/gmsh_4_7_1/tutorial/python/t1.py
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/gmsh_4_7_1/tutorial/python/t3.py
     """
-    mesh_file = f"jax_am/fem/data/msh/box.msh"
-    generate = True
-    if generate:
-        offset_x = 0.
-        offset_y = 0.
-        offset_z = 0.
-        domain_x = Lx
-        domain_y = Ly
-        domain_z = Lz
+    cell_type = get_meshio_cell_type(ele_type, lag_order)
+    msh_dir = os.path.join(data_dir, 'msh')
+    os.makedirs(msh_dir, exist_ok=True)
+    msh_file = os.path.join(msh_dir, 'box_order_2.msh')
 
-        gmsh.initialize()
-        gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)  # save in old MSH format
-        Rec2d = True  # tris or quads
-        Rec3d = True  # tets, prisms or hexas
-        p = gmsh.model.geo.addPoint(offset_x, offset_y, offset_z)
-        l = gmsh.model.geo.extrude([(0, p)], domain_x, 0, 0, [Nx], [1])
-        s = gmsh.model.geo.extrude([l[1]], 0, domain_y, 0, [Ny], [1], recombine=Rec2d)
-        v = gmsh.model.geo.extrude([s[1]], 0, 0, domain_z, [Nz], [1], recombine=Rec3d)
+    offset_x = 0.
+    offset_y = 0.
+    offset_z = 0.
+    domain_x = Lx
+    domain_y = Ly
+    domain_z = Lz
 
-        gmsh.model.geo.synchronize()
-        gmsh.model.mesh.generate(3)
-        gmsh.write(mesh_file)
-        gmsh.finalize()
+    gmsh.initialize()
+    gmsh.option.setNumber("Mesh.MshFileVersion", 2.2)  # save in old MSH format
+    if cell_type.startswith('tetra'):
+        Rec2d = False  # tris or quads
+        Rec3d = False  # tets, prisms or hexas
+    else:
+        Rec2d = True
+        Rec3d = True
+    p = gmsh.model.geo.addPoint(offset_x, offset_y, offset_z)
+    l = gmsh.model.geo.extrude([(0, p)], domain_x, 0, 0, [Nx], [1])
+    s = gmsh.model.geo.extrude([l[1]], 0, domain_y, 0, [Ny], [1], recombine=Rec2d)
+    v = gmsh.model.geo.extrude([s[1]], 0, 0, domain_z, [Nz], [1], recombine=Rec3d)
+
+    gmsh.model.geo.synchronize()
+    gmsh.model.mesh.generate(3)
+    gmsh.model.mesh.setOrder(lag_order)
+    gmsh.write(msh_file)
+    gmsh.finalize()
       
-    mesh = meshio.read(mesh_file)
+    mesh = meshio.read(msh_file)
     points = mesh.points # (num_total_nodes, dim)
-    cells =  mesh.cells_dict['hexahedron'] # (num_cells, num_nodes)
+    cells =  mesh.cells_dict[cell_type] # (num_cells, num_nodes)
+    out_mesh = meshio.Mesh(points=points, cells={cell_type: cells})
 
-    out_mesh = meshio.Mesh(points=points, cells={'hexahedron': cells})
     return out_mesh
 
 
-def cylinder_mesh(R=5, H=10, circle_mesh=5, hight_mesh=20, rect_ratio=0.4):
+def cylinder_mesh(data_dir, R=5, H=10, circle_mesh=5, hight_mesh=20, rect_ratio=0.4):
     """By Xinxin Wu at PKU in July, 2022
     Reference: https://www.researchgate.net/post/How_can_I_create_a_structured_mesh_using_a_transfinite_volume_in_gmsh
     R: radius
@@ -51,10 +72,10 @@ def cylinder_mesh(R=5, H=10, circle_mesh=5, hight_mesh=20, rect_ratio=0.4):
     hight_mesh:num of meshs in hight
     rect_ratio: rect length/R
     """
-    mesh_name = f"jax_am/fem/data/msh/cylinder"
-    rect_coor = R*rect_ratio
-    geo_file = mesh_name + ".geo"
-    mesh_file = mesh_name + ".msh"
+    msh_dir = os.path.join(data_dir, 'msh')
+    os.makedirs(msh_dir, exist_ok=True)
+    geo_file = os.path.join(msh_dir, 'cylinder.geo')
+    msh_file = os.path.join(msh_dir, 'cylinder.msh')
     
     string='''
         Point(1) = {{0, 0, 0, 1.0}};
@@ -121,7 +142,3 @@ def cylinder_mesh(R=5, H=10, circle_mesh=5, hight_mesh=20, rect_ratio=0.4):
 
     out_mesh = meshio.Mesh(points=points, cells={'hexahedron': cells})
     return out_mesh
-
-
-if __name__=="__main__":
-    cylinder_mesh(R=5, H=10, circle_mesh=5, hight_mesh=20, rect_ratio=0.4)

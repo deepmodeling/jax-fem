@@ -65,7 +65,7 @@ class LinearPoisson(Laplace):
         return self.compute_residual_vars(sol)
 
 
-def taylor_tests(root_path, m, fn, fn_grad):
+def taylor_tests(data_dir, m, fn, fn_grad):
     """See https://www.dolfin-adjoint.org/en/latest/documentation/verification.html
     """
     hs = onp.array([1e-4, 1e-3, 1e-2, 1e-1])
@@ -80,18 +80,18 @@ def taylor_tests(root_path, m, fn, fn_grad):
         res_zero.append(r_zero)
         res_first.append(r_first)
 
-    onp.save(os.path.join(root_path, f"numpy/res.npy"), onp.stack((hs, res_zero, res_first)))
+    onp.save(os.path.join(data_dir, f"numpy/res.npy"), onp.stack((hs, res_zero, res_first)))
 
 
 def param_id():
-    root_path = f"applications/fem/param_id/data/"
-    files = glob.glob(os.path.join(root_path, f'vtk/inverse/*'))
+    data_dir = os.path.join(os.path.dirname(__file__), 'data')
+    files = glob.glob(os.path.join(data_dir, f'vtk/inverse/*'))
     for f in files:
         os.remove(f)
 
     Lx, Ly, Lz = 1., 1., 0.2
     Nx, Ny, Nz = 50, 50, 10
-    meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz)
+    meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
     jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def min_x_loc(point):
@@ -129,7 +129,7 @@ def param_id():
     problem_fwd = LinearPoisson(f"forward", jax_mesh, dirichlet_bc_info=dirichlet_bc_info, source_info=body_force)
     true_sol = solver(problem_fwd, linear=True)
     true_body_force = jax.vmap(body_force)(problem_fwd.points)
-    vtu_path = os.path.join(root_path, f"vtk/{problem_fwd.name}/u.vtu")
+    vtu_path = os.path.join(data_dir, f"vtk/{problem_fwd.name}/u.vtu")
     save_sol(problem_fwd, true_sol, vtu_path, point_infos=[('source', true_body_force)])
     print(f"True force L2 integral = {problem_fwd.compute_L2(true_body_force)}")
     num_obs_pts = 250
@@ -137,11 +137,11 @@ def param_id():
     observed_points = jax_mesh.points[observed_inds]
     cells = [[i%num_obs_pts, (i + 1)%num_obs_pts, (i + 2)%num_obs_pts] for i in range(num_obs_pts)]
     mesh = meshio.Mesh(observed_points, [("triangle", cells)])
-    mesh.write(os.path.join(root_path, f"vtk/{problem_fwd.name}/points.vtu"))
+    mesh.write(os.path.join(data_dir, f"vtk/{problem_fwd.name}/points.vtu"))
     true_vals = true_sol[observed_inds]
 
     problem_inv = LinearPoisson(f"inverse", jax_mesh, dirichlet_bc_info=dirichlet_bc_info)
-    files = glob.glob(os.path.join(root_path, f'vtk/{problem_inv.name}/*'))
+    files = glob.glob(os.path.join(data_dir, f'vtk/{problem_inv.name}/*'))
     for f in files:
         os.remove(f)
 
@@ -161,7 +161,7 @@ def param_id():
     outputs = []
     def output_sol(params, dofs, obj_val):
         sol = dofs.reshape((problem_inv.num_total_nodes, problem_inv.vec))
-        vtu_path = os.path.join(root_path, f"vtk/{problem_inv.name}/sol_{fn.counter:03d}.vtu")
+        vtu_path = os.path.join(data_dir, f"vtk/{problem_inv.name}/sol_{fn.counter:03d}.vtu")
         save_sol(problem_inv, sol, vtu_path, point_infos=[('source', params)])
         rel_error_sol = (np.sqrt(problem_fwd.compute_L2(true_sol - sol))/
                          np.sqrt(problem_fwd.compute_L2(true_sol)))
@@ -175,7 +175,7 @@ def param_id():
 
     fn, fn_grad = adjoint_method(problem_inv, J_fn, output_sol, linear=True)
     params_ini = onp.zeros(problem_inv.num_total_nodes * problem_inv.vec)
-    taylor_tests(root_path, params_ini, fn, fn_grad)
+    taylor_tests(data_dir, params_ini, fn, fn_grad)
 
     def objective_wrapper(x):
         obj_val = fn(x)
@@ -199,7 +199,7 @@ def param_id():
                        callback=None,
                        options=options)
 
-    onp.save(os.path.join(root_path, f"numpy/outputs.npy"), onp.array(outputs).T)
+    onp.save(os.path.join(data_dir, f"numpy/outputs.npy"), onp.array(outputs).T)
 
 
 if __name__=="__main__":

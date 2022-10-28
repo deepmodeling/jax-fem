@@ -24,7 +24,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 def topology_optimization():
     linear_flag = False
     problem_name = 'plate'
-    root_path = f'applications/fem/top_opt/data'
+    root_path = os.path.join(os.path.dirname(__file__), 'data') 
 
     files = glob.glob(os.path.join(root_path, f'vtk/{problem_name}/*'))
     for f in files:

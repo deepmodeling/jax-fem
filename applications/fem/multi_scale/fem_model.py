@@ -82,7 +82,6 @@ class HyperElasticity(Laplace):
             raise NotImplementedError(f"get_maps Only support rve, dns or nn.")
         return vmap_stress, vmap_energy
 
-
     def maps_rve(self):
         def psi(F, E, nu):
             mu = E/(2.*(1. + nu))

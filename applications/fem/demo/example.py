@@ -39,7 +39,10 @@ def problem():
     sol = solver(problem, linear=True, precond=True)
     vtk_path = os.path.join(data_dir, f'vtk/{problem_name}/u.vtu')
     save_sol(problem, sol, vtk_path)
-    jax.profiler.save_device_memory_profile(os.path.join(data_dir, f'prof/memory.prof'))
+
+    prof_dir = os.path.join(data_dir, f'prof')
+    os.makedirs(prof_dir, exist_ok=True)
+    jax.profiler.save_device_memory_profile(os.path.join(prof_dir, f'memory.prof'))
 
 
 if __name__ == "__main__":

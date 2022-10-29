@@ -5,6 +5,10 @@ import meshio
 
 
 def get_meshio_cell_type(ele_type, lag_order):
+    """
+    Reference:
+    https://github.com/nschloe/meshio/blob/9dc6b0b05c9606cad73ef11b8b7785dd9b9ea325/src/meshio/xdmf/common.py#L36
+    """
     if ele_type == 'tetrahedron' and lag_order == 1:
         cell_type = 'tetra'
     elif ele_type == 'tetrahedron' and lag_order == 2:
@@ -13,6 +17,10 @@ def get_meshio_cell_type(ele_type, lag_order):
         cell_type = 'hexahedron'
     elif ele_type == 'hexahedron' and lag_order == 2:
         cell_type = 'hexahedron27'
+    elif ele_type == 'triangle' and lag_order == 1:
+        cell_type = 'triangle'
+    elif ele_type == 'triangle' and lag_order == 2:
+        cell_type = 'triangle6'
     else:
         raise NotImplementedError
     return cell_type

@@ -43,7 +43,7 @@ class FEM:
         self.mesh = mesh
         self.points = self.mesh.points
         self.cells = self.mesh.cells
-        self.dim = 3
+        self.dim = len(self.points[0])
         self.num_cells = len(self.cells)
         self.num_total_nodes = len(self.mesh.points)
         self.num_total_dofs = self.num_total_nodes*self.vec
@@ -51,7 +51,6 @@ class FEM:
         start = time.time()
 
         # Some re-used quantities can be pre-computed and stored for better performance.
-        # self.quad_points = get_quad_points()
         self.shape_vals, self.shape_grads_ref, self.quad_weights = get_shape_vals_and_grads(ele_type, lag_order)
         self.face_shape_vals, self.face_shape_grads_ref, self.face_quad_weights, self.face_normals, self.face_inds \
         = get_face_shape_vals_and_grads(ele_type, lag_order)
@@ -199,7 +198,7 @@ class FEM:
         for i in range(len(location_fns)):
             node_inds = onp.argwhere(jax.vmap(location_fns[i])(self.mesh.points)).reshape(-1)
             vec_inds = onp.ones_like(node_inds, dtype=onp.int32)*vecs[i]
-            values = jax.vmap(value_fns[i])(self.mesh.points[node_inds].reshape(-1, self.dim))
+            values = jax.vmap(value_fns[i])(self.mesh.points[node_inds].reshape(-1, self.dim)).reshape(-1)
             node_inds_list.append(node_inds)
             vec_inds_list.append(vec_inds)
             vals_list.append(values)

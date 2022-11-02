@@ -5,8 +5,7 @@ import meshio
 
 
 def get_meshio_cell_type(ele_type, lag_order):
-    """
-    Reference:
+    """Reference:
     https://github.com/nschloe/meshio/blob/9dc6b0b05c9606cad73ef11b8b7785dd9b9ea325/src/meshio/xdmf/common.py#L36
     """
     if ele_type == 'tetrahedron' and lag_order == 1:

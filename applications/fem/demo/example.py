@@ -2,7 +2,7 @@ import jax
 import jax.numpy as np
 import os
 from jax_am.fem.jax_fem import Mesh, LinearElasticity
-from jax_am.fem.solver import solver
+from jax_am.fem.solver import solver, solver_lm
 from jax_am.fem.generate_mesh import box_mesh
 from jax_am.fem.utils import save_sol
 
@@ -14,8 +14,8 @@ def problem():
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
     problem_name = f'linear_elasticity'
-    # meshio_mesh = box_mesh(100, 100, 100, 1., 1., 1., data_dir)
-    meshio_mesh = box_mesh(300, 100, 100, 1., 1., 1., data_dir)
+    meshio_mesh = box_mesh(100, 100, 100, 1., 1., 1., data_dir)
+    # meshio_mesh = box_mesh(300, 100, 100, 1., 1., 1., data_dir)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def left(point):
@@ -36,7 +36,7 @@ def problem():
                           dirichlet_val, zero_dirichlet_val, zero_dirichlet_val]]
  
     problem = LinearElasticity(problem_name, mesh, dirichlet_bc_info=dirichlet_bc_info)
-    sol = solver(problem, linear=True, precond=True)
+    sol = solver_lm(problem, linear=True, precond=True)
     vtk_path = os.path.join(data_dir, f'vtk/{problem_name}/u.vtu')
     save_sol(problem, sol, vtk_path)
 

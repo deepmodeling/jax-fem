@@ -20,7 +20,8 @@ onp.set_printoptions(threshold=sys.maxsize, linewidth=1000, suppress=True, preci
 
 
 class FEM:
-    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, 
+        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
         """
         Attributes
         ----------
@@ -63,6 +64,10 @@ class FEM:
 
         # Note: Assume Dirichlet B.C. must be provided. This is probably true for all the problems we will encounter.
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(dirichlet_bc_info)
+        self.periodic_bc_info = periodic_bc_info
+        if periodic_bc_info is not None:
+            self.p_node_inds_list_A, self.p_node_inds_list_B, self.p_vec_inds_list = \
+            self.periodic_boundary_conditions(periodic_bc_info)
 
         end = time.time()
         compute_time = end - start
@@ -211,6 +216,37 @@ class FEM:
         # TODO: use getter and setter!
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(dirichlet_bc_info)
 
+    def periodic_boundary_conditions(self, periodic_bc_info):
+        """TODO: comment
+        """
+        location_fns_A, location_fns_B, mappings, vecs = periodic_bc_info
+        p_node_inds_list_A = []
+        p_node_inds_list_B = []
+        p_vec_inds_list = []
+        for i in range(len(location_fns_A)):
+            node_inds_A = onp.argwhere(jax.vmap(location_fns_A[i])(self.mesh.points)).reshape(-1)
+            node_inds_B = onp.argwhere(jax.vmap(location_fns_B[i])(self.mesh.points)).reshape(-1)
+            points_set_A = self.mesh.points[node_inds_A]
+            points_set_B = self.mesh.points[node_inds_B]
+
+            EPS = 1e-5
+            node_inds_B_ordered = []
+            for node_ind in node_inds_A:
+                point_A = self.mesh.points[node_ind]
+                dist = onp.linalg.norm(mappings[i](point_A)[None, :] - points_set_B, axis=-1)
+                node_ind_B_ordered = node_inds_B[onp.argwhere(dist < EPS)].reshape(-1)
+                node_inds_B_ordered.append(node_ind_B_ordered)
+
+            node_inds_B_ordered = onp.array(node_inds_B_ordered).reshape(-1)
+            vec_inds = onp.ones_like(node_inds_A, dtype=onp.int32)*vecs[i]
+
+            p_node_inds_list_A.append(node_inds_A)
+            p_node_inds_list_B.append(node_inds_B_ordered)
+            p_vec_inds_list.append(vec_inds)
+            assert len(node_inds_A) == len(node_inds_B_ordered)
+
+        return p_node_inds_list_A, p_node_inds_list_B, p_vec_inds_list
+
     def Neuman_boundary_conditions_inds(self, location_fns):
         """Given location functions, compute which faces satisfy the condition. 
 
@@ -279,8 +315,9 @@ class Laplace(FEM):
         ...
     """
     # TODO: Better way to write this __ini__ thing?
-    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info) 
+    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, 
+        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info) 
         # Some pre-computations   
         self.body_force = self.compute_body_force(source_info)
         self.neumann = self.compute_Neumann_integral(neumann_bc_info)
@@ -400,20 +437,14 @@ class Laplace(FEM):
         I = onp.repeat(inds[:, :, None], self.num_nodes*self.vec, axis=2).reshape(-1)
         J = onp.repeat(inds[:, None, :], self.num_nodes*self.vec, axis=1).reshape(-1)
         # print(f"type(V) = {type(V)}, type(I) = {type(I)}, type(J) = {type(J)}")
-        print(f"Creating sparse matrix with scipy...")
-        self.A_sp_scipy = scipy.sparse.csc_array((V, (I, J)), shape=(self.num_total_dofs, self.num_total_dofs))
-        print(f"Creating sparse matrix from scipy using JAX BCOO...")
-        self.A_sp = BCOO.from_scipy_sparse(self.A_sp_scipy).sort_indices()
-        print(f"self.A_sp.data.shape = {self.A_sp.data.shape}")
-        print(f"Global sparse matrix takes about {self.A_sp.data.shape[0]*8*3/2**30} G memory to store.")
+        self.I = I
+        self.J = J
+        self.V = V
 
     def newton_update(self, sol):
         """Child class should override if internal variables exist
         """
         return self.newton_vars(sol)
-
-    def compute_linearized_residual(self, dofs):
-        return self.A_sp @ dofs
 
     def compute_body_force(self, source_info):
         """In the weak form, we have (body_force, v) * dx, and this function computes this.
@@ -504,20 +535,22 @@ class Laplace(FEM):
 
 
 class LinearPoisson(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, 
+        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
         self.name = name
         self.vec = 1
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info) 
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info) 
 
     def get_tensor_map(self):
         return lambda x: x
  
 
 class LinearElasticity(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, 
+        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info) 
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info) 
     
     def get_tensor_map(self):
         def stress(u_grad):
@@ -566,10 +599,11 @@ class LinearElasticity(Laplace):
 
 
 class HyperElasticity(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, 
+        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info)
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info)
 
     def get_tensor_map(self):
         def psi(F):
@@ -617,10 +651,11 @@ class HyperElasticity(Laplace):
 
 
 class Plasticity(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, 
+        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info)
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info)
         self.epsilons_old = onp.zeros((len(self.cells), self.num_quads, self.vec, self.dim))
         self.sigmas_old = onp.zeros_like(self.epsilons_old)
 

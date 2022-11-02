@@ -24,9 +24,10 @@ def gmsh_mesh(data_dir, lag_order):
     gmsh.model.add("t1")
     lc = 1e-2
     gmsh.model.geo.addPoint(0, 0, 0, lc, 1)
-    gmsh.model.geo.addPoint(.1, 0, 0, lc, 2)
-    gmsh.model.geo.addPoint(.1, .3, 0, lc, 3)
-    p4 = gmsh.model.geo.addPoint(0, .3, 0, lc)
+    gmsh.model.geo.addPoint(1., 0, 0, lc, 2)
+    gmsh.model.geo.addPoint(1., 1., 0, lc, 3)
+    p4 = gmsh.model.geo.addPoint(0, 1., 0, lc)
+
     gmsh.model.geo.addLine(1, 2, 1)
     gmsh.model.geo.addLine(3, 2, 2)
     gmsh.model.geo.addLine(3, p4, 3)
@@ -45,44 +46,60 @@ def gmsh_mesh(data_dir, lag_order):
 
 
 def problem():
+    """
+
+    Reference:
+    https://fenicsproject.org/olddocs/dolfin/1.4.0/python/demo/documented/periodic/python/documentation.html
+    """
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
     ele_type = 'triangle'
     lag_order = 2
     msh_file_path = gmsh_mesh(data_dir, lag_order)
     cell_type = get_meshio_cell_type(ele_type, lag_order)
     meshio_mesh = meshio.read(msh_file_path)
+    # TODO:
     mesh = Mesh(meshio_mesh.points[:, :2], meshio_mesh.cells_dict[cell_type])
 
-    def body_force(point):
-        val = -np.trace(np.squeeze(jax.hessian(true_u_fn)(point)))
+    def body_force(x):
+        dx = x[0] - 0.5
+        dy = x[1] - 0.5
+        val = x[0]*np.sin(5.0*np.pi*x[1]) + 1.0*np.exp(-(dx*dx + dy*dy)/0.02)
         return np.array([val])
 
     def left(point):
         return np.isclose(point[0], 0., atol=1e-5)
 
     def right(point):
-        return np.isclose(point[0], 0.1, atol=1e-5)
+        return np.isclose(point[0], 1., atol=1e-5)
 
     def bottom(point):
         return np.isclose(point[1], 0., atol=1e-5)
 
     def top(point):
-        return np.isclose(point[1], 0.3, atol=1e-5)
+        return np.isclose(point[1], 1., atol=1e-5)
 
-    def dirichlet_val_left(point):
+    def dirichlet_val(point):
         return 0.
 
-    def dirichlet_val_right(point):
-        return 1.
+    def mapping_x(point_A):
+        point_B = point_A + np.array([1., 0])
+        return point_B
 
-    dirichlet_bc_info = [[left, right], 
+    location_fns_A = [left] 
+    location_fns_B = [right] 
+    mappings = [mapping_x]
+    vecs = [0]
+    periodic_bc_info = [location_fns_A, location_fns_B, mappings, vecs]
+
+    dirichlet_bc_info = [[bottom, top], 
                          [0]*2, 
-                         [dirichlet_val_left, dirichlet_val_right]]
+                         [dirichlet_val, dirichlet_val]]
 
-    problem = LinearPoisson('some_name', mesh, ele_type, lag_order, 
-                            dirichlet_bc_info=dirichlet_bc_info)
+    problem = LinearPoisson('problem_name', mesh, ele_type, lag_order, dirichlet_bc_info=dirichlet_bc_info, 
+                            periodic_bc_info=periodic_bc_info, source_info=body_force)
 
-    sol = solver(problem, linear=True, precond=True)
+    sol = solver(problem, linear=True)
+
     vtk_dir = os.path.join(data_dir, 'vtk')
     os.makedirs(vtk_dir, exist_ok=True)
     vtk_file = os.path.join(vtk_dir, f"u.vtu")

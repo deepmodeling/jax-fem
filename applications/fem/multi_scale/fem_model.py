@@ -11,18 +11,17 @@ from applications.fem.multi_scale.utils import tensor_to_flat
 class HyperElasticity(Laplace):
     """Three modes: rve, dns, nn
     """
-    def __init__(self, name, mesh, mode=None, dns_info=None, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None, periodic_bc_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, mode=None, dns_info=None, 
+                 dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, dirichlet_bc_info, neumann_bc_info, source_info)
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info)
         self.mode = mode
         self.dns_info = dns_info
         if self.mode == 'rve':
             self.H_bar = None
             self.physical_quad_points = self.get_physical_quad_points()
             self.E, self.nu = self.compute_moduli()
-            self.periodic_bc_info = periodic_bc_info
-            self.p_node_inds_list_A, self.p_node_inds_list_B, self.p_vec_inds_list = self.periodic_bc_info
         elif self.mode == 'dns':
             self.physical_quad_points = self.get_physical_quad_points()
             self.E, self.nu = self.compute_moduli()
@@ -46,14 +45,13 @@ class HyperElasticity(Laplace):
         stress_map, _ = self.get_maps()
         return stress_map
 
-
     def newton_update(self, sol):
-        if self.mode == 'dns':
+        if self.mode == 'dns' or self.mode == 'rve':
             return self.newton_vars(sol, laplace=[self.E, self.nu])
         elif self.mode == 'nn':
             return self.newton_vars(sol)
         else:
-            raise NotImplementedError(f"newton_update Only support dns or nn.")
+            raise NotImplementedError(f"newton_update Only support rve, dns or nn.")
 
     def get_maps(self):
         if self.mode == 'rve':

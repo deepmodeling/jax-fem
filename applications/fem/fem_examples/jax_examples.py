@@ -124,7 +124,7 @@ def hyperelasticity_cylinder(disps):
     for i, disp in enumerate(disps):
         dirichlet_bc_info[-1][-1] = get_dirichlet_top(disp)
         problem.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
-        sol = solver(problem, initial_guess=sol)
+        sol = solver(problem)
         traction = problem.compute_traction(top, sol)
         tractions.append(traction[2])
     tractions = np.array(tractions)

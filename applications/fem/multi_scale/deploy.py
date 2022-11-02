@@ -88,7 +88,7 @@ def homogenization_problem(case, dns_info=None):
         print(f"\nStep {i} in {len(rel_disps) - 1}, rel_disp = {rel_disp}, problem_name = {problem_name}")
         dirichlet_bc_info[-1][-1] = get_dirichlet_z(rel_disp)
         problem.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
-        sol = solver(problem, initial_guess=sol)
+        sol = solver(problem)
         energy = problem.compute_energy(sol)
         traction = problem.compute_traction(top, sol)
         energies.append(energy)

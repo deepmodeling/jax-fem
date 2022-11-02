@@ -12,10 +12,10 @@ class HyperElasticity(Laplace):
     """Three modes: rve, dns, nn
     """
     def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, mode=None, dns_info=None, 
-                 dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
+                 dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info)
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info)
         self.mode = mode
         self.dns_info = dns_info
         if self.mode == 'rve':

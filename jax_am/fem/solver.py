@@ -480,8 +480,7 @@ def adjoint_method(problem, J_fn, output_sol, linear=False):
         """
         # The following two lines may not be needed
         problem.params = params
-        problem.D = problem.newton_update(dofs.reshape((problem.num_total_nodes, problem.vec)))
-        A_fn = problem.compute_linearized_residual
+        A_fn = get_A_fn(problem)
         A_fn = row_elimination(A_fn, problem)
         def adjoint_linear_fn(adjoint):
             primals, f_vjp = jax.vjp(A_fn, dofs)
@@ -507,9 +506,9 @@ def adjoint_method(problem, J_fn, output_sol, linear=False):
         partial_dJ_dp = jax.grad(J_fn, argnums=1)(dofs, params)
         adjoint_linear_fn = get_vjp_contraint_fn_dofs(params, dofs)
         vjp_linear_fn = get_vjp_contraint_fn_params(params, dofs)
-        # test_jacobi_precond(problem, jacobi_preconditioner(problem, dofs), adjoint_linear_fn)
+        # test_jacobi_precond(problem, jacobi_preconditioner(problem), adjoint_linear_fn)
         problem.newton_update(dofs.reshape((problem.num_total_nodes, problem.vec)))
-        pc = get_jacobi_precond(jacobi_preconditioner(problem, dofs))
+        pc = get_jacobi_precond(jacobi_preconditioner(problem))
         start = time.time()
         adjoint, info = jax.scipy.sparse.linalg.bicgstab(adjoint_linear_fn, partial_dJ_du, x0=None, M=pc, tol=1e-10, atol=1e-10, maxiter=10000)
         end = time.time()

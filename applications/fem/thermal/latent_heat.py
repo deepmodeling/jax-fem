@@ -29,10 +29,10 @@ Ts = 1563
 Tl = 1623
 
 class Thermal(Laplace):
-    def __init__(self, name, mesh, dt, dirichlet_bc_info=[[],[],[]], neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, dt, dirichlet_bc_info=[[],[],[]], periodic_bc_info=None, neumann_bc_info=None, source_info=None):
         self.name = name
         self.vec = 1
-        super().__init__(mesh, dirichlet_bc_info, neumann_bc_info, source_info) 
+        super().__init__(mesh, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info) 
         self.mass_kernel_flag = True
         self.old_sol = None
 

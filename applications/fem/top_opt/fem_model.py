@@ -6,10 +6,11 @@ from jax_am.fem.jax_fem import Laplace
 
 
 class Elasticity(Laplace):
-    def __init__(self, name, mesh, linear_flag, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, linear_flag, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
+        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info)
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info)
         self.neumann_boundary_inds = self.Neuman_boundary_conditions_inds(neumann_bc_info[0])[0]
         self.cell_centroids = onp.mean(onp.take(self.points, self.cells, axis=0), axis=1)
         self.flex_inds = np.arange(len(self.cells))

@@ -107,7 +107,7 @@ def get_face_shape_vals_and_grads(ele_type, lag_order):
     face_normals:ndarray
         (6, 3) = (num_faces, dim)
     face_inds: ndarray
-        (6, 4) = (num_faces, num_face_quads)
+        (6, 4) = (num_faces, num_face_vertices)
     """
     basix_ele, basix_face_ele, gauss_order, re_order = get_elements(ele_type, lag_order)
 

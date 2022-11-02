@@ -5,7 +5,7 @@ A differentiable 2D/3D finite element solver for automatic inverse design and me
 
 ## To-do
 
-1. Cauchy boundary conditions/GAMMA code
+1. Quiet element method
 2. Logging, color prints
 3. Tutorial
 4. Interfacing with linear solvers like PETSc

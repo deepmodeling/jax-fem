@@ -2,7 +2,7 @@ import jax
 import jax.numpy as np
 import os
 from jax_am.fem.jax_fem import Mesh, LinearElasticity
-from jax_am.fem.solver import solver, solver_lm
+from jax_am.fem.solver import solver
 from jax_am.fem.generate_mesh import box_mesh
 from jax_am.fem.utils import save_sol
 
@@ -36,7 +36,7 @@ def problem():
                           dirichlet_val, zero_dirichlet_val, zero_dirichlet_val]]
  
     problem = LinearElasticity(problem_name, mesh, dirichlet_bc_info=dirichlet_bc_info)
-    sol = solver_lm(problem, linear=True, precond=True)
+    sol = solver(problem, linear=True, precond=True)
     vtk_path = os.path.join(data_dir, f'vtk/{problem_name}/u.vtu')
     save_sol(problem, sol, vtk_path)
 

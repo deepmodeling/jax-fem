@@ -20,8 +20,8 @@ onp.set_printoptions(threshold=sys.maxsize, linewidth=1000, suppress=True, preci
 
 
 class FEM:
-    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, 
-        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
+        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
         """
         Attributes
         ----------
@@ -69,6 +69,8 @@ class FEM:
             self.p_node_inds_list_A, self.p_node_inds_list_B, self.p_vec_inds_list = \
             self.periodic_boundary_conditions(periodic_bc_info)
 
+        self.cauchy_bc_info = cauchy_bc_info
+
         end = time.time()
         compute_time = end - start
         print(f"\nDone pre-computations, took {compute_time} [s]")
@@ -93,7 +95,7 @@ class FEM:
         jacobian_dx_deta = onp.sum(physical_coos[:, None, :, :, None] * self.shape_grads_ref[None, :, :, None, :], axis=2, keepdims=True)
         jacobian_det = onp.linalg.det(jacobian_dx_deta)[:, :, 0] # (num_cells, num_quads)
         jacobian_deta_dx = onp.linalg.inv(jacobian_dx_deta)
-        # (1, num_quads, num_nodes, 1, dim) @ (num_cells, num_quads, 1, dim, dim) 
+        # (1, num_quads, num_nodes, 1, dim) @ (num_cells, num_quads, 1, dim, dim)
         # (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, dim)
         shape_grads_physical = (self.shape_grads_ref[None, :, :, None, :] @ jacobian_deta_dx)[:, :, :, 0, :]
         JxW = jacobian_det * self.quad_weights[None, :]
@@ -262,9 +264,8 @@ class FEM:
             ndarray shape: (num_selected_faces, 2)
             boundary_inds_list[k][i, j] returns the index of face j of cell i of surface k
         """
-        # face_inds = get_face_inds()
         cell_points = onp.take(self.points, self.cells, axis=0) # (num_cells, num_nodes, dim)
-        cell_face_points = onp.take(cell_points, self.face_inds, axis=1) # (num_cells, num_faces, num_face_nodes, dim)
+        cell_face_points = onp.take(cell_points, self.face_inds, axis=1) # (num_cells, num_faces, num_face_vertices, dim)
         boundary_inds_list = []
         for i in range(len(location_fns)):
             vmap_location_fn = jax.vmap(location_fns[i])
@@ -315,9 +316,9 @@ class Laplace(FEM):
         ...
     """
     # TODO: Better way to write this __ini__ thing?
-    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, 
-        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info) 
+    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
+        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info) 
         # Some pre-computations   
         self.body_force = self.compute_body_force(source_info)
         self.neumann = self.compute_Neumann_integral(neumann_bc_info)
@@ -350,10 +351,20 @@ class Laplace(FEM):
             # (1, num_nodes, vec) * (num_quads, num_nodes, 1) -> (num_quads, num_nodes, vec) -> (num_quads, vec)
             u = np.sum(cell_sol[None, :, :] * self.shape_vals[:, :, None], axis=1)
             u_physics = jax.vmap(mass_map)(u, *cell_internal_vars) # (num_quads, vec) 
-            # (num_quads, 1, vec) * (num_quads, num_nodes, 1) * (num_quads, None, None) -> (num_nodes, vec)
+            # (num_quads, 1, vec) * (num_quads, num_nodes, 1) * (num_quads, 1, 1) -> (num_nodes, vec)
             val = np.sum(u_physics[:, None, :] * self.shape_vals[:, :, None] * cell_JxW[:, None, None], axis=0)
             return val
         return mass_kernel    
+
+    def get_cauchy_kernel(self, cauchy_map):
+        def cauchy_kernel(cell_sol, face_shape_vals, face_nanson_scale):
+            # (1, num_nodes, vec) * (num_face_quads, num_nodes, 1) -> (num_face_quads, vec) 
+            u = np.sum(cell_sol[None, :, :] * face_shape_vals[:, :, None], axis=1)
+            u_physics = jax.vmap(cauchy_map)(u) # (num_face_quads, vec) 
+            # (num_face_quads, 1, vec) * (num_face_quads, num_nodes, 1) * (num_face_quads, 1, 1) -> (num_nodes, vec)
+            val = np.sum(u_physics[:, None, :] * face_shape_vals[:, :, None] * face_nanson_scale[:, None, None], axis=0)
+            return val
+        return cauchy_kernel
 
     def unpack_kernels_vars(self, **internal_vars):
         if 'mass' in internal_vars.keys():
@@ -368,28 +379,30 @@ class Laplace(FEM):
 
         return [mass_internal_vars, laplace_internal_vars]        
 
-    def get_kernel_fn(self):
-        def kernel(cell_sol, cell_shape_grads, cell_JxW, cell_v_grads_JxW, cell_mass_internal_vars, cell_laplace_internal_vars):
-            if self.mass_kernel_flag:
-                mass_kernel = self.get_mass_kernel(self.get_mass_map())
-                mass_val = mass_kernel(cell_sol, cell_JxW, *cell_mass_internal_vars)
-            else:
-                mass_val = 0.
+    def split_and_compute_cell(self, cells_sol, np_version, jac_flag, **internal_vars):
+        def get_kernel_fn_cell():
+            def kernel(cell_sol, cell_shape_grads, cell_JxW, cell_v_grads_JxW, cell_mass_internal_vars, cell_laplace_internal_vars):
+                if self.mass_kernel_flag:
+                    mass_kernel = self.get_mass_kernel(self.get_mass_map())
+                    mass_val = mass_kernel(cell_sol, cell_JxW, *cell_mass_internal_vars)
+                else:
+                    mass_val = 0.
 
-            if self.laplace_kernel_flag:
-                laplace_kernel = self.get_laplace_kernel(self.get_tensor_map())
-                laplace_val = laplace_kernel(cell_sol, cell_shape_grads, cell_v_grads_JxW, *cell_laplace_internal_vars)
-            else:
-                laplace_val = 0.
-            
-            return laplace_val + mass_val
+                if self.laplace_kernel_flag:
+                    laplace_kernel = self.get_laplace_kernel(self.get_tensor_map())
+                    laplace_val = laplace_kernel(cell_sol, cell_shape_grads, cell_v_grads_JxW, *cell_laplace_internal_vars)
+                else:
+                    laplace_val = 0.
+                
+                return laplace_val + mass_val
 
-        def D_fn(cell_sol, *args):
-            return jax.jacfwd(kernel)(cell_sol, *args)
+            def kernel_jac(cell_sol, *args):
+                return jax.jacfwd(kernel)(cell_sol, *args)
 
-        return kernel, D_fn
+            return kernel, kernel_jac
 
-    def split_and_compute(self, cells_sol, fn, np_version, **internal_vars):
+        kernel, kernel_jac = get_kernel_fn_cell()
+        fn = kernel_jac if jac_flag else kernel
         vmap_fn = jax.jit(jax.vmap(fn))
         kernal_vars = self.unpack_kernels_vars(**internal_vars)
         num_cuts = 20
@@ -412,13 +425,53 @@ class Laplace(FEM):
         values = np_version.vstack(values)
         return values
 
+    def compute_face(self, cells_sol, np_version, jac_flag):
+        def get_kernel_fn_face(cauchy_map): 
+            def kernel(cell_sol, face_shape_vals, face_nanson_scale):
+                cauchy_kernel = self.get_cauchy_kernel(cauchy_map)
+                val = cauchy_kernel(cell_sol, face_shape_vals, face_nanson_scale)
+                return val
+
+            def kernel_jac(cell_sol, *args):
+                return jax.jacfwd(kernel)(cell_sol, *args)
+
+            return kernel, kernel_jac        
+
+        location_fns, value_fns = self.cauchy_bc_info
+        boundary_inds_list = self.Neuman_boundary_conditions_inds(location_fns)
+        values = []
+        selected_cells = []
+        for i, boundary_inds in enumerate(boundary_inds_list):
+            selected_cell_sols = cells_sol[boundary_inds[:, 0]] # (num_selected_faces, num_nodes, vec))
+            selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)
+            _, nanson_scale = self.get_face_shape_grads(boundary_inds) # (num_selected_faces, num_face_quads)
+            kernel, kernel_jac = get_kernel_fn_face(value_fns[i])
+            fn = kernel_jac if jac_flag else kernel
+            vmap_fn = jax.jit(jax.vmap(fn))
+            val = vmap_fn(selected_cell_sols, selected_face_shape_vals, nanson_scale)   
+            values.append(val)
+            selected_cells.append(self.cells[boundary_inds[:, 0]])
+        
+        values = np_version.vstack(values)
+        selected_cells = onp.vstack(selected_cells)
+
+        assert len(values) == len(selected_cells)
+
+        return values, selected_cells
+
     def compute_residual_vars(self, sol, **internal_vars):
-        cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
-        kernel, _ = self.get_kernel_fn()
-        weak_form = self.split_and_compute(cells_sol, kernel, np, **internal_vars) # (num_cells, num_nodes, vec)
-        weak_form = weak_form.reshape(-1, self.vec) # (num_cells*num_nodes, vec)
         res = np.zeros_like(sol)
-        res = res.at[self.cells.reshape(-1)].add(weak_form) - self.body_force - self.neumann
+        cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
+        weak_form = self.split_and_compute_cell(cells_sol, np, False, **internal_vars) # (num_cells, num_nodes, vec)
+        weak_form = weak_form.reshape(-1, self.vec) # (num_cells*num_nodes, vec)
+        res = res.at[self.cells.reshape(-1)].add(weak_form) 
+
+        if self.cauchy_bc_info is not None:
+            values, selected_cells = self.compute_face(cells_sol, np, False)
+            values = values.reshape(-1, self.vec)
+            res = res.at[selected_cells.reshape(-1)].add(values) 
+
+        res = res - self.body_force - self.neumann
         return res 
 
     def compute_residual(self, sol):
@@ -429,17 +482,27 @@ class Laplace(FEM):
     def newton_vars(self, sol, **internal_vars):
         print(f"Update solution, internal variable...")
         cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
-        _, D_fn = self.get_kernel_fn()
-        print(f"Compute D...")
-        D = self.split_and_compute(cells_sol, D_fn, onp, **internal_vars)
-        V = D.reshape(-1)
-        inds = (self.vec * self.cells[:, :, None] + onp.arange(self.vec)[None, None, :]).reshape(self.num_cells, -1)
+        print(f"Compute cell Jacobian...")
+        # (num_cells, num_nodes, vec, num_nodes, vec)
+        cells_jac = self.split_and_compute_cell(cells_sol, onp, True, **internal_vars)
+        V = cells_jac.reshape(-1)
+        inds = (self.vec * self.cells[:, :, None] + onp.arange(self.vec)[None, None, :]).reshape(len(self.cells), -1)
         I = onp.repeat(inds[:, :, None], self.num_nodes*self.vec, axis=2).reshape(-1)
         J = onp.repeat(inds[:, None, :], self.num_nodes*self.vec, axis=1).reshape(-1)
         # print(f"type(V) = {type(V)}, type(I) = {type(I)}, type(J) = {type(J)}")
         self.I = I
         self.J = J
         self.V = V
+
+        if self.cauchy_bc_info is not None:
+            D_face, selected_cells = self.compute_face(cells_sol, onp, True)
+            V_face = D_face.reshape(-1)
+            inds_face = (self.vec * selected_cells[:, :, None] + onp.arange(self.vec)[None, None, :]).reshape(len(selected_cells), -1)
+            I_face = onp.repeat(inds_face[:, :, None], self.num_nodes*self.vec, axis=2).reshape(-1)
+            J_face = onp.repeat(inds_face[:, None, :], self.num_nodes*self.vec, axis=1).reshape(-1)
+            self.I = onp.hstack((self.I, I_face))
+            self.J = onp.hstack((self.J, J_face))
+            self.V = onp.hstack((self.V, V_face))
 
     def newton_update(self, sol):
         """Child class should override if internal variables exist
@@ -535,22 +598,22 @@ class Laplace(FEM):
 
 
 class LinearPoisson(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, 
-        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
+        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
         self.name = name
         self.vec = 1
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info) 
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info) 
 
     def get_tensor_map(self):
         return lambda x: x
  
 
 class LinearElasticity(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, 
-        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
+        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info) 
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info) 
     
     def get_tensor_map(self):
         def stress(u_grad):
@@ -599,11 +662,11 @@ class LinearElasticity(Laplace):
 
 
 class HyperElasticity(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, 
-        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
+        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info)
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info)
 
     def get_tensor_map(self):
         def psi(F):
@@ -651,11 +714,11 @@ class HyperElasticity(Laplace):
 
 
 class Plasticity(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, 
-        dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, source_info=None):
+    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
+        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
         self.name = name
         self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, source_info)
+        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info)
         self.epsilons_old = onp.zeros((len(self.cells), self.num_quads, self.vec, self.dim))
         self.sigmas_old = onp.zeros_like(self.epsilons_old)
 

@@ -3,12 +3,10 @@ import jax
 import jax.numpy as np
 from jax.experimental.sparse import BCOO
 import scipy
-import os
 import sys
 import time
-import meshio
-import matplotlib.pyplot as plt
-from functools import partial
+from dataclasses import dataclass
+from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
 from jax_am.fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grads
 
@@ -19,32 +17,54 @@ onp.random.seed(0)
 onp.set_printoptions(threshold=sys.maxsize, linewidth=1000, suppress=True, precision=5)
 
 
+@dataclass
 class FEM:
-    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
-        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
-        """
-        Attributes
-        ----------
-        self.mesh: Mesh object
-            The mesh object stores points (coordinates) and cells (connectivity).
-        self.points: ndarray
-            shape: (num_total_nodes, dim) 
-            The physical mesh nodal coordinates.
-        self.dim: int
-            The dimension of the problem.
-        self.num_quads: int
-            Number of quadrature points for each hex element.
-        self.num_faces: int
-            Number of faces for each hex element.
-        self.num_cells: int
-            Number of hex elements.
-        self.num_total_nodes: int
-            Number of total nodes.
-        """
-        self.mesh = mesh
+    """
+    Solving second-order elliptic PDE problems whose FEM weak form is 
+    (f(u_grad), v_grad) * dx - (traction, v) * ds - (body_force, v) * dx = 0,
+    where u and v are trial and test functions, respectively, and f is a general function.
+    This covers
+        - Poisson's problem
+        - Linear elasticity
+        - Hyper-elasticity
+        - Plasticity
+        ...
+
+    TODO: Attributes comments need to be updated
+
+    Attributes
+    ----------
+    self.mesh: Mesh object
+        The mesh object stores points (coordinates) and cells (connectivity).
+    self.points: ndarray
+        shape: (num_total_nodes, dim) 
+        The physical mesh nodal coordinates.
+    self.dim: int
+        The dimension of the problem.
+    self.num_quads: int
+        Number of quadrature points for each hex element.
+    self.num_faces: int
+        Number of faces for each hex element.
+    self.num_cells: int
+        Number of hex elements.
+    self.num_total_nodes: int
+        Number of total nodes.
+    """
+    mesh: Any
+    vec: int
+    dim: int
+    ele_type: str = 'hexahedron'
+    lag_order: int = 1
+    dirichlet_bc_info: Any = None 
+    periodic_bc_info: Any = None
+    neumann_bc_info: Any = None
+    cauchy_bc_info: Any = None
+    source_info: Any = None
+    additional_info: Any = ()
+
+    def __post_init__(self):
         self.points = self.mesh.points
         self.cells = self.mesh.cells
-        self.dim = len(self.points[0])
         self.num_cells = len(self.cells)
         self.num_total_nodes = len(self.mesh.points)
         self.num_total_dofs = self.num_total_nodes*self.vec
@@ -52,9 +72,9 @@ class FEM:
         start = time.time()
 
         # Some re-used quantities can be pre-computed and stored for better performance.
-        self.shape_vals, self.shape_grads_ref, self.quad_weights = get_shape_vals_and_grads(ele_type, lag_order)
+        self.shape_vals, self.shape_grads_ref, self.quad_weights = get_shape_vals_and_grads(self.ele_type, self.lag_order)
         self.face_shape_vals, self.face_shape_grads_ref, self.face_quad_weights, self.face_normals, self.face_inds \
-        = get_face_shape_vals_and_grads(ele_type, lag_order)
+        = get_face_shape_vals_and_grads(self.ele_type, self.lag_order)
 
         self.num_quads = self.shape_vals.shape[0]
         self.num_nodes = self.shape_vals.shape[1]
@@ -63,18 +83,32 @@ class FEM:
         self.shape_grads, self.JxW = self.get_shape_grads()
 
         # Note: Assume Dirichlet B.C. must be provided. This is probably true for all the problems we will encounter.
-        self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(dirichlet_bc_info)
-        self.periodic_bc_info = periodic_bc_info
-        if periodic_bc_info is not None:
+        self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(self.dirichlet_bc_info)
+        if self.periodic_bc_info is not None:
             self.p_node_inds_list_A, self.p_node_inds_list_B, self.p_vec_inds_list = \
-            self.periodic_boundary_conditions(periodic_bc_info)
-
-        self.cauchy_bc_info = cauchy_bc_info
+            self.periodic_boundary_conditions(self.periodic_bc_info)
 
         end = time.time()
         compute_time = end - start
         print(f"\nDone pre-computations, took {compute_time} [s]")
         print(f"Solving a problem with {len(self.cells)} cells, {self.num_total_nodes}x{self.vec} = {self.num_total_dofs} dofs.")
+
+        self.body_force = self.compute_body_force(self.source_info)
+
+        if self.neumann_bc_info is not None:
+            self.neumann_location_fns, self.neumann_value_fns = self.neumann_bc_info
+            self.neumann_boundary_inds_list = self.Neuman_boundary_conditions_inds(self.neumann_location_fns)
+            
+        self.neumann = self.compute_Neumann_integral()
+        # (num_cells, num_quads, num_nodes, 1, dim)
+        self.v_grads_JxW = self.shape_grads[:, :, :, None, :] * self.JxW[:, :, None, None, None]
+
+        self.custom_init(*self.additional_info)
+
+    def custom_init(self):
+        """Child class should override if more things need to be done in initialization
+        """
+        pass
 
     def get_shape_grads(self):
         """Pre-compute shape function gradient value
@@ -249,7 +283,7 @@ class FEM:
 
         return p_node_inds_list_A, p_node_inds_list_B, p_vec_inds_list
 
-    def Neuman_boundary_conditions_inds(self, location_fns):
+    def Neuman_boundary_conditions_inds(self, location_fns, additional_filter=None):
         """Given location functions, compute which faces satisfy the condition. 
 
         Parameters
@@ -264,26 +298,54 @@ class FEM:
             ndarray shape: (num_selected_faces, 2)
             boundary_inds_list[k][i, j] returns the index of face j of cell i of surface k
         """
+
         cell_points = onp.take(self.points, self.cells, axis=0) # (num_cells, num_nodes, dim)
         cell_face_points = onp.take(cell_points, self.face_inds, axis=1) # (num_cells, num_faces, num_face_vertices, dim)
+
+        # A filter based on hash table to select external faces 
+        print(f"Filter external faces...")
+        cells_face = self.mesh.cells[:, self.face_inds]
+        cells_face_sorted = onp.sort(cells_face)
+        hash_map = {}
+        inner_faces = []
+        all_faces = []
+        for cell_id in range(len(cells_face)):
+            for face_id in range(len(cells_face[cell_id])):
+                key = tuple(cells_face[cell_id, face_id].tolist())
+                if key in hash_map.keys():
+                    inner_faces.append(hash_map[key])
+                    inner_faces.append((cell_id, face_id))
+                else:
+                    hash_map[key] = (cell_id, face_id)
+                all_faces.append((cell_id, face_id))
+        external_faces = onp.array(list((set(all_faces) - set(inner_faces))))
+
+        # (num_external_faces, num_face_vertices, dim)
+        cell_face_points = cell_face_points[external_faces[:, 0], external_faces[:, 1]]
         boundary_inds_list = []
         for i in range(len(location_fns)):
             vmap_location_fn = jax.vmap(location_fns[i])
             def on_boundary(cell_points):
                 boundary_flag = vmap_location_fn(cell_points)
                 return onp.all(boundary_flag)
-            vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
-            boundary_flags = vvmap_on_boundary(cell_face_points)
-            boundary_inds = onp.argwhere(boundary_flags) # (num_selected_faces, 2)
+            vmap_on_boundary = jax.vmap(on_boundary)
+            boundary_flags = vmap_on_boundary(cell_face_points)
+            inds_flags = onp.argwhere(boundary_flags).reshape(-1)
+            boundary_inds = external_faces[inds_flags] # (num_selected_faces, 2)
             boundary_inds_list.append(boundary_inds)
+
+        if hasattr(self, 'additional_neumann_filter'):
+            boundary_inds_list = self.additional_neumann_filter(boundary_inds_list)
+
         return boundary_inds_list
 
-    def Neuman_boundary_conditions_vals(self, value_fns, boundary_inds_list):
+    def Neuman_boundary_conditions_vals(self, *internal_vars):
         """Compute traction values on the face quadrature points.
+        TODO: comments not correct.
 
         Parameters
         ----------
-        value_fns: list[callable]
+        neumann_value_fns: list[callable]
             callable: a function that inputs a point (ndarray) and returns the value
                       e.g., lambda x: x[0]**2
         boundary_inds_list: list[ndarray]
@@ -295,43 +357,15 @@ class FEM:
             ndarray shape: (num_selected_faces, num_face_quads, vec)
         """
         traction_list = []
-        for i in range(len(value_fns)):
-            boundary_inds = boundary_inds_list[i]
+        for i in range(len(self.neumann_value_fns)):
+            boundary_inds = self.neumann_boundary_inds_list[i]
             # (num_cells, num_faces, num_face_quads, dim) -> (num_selected_faces, num_face_quads, dim)
             subset_quad_points = self.get_physical_surface_quad_points(boundary_inds)
-            traction = jax.vmap(jax.vmap(value_fns[i]))(subset_quad_points) # (num_selected_faces, num_face_quads, vec)
+            int_vars = [x[i] for x in internal_vars]
+            traction = jax.vmap(jax.vmap(self.neumann_value_fns[i]))(subset_quad_points, *int_vars) # (num_selected_faces, num_face_quads, vec)
             assert len(traction.shape) == 3
             traction_list.append(traction)
         return traction_list
-
-
-class Laplace(FEM):
-    """Solving problems whose weak form is (f(u_grad), v_grad) * dx - (traction, v) * ds - (body_force, v) * dx = 0,
-    where u and v are trial and test functions, respectively, and f is a general function.
-    This covers
-        - Poisson's problem
-        - Linear elasticity
-        - Hyper-elasticity
-        - Plasticity
-        ...
-    """
-    # TODO: Better way to write this __ini__ thing?
-    def __init__(self, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
-        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info) 
-        # Some pre-computations   
-        self.body_force = self.compute_body_force(source_info)
-        self.neumann = self.compute_Neumann_integral(neumann_bc_info)
-        # (num_cells, num_quads, num_nodes, 1, dim)
-        self.v_grads_JxW = self.shape_grads[:, :, :, None, :] * self.JxW[:, :, None, None, None]
-        self.mass_kernel_flag = False
-        self.laplace_kernel_flag = True
-
-    def get_tensor_map(self):
-        raise NotImplementedError(f"Child class must override this function.")
-
-    def get_mass_map(self):
-        raise NotImplementedError(f"Child class must override this function.")
 
     def get_laplace_kernel(self, tensor_map):
         def laplace_kernel(cell_sol, cell_shape_grads, cell_v_grads_JxW, *cell_internal_vars):
@@ -382,13 +416,13 @@ class Laplace(FEM):
     def split_and_compute_cell(self, cells_sol, np_version, jac_flag, **internal_vars):
         def get_kernel_fn_cell():
             def kernel(cell_sol, cell_shape_grads, cell_JxW, cell_v_grads_JxW, cell_mass_internal_vars, cell_laplace_internal_vars):
-                if self.mass_kernel_flag:
+                if hasattr(self, 'get_mass_map'):
                     mass_kernel = self.get_mass_kernel(self.get_mass_map())
                     mass_val = mass_kernel(cell_sol, cell_JxW, *cell_mass_internal_vars)
                 else:
                     mass_val = 0.
 
-                if self.laplace_kernel_flag:
+                if hasattr(self, 'get_tensor_map'):
                     laplace_kernel = self.get_laplace_kernel(self.get_tensor_map())
                     laplace_val = laplace_kernel(cell_sol, cell_shape_grads, cell_v_grads_JxW, *cell_laplace_internal_vars)
                 else:
@@ -437,6 +471,7 @@ class Laplace(FEM):
 
             return kernel, kernel_jac        
 
+        # TODO: Better to move the following to __init__ function
         location_fns, value_fns = self.cauchy_bc_info
         boundary_inds_list = self.Neuman_boundary_conditions_inds(location_fns)
         values = []
@@ -535,7 +570,13 @@ class Laplace(FEM):
             rhs = rhs.at[self.cells.reshape(-1)].add(rhs_vals) 
         return rhs
 
-    def compute_Neumann_integral(self, neumann_bc_info):
+    def compute_Neumann_integral(self):
+        # TODO: not necessarily override
+        """Child class should override if internal variables exist
+        """
+        return self.compute_Neumann_integral_vars()
+
+    def compute_Neumann_integral_vars(self, *internal_vars):
         """In the weak form, we have the Neumann integral: (traction, v) * ds, and this function computes this.
 
         Parameters
@@ -550,12 +591,11 @@ class Laplace(FEM):
             (num_total_nodes, vec)
         """
         integral = np.zeros((self.num_total_nodes, self.vec))
-        if neumann_bc_info is not None:
-            location_fns, value_fns = neumann_bc_info
+        if self.neumann_bc_info is not None:
+            # location_fns, value_fns = self.neumann_bc_info
             integral = np.zeros((self.num_total_nodes, self.vec))
-            boundary_inds_list = self.Neuman_boundary_conditions_inds(location_fns)
-            traction_list = self.Neuman_boundary_conditions_vals(value_fns, boundary_inds_list)
-            for i, boundary_inds in enumerate(boundary_inds_list):
+            traction_list = self.Neuman_boundary_conditions_vals(*internal_vars)
+            for i, boundary_inds in enumerate(self.neumann_boundary_inds_list):
                 traction = traction_list[i]
                 _, nanson_scale = self.get_face_shape_grads(boundary_inds) # (num_selected_faces, num_face_quads)
                 # (num_faces, num_face_quads, num_nodes) ->  (num_selected_faces, num_face_quads, num_nodes)
@@ -596,208 +636,3 @@ class Laplace(FEM):
         int_val = np.sum(traction * nanson_scale[:, :, None], axis=(0, 1))
         return int_val
 
-
-class LinearPoisson(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
-        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
-        self.name = name
-        self.vec = 1
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info) 
-
-    def get_tensor_map(self):
-        return lambda x: x
- 
-
-class LinearElasticity(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
-        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
-        self.name = name
-        self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info) 
-    
-    def get_tensor_map(self):
-        def stress(u_grad):
-            E = 70e3
-            nu = 0.3
-            mu = E/(2.*(1. + nu))
-            lmbda = E*nu/((1+nu)*(1-2*nu))
-            epsilon = 0.5*(u_grad + u_grad.T)
-            sigma = lmbda*np.trace(epsilon)*np.eye(self.dim) + 2*mu*epsilon
-            return sigma
-        return stress
-
-    def compute_surface_area(self, location_fn, sol):
-        """For post-processing only
-        """
-        def unity_fn(u_grads):
-            unity = np.ones_like(u_grads)[:, :, :, 0]
-            return unity
-        unity_integral_val = self.surface_integral(location_fn, unity_fn, sol)
-        return unity_integral_val
-
-    def compute_traction(self, location_fn, sol):
-        """For post-processing only
-        TODO: duplicated code
-        """
-        stress = self.get_tensor_map()
-        vmap_stress = jax.vmap(stress)
-        def traction_fn(u_grads):
-            """
-            Returns
-            ------- 
-            traction: ndarray
-                (num_selected_faces, num_face_quads, vec)
-            """
-            # (num_selected_faces, num_face_quads, vec, dim) -> (num_selected_faces*num_face_quads, vec, dim)
-            u_grads_reshape = u_grads.reshape(-1, self.vec, self.dim)
-            sigmas = vmap_stress(u_grads_reshape).reshape(u_grads.shape)
-            # TODO: a more general normals with shape (num_selected_faces, num_face_quads, dim, 1) should be supplied
-            # (num_selected_faces, num_face_quads, vec, dim) @ (1, 1, dim, 1) -> (num_selected_faces, num_face_quads, vec, 1)
-            normals = np.array([0., 0., 1.]).reshape((self.dim, 1))
-            traction = (sigmas @ normals[None, None, :, :])[:, :, :, 0]
-            return traction
-
-        traction_integral_val = self.surface_integral(location_fn, traction_fn, sol)
-        return traction_integral_val
-
-
-class HyperElasticity(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
-        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
-        self.name = name
-        self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info)
-
-    def get_tensor_map(self):
-        def psi(F):
-            E = 1e3
-            nu = 0.3
-            mu = E/(2.*(1. + nu))
-            kappa = E/(3.*(1. - 2.*nu))
-            J = np.linalg.det(F)
-            Jinv = J**(-2./3.)
-            I1 = np.trace(F.T @ F)
-            energy = (mu/2.)*(Jinv*I1 - 3.) + (kappa/2.) * (J - 1.)**2.
-            return energy
-        P_fn = jax.grad(psi)
-
-        def first_PK_stress(u_grad):
-            I = np.eye(self.dim)
-            F = u_grad + I
-            P = P_fn(F)
-            return P
-        return first_PK_stress
-
-    def compute_traction(self, location_fn, sol):
-        """For post-processing only
-        """
-        first_PK_stress = self.get_tensor_map()
-        vmap_stress = jax.vmap(first_PK_stress)
-        def traction_fn(u_grads):
-            """
-            Returns
-            ------- 
-            traction: ndarray
-                (num_selected_faces, num_face_quads, vec)
-            """
-            # (num_selected_faces, num_face_quads, vec, dim) -> (num_selected_faces*num_face_quads, vec, dim)
-            u_grads_reshape = u_grads.reshape(-1, self.vec, self.dim)
-            sigmas = vmap_stress(u_grads_reshape).reshape(u_grads.shape)
-            # TODO: a more general normals with shape (num_selected_faces, num_face_quads, dim, 1) should be supplied
-            # (num_selected_faces, num_face_quads, vec, dim) @ (1, 1, dim, 1) -> (num_selected_faces, num_face_quads, vec, 1)
-            normals = np.array([0., 0., 1.]).reshape((self.dim, 1))
-            traction = (sigmas @ normals[None, None, :, :])[:, :, :, 0]
-            return traction
-
-        traction_integral_val = self.surface_integral(location_fn, traction_fn, sol)
-        return traction_integral_val
-
-
-class Plasticity(Laplace):
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, dirichlet_bc_info=None, 
-        periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
-        self.name = name
-        self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info)
-        self.epsilons_old = onp.zeros((len(self.cells), self.num_quads, self.vec, self.dim))
-        self.sigmas_old = onp.zeros_like(self.epsilons_old)
-
-    def get_tensor_map(self):
-        _, stress_return_map = self.get_maps()
-        return stress_return_map
-
-    def newton_update(self, sol):
-        return self.newton_vars(sol, laplace=[self.sigmas_old, self.epsilons_old])
-
-    def compute_residual(self, sol):
-        return self.compute_residual_vars(sol, laplace=[self.sigmas_old, self.epsilons_old])
-
-    def get_maps(self):
-        EPS = 1e-10
-        # TODO
-        def safe_sqrt(x):  
-            safe_x = np.where(x > 0., x, EPS)
-            return np.sqrt(safe_x)
-
-        def strain(u_grad):
-            epsilon = 0.5*(u_grad + u_grad.T)
-            return epsilon
-
-        def stress(epsilon):
-            E = 70e3
-            nu = 0.3
-            mu = E/(2.*(1. + nu))
-            lmbda = E*nu/((1+nu)*(1-2*nu))
-            sigma = lmbda*np.trace(epsilon)*np.eye(self.dim) + 2*mu*epsilon
-            return sigma
-
-        def stress_return_map(u_grad, sigma_old, epsilon_old):
-            sig0 = 250.
-            epsilon_crt = strain(u_grad)
-            epsilon_inc = epsilon_crt - epsilon_old
-            sigma_trial = stress(epsilon_inc) + sigma_old
-
-            s_dev = sigma_trial - 1./self.dim*np.trace(sigma_trial)*np.eye(self.dim)
-
-            # s_norm = np.sqrt(3./2.*np.sum(s_dev*s_dev))
-            s_norm = safe_sqrt(3./2.*np.sum(s_dev*s_dev))
-
-            f_yield = s_norm - sig0
-            f_yield_plus = np.where(f_yield > 0., f_yield, 0.)
-            # TODO
-            sigma = sigma_trial - f_yield_plus*s_dev/(s_norm + EPS)
-            return sigma
-
-        return strain, stress_return_map
-
-    def stress_strain_fns(self):
-        strain, stress_return_map = self.get_maps()
-        vmap_strain = jax.vmap(jax.vmap(strain))
-        vmap_stress_return_map = jax.vmap(jax.vmap(stress_return_map))
-        return vmap_strain, vmap_stress_return_map
-
-    def update_stress_strain(self, sol):
-        # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
-        u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
-        u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim)
-        vmap_strain, vmap_stress_rm = self.stress_strain_fns()
-        self.sigmas_old = vmap_stress_rm(u_grads, self.sigmas_old, self.epsilons_old)
-        self.epsilons_old = vmap_strain(u_grads)
-
-    def compute_avg_stress(self):
-        """For post-processing only
-        """
-        # num_cells*num_quads, vec, dim) * (num_cells*num_quads, 1, 1)
-        sigma = np.sum(self.sigmas_old.reshape(-1, self.vec, self.dim) * self.JxW.reshape(-1)[:, None, None], 0)
-        vol = np.sum(self.JxW)
-        avg_sigma = sigma/vol
-        return avg_sigma
-
-
-class Mesh():
-    """A custom mesh manager might be better than just use third-party packages like meshio?
-    """
-    def __init__(self, points, cells):
-        # TODO: Assert that cells must have correct orders 
-        self.points = points
-        self.cells = cells

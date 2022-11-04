@@ -7,10 +7,10 @@ import os
 import glob
 import scipy.optimize as opt
 
-from jax_am.fem.jax_fem import Mesh, Laplace
+from jax_am.fem.core import FEM
 from jax_am.fem.solver import solver, adjoint_method
 from jax_am.fem.utils import modify_vtu_file, save_sol
-from jax_am.fem.generate_mesh import box_mesh
+from jax_am.fem.generate_mesh import Mesh, box_mesh
 
 onp.random.seed(0)
 
@@ -29,12 +29,9 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
-class LinearPoisson(Laplace):
-    def __init__(self, name, mesh, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):
+class LinearPoisson(FEM):
+    def custom_init(self, name):
         self.name = name
-        self.vec = 1
-        self.params = None
-        super().__init__(mesh, dirichlet_bc_info, neumann_bc_info, source_info) 
 
     def get_tensor_map(self):
         return lambda x: x
@@ -126,10 +123,12 @@ def param_id():
                          [0]*6, 
                          [zero_dirichlet_val]*6]
 
-    problem_fwd = LinearPoisson(f"forward", jax_mesh, dirichlet_bc_info=dirichlet_bc_info, source_info=body_force)
+    problem_fwd_name = "forward"                 
+    problem_fwd = LinearPoisson(jax_mesh, vec=1, dim=3, dirichlet_bc_info=dirichlet_bc_info, 
+        source_info=body_force, additional_info=(problem_fwd_name,))
     true_sol = solver(problem_fwd, linear=True)
     true_body_force = jax.vmap(body_force)(problem_fwd.points)
-    vtu_path = os.path.join(data_dir, f"vtk/{problem_fwd.name}/u.vtu")
+    vtu_path = os.path.join(data_dir, f"vtk/{problem_fwd_name}/u.vtu")
     save_sol(problem_fwd, true_sol, vtu_path, point_infos=[('source', true_body_force)])
     print(f"True force L2 integral = {problem_fwd.compute_L2(true_body_force)}")
     num_obs_pts = 250
@@ -137,11 +136,12 @@ def param_id():
     observed_points = jax_mesh.points[observed_inds]
     cells = [[i%num_obs_pts, (i + 1)%num_obs_pts, (i + 2)%num_obs_pts] for i in range(num_obs_pts)]
     mesh = meshio.Mesh(observed_points, [("triangle", cells)])
-    mesh.write(os.path.join(data_dir, f"vtk/{problem_fwd.name}/points.vtu"))
+    mesh.write(os.path.join(data_dir, f"vtk/{problem_fwd_name}/points.vtu"))
     true_vals = true_sol[observed_inds]
 
-    problem_inv = LinearPoisson(f"inverse", jax_mesh, dirichlet_bc_info=dirichlet_bc_info)
-    files = glob.glob(os.path.join(data_dir, f'vtk/{problem_inv.name}/*'))
+    problem_inv_name = "inverse"
+    problem_inv = LinearPoisson(jax_mesh, vec=1, dim=3, dirichlet_bc_info=dirichlet_bc_info, additional_info=(problem_inv_name,))
+    files = glob.glob(os.path.join(data_dir, f'vtk/{problem_inv_name}/*'))
     for f in files:
         os.remove(f)
 
@@ -161,7 +161,7 @@ def param_id():
     outputs = []
     def output_sol(params, dofs, obj_val):
         sol = dofs.reshape((problem_inv.num_total_nodes, problem_inv.vec))
-        vtu_path = os.path.join(data_dir, f"vtk/{problem_inv.name}/sol_{fn.counter:03d}.vtu")
+        vtu_path = os.path.join(data_dir, f"vtk/{problem_inv_name}/sol_{fn.counter:03d}.vtu")
         save_sol(problem_inv, sol, vtu_path, point_infos=[('source', params)])
         rel_error_sol = (np.sqrt(problem_fwd.compute_L2(true_sol - sol))/
                          np.sqrt(problem_fwd.compute_L2(true_sol)))

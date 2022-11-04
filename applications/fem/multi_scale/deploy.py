@@ -4,8 +4,7 @@ import jax.numpy as np
 import os 
 import matplotlib.pyplot as plt
 
-from jax_am.fem.generate_mesh import box_mesh
-from jax_am.fem.jax_fem import Mesh
+from jax_am.fem.generate_mesh import Mesh, box_mesh
 from jax_am.fem.solver import solver
 from jax_am.fem.utils import save_sol
 
@@ -33,7 +32,7 @@ def debug():
 
 
 def homogenization_problem(case, dns_info=None):
-    data_dir = os.path.join(crt_file_path, 'data')
+    data_dir = os.path.join(os.path.dirname(__file__), 'data')
     problem_name = case if dns_info is None else case + "_" + dns_info
     args.num_units_x = 10
     args.num_units_y = 2
@@ -45,7 +44,7 @@ def homogenization_problem(case, dns_info=None):
         num_hex = args.num_hex
 
     meshio_mesh = box_mesh(num_hex*args.num_units_x, num_hex*args.num_units_y, num_hex*args.num_units_z,
-                           L*args.num_units_x, L*args.num_units_y, L*args.num_units_z)
+                           L*args.num_units_x, L*args.num_units_y, L*args.num_units_z, data_dir)
 
     jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
@@ -72,7 +71,7 @@ def homogenization_problem(case, dns_info=None):
                           dirichlet_zero, dirichlet_zero, get_dirichlet_z(0.)]]
 
  
-    problem = HyperElasticity(case, jax_mesh, mode=case, dns_info=dns_info, dirichlet_bc_info=dirichlet_bc_info)
+    problem = HyperElasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, additional_info=(case, dns_info))
    
     rel_disps = np.linspace(0., 0.1, 11)
     energies = []

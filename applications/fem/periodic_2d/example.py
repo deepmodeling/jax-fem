@@ -3,9 +3,10 @@ import jax.numpy as np
 import os
 import meshio
 import gmsh
-from jax_am.fem.jax_fem import Mesh, LinearPoisson
+
+from jax_am.fem.models import LinearPoisson
 from jax_am.fem.solver import solver
-from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type
+from jax_am.fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
 from jax_am.fem.utils import save_sol, modify_vtu_file
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
@@ -95,7 +96,7 @@ def problem():
                          [0]*2, 
                          [dirichlet_val, dirichlet_val]]
 
-    problem = LinearPoisson('problem_name', mesh, ele_type, lag_order, dirichlet_bc_info=dirichlet_bc_info, 
+    problem = LinearPoisson(mesh, vec=1, dim=2, ele_type=ele_type, lag_order=lag_order, dirichlet_bc_info=dirichlet_bc_info, 
                             periodic_bc_info=periodic_bc_info, source_info=body_force)
 
     sol = solver(problem, linear=True)

@@ -10,8 +10,7 @@ from scipy.optimize import Bounds
 import meshio
 import time
 
-from jax_am.fem.generate_mesh import box_mesh
-from jax_am.fem.jax_fem import Mesh
+from jax_am.fem.generate_mesh import Mesh, box_mesh
 from jax_am.fem.solver import solver, adjoint_method
 from jax_am.fem.utils import save_sol
 
@@ -77,7 +76,7 @@ def human_design():
 
     dirichlet_bc_info = [[fixed_location]*3, [0, 1, 2], [dirichlet_val]*3]
     neumann_bc_info = [[load_location], [neumann_val]]
-    problem = Elasticity(problem_name, jax_mesh, linear_flag, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info)
+    Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(linear_flag,))
 
     sol = solver(problem, linear=linear_flag)
     compliance = problem.compute_compliance(neumann_val, sol)

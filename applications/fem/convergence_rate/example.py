@@ -5,44 +5,12 @@ import meshio
 import gmsh
 import os
 
-from jax_am.fem.jax_fem import Mesh, LinearPoisson
+from jax_am.fem.models import LinearPoisson
 from jax_am.fem.solver import solver
-from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type
+from jax_am.fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
 from jax_am.fem.utils import save_sol
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
-
-
-class LinearPoissonConvergence(LinearPoisson):
-    def __init__(self, mesh, ele_type, lag_order, dirichlet_bc_info=None, neumann_bc_info=None, source_info=None):  
-        super().__init__("some_name", mesh, ele_type, lag_order, dirichlet_bc_info, neumann_bc_info, source_info) 
-
-    def compute_l2_norm_error(self, sol, true_u_fn):
-        cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
-        # (num_cells, 1, num_nodes, vec) * (1, num_quads, num_nodes, 1) -> (num_cells, num_quads, vec)
-        u = np.sum(cells_sol[:, None, :, :] * self.shape_vals[None, :, :, None], axis=2)
-        physical_quad_points = self.get_physical_quad_points() # (num_cells, num_quads, dim) 
-        true_u = jax.vmap(jax.vmap(true_u_fn))(physical_quad_points) # (num_cells, num_quads, vec)
-        # (num_cells, num_quads, vec) * (num_cells, num_quads, 1)
-        l2_error = np.sqrt(np.sum((u - true_u)**2 * self.JxW[:, :, None]))
-        return l2_error
-
-    def compute_h1_norm_error(self, sol, true_u_fn):
-        cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
-        # (num_cells, 1, num_nodes, vec) * (1, num_quads, num_nodes, 1) -> (num_cells, num_quads, vec)
-        u = np.sum(cells_sol[:, None, :, :] * self.shape_vals[None, :, :, None], axis=2)
-        # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim)
-        u_grads = cells_sol[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
-        u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim)
-        physical_quad_points = self.get_physical_quad_points() # (num_cells, num_quads, dim) 
-        true_u = jax.vmap(jax.vmap(true_u_fn))(physical_quad_points) # (num_cells, num_quads, vec)
-        true_u_grads = jax.vmap(jax.vmap(jax.jacrev(true_u_fn)))(physical_quad_points) # (num_cells, num_quads, vec, dim)
-        # (num_cells, num_quads, vec) * (num_cells, num_quads, 1)
-        val_l2_error = np.sqrt(np.sum((u - true_u)**2 * self.JxW[:, :, None]))
-        # (num_cells, num_quads, vec, dim) * (num_cells, num_quads, 1, 1)
-        grad_l2_error = np.sqrt(np.sum((u_grads - true_u_grads)**2 * self.JxW[:, :, None, None]))
-        h1_error = val_l2_error + grad_l2_error
-        return h1_error
 
 
 def problem(ele_type, lag_order, N, data_dir):
@@ -85,8 +53,8 @@ def problem(ele_type, lag_order, N, data_dir):
                          [0]*6, 
                          [dirichlet_val]*6]
  
-    problem = LinearPoissonConvergence(mesh, ele_type, lag_order, 
-                                       dirichlet_bc_info=dirichlet_bc_info, source_info=body_force)
+    problem = LinearPoisson(mesh, vec=1, dim=3, ele_type=ele_type, lag_order=lag_order, 
+                            dirichlet_bc_info=dirichlet_bc_info, source_info=body_force)
 
     sol = solver(problem, linear=True, precond=True)
     vtk_dir = os.path.join(data_dir, 'vtk')

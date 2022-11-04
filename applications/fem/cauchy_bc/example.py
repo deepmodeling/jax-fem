@@ -3,9 +3,10 @@ import jax.numpy as np
 import os
 import meshio
 import gmsh
-from jax_am.fem.jax_fem import Mesh, LinearPoisson
+
+from jax_am.fem.models import LinearPoisson
 from jax_am.fem.solver import solver
-from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type
+from jax_am.fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
 from jax_am.fem.utils import save_sol, modify_vtu_file
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
@@ -52,6 +53,8 @@ def problem():
     https://fenicsproject.org/olddocs/dolfin/1.4.0/python/demo/documented/periodic/python/documentation.html
     """
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
+    vec = 1
+    dim = 2
     ele_type = 'triangle'
     lag_order = 1
     msh_file_path = gmsh_mesh(data_dir, lag_order)
@@ -94,7 +97,7 @@ def problem():
 
     cauchy_bc_info = [[left, right], [cauchy_map]*2]
 
-    problem = LinearPoisson('problem_name', mesh, ele_type, lag_order, dirichlet_bc_info=dirichlet_bc_info, 
+    problem = LinearPoisson(mesh, vec, dim, ele_type, lag_order, dirichlet_bc_info=dirichlet_bc_info, 
                             cauchy_bc_info=cauchy_bc_info, source_info=body_force)
 
     sol = solver(problem, linear=False)

@@ -7,8 +7,7 @@ import glob
 from functools import partial
 from scipy.stats import qmc
 
-from jax_am.fem.generate_mesh import box_mesh
-from jax_am.fem.jax_fem import Mesh, Laplace
+from jax_am.fem.generate_mesh import Mesh, box_mesh
 from jax_am.fem.solver import solver, assign_bc, get_A_fn_linear_fn
 from jax_am.fem.utils import save_sol
 
@@ -19,7 +18,7 @@ from applications.fem.multi_scale.fem_model import HyperElasticity
 os.environ["CUDA_VISIBLE_DEVICES"] = str(args.device)
 
 
-def rve_problem(problem_name, data_dir):
+def rve_problem(data_dir):
     args.num_units_x = 1
     args.num_units_y = 1
     args.num_units_z = 1
@@ -76,7 +75,8 @@ def rve_problem(problem_name, data_dir):
     vecs = [0, 1, 2]*3
 
     periodic_bc_info = [location_fns_A, location_fns_B, mappings, vecs]
-    problem = HyperElasticity(f"{problem_name}", jax_mesh, mode='rve', dirichlet_bc_info=dirichlet_bc_info, periodic_bc_info=periodic_bc_info)
+    problem = HyperElasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, 
+        periodic_bc_info=periodic_bc_info, additional_info=('rve', None))
     problem.p_num_eps = 1e2 # For numerical stability of imposing periodic B.C.
     return problem
 
@@ -84,8 +84,9 @@ def rve_problem(problem_name, data_dir):
 def exp():
     """Do not delete. We use this to generate RVE demo.
     """
+    problem_name = 'rve_debug'
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
-    problem = rve_problem('rve_debug', data_dir)
+    problem = rve_problem(data_dir)
     H_bar = np.array([[-0.009, 0., 0.],
                       [0., -0.009, 0.],
                       [0., 0., 0.025]])
@@ -100,7 +101,7 @@ def exp():
     print(f"Initial energy = {energy}")
 
     sol_disp_ini = problem.fluc_to_disp(sol_fluc_ini)
-    jax_vtu_path = os.path.join(data_dir, f'vtk/{problem.name}/sol_disp_ini.vtu')
+    jax_vtu_path = os.path.join(data_dir, f'vtk/{problem_name}/sol_disp_ini.vtu')
     save_sol(problem, sol_disp_ini, jax_vtu_path, [("E", problem.E.reshape((problem.num_cells, problem.num_quads))[:, 0])])
 
     sol_fluc = aug_solve(problem)
@@ -114,10 +115,10 @@ def exp():
     print(f"Final energy = {energy}")
 
     sol_disp = problem.fluc_to_disp(sol_fluc)
-    jax_vtu_path = os.path.join(data_dir, f'vtk/{problem.name}/sol_disp.vtu')
+    jax_vtu_path = os.path.join(data_dir, f'vtk/{problem_name}/sol_disp.vtu')
     save_sol(problem, sol_disp, jax_vtu_path)
 
-    jax_vtu_path = os.path.join(data_dir, f'vtk/{problem.name}/sol_fluc.vtu')
+    jax_vtu_path = os.path.join(data_dir, f'vtk/{problem_name}/sol_fluc.vtu')
     save_sol(problem, sol_fluc, jax_vtu_path)
 
     a = sol_fluc[problem.p_node_inds_list_A[0], problem.p_vec_inds_list[0]]
@@ -164,7 +165,7 @@ def generate_samples():
 
 def collect_data():
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
-    problem = rve_problem('rve', data_dir)
+    problem = rve_problem(data_dir)
     date = f"11012022"
     root_numpy = os.path.join(data_dir, 'numpy/training', date)
  

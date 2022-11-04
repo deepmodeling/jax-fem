@@ -4,6 +4,15 @@ import numpy as onp
 import meshio
 
 
+class Mesh():
+    """A custom mesh manager might be better than just use third-party packages like meshio?
+    """
+    def __init__(self, points, cells):
+        # TODO: Assert that cells must have correct orders 
+        self.points = points
+        self.cells = cells
+
+
 def get_meshio_cell_type(ele_type, lag_order):
     """Reference:
     https://github.com/nschloe/meshio/blob/9dc6b0b05c9606cad73ef11b8b7785dd9b9ea325/src/meshio/xdmf/common.py#L36
@@ -79,6 +88,7 @@ def cylinder_mesh(data_dir, R=5, H=10, circle_mesh=5, hight_mesh=20, rect_ratio=
     hight_mesh:num of meshs in hight
     rect_ratio: rect length/R
     """
+    rect_coor = R*rect_ratio
     msh_dir = os.path.join(data_dir, 'msh')
     os.makedirs(msh_dir, exist_ok=True)
     geo_file = os.path.join(msh_dir, 'cylinder.geo')
@@ -133,13 +143,13 @@ def cylinder_mesh(data_dir, R=5, H=10, circle_mesh=5, hight_mesh=20, rect_ratio=
           Surface{{1:5}}; Layers {{{hight_mesh}}}; Recombine;
         }}
 
-        Mesh 3;'''.format(R=R, H=H, rect_coor=rect_coor, circle_mesh=circle_mesh, hight_mesh=hight_mesh, mesh_file=mesh_file)
+        Mesh 3;'''.format(R=R, H=H, rect_coor=rect_coor, circle_mesh=circle_mesh, hight_mesh=hight_mesh)
 
     with open(geo_file, "w") as f:
         f.write(string)
-    os.system("gmsh -3 {geo_file} -o {mesh_file} -format msh2".format(geo_file=geo_file, mesh_file=mesh_file))
+    os.system("gmsh -3 {geo_file} -o {msh_file} -format msh2".format(geo_file=geo_file, msh_file=msh_file))
 
-    mesh = meshio.read(mesh_file)
+    mesh = meshio.read(msh_file)
     points = mesh.points # (num_total_nodes, dim)
     cells =  mesh.cells_dict['hexahedron'] # (num_cells, num_nodes)
 

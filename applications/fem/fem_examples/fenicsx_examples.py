@@ -48,7 +48,7 @@ def get_dog_bone_file_path(file_type, index):
 
 
 def get_cylinder_file_path():
-    return f"jax_am/fem/data/msh/cylinder.xdmf"
+    return os.path.join(data_dir, f"msh/cylinder.xdmf")
 
 
 def generate_xdmf():
@@ -240,13 +240,13 @@ def hyperelasticity(disp):
     return traction
 
 
-
 def plasticity(disps, path):
     meshio_mesh = cylinder_mesh(data_dir)
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
-    xdmf_file = f"jax_am/fem/data/msh/cylinder.xdmf"
+    os.makedirs(os.path.join(data_dir, 'msh'), exist_ok=True)
+    xdmf_file = os.path.join(data_dir, f"msh/cylinder.xdmf")
     out_mesh.write(xdmf_file)
     mesh_xdmf_file = io.XDMFFile(MPI.COMM_WORLD, xdmf_file, 'r')
     msh = mesh_xdmf_file.read_mesh(name="Grid")

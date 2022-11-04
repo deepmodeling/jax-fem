@@ -4,10 +4,11 @@ import jax.numpy as np
 import meshio
 import time
 import os
-from jax_am.fem.jax_fem import Mesh, LinearElasticity, HyperElasticity, Plasticity
+
+from jax_am.fem.models import LinearElasticity, HyperElasticity, Plasticity
 from jax_am.fem.solver import solver
 from jax_am.fem.utils import modify_vtu_file, save_sol
-from jax_am.fem.generate_mesh import cylinder_mesh
+from jax_am.fem.generate_mesh import Mesh, cylinder_mesh
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
@@ -50,12 +51,13 @@ def linear_elasticity_dogbone(disp, index):
                           dirichlet_val, zero_dirichlet_val, zero_dirichlet_val]]
 
     start_time = time.time()
-    problem = LinearElasticity(f"dogbone", jax_mesh, dirichlet_bc_info=dirichlet_bc_info)
+    problem_name = "dogbone"
+    problem = LinearElasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info)
     sol = solver(problem, linear=True, precond=True)
     end_time = time.time()
     solve_time = end_time - start_time
     print(f"Wall time elapsed {solve_time}")
-    vtu_path = os.path.join(data_dir, f'vtk/{problem.name}/u_{index}.vtu')
+    vtu_path = os.path.join(data_dir, f'vtk/{problem_name}/u_{index}.vtu')
     save_sol(problem, sol, vtu_path)
     num_total_dofs = problem.num_total_nodes*problem.vec
     return solve_time, num_total_dofs
@@ -84,7 +86,7 @@ def linear_elasticity_cylinder(disps):
                          [zero_dirichlet_val, zero_dirichlet_val, zero_dirichlet_val, 
                           zero_dirichlet_val, zero_dirichlet_val, get_dirichlet_top(disps[0])]]
  
-    problem = LinearElasticity('linear_elasticity', mesh, dirichlet_bc_info=dirichlet_bc_info)
+    problem = LinearElasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info)
     tractions = []
     for i, disp in enumerate(disps):
         dirichlet_bc_info[-1][-1] = get_dirichlet_top(disp)
@@ -93,7 +95,7 @@ def linear_elasticity_cylinder(disps):
         traction = problem.compute_traction(top, sol)
         tractions.append(traction[2])
     tractions = np.array(tractions)
-    np.save(f"applications/fem/fem_examples/data/numpy/linear_elasticity/jax_fem/forces.npy", tractions)
+    np.save(os.path.join(data_dir, "numpy/linear_elasticity/jax_fem/forces.npy"), tractions)
 
 
 def hyperelasticity_cylinder(disps):
@@ -118,7 +120,7 @@ def hyperelasticity_cylinder(disps):
                          [0, 1, 2, 0, 1, 2], 
                          [zero_dirichlet_val, zero_dirichlet_val, zero_dirichlet_val, 
                           zero_dirichlet_val, zero_dirichlet_val, get_dirichlet_top(disps[0])]]             
-    problem = HyperElasticity('hyperelasticity', mesh, dirichlet_bc_info=dirichlet_bc_info)
+    problem = HyperElasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info)
     sol = np.zeros((problem.num_total_nodes, problem.vec)) 
     tractions = []
     for i, disp in enumerate(disps):
@@ -133,9 +135,8 @@ def hyperelasticity_cylinder(disps):
 
 def plasticity():
     problem_name = "plasticity"
-    plasticity_path =  f"applications/fem/fem_examples/data/"
-    fenicsx_vtu_path_raw = os.path.join(plasticity_path, 'vtk', problem_name, 'fenicsx/sol_p0_000000.vtu')
-    fenicsx_vtu_path = os.path.join(plasticity_path, 'vtk', problem_name, 'fenicsx/sol.vtu')
+    fenicsx_vtu_path_raw = os.path.join(data_dir, 'vtk', problem_name, 'fenicsx/sol_p0_000000.vtu')
+    fenicsx_vtu_path = os.path.join(data_dir, 'vtk', problem_name, 'fenicsx/sol.vtu')
     modify_vtu_file(fenicsx_vtu_path_raw, fenicsx_vtu_path)
     fenicsx_vtu = meshio.read(fenicsx_vtu_path)
     cells = fenicsx_vtu.cells_dict['VTK_LAGRANGE_HEXAHEDRON'] # 'hexahedron'
@@ -166,7 +167,7 @@ def plasticity():
     vecs = [0, 1, 2, 0, 1, 2]
     dirichlet_bc_info = [location_fns, vecs, value_fns]
 
-    problem = Plasticity(f"{problem_name}", mesh, dirichlet_bc_info)
+    problem = Plasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info)
     avg_stresses = []
 
     for i, disp in enumerate(disps):

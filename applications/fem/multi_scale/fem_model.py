@@ -1,21 +1,17 @@
 import numpy as onp
 import jax
 import jax.numpy as np
-from jax_am.fem.jax_fem import Mesh, Laplace
+from jax_am.fem.core import FEM
 
 from applications.fem.multi_scale.arguments import args
 from applications.fem.multi_scale.trainer import get_nn_batch_forward
 from applications.fem.multi_scale.utils import tensor_to_flat
 
 
-class HyperElasticity(Laplace):
+class HyperElasticity(FEM):
     """Three modes: rve, dns, nn
     """
-    def __init__(self, name, mesh, ele_type='hexahedron', lag_order=1, mode=None, dns_info=None, 
-                 dirichlet_bc_info=None, periodic_bc_info=None, neumann_bc_info=None, cauchy_bc_info=None, source_info=None):
-        self.name = name
-        self.vec = 3
-        super().__init__(mesh, ele_type, lag_order, dirichlet_bc_info, periodic_bc_info, neumann_bc_info, cauchy_bc_info, source_info)
+    def custom_init(self, mode, dns_info):
         self.mode = mode
         self.dns_info = dns_info
         if self.mode == 'rve':

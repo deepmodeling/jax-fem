@@ -3,8 +3,11 @@ import numpy.testing as onptest
 import jax
 import jax.numpy as np
 import meshio
+import os
 import unittest
-from jax_am.fem.jax_fem import Mesh, LinearElasticity
+
+from jax_am.fem.generate_mesh import Mesh
+from jax_am.fem.models import LinearElasticity
 from jax_am.fem.solver import solver
 from jax_am.fem.utils import modify_vtu_file, save_sol
 
@@ -16,8 +19,9 @@ class Test(unittest.TestCase):
         """Compare FEniCSx solution with JAX-FEM
         """
         problem_name = "linear_elasticity_cube"
-        fenicsx_vtu_path_raw = f"jax_am/fem/tests/{problem_name}/fenicsx/sol_p0_000000.vtu"
-        fenicsx_vtu_path = f"jax_am/fem/tests/{problem_name}/fenicsx/sol.vtu"
+        crt_dir = os.path.dirname(__file__)
+        fenicsx_vtu_path_raw = os.path.join(crt_dir, "fenicsx/sol_p0_000000.vtu")
+        fenicsx_vtu_path = os.path.join(crt_dir, "fenicsx/sol.vtu")
         modify_vtu_file(fenicsx_vtu_path_raw, fenicsx_vtu_path)
         fenicsx_vtu = meshio.read(fenicsx_vtu_path)
         cells = fenicsx_vtu.cells_dict['VTK_LAGRANGE_HEXAHEDRON'] # 'hexahedron'
@@ -47,11 +51,11 @@ class Test(unittest.TestCase):
 
         neumann_bc_info = [[right], [neumann_val]]
 
-        problem = LinearElasticity(f"{problem_name}", mesh, dirichlet_bc_info=dirichlet_bc_info, 
+        problem = LinearElasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, 
                                    neumann_bc_info=neumann_bc_info, source_info=body_force)
         sol = solver(problem)
 
-        jax_vtu_path = f"jax_am/fem/tests/{problem_name}/jax_fem/sol.vtu"
+        jax_vtu_path = os.path.join(crt_dir, "jax_fem/sol.vtu")
         save_sol(problem, sol, jax_vtu_path)
         jax_fem_vtu = meshio.read(jax_vtu_path)
 

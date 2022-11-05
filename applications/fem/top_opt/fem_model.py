@@ -7,7 +7,7 @@ from jax_am.fem.core import FEM
 
 class Elasticity(FEM):
     def custom_init(self, linear_flag):
-        self.neumann_boundary_inds = self.Neuman_boundary_conditions_inds(self.neumann_bc_info[0])[0]
+        self.neumann_boundary_inds = self.get_boundary_conditions_inds(self.neumann_bc_info[0])[0]
         self.cell_centroids = onp.mean(onp.take(self.points, self.cells, axis=0), axis=1)
         self.flex_inds = np.arange(len(self.cells))
         self.params = np.ones_like(self.flex_inds)

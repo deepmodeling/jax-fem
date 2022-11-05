@@ -5,10 +5,8 @@ A differentiable 2D/3D finite element solver for automatic inverse design and me
 
 ## To-do
 
-1. Quiet element method
-2. Logging, color prints
-3. Tutorial
-4. Interfacing with linear solvers like PETSc
+1. Tutorial
+2. Interfacing with linear solvers like PETSc
 
 
  

@@ -49,8 +49,6 @@ class LinearPoisson(FEM):
         return body_force 
 
     def compute_L2(self, sol):
-        """Should implement something like surface_integral in jax_fem.py
-        """
         kernel = self.get_mass_kernel(lambda x: x**2)
         cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
         val = jax.vmap(kernel)(cells_sol, self.JxW) # (num_cells, num_nodes, vec)

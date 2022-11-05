@@ -37,26 +37,35 @@ class LinearPoisson(FEM):
         return h1_error
 
 
-class LinearElasticity(FEM):
-    def get_tensor_map(self):
-        def stress(u_grad):
-            E = 70e3
-            nu = 0.3
-            mu = E/(2.*(1. + nu))
-            lmbda = E*nu/((1+nu)*(1-2*nu))
-            epsilon = 0.5*(u_grad + u_grad.T)
-            sigma = lmbda*np.trace(epsilon)*np.eye(self.dim) + 2*mu*epsilon
-            return sigma
-        return stress
+class Mechanics(FEM):
+    def surface_integral(self, location_fn, surface_fn, sol):
+        """Compute surface integral specified by surface_fn: f(u_grad) * ds
+        For post-processing only.
+        Example usage: compute the total force on a certain surface.
 
-    def compute_surface_area(self, location_fn, sol):
-        """For post-processing only
+        Parameters
+        ----------
+        location_fn: callable
+            A function that inputs a point (ndarray) and returns if the point satisfies the location condition.
+        surface_fn: callable
+            A function that inputs a point (ndarray) and returns the value.
+        sol: ndarray
+            (num_total_nodes, vec)
+
+        Returns
+        -------
+        int_val: ndarray
+            (vec,)
         """
-        def unity_fn(u_grads):
-            unity = np.ones_like(u_grads)[:, :, :, 0]
-            return unity
-        unity_integral_val = self.surface_integral(location_fn, unity_fn, sol)
-        return unity_integral_val
+        boundary_inds = self.get_boundary_conditions_inds([location_fn])[0]
+        face_shape_grads_physical, nanson_scale = self.get_face_shape_grads(boundary_inds)
+        # (num_selected_faces, 1, num_nodes, vec, 1) * (num_selected_faces, num_face_quads, num_nodes, 1, dim)
+        u_grads_face = sol[self.cells][boundary_inds[:, 0]][:, None, :, :, None] * face_shape_grads_physical[:, :, :, None, :]
+        u_grads_face = np.sum(u_grads_face, axis=2) # (num_selected_faces, num_face_quads, vec, dim)
+        traction = surface_fn(u_grads_face) # (num_selected_faces, num_face_quads, vec)
+        # (num_selected_faces, num_face_quads, vec) * (num_selected_faces, num_face_quads, 1)
+        int_val = np.sum(traction * nanson_scale[:, :, None], axis=(0, 1))
+        return int_val    
 
     def compute_traction(self, location_fn, sol):
         """For post-processing only
@@ -83,8 +92,30 @@ class LinearElasticity(FEM):
         traction_integral_val = self.surface_integral(location_fn, traction_fn, sol)
         return traction_integral_val
 
+    def compute_surface_area(self, location_fn, sol):
+        """For post-processing only
+        """
+        def unity_fn(u_grads):
+            unity = np.ones_like(u_grads)[:, :, :, 0]
+            return unity
+        unity_integral_val = self.surface_integral(location_fn, unity_fn, sol)
+        return unity_integral_val
 
-class HyperElasticity(FEM):
+
+class LinearElasticity(Mechanics):
+    def get_tensor_map(self):
+        def stress(u_grad):
+            E = 70e3
+            nu = 0.3
+            mu = E/(2.*(1. + nu))
+            lmbda = E*nu/((1+nu)*(1-2*nu))
+            epsilon = 0.5*(u_grad + u_grad.T)
+            sigma = lmbda*np.trace(epsilon)*np.eye(self.dim) + 2*mu*epsilon
+            return sigma
+        return stress
+
+
+class HyperElasticity(Mechanics):
     def get_tensor_map(self):
         def psi(F):
             E = 1e3
@@ -105,32 +136,8 @@ class HyperElasticity(FEM):
             return P
         return first_PK_stress
 
-    def compute_traction(self, location_fn, sol):
-        """For post-processing only
-        """
-        first_PK_stress = self.get_tensor_map()
-        vmap_stress = jax.vmap(first_PK_stress)
-        def traction_fn(u_grads):
-            """
-            Returns
-            ------- 
-            traction: ndarray
-                (num_selected_faces, num_face_quads, vec)
-            """
-            # (num_selected_faces, num_face_quads, vec, dim) -> (num_selected_faces*num_face_quads, vec, dim)
-            u_grads_reshape = u_grads.reshape(-1, self.vec, self.dim)
-            sigmas = vmap_stress(u_grads_reshape).reshape(u_grads.shape)
-            # TODO: a more general normals with shape (num_selected_faces, num_face_quads, dim, 1) should be supplied
-            # (num_selected_faces, num_face_quads, vec, dim) @ (1, 1, dim, 1) -> (num_selected_faces, num_face_quads, vec, 1)
-            normals = np.array([0., 0., 1.]).reshape((self.dim, 1))
-            traction = (sigmas @ normals[None, None, :, :])[:, :, :, 0]
-            return traction
 
-        traction_integral_val = self.surface_integral(location_fn, traction_fn, sol)
-        return traction_integral_val
-
-
-class Plasticity(FEM):
+class Plasticity(Mechanics):
     def custom_init(self):
         self.epsilons_old = onp.zeros((len(self.cells), self.num_quads, self.vec, self.dim))
         self.sigmas_old = onp.zeros_like(self.epsilons_old)

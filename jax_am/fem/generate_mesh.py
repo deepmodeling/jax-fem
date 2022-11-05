@@ -8,7 +8,8 @@ class Mesh():
     """A custom mesh manager might be better than just use third-party packages like meshio?
     """
     def __init__(self, points, cells):
-        # TODO: Assert that cells must have correct orders 
+        # TODO: Assert that cells must have correct orders
+        # TODO: first cells, then points?
         self.points = points
         self.cells = cells
 

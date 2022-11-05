@@ -1,14 +1,15 @@
 import numpy as onp
 import jax
 import jax.numpy as np
-from jax_am.fem.core import FEM
+
+from jax_am.fem.models import Mechanics
 
 from applications.fem.multi_scale.arguments import args
 from applications.fem.multi_scale.trainer import get_nn_batch_forward
 from applications.fem.multi_scale.utils import tensor_to_flat
 
 
-class HyperElasticity(FEM):
+class HyperElasticity(Mechanics):
     """Three modes: rve, dns, nn
     """
     def custom_init(self, mode, dns_info):

@@ -6,8 +6,9 @@ import scipy
 import sys
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Optional, List, Union
 
+from jax_am.fem.generate_mesh import Mesh
 from jax_am.fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grads
 
 from jax.config import config
@@ -25,41 +26,67 @@ class FEM:
     where u and v are trial and test functions, respectively, and f is a general function.
     This covers
         - Poisson's problem
+        - Heat equation
         - Linear elasticity
         - Hyper-elasticity
         - Plasticity
         ...
 
-    TODO: Attributes comments need to be updated
-
     Attributes
     ----------
-    self.mesh: Mesh object
+    mesh : Mesh object
         The mesh object stores points (coordinates) and cells (connectivity).
-    self.points: ndarray
-        shape: (num_total_nodes, dim) 
-        The physical mesh nodal coordinates.
-    self.dim: int
+    vec : int
+        The number of vector variable components of the solution.
+        E.g., a 3D displacement field has u_x, u_y and u_z components, so vec=3 
+    dim : int
         The dimension of the problem.
-    self.num_quads: int
-        Number of quadrature points for each hex element.
-    self.num_faces: int
-        Number of faces for each hex element.
-    self.num_cells: int
-        Number of hex elements.
-    self.num_total_nodes: int
-        Number of total nodes.
+    ele_type : str
+        Element type
+    lag_order : int
+        Lagrangian shape function order
+    dirichlet_bc_info : [location_fns, vecs, value_fns]
+        location_fns : List[Callable]
+            Callable : a function that inputs a point and returns if the point satisfies the location condition
+        vecs: List[int]
+            integer value must be in the range of 0 to vec - 1, 
+            specifying which component of the (vector) variable to apply Dirichlet condition to
+        value_fns : List[Callable]
+            Callable : a function that inputs a point and returns the Dirichlet value
+    periodic_bc_info : [location_fns_A, location_fns_B, mappings, vecs]
+        location_fns_A : List[Callable]
+            Callable : location function for boundary A
+        location_fns_B : List[Callable]
+            Callable : location function for boundary B
+        mappings : List[Callable]
+            Callable: function mapping a point from boundary A to boundary B
+        vecs: List[int]
+            which component of the (vector) variable to apply periodic condition to 
+    neumann_bc_info : [location_fns, value_fns]
+        location_fns : List[Callable]
+            Callable : location function for Neumann boundary
+        value_fns : List[Callable]
+            Callable : a function that inputs a point and returns the Neumann value
+    cauchy_bc_info : [location_fns, value_fns]
+        location_fns : List[Callable]
+            Callable : location function for Cauchy boundary
+        value_fns : List[Callable]
+            Callable : a function that inputs the solution and returns the Cauchy boundary value
+    source_info: Callable
+        A function that inputs a point and returns the body force at this point
+    additional_info : Any
+        Other information that the FEM solver should know
     """
-    mesh: Any
+    mesh: Mesh
     vec: int
     dim: int
     ele_type: str = 'hexahedron'
     lag_order: int = 1
-    dirichlet_bc_info: Any = None 
-    periodic_bc_info: Any = None
-    neumann_bc_info: Any = None
-    cauchy_bc_info: Any = None
-    source_info: Any = None
+    dirichlet_bc_info: Optional[List[Union[List[Callable], List[int], List[Callable]]]] = None 
+    periodic_bc_info: Optional[List[Union[List[Callable], List[Callable], List[Callable], List[int]]]] = None
+    neumann_bc_info: Optional[List[Union[List[Callable], List[Callable]]]] = None
+    cauchy_bc_info: Optional[List[Union[List[Callable], List[Callable]]]] = None
+    source_info: Callable = None
     additional_info: Any = ()
 
     def __post_init__(self):
@@ -71,7 +98,6 @@ class FEM:
 
         start = time.time()
 
-        # Some re-used quantities can be pre-computed and stored for better performance.
         self.shape_vals, self.shape_grads_ref, self.quad_weights = get_shape_vals_and_grads(self.ele_type, self.lag_order)
         self.face_shape_vals, self.face_shape_grads_ref, self.face_quad_weights, self.face_normals, self.face_inds \
         = get_face_shape_vals_and_grads(self.ele_type, self.lag_order)
@@ -93,13 +119,17 @@ class FEM:
         print(f"\nDone pre-computations, took {compute_time} [s]")
         print(f"Solving a problem with {len(self.cells)} cells, {self.num_total_nodes}x{self.vec} = {self.num_total_dofs} dofs.")
 
+        # TODO: full_field_infer/poisson.py
+        # A better way to pass design parameters in
+        # Do not compute it here.
         self.body_force = self.compute_body_force(self.source_info)
 
         if self.neumann_bc_info is not None:
             self.neumann_location_fns, self.neumann_value_fns = self.neumann_bc_info
-            self.neumann_boundary_inds_list = self.Neuman_boundary_conditions_inds(self.neumann_location_fns)
+            self.neumann_boundary_inds_list = self.get_boundary_conditions_inds(self.neumann_location_fns)
             
-        self.neumann = self.compute_Neumann_integral()
+        # self.neumann = self.compute_Neumann_integral()
+
         # (num_cells, num_quads, num_nodes, 1, dim)
         self.v_grads_JxW = self.shape_grads[:, :, :, None, :] * self.JxW[:, :, None, None, None]
 
@@ -142,7 +172,7 @@ class FEM:
 
         Parameters
         ----------
-        boundary_inds: list[ndarray]
+        boundary_inds: List[ndarray]
             ndarray shape: (num_selected_faces, 2)
 
         Returns
@@ -192,7 +222,7 @@ class FEM:
 
         Parameters
         ----------
-        boundary_inds: list[ndarray]
+        boundary_inds: List[ndarray]
             ndarray shape: (num_selected_faces, 2)
 
         Returns
@@ -213,21 +243,21 @@ class FEM:
         Parameters
         ----------
         dirichlet_bc_info: [location_fns, vecs, value_fns]
-            location_fns: list[callable]
+            location_fns: List[callable]
                 callable: a function that inputs a point (ndarray) and returns if the point satisfies the location condition
-            vecs: list[int]
+            vecs: List[int]
                 integer value must be in the range of 0 to vec - 1, 
                 specifying which component of the (vector) variable to apply Dirichlet condition to
-            value_fns: list[callable]
+            value_fns: List[callable]
                 callable: a function that inputs a point (ndarray) and returns the Dirichlet value
 
         Returns
         ------- 
-        node_inds_list: list[ndarray]
+        node_inds_List: List[ndarray]
             The ndarray ranges from 0 to num_total_nodes - 1
-        vec_inds_list: list[ndarray]
+        vec_inds_List: List[ndarray]
             The ndarray ranges from 0 to to vec - 1
-        vals_list: list[ndarray]
+        vals_List: List[ndarray]
             Dirichlet values to be assigned
         """
         location_fns, vecs, value_fns = dirichlet_bc_info
@@ -283,20 +313,20 @@ class FEM:
 
         return p_node_inds_list_A, p_node_inds_list_B, p_vec_inds_list
 
-    def Neuman_boundary_conditions_inds(self, location_fns, additional_filter=None):
+    def get_boundary_conditions_inds(self, location_fns, additional_filter=None):
         """Given location functions, compute which faces satisfy the condition. 
 
         Parameters
         ----------
-        location_fns: list[callable]
+        location_fns: List[callable]
             callable: a function that inputs a point (ndarray) and returns if the point satisfies the location condition
                       e.g., lambda x: np.isclose(x[0], 0.)
 
         Returns
         ------- 
-        boundary_inds_list: list[ndarray]
+        boundary_inds_List: List[ndarray]
             ndarray shape: (num_selected_faces, 2)
-            boundary_inds_list[k][i, j] returns the index of face j of cell i of surface k
+            boundary_inds_List[k][i, j] returns the index of face j of cell i of surface k
         """
 
         cell_points = onp.take(self.points, self.cells, axis=0) # (num_cells, num_nodes, dim)
@@ -345,15 +375,15 @@ class FEM:
 
         Parameters
         ----------
-        neumann_value_fns: list[callable]
+        neumann_value_fns: List[callable]
             callable: a function that inputs a point (ndarray) and returns the value
                       e.g., lambda x: x[0]**2
-        boundary_inds_list: list[ndarray]
+        boundary_inds_list: List[ndarray]
             ndarray shape: (num_selected_faces, 2)    
 
         Returns
         ------- 
-            traction_list: list[ndarray]
+            traction_list: List[ndarray]
             ndarray shape: (num_selected_faces, num_face_quads, vec)
         """
         traction_list = []
@@ -366,6 +396,69 @@ class FEM:
             assert len(traction.shape) == 3
             traction_list.append(traction)
         return traction_list
+
+    def compute_Neumann_integral_vars(self, *internal_vars):
+        """In the weak form, we have the Neumann integral: (traction, v) * ds, and this function computes this.
+
+        Parameters
+        ----------
+        neumann_bc_info: [location_fns, value_fns]
+            location_fns: List[callable]
+            value_fns: List[callable]
+
+        Returns
+        -------
+        integral: ndarray
+            (num_total_nodes, vec)
+        """
+        integral = np.zeros((self.num_total_nodes, self.vec))
+        if self.neumann_bc_info is not None:
+            # location_fns, value_fns = self.neumann_bc_info
+            integral = np.zeros((self.num_total_nodes, self.vec))
+            traction_list = self.Neuman_boundary_conditions_vals(*internal_vars)
+            for i, boundary_inds in enumerate(self.neumann_boundary_inds_list):
+                traction = traction_list[i]
+                _, nanson_scale = self.get_face_shape_grads(boundary_inds) # (num_selected_faces, num_face_quads)
+                # (num_faces, num_face_quads, num_nodes) ->  (num_selected_faces, num_face_quads, num_nodes)
+                v_vals = np.take(self.face_shape_vals, boundary_inds[:, 1], axis=0)
+                v_vals = np.repeat(v_vals[:, :, :, None], self.vec, axis=-1) # (num_selected_faces, num_face_quads, num_nodes, vec)
+                subset_cells = np.take(self.cells, boundary_inds[:, 0], axis=0) # (num_selected_faces, num_nodes)
+                # (num_selected_faces, num_nodes, vec) -> (num_selected_faces*num_nodes, vec)
+                int_vals = np.sum(v_vals * traction[:, :, None, :] * nanson_scale[:, :, None, None], axis=1).reshape(-1, self.vec) 
+                integral = integral.at[subset_cells.reshape(-1)].add(int_vals)   
+        return integral
+
+    def compute_Neumann_integral(self):
+        # TODO: not necessarily override?
+        """Child class should override if internal variables exist
+        """
+        return self.compute_Neumann_integral_vars()
+
+    def compute_body_force(self, source_info):
+        """In the weak form, we have (body_force, v) * dx, and this function computes this.
+
+        Parameters
+        ----------
+        source_info: callable
+            A function that inputs a point (ndarray) and returns the body force at this point.
+
+        Returns
+        -------
+        body_force: ndarray
+            (num_total_nodes, vec)
+        """
+        rhs = np.zeros((self.num_total_nodes, self.vec))
+        if source_info is not None:
+            body_force_fn = source_info
+            physical_quad_points = self.get_physical_quad_points() # (num_cells, num_quads, dim) 
+            body_force = jax.vmap(jax.vmap(body_force_fn))(physical_quad_points) # (num_cells, num_quads, vec) 
+            assert len(body_force.shape) == 3
+            v_vals = np.repeat(self.shape_vals[None, :, :, None], self.num_cells, axis=0) # (num_cells, num_quads, num_nodes, 1)
+            v_vals = np.repeat(v_vals, self.vec, axis=-1) # (num_cells, num_quads, num_nodes, vec)
+            # (num_cells, num_nodes, vec) -> (num_cells*num_nodes, vec)
+            rhs_vals = np.sum(v_vals * body_force[:, :, None, :] * self.JxW[:, :, None, None], axis=1).reshape(-1, self.vec) 
+            rhs = rhs.at[self.cells.reshape(-1)].add(rhs_vals) 
+        return rhs
 
     def get_laplace_kernel(self, tensor_map):
         def laplace_kernel(cell_sol, cell_shape_grads, cell_v_grads_JxW, *cell_internal_vars):
@@ -473,7 +566,7 @@ class FEM:
 
         # TODO: Better to move the following to __init__ function
         location_fns, value_fns = self.cauchy_bc_info
-        boundary_inds_list = self.Neuman_boundary_conditions_inds(location_fns)
+        boundary_inds_list = self.get_boundary_conditions_inds(location_fns)
         values = []
         selected_cells = []
         for i, boundary_inds in enumerate(boundary_inds_list):
@@ -505,6 +598,8 @@ class FEM:
             values, selected_cells = self.compute_face(cells_sol, np, False)
             values = values.reshape(-1, self.vec)
             res = res.at[selected_cells.reshape(-1)].add(values) 
+
+        self.neumann = self.compute_Neumann_integral()
 
         res = res - self.body_force - self.neumann
         return res 
@@ -543,96 +638,3 @@ class FEM:
         """Child class should override if internal variables exist
         """
         return self.newton_vars(sol)
-
-    def compute_body_force(self, source_info):
-        """In the weak form, we have (body_force, v) * dx, and this function computes this.
-
-        Parameters
-        ----------
-        source_info: callable
-            A function that inputs a point (ndarray) and returns the body force at this point.
-
-        Returns
-        -------
-        body_force: ndarray
-            (num_total_nodes, vec)
-        """
-        rhs = np.zeros((self.num_total_nodes, self.vec))
-        if source_info is not None:
-            body_force_fn = source_info
-            physical_quad_points = self.get_physical_quad_points() # (num_cells, num_quads, dim) 
-            body_force = jax.vmap(jax.vmap(body_force_fn))(physical_quad_points) # (num_cells, num_quads, vec) 
-            assert len(body_force.shape) == 3
-            v_vals = np.repeat(self.shape_vals[None, :, :, None], self.num_cells, axis=0) # (num_cells, num_quads, num_nodes, 1)
-            v_vals = np.repeat(v_vals, self.vec, axis=-1) # (num_cells, num_quads, num_nodes, vec)
-            # (num_cells, num_nodes, vec) -> (num_cells*num_nodes, vec)
-            rhs_vals = np.sum(v_vals * body_force[:, :, None, :] * self.JxW[:, :, None, None], axis=1).reshape(-1, self.vec) 
-            rhs = rhs.at[self.cells.reshape(-1)].add(rhs_vals) 
-        return rhs
-
-    def compute_Neumann_integral(self):
-        # TODO: not necessarily override
-        """Child class should override if internal variables exist
-        """
-        return self.compute_Neumann_integral_vars()
-
-    def compute_Neumann_integral_vars(self, *internal_vars):
-        """In the weak form, we have the Neumann integral: (traction, v) * ds, and this function computes this.
-
-        Parameters
-        ----------
-        neumann_bc_info: [location_fns, value_fns]
-            location_fns: list[callable]
-            value_fns: list[callable]
-
-        Returns
-        -------
-        integral: ndarray
-            (num_total_nodes, vec)
-        """
-        integral = np.zeros((self.num_total_nodes, self.vec))
-        if self.neumann_bc_info is not None:
-            # location_fns, value_fns = self.neumann_bc_info
-            integral = np.zeros((self.num_total_nodes, self.vec))
-            traction_list = self.Neuman_boundary_conditions_vals(*internal_vars)
-            for i, boundary_inds in enumerate(self.neumann_boundary_inds_list):
-                traction = traction_list[i]
-                _, nanson_scale = self.get_face_shape_grads(boundary_inds) # (num_selected_faces, num_face_quads)
-                # (num_faces, num_face_quads, num_nodes) ->  (num_selected_faces, num_face_quads, num_nodes)
-                v_vals = np.take(self.face_shape_vals, boundary_inds[:, 1], axis=0)
-                v_vals = np.repeat(v_vals[:, :, :, None], self.vec, axis=-1) # (num_selected_faces, num_face_quads, num_nodes, vec)
-                subset_cells = np.take(self.cells, boundary_inds[:, 0], axis=0) # (num_selected_faces, num_nodes)
-                # (num_selected_faces, num_nodes, vec) -> (num_selected_faces*num_nodes, vec)
-                int_vals = np.sum(v_vals * traction[:, :, None, :] * nanson_scale[:, :, None, None], axis=1).reshape(-1, self.vec) 
-                integral = integral.at[subset_cells.reshape(-1)].add(int_vals)   
-        return integral
-
-    def surface_integral(self, location_fn, surface_fn, sol):
-        """Compute surface integral specified by surface_fn: f(u_grad) * ds
-        For post-processing only.
-        Example usage: compute the total force on a certain surface.
-
-        Parameters
-        ----------
-        location_fn: callable
-            A function that inputs a point (ndarray) and returns if the point satisfies the location condition.
-        surface_fn: callable
-            A function that inputs a point (ndarray) and returns the value.
-        sol: ndarray
-            (num_total_nodes, vec)
-
-        Returns
-        -------
-        int_val: ndarray
-            (vec,)
-        """
-        boundary_inds = self.Neuman_boundary_conditions_inds([location_fn])[0]
-        face_shape_grads_physical, nanson_scale = self.get_face_shape_grads(boundary_inds)
-        # (num_selected_faces, 1, num_nodes, vec, 1) * (num_selected_faces, num_face_quads, num_nodes, 1, dim)
-        u_grads_face = sol[self.cells][boundary_inds[:, 0]][:, None, :, :, None] * face_shape_grads_physical[:, :, :, None, :]
-        u_grads_face = np.sum(u_grads_face, axis=2) # (num_selected_faces, num_face_quads, vec, dim)
-        traction = surface_fn(u_grads_face) # (num_selected_faces, num_face_quads, vec)
-        # (num_selected_faces, num_face_quads, vec) * (num_selected_faces, num_face_quads, 1)
-        int_val = np.sum(traction * nanson_scale[:, :, None], axis=(0, 1))
-        return int_val
-

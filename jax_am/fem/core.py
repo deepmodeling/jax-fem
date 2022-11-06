@@ -14,7 +14,6 @@ from jax_am.fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_g
 from jax.config import config
 config.update("jax_enable_x64", True)
 
-onp.random.seed(0)
 onp.set_printoptions(threshold=sys.maxsize, linewidth=1000, suppress=True, precision=5)
 
 
@@ -126,7 +125,8 @@ class FEM:
 
         if self.neumann_bc_info is not None:
             self.neumann_location_fns, self.neumann_value_fns = self.neumann_bc_info
-            self.neumann_boundary_inds_list = self.get_boundary_conditions_inds(self.neumann_location_fns)
+            if self.neumann_location_fns is not None:
+                self.neumann_boundary_inds_list = self.get_boundary_conditions_inds(self.neumann_location_fns)
             
         # self.neumann = self.compute_Neumann_integral()
 
@@ -313,65 +313,36 @@ class FEM:
 
         return p_node_inds_list_A, p_node_inds_list_B, p_vec_inds_list
 
-    def get_boundary_conditions_inds(self, location_fns, additional_filter=None):
+    def get_boundary_conditions_inds(self, location_fns):
         """Given location functions, compute which faces satisfy the condition. 
-
         Parameters
         ----------
-        location_fns: List[callable]
+        location_fns: list[callable]
             callable: a function that inputs a point (ndarray) and returns if the point satisfies the location condition
                       e.g., lambda x: np.isclose(x[0], 0.)
-
         Returns
         ------- 
-        boundary_inds_List: List[ndarray]
+        boundary_inds_list: list[ndarray]
             ndarray shape: (num_selected_faces, 2)
-            boundary_inds_List[k][i, j] returns the index of face j of cell i of surface k
+            boundary_inds_list[k][i, j] returns the index of face j of cell i of surface k
         """
-
         cell_points = onp.take(self.points, self.cells, axis=0) # (num_cells, num_nodes, dim)
-        cell_face_points = onp.take(cell_points, self.face_inds, axis=1) # (num_cells, num_faces, num_face_vertices, dim)
-
-        # A filter based on hash table to select external faces 
-        print(f"Filter external faces...")
-        cells_face = self.mesh.cells[:, self.face_inds]
-        cells_face_sorted = onp.sort(cells_face)
-        hash_map = {}
-        inner_faces = []
-        all_faces = []
-        for cell_id in range(len(cells_face)):
-            for face_id in range(len(cells_face[cell_id])):
-                key = tuple(cells_face[cell_id, face_id].tolist())
-                if key in hash_map.keys():
-                    inner_faces.append(hash_map[key])
-                    inner_faces.append((cell_id, face_id))
-                else:
-                    hash_map[key] = (cell_id, face_id)
-                all_faces.append((cell_id, face_id))
-        external_faces = onp.array(list((set(all_faces) - set(inner_faces))))
-
-        # (num_external_faces, num_face_vertices, dim)
-        cell_face_points = cell_face_points[external_faces[:, 0], external_faces[:, 1]]
+        cell_face_points = onp.take(cell_points, self.face_inds, axis=1) # (num_cells, num_faces, num_face_nodes, dim)
         boundary_inds_list = []
         for i in range(len(location_fns)):
             vmap_location_fn = jax.vmap(location_fns[i])
             def on_boundary(cell_points):
                 boundary_flag = vmap_location_fn(cell_points)
                 return onp.all(boundary_flag)
-            vmap_on_boundary = jax.vmap(on_boundary)
-            boundary_flags = vmap_on_boundary(cell_face_points)
-            inds_flags = onp.argwhere(boundary_flags).reshape(-1)
-            boundary_inds = external_faces[inds_flags] # (num_selected_faces, 2)
+            vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
+            boundary_flags = vvmap_on_boundary(cell_face_points)
+            boundary_inds = onp.argwhere(boundary_flags) # (num_selected_faces, 2)
             boundary_inds_list.append(boundary_inds)
-
-        if hasattr(self, 'additional_neumann_filter'):
-            boundary_inds_list = self.additional_neumann_filter(boundary_inds_list)
-
         return boundary_inds_list
 
     def Neuman_boundary_conditions_vals(self, *internal_vars):
         """Compute traction values on the face quadrature points.
-        TODO: comments not correct.
+        TODO: comments not be correct. Merge into compute_Neumann_integral_vars
 
         Parameters
         ----------

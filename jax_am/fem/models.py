@@ -69,7 +69,6 @@ class Mechanics(FEM):
 
     def compute_traction(self, location_fn, sol):
         """For post-processing only
-        TODO: duplicated code
         """
         stress = self.get_tensor_map()
         vmap_stress = jax.vmap(stress)

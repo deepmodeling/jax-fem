@@ -76,14 +76,16 @@ def human_design():
 
     dirichlet_bc_info = [[fixed_location]*3, [0, 1, 2], [dirichlet_val]*3]
     neumann_bc_info = [[load_location], [neumann_val]]
-    Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(linear_flag,))
+    problem = Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(linear_flag,))
 
     sol = solver(problem, linear=linear_flag)
     compliance = problem.compute_compliance(neumann_val, sol)
     print(f"Human design compliance = {compliance}")
 
+    volume_avg_vm_stress = problem.compute_von_mises_stress(sol)
+
     vtu_path = os.path.join(root_path, f'vtk/{problem_name}/sol.vtu')
-    save_sol(problem, sol, vtu_path)
+    save_sol(problem, sol, vtu_path, cell_infos=[('vm_stress', volume_avg_vm_stress)])
 
     flex_inds = np.argwhere(jax.vmap(flex_location)(problem.cell_centroids)).reshape(-1)
     V = np.sum(problem.JxW)
@@ -160,5 +162,5 @@ def computer_design():
 
 
 if __name__ == "__main__":
-    # human_design()
-    computer_design()
+    human_design()
+    # computer_design()

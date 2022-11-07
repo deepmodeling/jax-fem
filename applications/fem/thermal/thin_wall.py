@@ -63,14 +63,6 @@ def ded_thin_wall():
     toolpath = onp.loadtxt(os.path.join(data_dir, f'toolpath/thinwall_toolpath.crs'))
     toolpath[:, 1:4] = toolpath[:, 1:4]/1e3
 
-    # def neumann_top(point, old_T):
-    #     # q is the heat flux into the domain
-    #     d2 = (point[0] - laser_center[0])**2 + (point[1] - laser_center[1])**2
-    #     q_laser = 2*eta*P/(np.pi*rb**2) * np.exp(-2*d2/rb**2)
-    #     q_conv = h*(T0 - old_T[0])
-    #     q = q_laser + q_conv
-    #     return np.array([q])
-
     def neumann_top(point, old_T):
         # q is the heat flux into the domain
         d2 = (point[0] - laser_center[0])**2 + (point[1] - laser_center[1])**2
@@ -109,7 +101,7 @@ def ded_thin_wall():
                 vtk_path = os.path.join(vtk_dir, f"u_active_{i:05d}_{j:05d}.vtu")
                 save_sol(problem, sol, vtk_path)
         else:
-            direction = toolpath[i, 1:4] - toolpath[i- 1 , 1:4]
+            direction = toolpath[i, 1:4] - toolpath[i - 1 , 1:4]
             d = np.linalg.norm(direction)
             dir_norm = direction/d
             num_laser_on = round(d/path_resolution)

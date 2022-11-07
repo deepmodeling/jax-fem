@@ -84,10 +84,6 @@ def problem():
     def dirichlet_val(point):
         return 1.
 
-    def mapping_x(point_A):
-        point_B = point_A + np.array([1., 0])
-        return point_B
-
     def cauchy_map(u):
         return 5*u**2
 

@@ -9,7 +9,7 @@ def make_video():
     # https://stackoverflow.com/questions/20847674/ffmpeg-libx264-height-not-divisible-by-2
     # -y means always overwrite
 
-    os.system(f'ffmpeg -y -framerate 10 -i {data_dir}/png/u.%04d.png -pix_fmt yuv420p -vf \
+    os.system(f'ffmpeg -y -framerate 60 -i {data_dir}/png/u.%04d.png -pix_fmt yuv420p -vf \
                "crop=trunc(iw/2)*2:trunc(ih/2)*2" {data_dir}/mp4/test.mp4')
 
 

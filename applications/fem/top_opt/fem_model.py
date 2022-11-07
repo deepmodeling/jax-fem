@@ -79,3 +79,24 @@ class Elasticity(FEM):
         traction = jax.vmap(jax.vmap(neumann_fn))(subset_quad_points) # (num_selected_faces, num_face_quads, vec)
         val = np.sum(traction * u_face * nanson_scale[:, :, None])
         return val
+
+    def get_von_mises_stress_fn(self):
+        stress_fn = self.get_tensor_map_linearelasticity()
+        def vm_stress_fn(u_grad, theta):
+            sigma = stress_fn(u_grad, theta)
+            s_dev = sigma - 1./self.dim*np.trace(sigma)*np.eye(self.dim)
+            vm_s = np.sqrt(3./2.*np.sum(s_dev*s_dev))
+            return vm_s
+        return vm_stress_fn
+
+    def compute_von_mises_stress(self, sol):
+        """TODO: Move this to jax-am library?
+        """
+        # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
+        u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
+        u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim) 
+        thetas = self.set_params()
+        vm_stress_fn = self.get_von_mises_stress_fn()
+        vm_stress = jax.vmap(jax.vmap(vm_stress_fn))(u_grads, thetas) # (num_cells, num_quads)
+        volume_avg_vm_stress = np.sum(vm_stress * self.JxW, axis=1) / np.sum(self.JxW, axis=1) # (num_cells,)
+        return volume_avg_vm_stress

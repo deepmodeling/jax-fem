@@ -39,15 +39,6 @@ class LinearPoisson(FEM):
     def get_mass_map(self):
         return lambda x: x
 
-    def compute_source(self, sol):
-        mass_kernel = self.get_mass_kernel(self.get_mass_map())
-        cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
-        val = jax.vmap(mass_kernel)(cells_sol, self.JxW) # (num_cells, num_nodes, vec)
-        val = val.reshape(-1, self.vec) # (num_cells*num_nodes, vec)
-        body_force = np.zeros_like(sol)
-        body_force = body_force.at[self.cells.reshape(-1)].add(val) 
-        return body_force 
-
     def compute_L2(self, sol):
         kernel = self.get_mass_kernel(lambda x: x**2)
         cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
@@ -56,7 +47,7 @@ class LinearPoisson(FEM):
 
     def compute_residual(self, sol):
         if self.name == 'inverse': 
-            self.body_force = self.compute_source(self.params.reshape((self.num_total_nodes, self.vec)))
+            self.body_force = self.compute_body_force_by_sol(self.params.reshape((self.num_total_nodes, self.vec)), self.get_mass_map())
         return self.compute_residual_vars(sol)
 
 

@@ -58,6 +58,8 @@ def get_flatten_fn(fn_sol, problem):
 
 
 def get_A_fn_linear_fn(dofs, fn):
+    """Not quite used.
+    """
     def A_fn_linear_fn(inc):
         primals, tangents = jax.jvp(fn, (dofs,), (inc,))
         return tangents
@@ -78,7 +80,7 @@ def get_A_fn_linear_fn_JFNK(dofs, fn):
 
 
 def operator_to_matrix(operator_fn, problem):
-    """Only used for debugging purpose.
+    """Only used for when debugging.
     Can be used to print the matrix, check the conditional number, etc.
     """
     J = jax.jacfwd(operator_fn)(np.zeros(problem.num_total_nodes*problem.vec))
@@ -119,8 +121,7 @@ def linear_guess_solve(problem, A_fn, precond):
 
 
 def linear_incremental_solver(problem, res_fn, A_fn, dofs, precond):
-    """
-    Lift solver
+    """Lift solver
     dofs must already satisfy Dirichlet boundary conditions
     """
     b = -res_fn(dofs)
@@ -402,7 +403,7 @@ def solver_lagrange_multiplier(problem, linear=False):
 
 
 ################################################################################
-# General solver
+# General
 
 def solver(problem, linear=False, precond=True):
     """periodic B.C. is a special form of adding a linear constraint. 

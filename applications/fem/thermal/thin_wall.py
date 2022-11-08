@@ -139,8 +139,8 @@ def ded_thin_wall():
 
                 active_cell_truth_tab_old = active_cell_truth_tab
 
-                # if j > 10:
-                #     exit()
+                if j > 10:
+                    exit()
 
 
 if __name__ == "__main__":

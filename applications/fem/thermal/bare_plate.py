@@ -9,7 +9,7 @@ from jax_am.fem.generate_mesh import box_mesh, Mesh
 from jax_am.fem.solver import solver
 from jax_am.fem.utils import save_sol
 
-from applications.fem.thermal.models import Thermal
+from applications.fem.thermal.models import Thermal, initialize_hash_map, update_hash_map, get_active_mesh
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 data_dir = os.path.join(os.path.dirname(__file__), 'data') 
@@ -23,23 +23,25 @@ def bare_plate_single_track():
     Cp = 500.
     L = 290e3
     rho = 8440.
-    Ts = 1563
-    Tl = 1623
     h = 50.
     rb = 1e-3
     eta = 0.4
     P = 500.
+    vec = 1
+    dim = 3
+    ele_type = 'hexahedron'
+    lag_order = 1
 
     ts = np.arange(0., 10e5, dt)
     # ts = np.arange(0., 10*dt, dt)
-    data_dir = os.path.join(os.path.dirname(__file__), 'data') 
+
     vtk_dir = os.path.join(data_dir, 'vtk')
 
     problem_name = f'bare_plate'
     Nx, Ny, Nz = 150, 30, 10
     Lx, Ly, Lz = 30e-3, 6e-3, 2e-3
     meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
-    mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
+    full_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def top(point):
         return point[2] > 0.
@@ -49,10 +51,9 @@ def bare_plate_single_track():
 
     def neumann_top(point, old_T):
         # q is the heat flux into the domain
-        d2 = np.sum((point - laser_center)**2)
+        d2 = (point[0] - laser_center[0])**2 + (point[1] - laser_center[1])**2
         q_laser = 2*eta*P/(np.pi*rb**2) * np.exp(-2*d2/rb**2)
-        q_conv = h*(T0 - old_T[0])
-        q = q_laser + q_conv
+        q = q_laser
         return np.array([q])
 
     def neumann_walls(point, old_T):
@@ -61,14 +62,16 @@ def bare_plate_single_track():
         q = q_conv
         return np.array([q])
 
-    neumann_bc_info = [[top, walls], [neumann_top, neumann_walls]]
+    neumann_bc_info = [None, [neumann_top, neumann_walls]]
 
-    vec = 1
-    dim = 3
-    old_sol = T0*np.ones((len(mesh.points), vec))
+    active_cell_truth_tab = onp.ones(len(full_mesh.cells), dtype=bool)
+    active_mesh, points_map_active, cells_map_full = get_active_mesh(full_mesh, active_cell_truth_tab)
+    external_faces, cells_face, hash_map, inner_faces, all_faces = initialize_hash_map(full_mesh, 
+        active_cell_truth_tab, cells_map_full, ele_type, lag_order)
+    old_sol = T0*np.ones((len(active_mesh.points), vec))
 
-    problem = Thermal(mesh, vec=vec, dim=dim, dirichlet_bc_info=[[],[],[]], neumann_bc_info=neumann_bc_info, 
-                      additional_info=(old_sol, rho, Cp, dt))
+    problem = Thermal(active_mesh, vec=vec, dim=dim, neumann_bc_info=neumann_bc_info, 
+                      additional_info=(old_sol, rho, Cp, dt, external_faces))
 
     files = glob.glob(os.path.join(vtk_dir, f'{problem_name}/*'))
     for f in files:

@@ -14,7 +14,7 @@ class Thermal(FEM):
         self.rho = rho
         self.Cp = Cp
         self.dt = dt
-        self.neumann_boundary_inds_list = self.update_Neumann_boundary_inds(external_faces)
+        self.external_faces = external_faces
 
     def get_tensor_map(self):
         def fn(u_grad):
@@ -29,26 +29,19 @@ class Thermal(FEM):
             return self.rho*self.Cp*T/self.dt
         return T_map
 
-    def get_body_force_old_T(self, sol):
-        mass_kernel = self.get_mass_kernel(self.get_mass_map())
-        cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
-        val = jax.vmap(mass_kernel)(cells_sol, self.JxW) # (num_cells, num_nodes, vec)
-        val = val.reshape(-1, self.vec) # (num_cells*num_nodes, vec)
-        body_force = np.zeros_like(sol)
-        body_force = body_force.at[self.cells.reshape(-1)].add(val) 
-        return body_force 
-
     def compute_residual(self, sol):
-        self.body_force = self.get_body_force_old_T(self.old_sol)
+        self.body_force = self.compute_body_force_by_sol(self.old_sol, self.get_mass_map())
+        self.neumann = self.compute_Neumann_integral_custom()
         return self.compute_residual_vars(sol)
 
-    def compute_Neumann_integral(self):
-        """Overriding base class method
-        """
+    def compute_Neumann_integral_custom(self):
+        self.neumann_boundary_inds_list = self.update_Neumann_boundary_inds()
         surface_old_T = self.get_surface_old_T(self.old_sol)
         return self.compute_Neumann_integral_vars(surface_old_T)
 
     def get_surface_old_T(self, sol):
+        """TODO: Should we move this function to jax-am library?
+        """
         cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
         surface_old_T = []
         crt_t = []
@@ -61,19 +54,16 @@ class Thermal(FEM):
             surface_old_T.append(u)
         return surface_old_T
 
-    def update_Neumann_boundary_inds(self, external_faces):
+    def update_Neumann_boundary_inds(self):
         cell_points = onp.take(self.points, self.cells, axis=0) # (num_cells, num_nodes, dim)
         cell_face_points = onp.take(cell_points, self.face_inds, axis=1) # (num_cells, num_faces, num_face_vertices, dim)
-        external_cell_face_points = cell_face_points[external_faces[:, 0], external_faces[:, 1]] # (num_external_faces, num_face_vertices, dim)
+        external_cell_face_points = cell_face_points[self.external_faces[:, 0], self.external_faces[:, 1]] # (num_external_faces, num_face_vertices, dim)
       
         def top(face_points):
             face_points_z = face_points[:, 2]
             face_points_z = face_points_z - face_points_z[0]
             no_bottom = face_points[0, 2] > 0.
             return np.logical_and(np.all(np.isclose(face_points_z, 0., atol=1e-5)), no_bottom)
-
-        # def walls(face_points):
-        #     return np.logical_not(top(face_points))
 
         def walls(face_points):
             return True
@@ -86,13 +76,15 @@ class Thermal(FEM):
                 vmap_filter_fn = jax.vmap(top)
             boundary_flags = vmap_filter_fn(external_cell_face_points)
             inds_flags = onp.argwhere(boundary_flags).reshape(-1)
-            boundary_inds = external_faces[inds_flags] # (num_selected_faces, 2)
+            boundary_inds = self.external_faces[inds_flags] # (num_selected_faces, 2)
             boundary_inds_list.append(boundary_inds)
 
         return boundary_inds_list
 
 
 def hash_map_for_faces(active_cell_truth_tab, cells_face, hash_map, inner_faces, all_faces, cell_inds):
+    """Use a hash table to store inner faces
+    """
     for i, cell_id in enumerate(cell_inds):
         if active_cell_truth_tab[cell_id]:
             for face_id in range(len(cells_face[cell_id])):

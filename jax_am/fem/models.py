@@ -152,11 +152,12 @@ class Plasticity(Mechanics):
         return self.compute_residual_vars(sol, laplace=[self.sigmas_old, self.epsilons_old])
 
     def get_maps(self):
-        EPS = 1e-10
-        # TODO
         def safe_sqrt(x):  
-            safe_x = np.where(x > 0., x, EPS)
-            return np.sqrt(safe_x)
+            safe_x = np.where(x > 0., np.sqrt(x), 0.)
+            return safe_x
+
+        def safe_divide(x, y):
+            return np.where(y == 0., 0., x/y)
 
         def strain(u_grad):
             epsilon = 0.5*(u_grad + u_grad.T)
@@ -175,16 +176,11 @@ class Plasticity(Mechanics):
             epsilon_crt = strain(u_grad)
             epsilon_inc = epsilon_crt - epsilon_old
             sigma_trial = stress(epsilon_inc) + sigma_old
-
             s_dev = sigma_trial - 1./self.dim*np.trace(sigma_trial)*np.eye(self.dim)
-
-            # s_norm = np.sqrt(3./2.*np.sum(s_dev*s_dev))
             s_norm = safe_sqrt(3./2.*np.sum(s_dev*s_dev))
-
             f_yield = s_norm - sig0
             f_yield_plus = np.where(f_yield > 0., f_yield, 0.)
-            # TODO
-            sigma = sigma_trial - f_yield_plus*s_dev/(s_norm + EPS)
+            sigma = sigma_trial - safe_divide(f_yield_plus*s_dev, s_norm)
             return sigma
 
         return strain, stress_return_map

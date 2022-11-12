@@ -508,7 +508,7 @@ class FEM:
             def kernel_jac(cell_sol, *args):
                 return jax.jacfwd(kernel)(cell_sol, *args)
 
-            return kernel, kernel_jac        
+            return kernel, kernel_jac
 
         # TODO: Better to move the following to __init__ function?
         location_fns, value_fns = self.cauchy_bc_info

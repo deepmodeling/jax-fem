@@ -113,7 +113,8 @@ def test_jacobi_precond(problem, jacobi, A_fn):
  
 
 def linear_guess_solve(problem, A_fn, precond):
-    b = np.zeros((problem.num_total_nodes, problem.vec))
+    # b = np.zeros((problem.num_total_nodes, problem.vec))
+    b = problem.body_force + problem.neumann
     b = assign_bc(b, problem)
     pc = get_jacobi_precond(jacobi_preconditioner(problem)) if precond else None
     dofs, info = jax.scipy.sparse.linalg.bicgstab(A_fn, b, x0=b, M=pc, tol=1e-10, atol=1e-10, maxiter=10000)
@@ -132,9 +133,9 @@ def linear_incremental_solver(problem, res_fn, A_fn, dofs, precond):
 
 
 def compute_residual_val(res_fn, dofs):
-   res_vec = res_fn(dofs)
-   res_val = np.linalg.norm(res_vec)
-   return res_val
+    res_vec = res_fn(dofs)
+    res_val = np.linalg.norm(res_vec)
+    return res_val
 
 
 def get_A_fn(problem):
@@ -152,7 +153,7 @@ def get_A_fn(problem):
     return compute_linearized_residual
 
 
-def solver_row_elimination(problem, linear=False, precond=True):
+def solver_row_elimination(problem, linear=False, precond=True, initial_guess=None):
     """Imposing Dirichlet B.C. with "row elimination" method.
     """
     print(f"Calling the row elimination solver for imposing Dirichlet B.C.")
@@ -176,7 +177,11 @@ def solver_row_elimination(problem, linear=False, precond=True):
         dofs = assign_bc(dofs, problem)
         dofs = linear_incremental_solver(problem, res_fn, A_fn, dofs, precond)
     else:
-        dofs = linear_guess_solve(problem, A_fn, precond)
+        if initial_guess is None:
+            dofs = linear_guess_solve(problem, A_fn, precond)
+        else:
+            dofs = initial_guess.reshape(-1)
+
         res_val = compute_residual_val(res_fn, dofs)
         print(f"Before, res l_2 = {res_val}") 
         tol = 1e-6
@@ -405,12 +410,12 @@ def solver_lagrange_multiplier(problem, linear=False):
 ################################################################################
 # General
 
-def solver(problem, linear=False, precond=True):
+def solver(problem, linear=False, precond=True, initial_guess=None):
     """periodic B.C. is a special form of adding a linear constraint. 
     Lagrange multiplier seems to be convenient to impose this constraint.
     """
     if problem.periodic_bc_info is None:
-        return solver_row_elimination(problem, linear, precond)
+        return solver_row_elimination(problem, linear, precond, initial_guess)
     else:
         return solver_lagrange_multiplier(problem, linear)
 

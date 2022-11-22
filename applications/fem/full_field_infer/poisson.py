@@ -120,7 +120,9 @@ def param_id():
     vtu_path = os.path.join(data_dir, f"vtk/{problem_fwd_name}/u.vtu")
     save_sol(problem_fwd, true_sol, vtu_path, point_infos=[('source', true_body_force)])
     print(f"True force L2 integral = {problem_fwd.compute_L2(true_body_force)}")
-    num_obs_pts = 250
+    
+    num_obs_pts = 2500
+
     observed_inds = onp.random.choice(onp.arange(len(jax_mesh.points)), size=num_obs_pts, replace=False)
     observed_points = jax_mesh.points[observed_inds]
     cells = [[i%num_obs_pts, (i + 1)%num_obs_pts, (i + 2)%num_obs_pts] for i in range(num_obs_pts)]

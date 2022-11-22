@@ -3,6 +3,7 @@ import jax
 import jax.numpy as np
 import os 
 import matplotlib.pyplot as plt
+import time
 
 from jax_am.fem.generate_mesh import Mesh, box_mesh
 from jax_am.fem.solver import solver
@@ -31,6 +32,19 @@ def debug():
     print(energy)
 
 
+def walltime(func):
+    def wrapper(*list_args, **keyword_args):
+        start_time = time.time()
+        return_values = func(*list_args, **keyword_args)
+        end_time = time.time()
+        time_elapsed = end_time - start_time
+        platform = jax.lib.xla_bridge.get_backend().platform
+        print(f"Time elapsed {time_elapsed} of function {func.__name__} on platform {platform}")
+        return return_values
+    return wrapper
+    
+
+@walltime
 def homogenization_problem(case, dns_info=None):
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
     problem_name = case if dns_info is None else case + "_" + dns_info
@@ -108,8 +122,8 @@ def homogenization_problem(case, dns_info=None):
 def run_tensile():
     homogenization_problem('nn')
     homogenization_problem('dns')
-    homogenization_problem('dns', 'in')
-    homogenization_problem('dns', 'out')
+    # homogenization_problem('dns', 'in')
+    # homogenization_problem('dns', 'out')
 
 
 def plot_results():
@@ -143,8 +157,8 @@ def plot_results():
 
 
 if __name__=="__main__":
-    # run_tensile()
+    run_tensile()
     # debug()
-    plot_results()
+    # plot_results()
     # plt.show()
 

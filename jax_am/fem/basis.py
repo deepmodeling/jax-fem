@@ -25,6 +25,7 @@ def get_elements(ele_type, lag_order):
     The consequence is that we need to define this "re_order" variable to make sure the 
     ordering is correct.
     """
+    element_family = basix.ElementFamily.P
     if (ele_type, lag_order) == ('hexahedron', 1):
         re_order = [0, 1, 3, 2, 4, 5, 7, 6]
         basix_ele = basix.CellType.hexahedron
@@ -57,10 +58,17 @@ def get_elements(ele_type, lag_order):
         basix_ele = basix.CellType.triangle
         basix_face_ele = basix.CellType.interval
         gauss_order = 2 # 3, full integration  
+    # TODO:
+    elif (ele_type, lag_order) == ('serendipity', 2):
+        re_order = [0, 1, 3, 2, 4, 5, 7, 6, 8, 11, 13, 9, 16, 18, 19, 17, 10, 12, 15, 14]
+        element_family = basix.ElementFamily.serendipity
+        basix_ele = basix.CellType.hexahedron
+        basix_face_ele = basix.CellType.quadrilateral
+        gauss_order = 10 # 6x6x6, full integration
     else:
         raise NotImplementedError
 
-    return basix_ele, basix_face_ele, gauss_order, re_order
+    return element_family, basix_ele, basix_face_ele, gauss_order, re_order
 
 
 def reorder_inds(inds, re_order):
@@ -83,10 +91,10 @@ def get_shape_vals_and_grads(ele_type, lag_order):
     weights: ndarray
         (8,) = (num_quads,)
     """
-    basix_ele, basix_face_ele, gauss_order, re_order = get_elements(ele_type, lag_order)
+    element_family, basix_ele, basix_face_ele, gauss_order, re_order = get_elements(ele_type, lag_order)
     quad_points, weights = basix.make_quadrature(basix_ele, gauss_order)  
-    lagrange = basix.create_element(basix.ElementFamily.P, basix_ele, lag_order, basix.LagrangeVariant.equispaced)
-    vals_and_grads = lagrange.tabulate(1, quad_points)[:, :, re_order, :]
+    element = basix.create_element(element_family, basix_ele, lag_order, basix.LagrangeVariant.equispaced)
+    vals_and_grads = element.tabulate(1, quad_points)[:, :, re_order, :]
     shape_values = vals_and_grads[0, :, :, 0]
     shape_grads_ref = onp.transpose(vals_and_grads[1:, :, :, 0], axes=(1, 2, 0))
     print(f"ele_type = {ele_type}, lag_order = {lag_order}, quad_points.shape= {quad_points.shape}")
@@ -109,7 +117,7 @@ def get_face_shape_vals_and_grads(ele_type, lag_order):
     face_inds: ndarray
         (6, 4) = (num_faces, num_face_vertices)
     """
-    basix_ele, basix_face_ele, gauss_order, re_order = get_elements(ele_type, lag_order)
+    element_family, basix_ele, basix_face_ele, gauss_order, re_order = get_elements(ele_type, lag_order)
 
     # TODO: Check if this is correct.
     points, weights = basix.make_quadrature(basix_face_ele, gauss_order)
@@ -146,8 +154,8 @@ def get_face_shape_vals_and_grads(ele_type, lag_order):
     face_inds = onp.array(face_inds)
     face_inds = reorder_inds(face_inds, re_order)
     num_faces, num_face_quads, dim = face_quad_points.shape
-    lagrange = basix.create_element(basix.ElementFamily.P, basix_ele, lag_order, basix.LagrangeVariant.equispaced)
-    vals_and_grads = lagrange.tabulate(1, face_quad_points.reshape(-1, dim))[:, :, re_order, :]
+    element = basix.create_element(element_family, basix_ele, lag_order, basix.LagrangeVariant.equispaced)
+    vals_and_grads = element.tabulate(1, face_quad_points.reshape(-1, dim))[:, :, re_order, :]
     face_shape_vals = vals_and_grads[0, :, :, 0].reshape(num_faces, num_face_quads, -1)
     face_shape_grads_ref = vals_and_grads[1:, :, :, 0].reshape(dim, num_faces, num_face_quads, -1)
     face_shape_grads_ref = onp.transpose(face_shape_grads_ref, axes=(1, 2, 3, 0))

@@ -33,7 +33,6 @@ def plot_plastic_stress_strain():
         plt.savefig(os.path.join(data_dir, f'pdf/{problem_names[i]}_stress_strain.pdf'), bbox_inches='tight')
 
 
-
 def plot_performance():
     data_dir = f"applications/fem/fem_examples/data/"
     abaqus_cpu_time = onp.loadtxt(os.path.join(data_dir, f"txt/abaqus_fem_time_cpu.txt"))

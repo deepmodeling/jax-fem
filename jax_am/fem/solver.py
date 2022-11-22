@@ -178,6 +178,7 @@ def solver_row_elimination(problem, linear=False, precond=True, initial_guess=No
         dofs = linear_incremental_solver(problem, res_fn, A_fn, dofs, precond)
     else:
         if initial_guess is None:
+            # TODO: If dofs not satisfying B.C., nan occurs. Why?
             dofs = linear_guess_solve(problem, A_fn, precond)
         else:
             dofs = initial_guess.reshape(-1)

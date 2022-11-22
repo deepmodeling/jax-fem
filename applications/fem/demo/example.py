@@ -13,8 +13,15 @@ def problem():
     """Can be used to test the memory limit of JAX-FEM
     """
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
-    meshio_mesh = box_mesh(100, 100, 100, 1., 1., 1., data_dir)
+
+    ele_type = 'hexahedron'
+    lag_order = 1
+
+    meshio_mesh = box_mesh(10, 10, 10, 1., 1., 1., data_dir, ele_type=ele_type, lag_order=lag_order)
+
+    # meshio_mesh = box_mesh(100, 100, 100, 1., 1., 1., data_dir)
     # meshio_mesh = box_mesh(300, 100, 100, 1., 1., 1., data_dir)
+
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def left(point):
@@ -34,7 +41,7 @@ def problem():
                          [zero_dirichlet_val, zero_dirichlet_val, zero_dirichlet_val, 
                           dirichlet_val, zero_dirichlet_val, zero_dirichlet_val]]
  
-    problem = LinearElasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info)
+    problem = LinearElasticity(mesh, vec=3, dim=3, ele_type=ele_type, lag_order=lag_order, dirichlet_bc_info=dirichlet_bc_info)
     sol = solver(problem, linear=True, precond=True)
     vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
     save_sol(problem, sol, vtk_path)

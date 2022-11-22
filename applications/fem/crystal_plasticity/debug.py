@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as np
+import jax.flatten_util
 import numpy as onp
 import os
 import glob
@@ -36,18 +37,18 @@ def debug_problem():
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
     problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type, lag_order=lag_order, dirichlet_bc_info=[[],[],[]])
+    problem.dt = 0.025
 
     tensor_map, update_int_vars_map = problem.get_maps()
-
 
     gss_initial = 60.8 
     num_slip_sys = 12
     slip_resistance_old = gss_initial*onp.ones(num_slip_sys)
+    slip_old = onp.zeros_like(slip_resistance_old)
     Fp_inv_old = onp.eye(problem.dim)
 
-
     u_grad = np.array([[0., 0., 0.], [0., 0., 0.], [0., 0., 0.001]])
-    S = tensor_map(u_grad, Fp_inv_old, slip_resistance_old)
+    S = tensor_map(u_grad, Fp_inv_old, slip_resistance_old, slip_old)
 
     Fe = u_grad + np.eye(problem.dim)
     elastic_S = np.sum(problem.C * 1./2.*(Fe.T @ Fe - np.eye(problem.dim))[None, None, :, :], axis=(2, 3))
@@ -57,18 +58,19 @@ def debug_problem():
     print(elastic_S)
 
     stresses = []
-    strains = onp.linspace(0, 0.007, 11)
+    strains = onp.linspace(0, 0.005, 11)
     for i in range(len(strains)):
         print(f"i = {i}")
         u_grad = onp.zeros((problem.dim, problem.dim))
         u_grad[2, 2] = strains[i]
-        u_grad[0, 0] = -0.42*strains[i]
-        u_grad[1, 1] = -0.42*strains[i]
-        S = tensor_map(u_grad, Fp_inv_old, slip_resistance_old)
+        u_grad[0, 0] = -0.36*strains[i]
+        u_grad[1, 1] = -0.36*strains[i]
+        S = tensor_map(u_grad, Fp_inv_old, slip_resistance_old, slip_old)
         stress = S[2, 2]
-        Fp_inv_old, slip_resistance_old = update_int_vars_map(u_grad, Fp_inv_old, slip_resistance_old)
+        Fp_inv_old, slip_resistance_old, slip_old = update_int_vars_map(u_grad, Fp_inv_old, slip_resistance_old, slip_old)
         print(f"Fp_inv_old = \n{Fp_inv_old}")
         print(f"slip_resistance_old = \n{slip_resistance_old}")
+        print(f"slip_old = \n{slip_old}")
         stresses.append(stress)
     stresses = onp.array(stresses)
     print(stresses)
@@ -80,3 +82,4 @@ def debug_problem():
 if __name__ == "__main__":
     debug_problem()
     plt.show()
+    # exp_unravel()

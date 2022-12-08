@@ -534,6 +534,7 @@ class FEM:
         return values, selected_cells
 
     def compute_residual_vars(self, sol, **internal_vars):
+        print(f"Compute cell residual...")
         res = np.zeros_like(sol)
         cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
         weak_form = self.split_and_compute_cell(cells_sol, np, False, **internal_vars) # (num_cells, num_nodes, vec)
@@ -554,8 +555,8 @@ class FEM:
         return self.compute_residual_vars(sol)
 
     def newton_vars(self, sol, **internal_vars):
-        cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
         print(f"Compute cell Jacobian...")
+        cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
         # (num_cells, num_nodes, vec, num_nodes, vec)
         cells_jac = self.split_and_compute_cell(cells_sol, onp, True, **internal_vars)
         V = cells_jac.reshape(-1)

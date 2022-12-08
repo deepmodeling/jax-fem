@@ -35,8 +35,8 @@ def problem():
     ele_type = 'hexahedron'
     lag_order = 1
 
-    # Nx, Ny, Nz = 2, 2, 20
-    # Lx, Ly, Lz = 10., 10., 100.
+    # Nx, Ny, Nz = 40, 40, 40
+    # Lx, Ly, Lz = 1., 1., 1.
 
     Nx, Ny, Nz = 1, 1, 1
     Lx, Ly, Lz = 1., 1., 1.
@@ -94,7 +94,10 @@ def problem():
     #                      [zero_dirichlet_val]*3]
 
 
-    problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type, lag_order=lag_order, dirichlet_bc_info=dirichlet_bc_info)
+    quat = onp.array([[1, 0., 0., 0.]])
+    cell_ori_inds = onp.zeros(len(mesh.cells), dtype=onp.int32)
+    problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type, lag_order=lag_order, dirichlet_bc_info=dirichlet_bc_info, 
+                                additional_info=(quat, cell_ori_inds))
 
     # problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type, lag_order=lag_order, 
         # dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info)
@@ -118,7 +121,7 @@ def problem():
 
         sol = solver(problem, linear=False)
 
-        stress_zz = problem.compute_avg_stress(sol)
+        stress_zz = problem.compute_avg_stress(sol)[0, 2, 2]
         F_p_zz, slip_resistance_0, slip_inc_dt_index_0 = problem.update_int_vars_gp(sol)
         print(f"stress_zz = {stress_zz}")
         

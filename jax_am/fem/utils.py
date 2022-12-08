@@ -11,6 +11,7 @@ def save_sol(problem, sol, sol_file, cell_infos=None, point_infos=None, cell_typ
     if cell_infos is not None:
         for cell_info in cell_infos:
             name, data = cell_info
+            # TODO: vector-valued cell data
             assert data.shape == (problem.num_cells,), "cell data wrong shape!"
             out_mesh.cell_data[name] = [onp.array(data, dtype=onp.float32)]
     if point_infos is not None:

@@ -10,17 +10,22 @@ from functools import partial
 ################################################################################
 # "row elimination" solver
 
+def apply_bc_vec(res_vec, dofs, problem):
+    sol = dofs.reshape((problem.num_total_nodes, problem.vec))
+    res = res_vec.reshape(sol.shape)
+    for i in range(len(problem.node_inds_list)):
+        res = (res.at[problem.node_inds_list[i], problem.vec_inds_list[i]].set
+               (sol[problem.node_inds_list[i], problem.vec_inds_list[i]], unique_indices=True))
+        res = res.at[problem.node_inds_list[i], problem.vec_inds_list[i]].add(-problem.vals_list[i])
+    return res.reshape(-1)
+
+
 def apply_bc(res_fn, problem):
     def A_fn(dofs):
         """Apply Dirichlet boundary conditions
         """
-        sol = dofs.reshape((problem.num_total_nodes, problem.vec))
-        res = res_fn(dofs).reshape(sol.shape)
-        for i in range(len(problem.node_inds_list)):
-            res = (res.at[problem.node_inds_list[i], problem.vec_inds_list[i]].set
-                   (sol[problem.node_inds_list[i], problem.vec_inds_list[i]], unique_indices=True))
-            res = res.at[problem.node_inds_list[i], problem.vec_inds_list[i]].add(-problem.vals_list[i])
-        return res.reshape(-1)
+        res_vec = res_fn(dofs)
+        return apply_bc_vec(res_vec, dofs, problem)
     return A_fn
 
 
@@ -128,8 +133,9 @@ def linear_guess_solve(problem, A_fn, precond):
     b = problem.body_force + problem.neumann
     b = assign_bc(b, problem)
     pc = get_jacobi_precond(jacobi_preconditioner(problem)) if precond else None
+
     dofs, info = jax.scipy.sparse.linalg.bicgstab(A_fn, b, x0=b, M=pc, tol=1e-10, atol=1e-10, maxiter=10000)
-    print(f"Linear guess solve done.")
+    print(f"Linear guess solve res = {np.linalg.norm(A_fn(dofs) - b)}")
 
     return dofs
 
@@ -137,7 +143,6 @@ def linear_guess_solve(problem, A_fn, precond):
 def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond):
     """Lift solver
     """
-    # b = -res_fn(dofs)
     b = -res_vec
     pc = get_jacobi_precond(jacobi_preconditioner(problem)) if precond else None
 
@@ -147,7 +152,7 @@ def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond):
 
     print(f"Solving linear system with lift solver...")
     inc, info = jax.scipy.sparse.linalg.bicgstab(A_fn, b, x0=x0, M=pc, tol=1e-10, atol=1e-10, maxiter=10000) # bicgstab, gmres
-    print(f"linear solver res = {np.linalg.norm(A_fn(inc) - b)}, inc norm = {np.linalg.norm(inc)}")
+    print(f"Lift linear solver res = {np.linalg.norm(A_fn(inc) - b)}, inc norm = {np.linalg.norm(inc)}")
 
     dofs = dofs + inc
     return dofs
@@ -175,52 +180,39 @@ def solver_row_elimination(problem, linear=False, precond=True, initial_guess=No
     print("Start timing")
     start = time.time()
     sol_shape = (problem.num_total_nodes, problem.vec)
-    if initial_guess is None:   
-        dofs = np.zeros(sol_shape)
-    else:
-        dofs = initial_guess.reshape(-1)
+    dofs = np.zeros(sol_shape).reshape(-1)
 
-    res_fn = problem.compute_residual
-    res_fn = get_flatten_fn(res_fn, problem)
-    res_fn = apply_bc(res_fn, problem) 
+    def newton_update_helper(dofs):
+        res_vec = problem.newton_update(dofs.reshape(sol_shape)).reshape(-1)
+        res_vec = apply_bc_vec(res_vec, dofs, problem)
+        A_fn = get_A_fn(problem)
+        A_fn = row_elimination(A_fn, problem)
+        return res_vec, A_fn
 
-    problem.newton_update(dofs.reshape((problem.num_total_nodes, problem.vec)))
-    A_fn = get_A_fn(problem)
-    A_fn = row_elimination(A_fn, problem)
-
-    # TODO: more notes here
     # TODO: detect np.nan and assert
     if linear:
         dofs = assign_bc(dofs, problem)
-        res_vec = res_fn(dofs)
+        res_vec, A_fn = newton_update_helper(dofs)
         dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond)
     else:
         if initial_guess is None:
+            res_vec, A_fn = newton_update_helper(dofs)
             # TODO: If dofs not satisfying B.C., nan occurs. Why?
             dofs = linear_guess_solve(problem, A_fn, precond)
         else:
             dofs = initial_guess.reshape(-1)
 
-        res_vec = res_fn(dofs)
+        res_vec, A_fn = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
         print(f"Before, res l_2 = {res_val}") 
         tol = 1e-6
         while res_val > tol:
-            problem.newton_update(dofs.reshape(sol_shape))
-            A_fn = get_A_fn(problem)
-            A_fn = row_elimination(A_fn, problem)  
-
-            # if res_val < 1e-5:
-            #     problem.tol_gp = 1e-10*onp.ones_like(problem.tol_gp)
-            # else:
-            #     problem.tol_gp = 1e-8*onp.ones_like(problem.tol_gp)
-
             dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond)
-            res_vec = res_fn(dofs)
-            res_val = np.linalg.norm(res_vec)
+            res_vec, A_fn = newton_update_helper(dofs)
             # test_jacobi_precond(problem, jacobi_preconditioner(problem, dofs), A_fn)
+            res_val = np.linalg.norm(res_vec)
             print(f"res l_2 = {res_val}") 
-
+            
     sol = dofs.reshape(sol_shape)
     end = time.time()
     solve_time = end - start

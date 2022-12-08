@@ -15,10 +15,10 @@ from applications.fem.crystal_plasticity.models import CrystalPlasticity
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
+case_name = 'polycrystal_neper'
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
-numpy_dir = os.path.join(data_dir, 'numpy')
-vtk_dir = os.path.join(data_dir, 'vtk')
+vtk_dir = os.path.join(data_dir, f'vtk/{case_name}')
 csv_dir = os.path.join(data_dir, 'csv')
 msh_dir = os.path.join(data_dir, 'msh')
 neper_folder = os.path.join(data_dir, 'neper')
@@ -58,11 +58,11 @@ def problem():
     for f in files:
         os.remove(f)
 
-    # disps = np.linspace(0., 0.005*Lx, 11)
-    # ts = np.linspace(0., 0.5, 11)
+    disps = np.linspace(0., 0.01*Lx, 51)
+    ts = np.linspace(0., 1., 51)
 
-    disps = np.linspace(0., 0.002*Lx, 11)
-    ts = np.linspace(0., 0.2, 11)
+    # disps = np.linspace(0., 0.002*Lx, 11)
+    # ts = np.linspace(0., 0.2, 11)
 
     def corner(point):
         flag_x = np.isclose(point[0], 0., atol=1e-3)
@@ -125,8 +125,8 @@ def problem():
         dirichlet_bc_info[-1][-1] = get_dirichlet_top(disps[i + 1])
         problem.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
 
-        sol = solver(problem, linear=False)
-        # sol = solver(problem, linear=False, initial_guess=sol)
+        # sol = solver(problem)
+        sol = solver(problem, initial_guess=sol)
 
         print(f"Computing stress...")
         sigma_cell_data = problem.compute_avg_stress(sol)[:, 0, 0]
@@ -134,7 +134,7 @@ def problem():
         F_p_zz, slip_resistance_0, slip_inc_dt_index_0 = problem.update_int_vars_gp(sol)
         print(f"stress = {sigma_cell_data[0]}, max stress = {np.max(sigma_cell_data)}")
         
-        vtk_path = os.path.join(data_dir, f'vtk/u_{i:03d}.vtu')
+        vtk_path = os.path.join(vtk_dir, f'u_{i:03d}.vtu')
         save_sol(problem, sol, vtk_path, cell_infos=[('cell_ori_inds', cell_ori_inds), ('sigma', sigma_cell_data)], cell_type=cell_type)
 
 

@@ -5,10 +5,13 @@ import numpy as onp
 import os
 import glob
 import matplotlib.pyplot as plt
-
+import functools
+ 
 from jax_am.fem.solver import solver
 from jax_am.fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
 from jax_am.fem.utils import save_sol
+
+from jax_am.phase_field.utils import make_video
 
 from applications.fem.crystal_plasticity.models import CrystalPlasticity
 
@@ -19,7 +22,7 @@ data_dir = os.path.join(os.path.dirname(__file__), 'data')
 numpy_dir = os.path.join(data_dir, 'numpy')
 vtk_dir = os.path.join(data_dir, 'vtk')
 
-
+    
 def debug_problem():
 
     ele_type = 'tetrahedron'
@@ -80,6 +83,7 @@ def debug_problem():
 
 
 if __name__ == "__main__":
-    debug_problem()
-    plt.show()
-    # exp_unravel()
+    # debug_problem()
+    # plt.show()
+    make_video(data_dir)
+

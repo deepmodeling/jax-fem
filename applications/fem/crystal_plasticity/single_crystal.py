@@ -13,10 +13,11 @@ from applications.fem.crystal_plasticity.models import CrystalPlasticity
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
+case_name = 'single_crystal'
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 numpy_dir = os.path.join(data_dir, 'numpy')
-vtk_dir = os.path.join(data_dir, 'vtk')
+vtk_dir = os.path.join(data_dir, f'vtk/{case_name}')
 csv_dir = os.path.join(data_dir, 'csv')
 
 
@@ -117,15 +118,13 @@ def problem():
         # problem.neumann_bc_info = [[top], [get_neumann_val(forces[i + 1])]]
         # problem.neumann = problem.compute_Neumann_integral()
 
-        # sol = solver(problem, linear=False, initial_guess=sol)
-
         sol = solver(problem, linear=False)
 
         stress_zz = problem.compute_avg_stress(sol)[0, 2, 2]
         F_p_zz, slip_resistance_0, slip_inc_dt_index_0 = problem.update_int_vars_gp(sol)
         print(f"stress_zz = {stress_zz}")
         
-        vtk_path = os.path.join(data_dir, f'vtk/u_{i:03d}.vtu')
+        vtk_path = os.path.join(vtk_dir, f'u_{i:03d}.vtu')
         save_sol(problem, sol, vtk_path, cell_type=cell_type)
 
         results_to_save.append([disps[i + 1]/Lz, F_p_zz, slip_resistance_0, slip_inc_dt_index_0, stress_zz])

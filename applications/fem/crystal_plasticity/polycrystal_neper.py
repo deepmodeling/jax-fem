@@ -57,11 +57,11 @@ def problem():
     for f in files:
         os.remove(f)
 
-    disps = np.linspace(0., 0.01*Lx, 51)
-    ts = np.linspace(0., 1., 51)
+    # disps = np.linspace(0., 0.01*Lx, 51)
+    # ts = np.linspace(0., 1., 51)
 
-    # disps = np.linspace(0., 0.002*Lx, 11)
-    # ts = np.linspace(0., 0.2, 11)
+    disps = np.linspace(0., 0.002*Lx, 11)
+    ts = np.linspace(0., 0.2, 11)
 
     def corner(point):
         flag_x = np.isclose(point[0], 0., atol=1e-3)

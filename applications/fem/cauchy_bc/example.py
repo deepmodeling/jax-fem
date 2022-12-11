@@ -8,11 +8,13 @@ from jax_am.fem.models import LinearPoisson
 from jax_am.fem.solver import solver
 from jax_am.fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
 from jax_am.fem.utils import save_sol, modify_vtu_file
+from jax_am.fem.basis import get_elements
+    
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 
-def gmsh_mesh(data_dir, lag_order):
+def gmsh_mesh(data_dir, degree):
     """
     Reference:
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/gmsh_4_8_3/tutorial/python/t1.py
@@ -40,7 +42,7 @@ def gmsh_mesh(data_dir, lag_order):
     ps = gmsh.model.addPhysicalGroup(2, [1])
     gmsh.model.setPhysicalName(2, ps, "My surface")
     gmsh.model.mesh.generate(2)
-    gmsh.model.mesh.setOrder(lag_order)
+    gmsh.model.mesh.setOrder(degree)
     gmsh.write(file_path)
 
     return file_path
@@ -55,10 +57,10 @@ def problem():
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
     vec = 1
     dim = 2
-    ele_type = 'triangle'
-    lag_order = 1
-    msh_file_path = gmsh_mesh(data_dir, lag_order)
-    cell_type = get_meshio_cell_type(ele_type, lag_order)
+    ele_type = 'TRI4'
+    _, _, _, _, degree, _ = get_elements(ele_type)
+    msh_file_path = gmsh_mesh(data_dir, degree)
+    cell_type = get_meshio_cell_type(ele_type)
     meshio_mesh = meshio.read(msh_file_path)
     # TODO:
     mesh = Mesh(meshio_mesh.points[:, :2], meshio_mesh.cells_dict[cell_type])
@@ -93,7 +95,7 @@ def problem():
 
     cauchy_bc_info = [[left, right], [cauchy_map]*2]
 
-    problem = LinearPoisson(mesh, vec, dim, ele_type, lag_order, dirichlet_bc_info=dirichlet_bc_info, 
+    problem = LinearPoisson(mesh, vec, dim, ele_type, dirichlet_bc_info=dirichlet_bc_info, 
                             cauchy_bc_info=cauchy_bc_info, source_info=body_force)
 
     sol = solver(problem, linear=False)

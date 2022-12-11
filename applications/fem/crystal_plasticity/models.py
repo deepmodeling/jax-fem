@@ -153,11 +153,11 @@ class CrystalPlasticity(Mechanics):
                 tmp = h*np.absolute(gamma_inc) * np.absolute(1 - slip_resistance_old/t_sat)**gss_a * np.sign(1 - slip_resistance_old/t_sat)
                 g_inc = (self.q @ tmp[:, None]).reshape(-1)
 
-                # tmp = h*np.absolute(gamma_inc) / np.cosh(h*np.sum(slip_new)/(t_sat - self.gss_initial))**2
+                # tmp = h*np.absolute(gamma_inc) / np.cosh(h*np.sum(slip_old)/(t_sat - self.gss_initial))**2
                 # g_inc = (self.q @ tmp[:, None]).reshape(-1)
 
                 slip_resistance_new = slip_resistance_old + g_inc
-                slip_new = slip_old + gamma_inc
+                slip_new = slip_old + np.absolute(gamma_inc)
                 F = u_grad + np.eye(self.dim)
                 L_plastic_inc = np.sum(gamma_inc[:, None, None] * rotate_tensor_rank_2_vmap(rot_mat, self.Schmid_tensors), axis=0)
                 Fp_inv_new = Fp_inv_old @ (np.eye(self.dim) - L_plastic_inc)

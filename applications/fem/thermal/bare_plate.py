@@ -29,8 +29,7 @@ def bare_plate_single_track():
     P = 500.
     vec = 1
     dim = 3
-    ele_type = 'hexahedron'
-    lag_order = 1
+    ele_type = 'HEX8'
 
     ts = np.arange(0., 10e5, dt)
     # ts = np.arange(0., 10*dt, dt)
@@ -67,7 +66,7 @@ def bare_plate_single_track():
     active_cell_truth_tab = onp.ones(len(full_mesh.cells), dtype=bool)
     active_mesh, points_map_active, cells_map_full = get_active_mesh(full_mesh, active_cell_truth_tab)
     external_faces, cells_face, hash_map, inner_faces, all_faces = initialize_hash_map(full_mesh, 
-        active_cell_truth_tab, cells_map_full, ele_type, lag_order)
+        active_cell_truth_tab, cells_map_full, ele_type)
     old_sol = T0*np.ones((len(active_mesh.points), vec))
 
     problem = Thermal(active_mesh, vec=vec, dim=dim, neumann_bc_info=neumann_bc_info, 

@@ -35,9 +35,8 @@ def problem():
     pf_args['num_oris'] = 10
     pre_processing(pf_args)
 
-    ele_type = 'hexahedron'
-    lag_order = 1
-    cell_type = get_meshio_cell_type(ele_type, lag_order)
+    ele_type = 'HEX8'
+    cell_type = get_meshio_cell_type(ele_type)
     meshio_mesh = meshio.read(os.path.join(neper_folder, f"domain.msh"))
  
     cell_grain_inds = meshio_mesh.cell_data['gmsh:physical'][0] - 1
@@ -111,7 +110,7 @@ def problem():
     #                      [2, 1, 0, 2, 1, 0], 
     #                      [zero_dirichlet_val, zero_dirichlet_val, zero_dirichlet_val, zero_dirichlet_val, zero_dirichlet_val, get_dirichlet_top(disps[0])]]
 
-    problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type, lag_order=lag_order, 
+    problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type, 
                                 dirichlet_bc_info=dirichlet_bc_info, additional_info=(quat, cell_ori_inds))
 
     results_to_save = []

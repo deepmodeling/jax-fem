@@ -3,6 +3,8 @@ import gmsh
 import numpy as onp
 import meshio
 
+from jax_am.fem.basis import get_elements
+
 
 class Mesh():
     """A custom mesh manager might be better than just use third-party packages like meshio?
@@ -14,34 +16,41 @@ class Mesh():
         self.cells = cells
 
 
-def get_meshio_cell_type(ele_type, lag_order):
+def get_meshio_cell_type(ele_type):
     """Reference:
     https://github.com/nschloe/meshio/blob/9dc6b0b05c9606cad73ef11b8b7785dd9b9ea325/src/meshio/xdmf/common.py#L36
     """
-    if ele_type == 'tetrahedron' and lag_order == 1:
+    if ele_type == 'TET4':
         cell_type = 'tetra'
-    elif ele_type == 'tetrahedron' and lag_order == 2:
+    elif ele_type == 'TET10':
         cell_type = 'tetra10'
-    elif ele_type == 'hexahedron' and lag_order == 1:
+    elif ele_type == 'HEX8':
         cell_type = 'hexahedron'
-    elif ele_type == 'hexahedron' and lag_order == 2:
+    elif ele_type == 'HEX27':
         cell_type = 'hexahedron27'
-    elif ele_type == 'triangle' and lag_order == 1:
+    elif  ele_type == 'HEX20':
+        cell_type = 'hexahedron20'
+    elif ele_type == 'TRI3':
         cell_type = 'triangle'
-    elif ele_type == 'triangle' and lag_order == 2:
+    elif ele_type == 'TRI6':
         cell_type = 'triangle6'
     else:
         raise NotImplementedError
     return cell_type
 
 
-def box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir, ele_type='hexahedron', lag_order=1):
+def box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir, ele_type='HEX8'):
     """References:
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/master/examples/api/hex.py
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/gmsh_4_7_1/tutorial/python/t1.py
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/gmsh_4_7_1/tutorial/python/t3.py
     """
-    cell_type = get_meshio_cell_type(ele_type, lag_order)
+
+    assert ele_type != 'HEX20', f"gmsh cannot produce HEX20 mesh?"
+
+    cell_type = get_meshio_cell_type(ele_type)
+    _, _, _, _, degree, _ = get_elements(ele_type)
+
     msh_dir = os.path.join(data_dir, 'msh')
     os.makedirs(msh_dir, exist_ok=True)
     msh_file = os.path.join(msh_dir, 'box_order_2.msh')
@@ -68,7 +77,7 @@ def box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir, ele_type='hexahedron', lag_order=
 
     gmsh.model.geo.synchronize()
     gmsh.model.mesh.generate(3)
-    gmsh.model.mesh.setOrder(lag_order)
+    gmsh.model.mesh.setOrder(degree)
     gmsh.write(msh_file)
     gmsh.finalize()
       

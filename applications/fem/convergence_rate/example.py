@@ -13,9 +13,9 @@ from jax_am.fem.utils import save_sol
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 
-def problem(ele_type, lag_order, N, data_dir):
-    cell_type = get_meshio_cell_type(ele_type, lag_order)
-    meshio_mesh = box_mesh(N, N, N, 1., 1., 1., data_dir, ele_type, lag_order)
+def problem(ele_type, N, data_dir):
+    cell_type = get_meshio_cell_type(ele_type)
+    meshio_mesh = box_mesh(N, N, N, 1., 1., 1., data_dir, ele_type)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
     def true_u_fn(point):
@@ -53,7 +53,7 @@ def problem(ele_type, lag_order, N, data_dir):
                          [0]*6, 
                          [dirichlet_val]*6]
  
-    problem = LinearPoisson(mesh, vec=1, dim=3, ele_type=ele_type, lag_order=lag_order, 
+    problem = LinearPoisson(mesh, vec=1, dim=3, ele_type=ele_type,
                             dirichlet_bc_info=dirichlet_bc_info, source_info=body_force)
 
     sol = solver(problem, linear=True, precond=True)
@@ -70,16 +70,16 @@ def problem(ele_type, lag_order, N, data_dir):
 def convergence_test():
     crt_file_path = os.path.dirname(__file__)
     data_dir = os.path.join(crt_file_path, 'data') # applications/fem/convergence_rate/data
-    ele_type = 'tetrahedron'
-    lag_orders = [1, 2]
+    ele_types = ['TET4', 'TET10']
+    degrees = [1, 2]
     Ns = onp.array([8, 16])
     l2_errors_orders = []
     h1_errors_orders = []
-    for lag_order in lag_orders:
+    for ele_type in ele_types:
         l2_errors = []
         h1_errors = []        
         for N in Ns:
-            l2_error, h1_error = problem(ele_type, lag_order, N, data_dir)
+            l2_error, h1_error = problem(ele_type, N, data_dir)
             l2_errors.append(l2_error)
             h1_errors.append(h1_error)
         l2_errors_orders.append(l2_errors)

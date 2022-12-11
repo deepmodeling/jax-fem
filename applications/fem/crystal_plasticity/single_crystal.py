@@ -30,20 +30,18 @@ plt.rcParams.update({
 
 
 def problem():
-    # ele_type = 'tetrahedron'
-    # lag_order = 2
+    # ele_type = 'HEX20'
 
-    ele_type = 'hexahedron'
-    lag_order = 1
-
+    ele_type = 'HEX8'
+ 
     # Nx, Ny, Nz = 40, 40, 40
     # Lx, Ly, Lz = 1., 1., 1.
 
     Nx, Ny, Nz = 1, 1, 1
     Lx, Ly, Lz = 1., 1., 1.
 
-    cell_type = get_meshio_cell_type(ele_type, lag_order)
-    meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir, ele_type, lag_order)
+    cell_type = get_meshio_cell_type(ele_type)
+    meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir, ele_type)
 
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
@@ -97,10 +95,10 @@ def problem():
 
     quat = onp.array([[1, 0., 0., 0.]])
     cell_ori_inds = onp.zeros(len(mesh.cells), dtype=onp.int32)
-    problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type, lag_order=lag_order, dirichlet_bc_info=dirichlet_bc_info, 
+    problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, 
                                 additional_info=(quat, cell_ori_inds))
 
-    # problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type, lag_order=lag_order, 
+    # problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type,
         # dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info)
 
     results_to_save = []

@@ -33,8 +33,7 @@ def ded_thin_wall():
 
     vec = 1
     dim = 3
-    ele_type = 'hexahedron'
-    lag_order = 1
+    ele_type = 'HEX8'
     problem_name = 'thin_wall'
 
     vtk_dir = os.path.join(data_dir, f'vtk/{problem_name}')
@@ -58,7 +57,7 @@ def ded_thin_wall():
     active_cell_truth_tab_old = active_cell_truth_tab
 
     external_faces, cells_face, hash_map, inner_faces, all_faces = initialize_hash_map(full_mesh, 
-        active_cell_truth_tab, cells_map_full, ele_type, lag_order)
+        active_cell_truth_tab, cells_map_full, ele_type)
 
     toolpath = onp.loadtxt(os.path.join(data_dir, f'toolpath/thinwall_toolpath.crs'))
     toolpath[:, 1:4] = toolpath[:, 1:4]/1e3

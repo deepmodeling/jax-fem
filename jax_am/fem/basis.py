@@ -14,7 +14,7 @@ import numpy as onp
 #     if ele_type == 'tetrahedron' or ele_type == 'triangle':
 #         return 2 * (dim*(lag_order - 1) - 1)
 
-def get_elements(ele_type, lag_order):
+def get_elements(ele_type):
     """Mesh node ordering is important.
     If the input mesh file is Gmsh .msh or Abaqus .inp, meshio would convert it to
     its own ordering. My experience shows that meshio ordering is the same as Abaqus.
@@ -26,49 +26,55 @@ def get_elements(ele_type, lag_order):
     ordering is correct.
     """
     element_family = basix.ElementFamily.P
-    if (ele_type, lag_order) == ('hexahedron', 1):
+    if ele_type == 'HEX8':
         re_order = [0, 1, 3, 2, 4, 5, 7, 6]
         basix_ele = basix.CellType.hexahedron
         basix_face_ele = basix.CellType.quadrilateral
         gauss_order = 2 # 2x2x2, TODO: is this full integration?
-    elif (ele_type, lag_order) == ('hexahedron', 2):
+        degree = 1
+    elif ele_type == 'HEX27':
         print(f"Warning: 27-node hexahedron is rarely used in practice and not recommended.")
         re_order = [0, 1, 3, 2, 4, 5, 7, 6, 8, 11, 13, 9, 16, 18, 19, 
                     17, 10, 12, 15, 14, 22, 23, 21, 24, 20, 25, 26]
         basix_ele = basix.CellType.hexahedron
         basix_face_ele = basix.CellType.quadrilateral
         gauss_order = 10 # 6x6x6, full integration
-    elif (ele_type, lag_order) == ('tetrahedron', 1):
-        re_order = [0, 1, 2, 3]
-        basix_ele = basix.CellType.tetrahedron
-        basix_face_ele = basix.CellType.triangle
-        gauss_order = 0 # 1, full integration
-    elif (ele_type, lag_order) == ('tetrahedron', 2):
-        re_order = [0, 1, 2, 3, 9, 6, 8, 7, 5, 4]
-        basix_ele = basix.CellType.tetrahedron
-        basix_face_ele = basix.CellType.triangle
-        gauss_order = 2 # 4, full integration
-    elif (ele_type, lag_order) == ('triangle', 1):
-        re_order = [0, 1, 2]
-        basix_ele = basix.CellType.triangle
-        basix_face_ele = basix.CellType.interval
-        gauss_order = 0 # 1, full integration        
-    elif (ele_type, lag_order) == ('triangle', 2):
-        re_order = [0, 1, 2, 5, 3, 4]
-        basix_ele = basix.CellType.triangle
-        basix_face_ele = basix.CellType.interval
-        gauss_order = 2 # 3, full integration  
-    # TODO:
-    elif (ele_type, lag_order) == ('serendipity', 2):
+        degree = 2
+    elif ele_type == 'HEX20':
         re_order = [0, 1, 3, 2, 4, 5, 7, 6, 8, 11, 13, 9, 16, 18, 19, 17, 10, 12, 15, 14]
         element_family = basix.ElementFamily.serendipity
         basix_ele = basix.CellType.hexahedron
         basix_face_ele = basix.CellType.quadrilateral
-        gauss_order = 10 # 6x6x6, full integration
+        gauss_order = 2 # 6x6x6, full integration
+        degree = 2
+    elif ele_type == 'TET4':
+        re_order = [0, 1, 2, 3]
+        basix_ele = basix.CellType.tetrahedron
+        basix_face_ele = basix.CellType.triangle
+        gauss_order = 0 # 1, full integration
+        degree = 1
+    elif ele_type == 'TET10':
+        re_order = [0, 1, 2, 3, 9, 6, 8, 7, 5, 4]
+        basix_ele = basix.CellType.tetrahedron
+        basix_face_ele = basix.CellType.triangle
+        gauss_order = 2 # 4, full integration
+        degree = 2
+    elif ele_type == 'TRI3':
+        re_order = [0, 1, 2]
+        basix_ele = basix.CellType.triangle
+        basix_face_ele = basix.CellType.interval
+        gauss_order = 0 # 1, full integration    
+        degree = 1    
+    elif  ele_type == 'TRI6':
+        re_order = [0, 1, 2, 5, 3, 4]
+        basix_ele = basix.CellType.triangle
+        basix_face_ele = basix.CellType.interval
+        gauss_order = 2 # 3, full integration 
+        degree = 2 
     else:
         raise NotImplementedError
 
-    return element_family, basix_ele, basix_face_ele, gauss_order, re_order
+    return element_family, basix_ele, basix_face_ele, gauss_order, degree, re_order
 
 
 def reorder_inds(inds, re_order):
@@ -79,7 +85,7 @@ def reorder_inds(inds, re_order):
     return new_inds
 
 
-def get_shape_vals_and_grads(ele_type, lag_order):
+def get_shape_vals_and_grads(ele_type):
     """TODO: Add comments
 
     Returns
@@ -91,17 +97,17 @@ def get_shape_vals_and_grads(ele_type, lag_order):
     weights: ndarray
         (8,) = (num_quads,)
     """
-    element_family, basix_ele, basix_face_ele, gauss_order, re_order = get_elements(ele_type, lag_order)
+    element_family, basix_ele, basix_face_ele, gauss_order, degree, re_order = get_elements(ele_type)
     quad_points, weights = basix.make_quadrature(basix_ele, gauss_order)  
-    element = basix.create_element(element_family, basix_ele, lag_order, basix.LagrangeVariant.equispaced)
+    element = basix.create_element(element_family, basix_ele, degree)
     vals_and_grads = element.tabulate(1, quad_points)[:, :, re_order, :]
     shape_values = vals_and_grads[0, :, :, 0]
     shape_grads_ref = onp.transpose(vals_and_grads[1:, :, :, 0], axes=(1, 2, 0))
-    print(f"ele_type = {ele_type}, lag_order = {lag_order}, quad_points.shape= {quad_points.shape}")
+    print(f"ele_type = {ele_type}, quad_points.shape= {quad_points.shape}")
     return shape_values, shape_grads_ref, weights
 
 
-def get_face_shape_vals_and_grads(ele_type, lag_order):
+def get_face_shape_vals_and_grads(ele_type):
     """TODO: Add comments
 
     Returns
@@ -117,13 +123,13 @@ def get_face_shape_vals_and_grads(ele_type, lag_order):
     face_inds: ndarray
         (6, 4) = (num_faces, num_face_vertices)
     """
-    element_family, basix_ele, basix_face_ele, gauss_order, re_order = get_elements(ele_type, lag_order)
+    element_family, basix_ele, basix_face_ele, gauss_order, degree, re_order = get_elements(ele_type)
 
     # TODO: Check if this is correct.
     points, weights = basix.make_quadrature(basix_face_ele, gauss_order)
 
-    map_lag_order = 1
-    lagrange_map = basix.create_element(basix.ElementFamily.P, basix_face_ele, map_lag_order, basix.LagrangeVariant.equispaced)
+    map_degree = 1
+    lagrange_map = basix.create_element(basix.ElementFamily.P, basix_face_ele, map_degree)
     values = lagrange_map.tabulate(0, points)[0, :, :, 0]
     vertices = basix.geometry(basix_ele)
     dim = len(vertices[0])
@@ -154,7 +160,7 @@ def get_face_shape_vals_and_grads(ele_type, lag_order):
     face_inds = onp.array(face_inds)
     face_inds = reorder_inds(face_inds, re_order)
     num_faces, num_face_quads, dim = face_quad_points.shape
-    element = basix.create_element(element_family, basix_ele, lag_order, basix.LagrangeVariant.equispaced)
+    element = basix.create_element(element_family, basix_ele, degree)
     vals_and_grads = element.tabulate(1, face_quad_points.reshape(-1, dim))[:, :, re_order, :]
     face_shape_vals = vals_and_grads[0, :, :, 0].reshape(num_faces, num_face_quads, -1)
     face_shape_grads_ref = vals_and_grads[1:, :, :, 0].reshape(dim, num_faces, num_face_quads, -1)

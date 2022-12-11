@@ -43,8 +43,6 @@ class FEM:
         The dimension of the problem.
     ele_type : str
         Element type
-    lag_order : int
-        Lagrangian shape function order
     dirichlet_bc_info : [location_fns, vecs, value_fns]
         location_fns : List[Callable]
             Callable : a function that inputs a point and returns if the point satisfies the location condition
@@ -80,8 +78,7 @@ class FEM:
     mesh: Mesh
     vec: int
     dim: int
-    ele_type: str = 'hexahedron'
-    lag_order: int = 1
+    ele_type: str = 'HEX8'
     dirichlet_bc_info: Optional[List[Union[List[Callable], List[int], List[Callable]]]] = None 
     periodic_bc_info: Optional[List[Union[List[Callable], List[Callable], List[Callable], List[int]]]] = None
     neumann_bc_info: Optional[List[Union[List[Callable], List[Callable]]]] = None
@@ -99,9 +96,9 @@ class FEM:
         start = time.time()
         print(f"Start timing - Compute shape function values, gradients, etc.")
 
-        self.shape_vals, self.shape_grads_ref, self.quad_weights = get_shape_vals_and_grads(self.ele_type, self.lag_order)
+        self.shape_vals, self.shape_grads_ref, self.quad_weights = get_shape_vals_and_grads(self.ele_type)
         self.face_shape_vals, self.face_shape_grads_ref, self.face_quad_weights, self.face_normals, self.face_inds \
-        = get_face_shape_vals_and_grads(self.ele_type, self.lag_order)
+        = get_face_shape_vals_and_grads(self.ele_type)
         self.num_quads = self.shape_vals.shape[0]
         self.num_nodes = self.shape_vals.shape[1]
         self.num_faces = self.face_shape_vals.shape[0]

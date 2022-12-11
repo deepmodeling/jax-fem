@@ -8,11 +8,13 @@ from jax_am.fem.models import LinearPoisson
 from jax_am.fem.solver import solver
 from jax_am.fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
 from jax_am.fem.utils import save_sol, modify_vtu_file
+from jax_am.fem.basis import get_elements
+
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 
-def gmsh_mesh(data_dir, lag_order):
+def gmsh_mesh(data_dir, degree):
     """
     Reference:
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/gmsh_4_8_3/tutorial/python/t1.py
@@ -40,7 +42,7 @@ def gmsh_mesh(data_dir, lag_order):
     ps = gmsh.model.addPhysicalGroup(2, [1])
     gmsh.model.setPhysicalName(2, ps, "My surface")
     gmsh.model.mesh.generate(2)
-    gmsh.model.mesh.setOrder(lag_order)
+    gmsh.model.mesh.setOrder(degree)
     gmsh.write(file_path)
 
     return file_path
@@ -53,10 +55,10 @@ def problem():
     https://fenicsproject.org/olddocs/dolfin/1.4.0/python/demo/documented/periodic/python/documentation.html
     """
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
-    ele_type = 'triangle'
-    lag_order = 2
-    msh_file_path = gmsh_mesh(data_dir, lag_order)
-    cell_type = get_meshio_cell_type(ele_type, lag_order)
+    ele_type = 'TRI6'
+    _, _, _, _, degree, _ = get_elements(ele_type)
+    msh_file_path = gmsh_mesh(data_dir, degree)
+    cell_type = get_meshio_cell_type(ele_type)
     meshio_mesh = meshio.read(msh_file_path)
     # TODO:
     mesh = Mesh(meshio_mesh.points[:, :2], meshio_mesh.cells_dict[cell_type])
@@ -96,7 +98,7 @@ def problem():
                          [0]*2, 
                          [dirichlet_val, dirichlet_val]]
 
-    problem = LinearPoisson(mesh, vec=1, dim=2, ele_type=ele_type, lag_order=lag_order, dirichlet_bc_info=dirichlet_bc_info, 
+    problem = LinearPoisson(mesh, vec=1, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, 
                             periodic_bc_info=periodic_bc_info, source_info=body_force)
 
     sol = solver(problem, linear=True)

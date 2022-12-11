@@ -24,9 +24,8 @@ msh_dir = os.path.join(data_dir, 'msh')
 
 
 def problem():
-    ele_type = 'hexahedron'
-    lag_order = 1
-    cell_type = get_meshio_cell_type(ele_type, lag_order)
+    ele_type = 'HEX8'
+    cell_type = get_meshio_cell_type(ele_type)
 
     mesh_file = os.path.join(msh_dir, f"simulation_fd_single_layer_030.msh")
     meshio_mesh = meshio.read(mesh_file)
@@ -110,7 +109,7 @@ def problem():
     # cell_ori_inds = onp.arange(8)
 
 
-    problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type, lag_order=lag_order, 
+    problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type,
                                 dirichlet_bc_info=dirichlet_bc_info, additional_info=(quat, cell_ori_inds))
 
     results_to_save = []

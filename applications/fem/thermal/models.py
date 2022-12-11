@@ -99,10 +99,10 @@ def hash_map_for_faces(active_cell_truth_tab, cells_face, hash_map, inner_faces,
     return external_faces
 
 
-def initialize_hash_map(full_mesh, active_cell_truth_tab, cells_map_full, ele_type, lag_order):
+def initialize_hash_map(full_mesh, active_cell_truth_tab, cells_map_full, ele_type):
     print(f"Initializing hash map for external faces...")
      # (num_faces, num_face_vertices)
-    _, _, _, _, face_inds = get_face_shape_vals_and_grads(ele_type, lag_order)
+    _, _, _, _, face_inds = get_face_shape_vals_and_grads(ele_type)
     cells_face = full_mesh.cells[:, face_inds] # (num_cells, num_faces, num_face_vertices)
     cells_face = onp.sort(cells_face)
     hash_map = {}

@@ -452,7 +452,7 @@ def adjoint_method(problem, J_fn, output_sol, linear=False):
         """J(u(p), p)
         """
         print(f"\nStep {fn.counter}")
-        problem.params = params
+        problem.set_params(params)
         sol = solver(problem, linear=linear)
         dofs = sol.reshape(-1)
         obj_val = J_fn(dofs, params)
@@ -466,7 +466,8 @@ def adjoint_method(problem, J_fn, output_sol, linear=False):
     def constraint_fn(dofs, params):
         """c(u, p)
         """
-        problem.params = params
+        # problem.params = params
+        problem.set_params(params)
         res_fn = problem.compute_residual
         res_fn = get_flatten_fn(res_fn, problem)
         res_fn = apply_bc(res_fn, problem)
@@ -504,7 +505,7 @@ def adjoint_method(problem, J_fn, output_sol, linear=False):
         If not, consider implementing the adjoint version of "problem.compute_linearized_residual" directly.
         """
         # The following two lines may not be needed
-        problem.params = params
+        problem.set_params(params)
         A_fn = get_A_fn(problem)
         A_fn = row_elimination(A_fn, problem)
         def adjoint_linear_fn(adjoint):

@@ -113,6 +113,8 @@ class FEM:
         # (num_cells, num_quads, num_nodes, 1, dim)
         self.v_grads_JxW = self.shape_grads[:, :, :, None, :] * self.JxW[:, :, None, None, None]
 
+        self.internal_vars = {}
+
         end = time.time()
         compute_time = end - start
         print(f"Done pre-computations, took {compute_time} [s]")
@@ -527,7 +529,6 @@ class FEM:
             values = np_version.vstack(values)
             return values
 
-
     def compute_face(self, cells_sol, np_version, jac_flag):
         def get_kernel_fn_face(cauchy_map): 
             def kernel(cell_sol, face_shape_vals, face_nanson_scale):
@@ -563,7 +564,7 @@ class FEM:
 
         return values, selected_cells
 
-    def compute_residual_vars_helper(self, sol, weak_form):
+    def compute_residual_vars_helper(self, sol, weak_form, **internal_vars):
         res = np.zeros((self.num_total_nodes, self.vec))
         weak_form = weak_form.reshape(-1, self.vec) # (num_cells*num_nodes, vec)
         res = res.at[self.cells.reshape(-1)].add(weak_form) 
@@ -574,6 +575,23 @@ class FEM:
             values = values.reshape(-1, self.vec)
             res = res.at[selected_cells.reshape(-1)].add(values) 
 
+        if 'body_vars' in internal_vars.keys():
+            self.body_force = self.compute_body_force_by_sol(internal_vars['body_vars'], self.get_body_map())
+
+        if 'neumann_vars' in internal_vars.keys():
+            old_sol = internal_vars['neumann_vars']
+            cells_old_sol = sol[self.cells] # (num_cells, num_nodes, vec)
+            surface_old_T = []
+            crt_t = []
+            for i in range(len(self.neumann_value_fns)):
+                boundary_inds = self.neumann_boundary_inds_list[i]
+                selected_cell_sols = cells_old_sol[boundary_inds[:, 0]] # (num_selected_faces, num_nodes, vec))
+                selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)
+                # (num_selected_faces, 1, num_nodes, vec) * (num_selected_faces, num_face_quads, num_nodes, 1) -> (num_selected_faces, num_face_quads, vec) 
+                u = np.sum(selected_cell_sols[:, None, :, :] * selected_face_shape_vals[:, :, :, None], axis=2)
+                surface_old_T.append(u)
+            self.neumann =  self.compute_Neumann_integral_vars(surface_old_T)
+
         res = res - self.body_force - self.neumann
         return res
 
@@ -581,15 +599,10 @@ class FEM:
         print(f"Compute cell residual...")
         cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
         weak_form = self.split_and_compute_cell(cells_sol, np, False, **internal_vars) # (num_cells, num_nodes, vec)
-        return self.compute_residual_vars_helper(sol, weak_form)
+        return self.compute_residual_vars_helper(sol, weak_form, **internal_vars)
     
-    def compute_residual(self, sol):
-        """Child class should override if internal variables exist
-        """
-        return self.compute_residual_vars(sol)
-
-    def newton_vars(self, sol, **internal_vars):
-        print(f"Compute cell Jacobian...")
+    def compute_newton_vars(self, sol, **internal_vars):
+        print(f"Compute cell Jacobian and cell residual...")
         cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
         # (num_cells, num_nodes, vec), (num_cells, num_nodes, vec, num_nodes, vec)
         weak_form, cells_jac = self.split_and_compute_cell(cells_sol, onp, True, **internal_vars)
@@ -611,9 +624,10 @@ class FEM:
             self.J = onp.hstack((self.J, J_face))
             self.V = onp.hstack((self.V, V_face))
 
-        return self.compute_residual_vars_helper(sol, weak_form) 
+        return self.compute_residual_vars_helper(sol, weak_form, **internal_vars) 
+
+    def compute_residual(self, sol):
+        return self.compute_residual_vars(sol, **self.internal_vars)
 
     def newton_update(self, sol):
-        """Child class should override if internal variables exist
-        """
-        return self.newton_vars(sol)
+        return self.compute_newton_vars(sol, **self.internal_vars)

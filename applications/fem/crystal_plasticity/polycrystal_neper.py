@@ -13,7 +13,7 @@ from jax_am.phase_field.neper import pre_processing
 
 from applications.fem.crystal_plasticity.models import CrystalPlasticity
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 case_name = 'polycrystal_neper'
 

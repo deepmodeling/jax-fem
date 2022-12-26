@@ -19,9 +19,11 @@ class HyperElasticity(Mechanics):
             self.H_bar = None
             self.physical_quad_points = self.get_physical_quad_points()
             self.E, self.nu = self.compute_moduli()
+            self.internal_vars = {'laplace': [self.E, self.nu]}
         elif self.mode == 'dns':
             self.physical_quad_points = self.get_physical_quad_points()
             self.E, self.nu = self.compute_moduli()
+            self.internal_vars = {'laplace': [self.E, self.nu]}
         elif self.mode == 'nn':
             # hyperparam = 'default'
             # It turns out that MLP2 has the lowest validation error.
@@ -30,25 +32,9 @@ class HyperElasticity(Mechanics):
         else:
             raise NotImplementedError(f"mode = {self.mode} is not defined.")
 
-    def compute_residual(self, sol):
-        if self.mode == 'rve' or self.mode == 'dns' :
-            return self.compute_residual_vars(sol, laplace=[self.E, self.nu])
-        elif self.mode == 'nn':
-            return self.compute_residual_vars(sol)
-        else:
-            raise NotImplementedError(f"compute_residual Only support rve, dns or nn.")
-
     def get_tensor_map(self):
         stress_map, _ = self.get_maps()
         return stress_map
-
-    def newton_update(self, sol):
-        if self.mode == 'dns' or self.mode == 'rve':
-            return self.newton_vars(sol, laplace=[self.E, self.nu])
-        elif self.mode == 'nn':
-            return self.newton_vars(sol)
-        else:
-            raise NotImplementedError(f"newton_update Only support rve, dns or nn.")
 
     def get_maps(self):
         if self.mode == 'rve':

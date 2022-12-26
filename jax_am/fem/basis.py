@@ -59,6 +59,20 @@ def get_elements(ele_type):
         basix_face_ele = basix.CellType.triangle
         gauss_order = 2 # 4, full integration
         degree = 2
+    # TODO: Check if this is correct.
+    elif ele_type == 'QUAD4':
+        re_order = [0, 1, 3, 2]
+        basix_ele = basix.CellType.quadrilateral
+        basix_face_ele = basix.CellType.interval
+        gauss_order = 2
+        degree = 1
+    elif ele_type == 'QUAD8':
+        re_order = [0, 1, 3, 2, 4, 6, 7, 5]
+        element_family = basix.ElementFamily.serendipity
+        basix_ele = basix.CellType.quadrilateral
+        basix_face_ele = basix.CellType.interval
+        gauss_order = 2 
+        degree = 2 
     elif ele_type == 'TRI3':
         re_order = [0, 1, 2]
         basix_ele = basix.CellType.triangle
@@ -70,20 +84,6 @@ def get_elements(ele_type):
         basix_ele = basix.CellType.triangle
         basix_face_ele = basix.CellType.interval
         gauss_order = 2 # 3, full integration 
-        degree = 2 
-    # TODO: Check if this is correct.
-    elif ele_type == 'QUAD4':
-        re_order = [0, 1, 3, 2]
-        basix_ele = basix.CellType.quadrilateral
-        basix_face_ele = basix.CellType.interval
-        gauss_order = 0
-        degree = 1
-    elif ele_type == 'QUAD8':
-        re_order = [0, 1, 3, 2, 4, 6, 7, 5]
-        element_family = basix.ElementFamily.serendipity
-        basix_ele = basix.CellType.quadrilateral
-        basix_face_ele = basix.CellType.interval
-        gauss_order = 2 
         degree = 2 
     else:
         raise NotImplementedError

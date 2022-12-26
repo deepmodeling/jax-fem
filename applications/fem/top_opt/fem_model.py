@@ -10,7 +10,7 @@ class Elasticity(FEM):
         self.neumann_boundary_inds = self.get_boundary_conditions_inds(self.neumann_bc_info[0])[0]
         self.cell_centroids = onp.mean(onp.take(self.points, self.cells, axis=0), axis=1)
         self.flex_inds = np.arange(len(self.cells))
-        self.params = np.ones_like(self.flex_inds)
+        # self.params = np.ones_like(self.flex_inds)
         if linear_flag:
             self.get_tensor_map = self.get_tensor_map_linearelasticity
         else:
@@ -53,20 +53,12 @@ class Elasticity(FEM):
             return P
         return first_PK_stress
 
-    def set_params(self):
+    def set_params(self, params):
         full_params = np.ones(self.num_cells)
-        full_params = full_params.at[self.flex_inds].set(self.params)
+        full_params = full_params.at[self.flex_inds].set(params)
         thetas = np.repeat(full_params[:, None], self.num_quads, axis=1)
         self.full_params = full_params
-        return thetas
-
-    def compute_residual(self, sol):
-        thetas = self.set_params()
-        return self.compute_residual_vars(sol, laplace=[thetas])
-
-    def newton_update(self, sol):
-        thetas = self.set_params()
-        return self.newton_vars(sol, laplace=[thetas])
+        self.internal_vars['laplace'] = [thetas]
 
     def compute_compliance(self, neumann_fn, sol):
         boundary_inds = self.neumann_boundary_inds

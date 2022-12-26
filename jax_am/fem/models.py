@@ -140,16 +140,11 @@ class Plasticity(Mechanics):
     def custom_init(self):
         self.epsilons_old = onp.zeros((len(self.cells), self.num_quads, self.vec, self.dim))
         self.sigmas_old = onp.zeros_like(self.epsilons_old)
+        self.internal_vars = {'laplace': [self.sigmas_old, self.epsilons_old]}
 
     def get_tensor_map(self):
         _, stress_return_map = self.get_maps()
         return stress_return_map
-
-    def newton_update(self, sol):
-        return self.newton_vars(sol, laplace=[self.sigmas_old, self.epsilons_old])
-
-    def compute_residual(self, sol):
-        return self.compute_residual_vars(sol, laplace=[self.sigmas_old, self.epsilons_old])
 
     def get_maps(self):
         def safe_sqrt(x):  
@@ -198,6 +193,7 @@ class Plasticity(Mechanics):
         vmap_strain, vmap_stress_rm = self.stress_strain_fns()
         self.sigmas_old = vmap_stress_rm(u_grads, self.sigmas_old, self.epsilons_old)
         self.epsilons_old = vmap_strain(u_grads)
+        self.internal_vars = {'laplace': [self.sigmas_old, self.epsilons_old]}
 
     def compute_avg_stress(self):
         """For post-processing only

@@ -13,7 +13,7 @@ from jax_am.fem.utils import save_sol
 
 from applications.fem.thermal.models import Thermal, initialize_hash_map, update_hash_map, get_active_mesh
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 data_dir = os.path.join(os.path.dirname(__file__), 'data') 
 
 
@@ -87,15 +87,16 @@ def ded_thin_wall():
                 num_laser_off = 10
             t = onp.linspace(toolpath[i - 1, 0], toolpath[i, 0], num_laser_off + 1)
             dt = t[1] - t[0]
-            old_sol = full_sol[points_map_active] 
+            sol = full_sol[points_map_active] 
             problem = Thermal(active_mesh, vec=vec, dim=dim, dirichlet_bc_info=[[],[],[]], neumann_bc_info=neumann_bc_info_laser_off, 
-                              additional_info=(old_sol, rho, Cp, dt, external_faces))
+                              additional_info=(sol, rho, Cp, dt, external_faces))
             for j in range(num_laser_off):
                 print(f"\n############################################################")
                 print(f"Laser off: i = {i} in {toolpath.shape[0]} , j = {j} in {num_laser_off}")
-                old_sol = full_sol[points_map_active]
-                problem.old_sol = old_sol
+                # old_sol = full_sol[points_map_active]
+                # problem.old_sol = old_sol
                 sol = solver(problem, linear=True)
+                problem.update_int_vars(sol)
                 full_sol = full_sol.at[points_map_active].set(sol)
                 vtk_path = os.path.join(vtk_dir, f"u_active_{i:05d}_{j:05d}.vtu")
                 save_sol(problem, sol, vtk_path)
@@ -118,19 +119,20 @@ def ded_thin_wall():
                 flag_2 = (centroids[:, 0] - laser_center[0])**2 + (centroids[:, 1] - laser_center[1])**2 <= rb**2
                 active_cell_truth_tab = onp.logical_or(active_cell_truth_tab, onp.logical_and(flag_1, flag_2))
                 active_mesh, points_map_active, cells_map_full = get_active_mesh(full_mesh, active_cell_truth_tab)
-                old_sol = full_sol[points_map_active]
+                sol = full_sol[points_map_active]
                 dt = t[j + 1] - t[j]
                 external_faces, hash_map, inner_faces, all_faces = update_hash_map(active_cell_truth_tab_old, 
                     active_cell_truth_tab, cells_map_full, cells_face, hash_map, inner_faces, all_faces)
 
                 if onp.all(active_cell_truth_tab == active_cell_truth_tab_old):
                     print(f"No element born")
-                    problem.old_sol = old_sol
+                    # problem.old_sol = old_sol
                 else:
                     print(f"New elements born")
                     problem = Thermal(active_mesh, vec=vec, dim=dim, dirichlet_bc_info=[[],[],[]], neumann_bc_info=neumann_bc_info_laser_on, 
-                                      additional_info=(old_sol, rho, Cp, dt, external_faces))
+                                      additional_info=(sol, rho, Cp, dt, external_faces))
                 sol = solver(problem, linear=True)
+                problem.update_int_vars(sol)
                 full_sol = full_sol.at[points_map_active].set(sol)
                 if j % 10 == 0:
                     vtk_path = os.path.join(vtk_dir, f"u_active_{i:05d}_{j:05d}.vtu")
@@ -138,8 +140,8 @@ def ded_thin_wall():
 
                 active_cell_truth_tab_old = active_cell_truth_tab
 
-                if j > 10:
-                    exit()
+                # if j > 10:
+                #     exit()
 
 
 if __name__ == "__main__":

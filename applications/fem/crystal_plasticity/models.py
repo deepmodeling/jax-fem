@@ -114,13 +114,16 @@ class CrystalPlasticity(Mechanics):
         self.C[1, 0, 0, 1] = C44
         self.C[1, 0, 1, 0] = C44
 
+        self.internal_vars = {'laplace': [self.Fp_inv_old_gp, self.slip_resistance_old_gp, 
+            self.slip_old_gp, self.rot_mats_gp]}
+
     def get_tensor_map(self):
         tensor_map, _ = self.get_maps()
         return tensor_map
 
-    def newton_update(self, sol):
-        return self.newton_vars(sol, laplace=[self.Fp_inv_old_gp, self.slip_resistance_old_gp, 
-            self.slip_old_gp, self.rot_mats_gp])
+    # def newton_update(self, sol):
+    #     return self.newton_vars(sol, laplace=[self.Fp_inv_old_gp, self.slip_resistance_old_gp, 
+    #         self.slip_old_gp, self.rot_mats_gp])
 
     def get_maps(self):
         h = 541.5
@@ -258,6 +261,9 @@ class CrystalPlasticity(Mechanics):
         print(f"Fp = \n{F_p}")
         slip_resistance_0 = self.slip_resistance_old_gp[0, 0, 0]
         print(f"slip_resistance index 0 = {slip_resistance_0}, max slip_resistance = {np.max(self.slip_resistance_old_gp)}")
+
+        self.internal_vars['laplace'] = [self.Fp_inv_old_gp, self.slip_resistance_old_gp, 
+                    self.slip_old_gp, self.rot_mats_gp]
 
         return F_p[2, 2], slip_resistance_0, slip_inc_dt_index_0 
 

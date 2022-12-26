@@ -10,11 +10,13 @@ from jax_am.fem.basis import get_face_shape_vals_and_grads
 
 class Thermal(FEM):
     def custom_init(self, old_sol, rho, Cp, dt, external_faces):
-        self.old_sol = old_sol
+        # self.old_sol = old_sol
         self.rho = rho
         self.Cp = Cp
         self.dt = dt
         self.external_faces = external_faces
+        self.neumann_boundary_inds_list = self.update_Neumann_boundary_inds()
+        self.internal_vars = {'body_vars': old_sol, 'neumann_vars': old_sol}
 
     def get_tensor_map(self):
         def fn(u_grad):
@@ -29,30 +31,12 @@ class Thermal(FEM):
             return self.rho*self.Cp*T/self.dt
         return T_map
 
-    def compute_residual(self, sol):
-        self.body_force = self.compute_body_force_by_sol(self.old_sol, self.get_mass_map())
-        self.neumann = self.compute_Neumann_integral_custom()
-        return self.compute_residual_vars(sol)
+    def get_body_map(self):
+        return self.get_mass_map()
 
-    def compute_Neumann_integral_custom(self):
-        self.neumann_boundary_inds_list = self.update_Neumann_boundary_inds()
-        surface_old_T = self.get_surface_old_T(self.old_sol)
-        return self.compute_Neumann_integral_vars(surface_old_T)
-
-    def get_surface_old_T(self, sol):
-        """TODO: Should we move this function to jax-am library?
-        """
-        cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
-        surface_old_T = []
-        crt_t = []
-        for i in range(len(self.neumann_value_fns)):
-            boundary_inds = self.neumann_boundary_inds_list[i]
-            selected_cell_sols = cells_sol[boundary_inds[:, 0]] # (num_selected_faces, num_nodes, vec))
-            selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)
-            # (num_selected_faces, 1, num_nodes, vec) * (num_selected_faces, num_face_quads, num_nodes, 1) -> (num_selected_faces, num_face_quads, vec) 
-            u = np.sum(selected_cell_sols[:, None, :, :] * selected_face_shape_vals[:, :, :, None], axis=2)
-            surface_old_T.append(u)
-        return surface_old_T
+    def update_int_vars(self, old_sol):
+        self.internal_vars['body_vars'] = old_sol
+        self.internal_vars['neumann_vars'] = old_sol
 
     def update_Neumann_boundary_inds(self):
         cell_points = onp.take(self.points, self.cells, axis=0) # (num_cells, num_nodes, dim)
@@ -80,6 +64,9 @@ class Thermal(FEM):
             boundary_inds_list.append(boundary_inds)
 
         return boundary_inds_list
+
+
+# class Plasticity
 
 
 def hash_map_for_faces(active_cell_truth_tab, cells_face, hash_map, inner_faces, all_faces, cell_inds):

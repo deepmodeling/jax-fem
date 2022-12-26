@@ -36,7 +36,7 @@ class LinearPoisson(FEM):
     def get_tensor_map(self):
         return lambda x: x
 
-    def get_mass_map(self):
+    def get_body_map(self):
         return lambda x: x
 
     def compute_L2(self, sol):
@@ -45,11 +45,8 @@ class LinearPoisson(FEM):
         val = jax.vmap(kernel)(cells_sol, self.JxW) # (num_cells, num_nodes, vec)
         return np.sum(val)
 
-    def compute_residual(self, sol):
-        if self.name == 'inverse': 
-            self.body_force = self.compute_body_force_by_sol(self.params.reshape((self.num_total_nodes, self.vec)), self.get_mass_map())
-        return self.compute_residual_vars(sol)
-
+    def set_params(self, params):
+        self.internal_vars['body_vars'] = params.reshape((self.num_total_nodes, self.vec))
 
 def taylor_tests(data_dir, m, fn, fn_grad):
     """See https://www.dolfin-adjoint.org/en/latest/documentation/verification.html
@@ -121,7 +118,7 @@ def param_id():
     save_sol(problem_fwd, true_sol, vtu_path, point_infos=[('source', true_body_force)])
     print(f"True force L2 integral = {problem_fwd.compute_L2(true_body_force)}")
     
-    num_obs_pts = 2500
+    num_obs_pts = 250
 
     observed_inds = onp.random.choice(onp.arange(len(jax_mesh.points)), size=num_obs_pts, replace=False)
     observed_points = jax_mesh.points[observed_inds]

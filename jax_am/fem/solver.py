@@ -6,6 +6,10 @@ import scipy
 import time
 from functools import partial
 
+import petsc4py
+petsc4py.init()
+from petsc4py import PETSc
+
 
 ################################################################################
 # "row elimination" solver
@@ -158,9 +162,45 @@ def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond):
     return dofs
 
 
+def linear_incremental_solver_petsc(problem, res_vec, petsc_mat, dofs):
+    """Lift solver
+    """
+    b = -res_vec
+    x0_1 = assign_bc(np.zeros_like(b), problem) 
+    x0_2 = copy_bc(dofs, problem)
+    x0 = x0_1 - x0_2
+
+    rhs = PETSc.Vec().createSeq(len(b))
+    rhs.setValues(range(len(b)), onp.array(b))
+
+    ksp = PETSc.KSP().create() 
+    ksp.setOperators(petsc_mat)
+    ksp.setFromOptions()
+    print (f'Solving with: {ksp.getType()}') 
+    # Solve!
+    res = PETSc.Vec().createSeq(len(b))
+    ksp.solve(rhs, res) 
+    inc = res.getArray()
+
+    print(f"PETSc - Solving linear system with lift solver...")
+    # print(f"Lift linear solver res = {np.linalg.norm(A_fn(inc) - b)}, inc norm = {np.linalg.norm(inc)}")
+
+    dofs = dofs + inc
+    return dofs
+
+
+def get_A_petsc(problem):
+    A_sp_scipy = scipy.sparse.csr_array((problem.V, (problem.I, problem.J)), shape=(problem.num_total_dofs, problem.num_total_dofs))
+    petsc_mat = PETSc.Mat().createAIJ(size=A_sp_scipy.shape, csr=(A_sp_scipy.indptr, A_sp_scipy.indices, A_sp_scipy.data))
+    for i in range(len(problem.node_inds_list)):
+        row_inds = onp.array(problem.node_inds_list[i]*problem.vec + problem.vec_inds_list[i], dtype=onp.int32)
+        petsc_mat.zeroRows(row_inds)
+    return petsc_mat
+
+
 def get_A_fn(problem):
     print(f"Creating sparse matrix with scipy...")
-    A_sp_scipy = scipy.sparse.csc_array((problem.V, (problem.I, problem.J)), shape=(problem.num_total_dofs, problem.num_total_dofs))
+    A_sp_scipy = scipy.sparse.csr_array((problem.V, (problem.I, problem.J)), shape=(problem.num_total_dofs, problem.num_total_dofs))
     print(f"Creating sparse matrix from scipy using JAX BCOO...")
     A_sp = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
     print(f"self.A_sp.data.shape = {A_sp.data.shape}")
@@ -185,15 +225,20 @@ def solver_row_elimination(problem, linear=False, precond=True, initial_guess=No
     def newton_update_helper(dofs):
         res_vec = problem.newton_update(dofs.reshape(sol_shape)).reshape(-1)
         res_vec = apply_bc_vec(res_vec, dofs, problem)
-        A_fn = get_A_fn(problem)
-        A_fn = row_elimination(A_fn, problem)
+
+        # A_fn = get_A_fn(problem)
+        # A_fn = row_elimination(A_fn, problem)
+
+        A_fn = get_A_petsc(problem)
+
         return res_vec, A_fn
 
     # TODO: detect np.nan and assert
     if linear:
         dofs = assign_bc(dofs, problem)
         res_vec, A_fn = newton_update_helper(dofs)
-        dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond)
+        # dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond)
+        dofs = linear_incremental_solver_petsc(problem, res_vec, A_fn, dofs)
     else:
         if initial_guess is None:
             res_vec, A_fn = newton_update_helper(dofs)

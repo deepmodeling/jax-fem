@@ -103,7 +103,7 @@ def ded_thin_wall():
         else:
             direction = toolpath[i, 1:4] - toolpath[i - 1 , 1:4]
             d = np.linalg.norm(direction)
-            dir_norm = direction/d
+            # dir_norm = direction/d
             num_laser_on = round(d/path_resolution)
             print(f"num_laser_on = {num_laser_on}")
             t = onp.linspace(toolpath[i - 1, 0], toolpath[i, 0], num_laser_on + 1)

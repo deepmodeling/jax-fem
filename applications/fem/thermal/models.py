@@ -66,9 +66,6 @@ class Thermal(FEM):
         return boundary_inds_list
 
 
-# class Plasticity
-
-
 def hash_map_for_faces(active_cell_truth_tab, cells_face, hash_map, inner_faces, all_faces, cell_inds):
     """Use a hash table to store inner faces
     """

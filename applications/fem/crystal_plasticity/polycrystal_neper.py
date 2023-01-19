@@ -124,8 +124,8 @@ def problem():
         dirichlet_bc_info[-1][-1] = get_dirichlet_top(disps[i + 1])
         problem.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
 
-        # sol = solver(problem)
-        sol = solver(problem, initial_guess=sol)
+        # sol = solver(problem, use_petsc=True)
+        sol = solver(problem, initial_guess=sol, use_petsc=True)
 
         print(f"Computing stress...")
         sigma_cell_data = problem.compute_avg_stress(sol)[:, 0, 0]

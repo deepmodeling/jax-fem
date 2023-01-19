@@ -49,7 +49,6 @@ class Test(unittest.TestCase):
 
         problem = HyperElasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, periodic_bc_info=[[],[],[],[]])
         problem.p_num_eps = 1e2 # For numerical stability of imposing periodic B.C.
-        # problem.p_num_eps = 1.
         sol = solver(problem)
 
         jax_vtu_path = os.path.join(crt_dir, "jax_fem/sol.vtu")

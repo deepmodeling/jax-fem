@@ -7,25 +7,32 @@ import time
 from functools import partial
 
 import petsc4py
-petsc4py.init()
+# petsc4py.init()
 from petsc4py import PETSc
 
 
 ################################################################################
-# PETSc linear solver
+# PETSc linear solver or JAX linear solver
 
-def petsc_solve(A, b):
+def petsc_solve(A, b, ksp_type, pc_type):
     rhs = PETSc.Vec().createSeq(len(b))
     rhs.setValues(range(len(b)), onp.array(b))
     ksp = PETSc.KSP().create() 
     ksp.setOperators(A)
     ksp.setFromOptions()
-    # ksp.setType('minres')
-    # ksp.pc.setType('none')
+    ksp.setType(ksp_type)
+    ksp.pc.setType(pc_type)
     print (f'PETSc - Solving with ksp_type = {ksp.getType()}, pc = {ksp.pc.getType()}') 
     x = PETSc.Vec().createSeq(len(b))
     ksp.solve(rhs, x) 
     return x.getArray()
+
+
+def jax_solve(problem, A_fn, b, x0, precond):
+    pc = get_jacobi_precond(jacobi_preconditioner(problem)) if precond else None
+    x, info = jax.scipy.sparse.linalg.bicgstab(A_fn, b, x0=x0, M=pc, tol=1e-10, atol=1e-10, maxiter=10000)
+    print(f"JAX scipy linear solve res = {np.linalg.norm(A_fn(x) - b)}")
+    return x
 
 
 ################################################################################
@@ -149,41 +156,32 @@ def test_jacobi_precond(problem, jacobi, A_fn):
 
 def linear_guess_solve(problem, A_fn, precond, use_petsc):
     print(f"Linear guess solve...")
-
     # b = np.zeros((problem.num_total_nodes, problem.vec))
     b = problem.body_force + problem.neumann
     b = assign_bc(b, problem)
-
     if use_petsc:
-        dofs = petsc_solve(A_fn, b)
+        dofs = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
     else:
-        pc = get_jacobi_precond(jacobi_preconditioner(problem)) if precond else None
-        dofs, info = jax.scipy.sparse.linalg.bicgstab(A_fn, b, x0=b, M=pc, tol=1e-10, atol=1e-10, maxiter=10000)
-        print(f"Linear guess solve res = {np.linalg.norm(A_fn(dofs) - b)}")
-
+        dofs = jax_solve(problem, A_fn, b, b, precond)
     return dofs
 
 
 def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc):
     """Lift solver
     """
+    print(f"Solving linear system with lift solver...")
     b = -res_vec
-    
-    x0_1 = assign_bc(np.zeros_like(b), problem) 
-    x0_2 = copy_bc(dofs, problem)
-    x0 = x0_1 - x0_2
 
     if use_petsc:
-        inc = petsc_solve(A_fn, b)
+        inc = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
     else:
-        pc = get_jacobi_precond(jacobi_preconditioner(problem)) if precond else None
-        print(f"Solving linear system with lift solver...")
-        inc, info = jax.scipy.sparse.linalg.bicgstab(A_fn, b, x0=x0, M=pc, tol=1e-10, atol=1e-10, maxiter=10000) # bicgstab, gmres
-        print(f"Lift linear solver res = {np.linalg.norm(A_fn(inc) - b)}, inc norm = {np.linalg.norm(inc)}")
+        x0_1 = assign_bc(np.zeros_like(b), problem) 
+        x0_2 = copy_bc(dofs, problem)
+        x0 = x0_1 - x0_2
+        inc = jax_solve(problem, A_fn, b, x0, precond)
 
     dofs = dofs + inc
     return dofs
-
 
 
 def get_A_fn(problem, use_petsc):
@@ -279,34 +277,30 @@ def aug_dof_w_bc(problem, dofs, p_num_eps):
     return np.hstack((dofs, aug_d))
 
 
-def linear_guess_solve_lm(problem, A_fn_aug, p_num_eps, use_petsc):
-    x0 = np.zeros((problem.num_total_nodes, problem.vec))
-    x0 = assign_bc(x0, problem)
-    x0 = aug_dof_w_zero_bc(problem, x0)
-    b = np.zeros(problem.num_total_dofs)
+def linear_guess_solve_lm(problem, A_aug, p_num_eps, use_petsc):
+    b = (problem.body_force + problem.neumann).reshape(-1)
     b_aug = aug_dof_w_bc(problem, b, p_num_eps)
     if use_petsc:
-        dofs_aug = petsc_solve(A_fn_aug, b_aug)
+        dofs_aug = petsc_solve(A_aug, b_aug, 'minres', 'none')
     else:
-        dofs_aug, info = jax.scipy.sparse.linalg.bicgstab(A_fn_aug, b_aug, x0=x0, M=None, tol=1e-10, atol=1e-10, maxiter=10000)
+        x0 = np.zeros((problem.num_total_nodes, problem.vec))
+        x0 = assign_bc(x0, problem)
+        x0 = aug_dof_w_zero_bc(problem, x0)
+        dofs_aug = jax_solve(problem, A_aug, b_aug, x0, None)
     return dofs_aug
 
 
-def linear_incremental_solver_lm(problem, res_fn, A_fn_aug, dofs_aug, p_num_eps, use_petsc):
-    """
-    Lift solver
-    dofs must already satisfy Dirichlet boundary conditions
-    """
-    b_aug = -compute_residual_lm(problem, res_fn, dofs_aug, p_num_eps)
+def linear_incremental_solver_lm(problem, A_aug, res_vec_aug, dofs_aug, p_num_eps, use_petsc):
+    b_aug = -res_vec_aug
     if use_petsc:
-        inc_aug = petsc_solve(A_fn_aug, b_aug)
+        inc_aug = petsc_solve(A_aug, b_aug, 'minres', 'none')
     else:
-        inc_aug, info = jax.scipy.sparse.linalg.bicgstab(A_fn_aug, b_aug, x0=None, M=None, tol=1e-10, atol=1e-10, maxiter=10000) # bicgstab
+        inc_aug = jax_solve(problem, A_aug, b_aug, None, None)
     dofs_aug = dofs_aug + inc_aug
     return dofs_aug
 
 
-def compute_residual_lm(problem, res_fn, dofs_aug, p_num_eps):
+def compute_residual_lm(problem, res_vec, dofs_aug, p_num_eps):
     d_splits = np.cumsum(np.array([len(x) for x in problem.node_inds_list])).tolist()
     p_splits = np.cumsum(np.array([len(x) for x in problem.p_node_inds_list_A])).tolist()
 
@@ -333,7 +327,6 @@ def compute_residual_lm(problem, res_fn, dofs_aug, p_num_eps):
             for i in range(len(problem.p_node_inds_list_A)):
                 lag += np.sum(p_lmbda_split[i] * (sol[problem.p_node_inds_list_A[i], problem.p_vec_inds_list[i]] - 
                                                     sol[problem.p_node_inds_list_B[i], problem.p_vec_inds_list[i]]))
-
             return p_num_eps*lag
 
         return Lagrangian_fn
@@ -341,17 +334,13 @@ def compute_residual_lm(problem, res_fn, dofs_aug, p_num_eps):
     Lagrangian_fn = get_Lagrangian()
     A_fn = jax.grad(Lagrangian_fn)
     res_vec_1 = A_fn(dofs_aug)
-
-    dofs = dofs_aug[:problem.num_total_dofs]
-    res_vec = res_fn(dofs)
     res_vec_2 = aug_dof_w_zero_bc(problem, res_vec)
-
     res_vec_aug = res_vec_1 + res_vec_2
 
     return res_vec_aug
 
 
-def get_A_fn_aug(problem, p_num_eps, use_petsc):
+def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
     def symmetry(I, J, V):
         I_sym = onp.hstack((I, J))
         J_sym = onp.hstack((J, I))
@@ -400,22 +389,24 @@ def get_A_fn_aug(problem, p_num_eps, use_petsc):
         return A_sp_aug @ dofs_aug
 
     if use_petsc:
-        A = PETSc.Mat().createAIJ(size=A_sp_scipy_aug.shape, csr=(A_sp_scipy_aug.indptr, A_sp_scipy_aug.indices, A_sp_scipy_aug.data))
+        A_aug = PETSc.Mat().createAIJ(size=A_sp_scipy_aug.shape, csr=(A_sp_scipy_aug.indptr, A_sp_scipy_aug.indices, A_sp_scipy_aug.data))
     else:
-        A = compute_linearized_residual
+        A_aug = compute_linearized_residual
 
-    return A
+    res_vec_aug = compute_residual_lm(problem, res_vec, dofs_aug, p_num_eps)
+
+    return A_aug, res_vec_aug
 
 
-def solver_lagrange_multiplier(problem, linear, use_petsc):
+def solver_lagrange_multiplier(problem, linear, use_petsc=True):
     """Imposing Dirichlet B.C. and periodic B.C. with lagrangian multiplier method.
 
     The global matrix is of the form 
     [A   B 
      B^T 0]
-    and a good preconditioner is needed.
-    The problem is well studied, though.
-    However, in the current code, there is no trick applied. 
+    JAX built solver gmres and bicgstab sometimes fail to solve such a system.
+    PESTc solver minres seems to work. 
+    TODO: explore which solver in PESTc is the best, and which preconditioner should be used.
 
     Reference:
     https://ethz.ch/content/dam/ethz/special-interest/baug/ibk/structural-mechanics-dam/education/femI/Presentation.pdf
@@ -423,46 +414,43 @@ def solver_lagrange_multiplier(problem, linear, use_petsc):
     print(f"Calling the lagrange multiplier solver for imposing Dirichlet B.C. and periodic B.C.")
     print("Start timing")
     start = time.time()
+    sol_shape = (problem.num_total_nodes, problem.vec)
+    dofs = np.zeros(sol_shape).reshape(-1)
 
     # Ad-hoc parameter to get a better conditioned global matrix.
-    # Currently, this parameter needs to be manually tuned.
-    # We need a (much) better way to deal with this type of saddle-point problem.
-    # Will interfacing with PETSc be a good idea?
     if hasattr(problem, 'p_num_eps'):
         p_num_eps = problem.p_num_eps
     else:
         p_num_eps = 1.
-
     print(f"Setting p_num_eps = {p_num_eps}. If periodic B.C. fails to be applied, consider modifying this parameter.")
 
-    sol = np.zeros((problem.num_total_nodes, problem.vec))
-    dofs = sol.reshape(-1)
-
-    res_fn = problem.compute_residual
-    res_fn = get_flatten_fn(res_fn, problem)
-
-    problem.newton_update(dofs.reshape(sol.shape))
-    A_fn_aug = get_A_fn_aug(problem, p_num_eps, use_petsc)
+    def newton_update_helper(dofs_aug):
+        res_vec = problem.newton_update(dofs_aug[:problem.num_total_dofs].reshape(sol_shape)).reshape(-1)
+        A_aug, res_vec_aug = get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc)
+        return res_vec_aug, A_aug
 
     if linear:
         # If we know the problem is linear, this way of solving seems faster.
         dofs = assign_bc(dofs, problem)
         dofs_aug = aug_dof_w_zero_bc(problem, dofs)
-        dofs_aug = linear_incremental_solver_lm(problem, res_fn, A_fn_aug, dofs_aug, p_num_eps, use_petsc)
-        print(f"Linear problem res l_2 = {np.linalg.norm(compute_residual_lm(problem, res_fn, dofs_aug, p_num_eps))}")
+        res_vec_aug, A_aug = newton_update_helper(dofs_aug)
+        dofs_aug = linear_incremental_solver_lm(problem, A_aug, res_vec_aug, dofs_aug, p_num_eps, use_petsc)
     else:
-        dofs_aug = linear_guess_solve_lm(problem, A_fn_aug, p_num_eps, use_petsc)
-        res_val = np.linalg.norm(compute_residual_lm(problem, res_fn, dofs_aug, p_num_eps))
+        dofs_aug = aug_dof_w_zero_bc(problem, dofs)
+        res_vec_aug, A_aug = newton_update_helper(dofs_aug)
+        dofs_aug = linear_guess_solve_lm(problem, A_aug, p_num_eps, use_petsc)
+
+        res_vec_aug, A_aug = newton_update_helper(dofs_aug)
+        res_val = np.linalg.norm(res_vec_aug)
         print(f"Before, res l_2 = {res_val}") 
         tol = 1e-6
         while res_val > tol:
-            problem.newton_update(dofs_aug[:problem.num_total_dofs].reshape(sol.shape))
-            A_fn_aug = get_A_fn_aug(problem, p_num_eps, use_petsc)
-            dofs_aug = linear_incremental_solver_lm(problem, res_fn, A_fn_aug, dofs_aug, p_num_eps, use_petsc)
-            res_val = np.linalg.norm(compute_residual_lm(problem, res_fn, dofs_aug, p_num_eps))
+            dofs_aug = linear_incremental_solver_lm(problem, A_aug, res_vec_aug, dofs_aug, p_num_eps, use_petsc)
+            res_vec_aug, A_aug = newton_update_helper(dofs_aug)
+            res_val = np.linalg.norm(res_vec_aug)
             print(f"res l_2 dofs_aug = {res_val}") 
- 
-    sol = dofs_aug[:problem.num_total_dofs].reshape(sol.shape)
+
+    sol = dofs_aug[:problem.num_total_dofs].reshape(sol_shape)
     end = time.time()
     solve_time = end - start
     print(f"Solve took {solve_time} [s]")
@@ -475,14 +463,14 @@ def solver_lagrange_multiplier(problem, linear, use_petsc):
 ################################################################################
 # General
 
-def solver(problem, linear=False, precond=True, initial_guess=None, use_petsc=True):
+def solver(problem, linear=False, precond=True, initial_guess=None, use_petsc=False):
     """periodic B.C. is a special form of adding a linear constraint. 
     Lagrange multiplier seems to be convenient to impose this constraint.
     """
     if problem.periodic_bc_info is None:
         return solver_row_elimination(problem, linear, precond, initial_guess, use_petsc)
     else:
-        return solver_lagrange_multiplier(problem, linear, use_petsc=False)
+        return solver_lagrange_multiplier(problem, linear, use_petsc)
 
 
 ################################################################################

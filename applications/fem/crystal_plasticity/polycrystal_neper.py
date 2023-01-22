@@ -18,10 +18,10 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 case_name = 'polycrystal_neper'
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
+numpy_dir = os.path.join(data_dir, f'numpy/{case_name}')
 vtk_dir = os.path.join(data_dir, f'vtk/{case_name}')
-csv_dir = os.path.join(data_dir, 'csv')
-msh_dir = os.path.join(data_dir, 'msh')
-neper_folder = os.path.join(data_dir, 'neper')
+csv_dir = os.path.join(data_dir, f'csv/{case_name}')
+neper_folder = os.path.join(data_dir, f'neper/{case_name}')
 
 
 def problem():
@@ -42,7 +42,6 @@ def problem():
     cell_grain_inds = meshio_mesh.cell_data['gmsh:physical'][0] - 1
     grain_oris_inds = onp.random.randint(pf_args['num_oris'], size=pf_args['num_grains'])
     cell_ori_inds = onp.take(grain_oris_inds, cell_grain_inds, axis=0)
-
 
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
@@ -114,8 +113,8 @@ def problem():
                                 dirichlet_bc_info=dirichlet_bc_info, additional_info=(quat, cell_ori_inds))
 
     results_to_save = []
-
     sol = np.zeros((problem.num_total_nodes, problem.vec))
+    params = problem.internal_vars['laplace']
 
     for i in range(len(ts) - 1):
         problem.dt = ts[i + 1] - ts[i]
@@ -123,16 +122,19 @@ def problem():
 
         dirichlet_bc_info[-1][-1] = get_dirichlet_top(disps[i + 1])
         problem.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
+        problem.set_params(params)
 
         # sol = solver(problem, use_petsc=True)
-        sol = solver(problem, initial_guess=sol, use_petsc=True)
+        sol = solver(problem, initial_guess=sol, use_petsc=True)   
 
         print(f"Computing stress...")
-        sigma_cell_data = problem.compute_avg_stress(sol)[:, 0, 0]
+        sigma_cell_data = problem.compute_avg_stress(sol, params)[:, 0, 0]
+
         print(f"Updating int vars...")
-        F_p_zz, slip_resistance_0, slip_inc_dt_index_0 = problem.update_int_vars_gp(sol)
+        params = problem.update_int_vars_gp(sol, params)
+
+        F_p_zz, slip_resistance_0, slip_0 = problem.inspect_interval_vars(params)
         print(f"stress = {sigma_cell_data[0]}, max stress = {np.max(sigma_cell_data)}")
-        
         vtk_path = os.path.join(vtk_dir, f'u_{i:03d}.vtu')
         save_sol(problem, sol, vtk_path, cell_infos=[('cell_ori_inds', cell_ori_inds), ('sigma', sigma_cell_data)], cell_type=cell_type)
 

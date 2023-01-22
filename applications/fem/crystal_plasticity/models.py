@@ -70,10 +70,10 @@ class CrystalPlasticity(Mechanics):
 
         rot_mats = onp.array(get_rot_mat_vmap(quat)[cell_ori_inds])
 
-        self.Fp_inv_old_gp = onp.repeat(onp.repeat(onp.eye(self.dim)[None, None, :, :], len(self.cells), axis=0), self.num_quads, axis=1)
-        self.slip_resistance_old_gp = self.gss_initial*onp.ones((len(self.cells), self.num_quads, num_slip_sys))
-        self.slip_old_gp = onp.zeros_like(self.slip_resistance_old_gp)
-        self.rot_mats_gp = onp.repeat(rot_mats[:, None, :, :], self.num_quads, axis=1)
+        Fp_inv_gp = onp.repeat(onp.repeat(onp.eye(self.dim)[None, None, :, :], len(self.cells), axis=0), self.num_quads, axis=1)
+        slip_resistance_gp = self.gss_initial*onp.ones((len(self.cells), self.num_quads, num_slip_sys))
+        slip_gp = onp.zeros_like(slip_resistance_gp)
+        rot_mats_gp = onp.repeat(rot_mats[:, None, :, :], self.num_quads, axis=1)
         self.C = onp.zeros((self.dim, self.dim, self.dim, self.dim))
 
         C11 = 1.684e5
@@ -114,16 +114,11 @@ class CrystalPlasticity(Mechanics):
         self.C[1, 0, 0, 1] = C44
         self.C[1, 0, 1, 0] = C44
 
-        self.internal_vars = {'laplace': [self.Fp_inv_old_gp, self.slip_resistance_old_gp, 
-            self.slip_old_gp, self.rot_mats_gp]}
+        self.internal_vars = {'laplace': [Fp_inv_gp, slip_resistance_gp, slip_gp, rot_mats_gp]}
 
     def get_tensor_map(self):
         tensor_map, _ = self.get_maps()
         return tensor_map
-
-    # def newton_update(self, sol):
-    #     return self.newton_vars(sol, laplace=[self.Fp_inv_old_gp, self.slip_resistance_old_gp, 
-    #         self.slip_old_gp, self.rot_mats_gp])
 
     def get_maps(self):
         h = 541.5
@@ -134,22 +129,25 @@ class CrystalPlasticity(Mechanics):
 
         def get_partial_tensor_map(Fp_inv_old, slip_resistance_old, slip_old, rot_mat):
             _, unflatten_fn = jax.flatten_util.ravel_pytree(Fp_inv_old)
+            _, unflatten_fn_params = jax.flatten_util.ravel_pytree([Fp_inv_old, Fp_inv_old, slip_resistance_old, slip_old, rot_mat])
     
             def first_PK_stress(u_grad):
-                y = newton_solver(u_grad.reshape(-1))
+                x, _ = jax.flatten_util.ravel_pytree([u_grad, Fp_inv_old, slip_resistance_old, slip_old, rot_mat])
+                y = newton_solver(x)
                 S = unflatten_fn(y)
-                _, _, _, Fe, F = helper(u_grad, S)
+                _, _, _, Fe, F = helper(u_grad, Fp_inv_old, slip_resistance_old, slip_old, rot_mat, S)
                 sigma = 1./np.linalg.det(Fe)*Fe @ S @ Fe.T
                 P = np.linalg.det(F)*sigma @ np.linalg.inv(F).T 
                 return P    
 
             def update_int_vars(u_grad):
-                y = newton_solver(u_grad.reshape(-1))
+                x, _ = jax.flatten_util.ravel_pytree([u_grad, Fp_inv_old, slip_resistance_old, slip_old, rot_mat])
+                y = newton_solver(x)
                 S = unflatten_fn(y)
-                Fp_inv_new, slip_resistance_new, slip_new, Fe, F = helper(u_grad, S)
-                return Fp_inv_new, slip_resistance_new, slip_new, y
+                Fp_inv_new, slip_resistance_new, slip_new, Fe, F = helper(u_grad, Fp_inv_old, slip_resistance_old, slip_old, rot_mat, S)
+                return Fp_inv_new, slip_resistance_new, slip_new, rot_mat
 
-            def helper(u_grad, S):
+            def helper(u_grad, Fp_inv_old, slip_resistance_old, slip_old, rot_mat, S):
                 tau = np.sum(S[None, :, :] * rotate_tensor_rank_2_vmap(rot_mat, self.Schmid_tensors), axis=(1, 2))
                 gamma_inc = ao*self.dt*np.absolute(tau/slip_resistance_old)**(1./xm)*np.sign(tau)
 
@@ -160,7 +158,7 @@ class CrystalPlasticity(Mechanics):
                 # g_inc = (self.q @ tmp[:, None]).reshape(-1)
 
                 slip_resistance_new = slip_resistance_old + g_inc
-                slip_new = slip_old + np.absolute(gamma_inc)
+                slip_new = slip_old + gamma_inc
                 F = u_grad + np.eye(self.dim)
                 L_plastic_inc = np.sum(gamma_inc[:, None, None] * rotate_tensor_rank_2_vmap(rot_mat, self.Schmid_tensors), axis=0)
                 Fp_inv_new = Fp_inv_old @ (np.eye(self.dim) - L_plastic_inc)
@@ -168,9 +166,9 @@ class CrystalPlasticity(Mechanics):
                 return Fp_inv_new, slip_resistance_new, slip_new, Fe, F
 
             def implicit_residual(x, y):
-                u_grad = unflatten_fn(x)
+                u_grad, Fp_inv_old, slip_resistance_old, slip_old, rot_mat = unflatten_fn_params(x)
                 S = unflatten_fn(y)
-                _, _, _, Fe, _ = helper(u_grad, S)
+                _, _, _, Fe, _ = helper(u_grad, Fp_inv_old, slip_resistance_old, slip_old, rot_mat, S)
                 S_ = np.sum(rotate_tensor_rank_4(rot_mat, self.C) * 1./2.*(Fe.T @ Fe - np.eye(self.dim))[None, None, :, :], axis=(2, 3))           
                 res, _ = jax.flatten_util.ravel_pytree(S - S_)
                 return res
@@ -241,33 +239,31 @@ class CrystalPlasticity(Mechanics):
 
         return tensor_map, update_int_vars_map
 
-    def update_int_vars_gp(self, sol):
+    def update_int_vars_gp(self, sol, params):
         _, update_int_vars_map = self.get_maps()
         vmap_update_int_vars_map = jax.jit(jax.vmap(jax.vmap(update_int_vars_map)))
-
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
         u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
         u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim)
-  
-        Fp_inv_new_gp, slip_resistance_new_gp, slip_new_gp, y_ini_gp = \
-            vmap_update_int_vars_map(u_grads, self.Fp_inv_old_gp, self.slip_resistance_old_gp, self.slip_old_gp, self.rot_mats_gp)
+        Fp_inv_gp, slip_resistance_gp, slip_gp, rot_mats_gp = \
+            vmap_update_int_vars_map(u_grads, *params)
+        # TODO
+        return [Fp_inv_gp, slip_resistance_gp, slip_gp, rot_mats_gp]
 
-        slip_inc_dt_index_0 = (slip_new_gp[0, 0, 0] - self.slip_old_gp[0, 0, 0])/self.dt
-        print(f"slip inc dt index 0 = {slip_inc_dt_index_0}, max slip = {np.max(np.absolute(slip_new_gp))}")
+    def set_params(self, params):
+        self.internal_vars['laplace'] = params
 
-        self.Fp_inv_old_gp, self.slip_resistance_old_gp, self.slip_old_gp, self.y_ini_gp = Fp_inv_new_gp, slip_resistance_new_gp, slip_new_gp, y_ini_gp
-
-        F_p = np.linalg.inv(self.Fp_inv_old_gp[0, 0])
+    def inspect_interval_vars(self, params):
+        """For post-processing only
+        """
+        Fp_inv_gp, slip_resistance_gp, slip_gp, rot_mats_gp = params
+        F_p = np.linalg.inv(Fp_inv_gp[0, 0])
         print(f"Fp = \n{F_p}")
-        slip_resistance_0 = self.slip_resistance_old_gp[0, 0, 0]
-        print(f"slip_resistance index 0 = {slip_resistance_0}, max slip_resistance = {np.max(self.slip_resistance_old_gp)}")
+        slip_resistance_0 = slip_resistance_gp[0, 0, 0]
+        print(f"slip_resistance index 0 = {slip_resistance_0}, max slip_resistance = {np.max(slip_resistance_gp)}")
+        return F_p[2, 2], slip_resistance_0, slip_gp[0, 0, 0]
 
-        self.internal_vars['laplace'] = [self.Fp_inv_old_gp, self.slip_resistance_old_gp, 
-                    self.slip_old_gp, self.rot_mats_gp]
-
-        return F_p[2, 2], slip_resistance_0, slip_inc_dt_index_0 
-
-    def compute_avg_stress(self, sol):
+    def compute_avg_stress(self, sol, params):
         """For post-processing only
         """
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
@@ -276,7 +272,7 @@ class CrystalPlasticity(Mechanics):
 
         partial_tensor_map, _ = self.get_maps()
         vmap_partial_tensor_map = jax.jit(jax.vmap(jax.vmap(partial_tensor_map)))
-        P = vmap_partial_tensor_map(u_grads, self.Fp_inv_old_gp, self.slip_resistance_old_gp, self.slip_old_gp, self.rot_mats_gp)
+        P = vmap_partial_tensor_map(u_grads, *params)
 
         def P_to_sigma(P, F):
             return 1./np.linalg.det(F) * P @ F.T
@@ -289,5 +285,4 @@ class CrystalPlasticity(Mechanics):
 
         # num_cells*num_quads, vec, dim) * (num_cells*num_quads, 1, 1)
         avg_P = np.sum(P.reshape(-1, self.vec, self.dim) * self.JxW.reshape(-1)[:, None, None], 0) / np.sum(self.JxW)
-  
         return sigma_cell_data

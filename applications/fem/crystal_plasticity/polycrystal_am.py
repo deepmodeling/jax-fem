@@ -17,10 +17,10 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 case_name = 'polycrystal_am'
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
-numpy_dir = os.path.join(data_dir, 'numpy')
+numpy_dir = os.path.join(data_dir, f'numpy/{case_name}')
 vtk_dir = os.path.join(data_dir, f'vtk/{case_name}')
-csv_dir = os.path.join(data_dir, 'csv')
-msh_dir = os.path.join(data_dir, 'msh')
+csv_dir = os.path.join(data_dir, f'csv/{case_name}')
+msh_dir = os.path.join(data_dir, f'msh/{case_name}')
 
 
 def problem():

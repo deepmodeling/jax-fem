@@ -474,7 +474,61 @@ def solver(problem, linear=False, precond=True, initial_guess=None, use_petsc=Fa
 
 
 ################################################################################
-# Adjoint method for inverse problem
+# Adjoint solve - Improved implementation
+
+def implicit_vjp(problem, sol, params, v):
+    def constraint_fn(dofs, params):
+        """c(u, p)
+        """
+        problem.set_params(params)
+        res_fn = problem.compute_residual
+        res_fn = get_flatten_fn(res_fn, problem)
+        res_fn = apply_bc(res_fn, problem)
+        return res_fn(dofs)
+
+    def constraint_fn_sol_to_sol(sol, params):
+        return constraint_fn(sol.reshape(-1), params).reshape(sol.shape)
+
+    def get_vjp_contraint_fn_dofs(dofs):
+        # Just a transpose of A_fn
+        def adjoint_linear_fn(adjoint):
+            primals, f_vjp = jax.vjp(A_fn, dofs)
+            val, = f_vjp(adjoint)
+            return val
+        return adjoint_linear_fn
+
+    def get_partial_params_c_fn(sol):
+        """c(u=u, p)
+        """
+        def partial_params_c_fn(params):
+            return constraint_fn_sol_to_sol(sol, params)
+        return partial_params_c_fn
+
+    def get_vjp_contraint_fn_params(params, sol):
+        """v*(partial dc/dp)
+        """
+        partial_c_fn = get_partial_params_c_fn(sol)
+        def vjp_linear_fn(v):
+            primals, f_vjp = jax.vjp(partial_c_fn, params)
+            val, = f_vjp(v)
+            return val
+        return vjp_linear_fn
+
+    problem.set_params(params)
+    problem.newton_update(sol).reshape(-1)
+    A_fn = get_A_fn(problem, use_petsc=False)
+    A_fn = row_elimination(A_fn, problem)
+    adjoint_linear_fn = get_vjp_contraint_fn_dofs(sol.reshape(-1))
+    adjoint = jax_solve(problem, adjoint_linear_fn, v.reshape(-1), None, True)
+    vjp_linear_fn = get_vjp_contraint_fn_params(params, sol)
+    vjp_result = vjp_linear_fn(adjoint.reshape(sol.shape))
+    vjp_result = jax.tree_map(lambda x: -x, vjp_result)
+
+    return vjp_result
+
+
+################################################################################
+# Adjoint method for inverse problem - For the JAX-FEM paper
 
 def adjoint_method(problem, J_fn, output_sol, linear=False):
     """Adjoint method with automatic differentiation.
@@ -536,6 +590,7 @@ def adjoint_method(problem, J_fn, output_sol, linear=False):
     def get_vjp_contraint_fn_dofs(params, dofs):
         """v*(partial dc/du)
         """
+        #TODO: The following line not useful?
         problem.set_params(params)
         A_fn = get_A_fn(problem, use_petsc=False)
         A_fn = row_elimination(A_fn, problem)

@@ -57,7 +57,3 @@ def make_video(data_dir):
     # TODO
     os.system(f'ffmpeg -y -framerate 10 -i {data_dir}/png/tmp/u.%04d.png -pix_fmt yuv420p -vf \
                "crop=trunc(iw/2)*2:trunc(ih/2)*2" {data_dir}/mp4/test.mp4')
-
-
-if __name__=="__main__":
-    make_video()

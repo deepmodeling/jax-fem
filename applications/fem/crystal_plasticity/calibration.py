@@ -5,7 +5,7 @@ import os
 import glob
 import matplotlib.pyplot as plt
 
-from jax_am.fem.solver import solver, implicit_vjp
+from jax_am.fem.solver import solver, ad_wrapper
 from jax_am.fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
 from jax_am.fem.utils import save_sol
 
@@ -69,23 +69,7 @@ def problem():
 
     sol = np.zeros((problem.num_total_nodes, problem.vec))
 
-    @jax.custom_vjp
-    def fwd_pred(params):
-        problem.set_params(params)
-        sol = solver(problem)
-        return sol
- 
-    def f_fwd(params):
-        sol = fwd_pred(params)
-        return sol, (params, sol)
-
-    def f_bwd(res, v):
-        print("\nRunning backward...")
-        params, sol = res 
-        vjp_result = implicit_vjp(problem, sol, params, v)
-        return (vjp_result,)
-
-    fwd_pred.defvjp(f_fwd, f_bwd)
+    fwd_pred = ad_wrapper(problem)
 
     def simulation(alpha):
 
@@ -105,30 +89,27 @@ def problem():
 
             params = problem.update_int_vars_gp(sol, params)
 
-            F_p_zz, slip_resistance_0, slip_0 = problem.inspect_interval_vars(params)
-            print(f"stress_zz = {stress_zz}")
-            vtk_path = os.path.join(vtk_dir, f'u_{i:03d}.vtu')
-            save_sol(problem, sol, vtk_path, cell_type=cell_type)
-            results_to_save.append([ts[i + 1], disps[i + 1]/Lz, F_p_zz, slip_resistance_0, slip_0, stress_zz])
+            # F_p_zz, slip_resistance_0, slip_0 = problem.inspect_interval_vars(params)
+            # print(f"stress_zz = {stress_zz}")
+            # vtk_path = os.path.join(vtk_dir, f'u_{i:03d}.vtu')
+            # save_sol(problem, sol, vtk_path, cell_type=cell_type)
+            # results_to_save.append([ts[i + 1], disps[i + 1]/Lz, F_p_zz, slip_resistance_0, slip_0, stress_zz])
 
-        results_to_save = onp.array(results_to_save)
-        os.makedirs(numpy_dir, exist_ok=True)
-        onp.save(os.path.join(numpy_dir, 'jax_fem_out.npy'), results_to_save)
+        # results_to_save = onp.array(results_to_save)
+        # os.makedirs(numpy_dir, exist_ok=True)
+        # onp.save(os.path.join(numpy_dir, 'jax_fem_out.npy'), results_to_save)
 
         return stress_zz
-
-    # initial_params = problem.internal_vars['laplace']
-    # simulation(initial_params)
 
     # 1.01 - 169.65845175597966
     # 0.99 - 166.3895137772737
     # FDM grad - 163.44689893529818
     # AD grad - 163.4479802160081
 
-    # grads = jax.grad(simulation)(1.)
-    # print(grads)
+    grads = jax.grad(simulation)(1.)
+    print(grads)
 
-    print(simulation(1.0))
+    # print(simulation(1.))
 
 
 def plot_stress_strain():

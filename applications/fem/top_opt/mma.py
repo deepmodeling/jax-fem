@@ -618,6 +618,6 @@ def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, 
 
         print(f"MMA took {end - start} [s]")
 
-        print(f'Iter {loop:d}; J {J:.5f}; vf {np.mean(rho):.5f}')
+        print(f'Iter {loop:d}; J {J:.5f}; vf {np.mean(rho):.5f}\n\n\n')
             
     return rho;

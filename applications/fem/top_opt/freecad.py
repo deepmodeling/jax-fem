@@ -11,16 +11,16 @@ import meshio
 import time
 
 from jax_am.fem.generate_mesh import Mesh, box_mesh
-from jax_am.fem.solver import solver, adjoint_method
+from jax_am.fem.solver import solver, ad_wrapper
 from jax_am.fem.utils import save_sol
 
 from applications.fem.top_opt.fem_model import Elasticity
 from applications.fem.top_opt.mma import optimize
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 
-def get_boundary_info(jax_mesh):
+def get_boundary_info():
     left_cx = -21.
     left_cy = 20.
     left_r = 5.
@@ -72,13 +72,14 @@ def human_design():
     meshio_mesh = meshio.read(mesh_file)
     jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
-    load_location, fixed_location, flex_location, dirichlet_val, neumann_val = get_boundary_info(jax_mesh)
+    load_location, fixed_location, flex_location, dirichlet_val, neumann_val = get_boundary_info()
 
     dirichlet_bc_info = [[fixed_location]*3, [0, 1, 2], [dirichlet_val]*3]
     neumann_bc_info = [[load_location], [neumann_val]]
     problem = Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(linear_flag,))
+    problem.set_params(np.ones_like(problem.flex_inds))
+    sol = solver(problem, linear=linear_flag, use_petsc=False)
 
-    sol = solver(problem, linear=linear_flag)
     compliance = problem.compute_compliance(neumann_val, sol)
     print(f"Human design compliance = {compliance}")
 
@@ -109,13 +110,13 @@ def computer_design():
     meshio_mesh = meshio.read(mesh_file)
     jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
-    load_location, fixed_location, flex_location, dirichlet_val, neumann_val = get_boundary_info(jax_mesh)
+    load_location, fixed_location, flex_location, dirichlet_val, neumann_val = get_boundary_info()
 
     dirichlet_bc_info = [[fixed_location]*3, [0, 1, 2], [dirichlet_val]*3]
     neumann_bc_info = [[load_location], [neumann_val]]
-    problem = Elasticity(problem_name, jax_mesh, linear_flag, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info)
-
+    problem = Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(linear_flag,))
     problem.flex_inds = np.argwhere(jax.vmap(flex_location)(problem.cell_centroids)).reshape(-1)
+    fwd_pred = ad_wrapper(problem, linear=linear_flag)
 
     def J_fn(dofs, params):
         """J(u, p)
@@ -124,17 +125,27 @@ def computer_design():
         compliance = problem.compute_compliance(neumann_val, sol)
         return compliance
 
+    def J_total(params):
+        """J(u(p), p)
+        """     
+        sol = fwd_pred(params)
+        dofs = sol.reshape(-1)
+        obj_val = J_fn(dofs, params)
+        return obj_val
+
     outputs = []
-    def output_sol(params, dofs, obj_val):
-        sol = dofs.reshape((problem.num_total_nodes, problem.vec))
-        vtu_path = os.path.join(root_path, f'vtk/{problem_name}/sol_{fn.counter:03d}.vtu')
+    def output_sol(params, obj_val):
+        print(f"\nOutput solution - need to solve the forward problem again...")
+        sol = fwd_pred(params)
+        vtu_path = os.path.join(root_path, f'vtk/{problem_name}/sol_{output_sol.counter:03d}.vtu')
         design_box = np.ones(problem.num_cells).at[problem.flex_inds].set(0.)
         save_sol(problem, sol, vtu_path, cell_infos=[('theta', problem.full_params), ('design', design_box)])
         print(f"compliance = {obj_val}, compliance_human = {compliance_human}")
         print(f"max theta = {np.max(params)}, min theta = {np.min(params)}, mean theta = {np.mean(params)}")
         outputs.append(obj_val)
+        output_sol.counter += 1
 
-    fn, fn_grad = adjoint_method(problem, J_fn, output_sol, linear=linear_flag)
+    output_sol.counter = 0
 
     V_design, compliance_human = human_design()
     V_design_box = np.sum(problem.JxW[problem.flex_inds])
@@ -142,8 +153,8 @@ def computer_design():
     print(f"Computer design should use the same vf = {vf} with human design.")
 
     def objectiveHandle(rho):
-        J = fn(rho)
-        dJ = fn_grad(rho)
+        J, dJ = jax.value_and_grad(J_total)(rho)
+        output_sol(rho, J)
         return J, dJ
 
     def computeConstraints(rho, epoch):
@@ -158,9 +169,9 @@ def computer_design():
     rho_ini = vf*np.ones(len(problem.flex_inds))
     optimize(problem, rho_ini, optimizationParams, objectiveHandle, computeConstraints, numConstraints=1)
     onp.save(os.path.join(root_path, f"numpy/{problem_name}_outputs.npy"), onp.array(outputs))
-    print(f"Compliance = {fn(np.ones(len(problem.flex_inds)))} for full material")
+    print(f"Compliance = {J_total(np.ones(len(problem.flex_inds)))} for full material")
 
 
 if __name__ == "__main__":
-    human_design()
-    # computer_design()
+    # human_design()
+    computer_design()

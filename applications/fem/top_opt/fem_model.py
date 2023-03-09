@@ -87,8 +87,7 @@ class Elasticity(FEM):
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
         u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
         u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim) 
-        thetas = self.set_params()
         vm_stress_fn = self.get_von_mises_stress_fn()
-        vm_stress = jax.vmap(jax.vmap(vm_stress_fn))(u_grads, thetas) # (num_cells, num_quads)
+        vm_stress = jax.vmap(jax.vmap(vm_stress_fn))(u_grads, *self.internal_vars['laplace']) # (num_cells, num_quads)
         volume_avg_vm_stress = np.sum(vm_stress * self.JxW, axis=1) / np.sum(self.JxW, axis=1) # (num_cells,)
         return volume_avg_vm_stress

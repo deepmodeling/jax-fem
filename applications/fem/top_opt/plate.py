@@ -11,7 +11,7 @@ import meshio
 import time
 
 from jax_am.fem.generate_mesh import Mesh, box_mesh
-from jax_am.fem.solver import solver, adjoint_method
+from jax_am.fem.solver import ad_wrapper
 from jax_am.fem.utils import save_sol
 
 from applications.fem.top_opt.fem_model import Elasticity
@@ -47,6 +47,7 @@ def topology_optimization():
     dirichlet_bc_info = [[fixed_location]*3, [0, 1, 2], [dirichlet_val]*3]
     neumann_bc_info = [[load_location], [neumann_val]]
     problem = Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(linear_flag,))
+    fwd_pred = ad_wrapper(problem, linear=linear_flag)
 
     def J_fn(dofs, params):
         """J(u, p)
@@ -55,28 +56,39 @@ def topology_optimization():
         compliance = problem.compute_compliance(neumann_val, sol)
         return compliance
 
+    def J_total(params):
+        """J(u(p), p)
+        """     
+        sol = fwd_pred(params)
+        dofs = sol.reshape(-1)
+        obj_val = J_fn(dofs, params)
+        return obj_val
+
     outputs = []
-    def output_sol(params, dofs, obj_val):
-        sol = dofs.reshape((problem.num_total_nodes, problem.vec))
-        vtu_path = os.path.join(root_path, f'vtk/{problem_name}/sol_{fn.counter:03d}.vtu')
+    def output_sol(params, obj_val):
+        print(f"\nOutput solution - need to solve the forward problem again...")
+        sol = fwd_pred(params)
+        vtu_path = os.path.join(root_path, f'vtk/{problem_name}/sol_{output_sol.counter:03d}.vtu')
         save_sol(problem, sol, vtu_path, cell_infos=[('theta', problem.full_params)])
         print(f"compliance = {obj_val}")
         print(f"max theta = {np.max(params)}, min theta = {np.min(params)}, mean theta = {np.mean(params)}")
         outputs.append(obj_val)
+        output_sol.counter += 1
 
-    fn, fn_grad = adjoint_method(problem, J_fn, output_sol, linear=linear_flag)
+    output_sol.counter = 0
+        
     vf = 0.5
 
     def objectiveHandle(rho):
-        J = fn(rho)
-        dJ = fn_grad(rho)
+        J, dJ = jax.value_and_grad(J_total)(rho)
+        output_sol(rho, J)
         return J, dJ
 
     def computeConstraints(rho, epoch):
         def computeGlobalVolumeConstraint(rho):
             g = np.mean(rho)/vf - 1.
             return g
-        c, gradc = jax.value_and_grad(computeGlobalVolumeConstraint)(rho);
+        c, gradc = jax.value_and_grad(computeGlobalVolumeConstraint)(rho)
         c, gradc = c.reshape((1, 1)), gradc.reshape((1, -1))
         return c, gradc
 
@@ -84,7 +96,7 @@ def topology_optimization():
     rho_ini = vf*np.ones(len(problem.flex_inds))
     optimize(problem, rho_ini, optimizationParams, objectiveHandle, computeConstraints, numConstraints=1)
     onp.save(os.path.join(root_path, f"numpy/{problem_name}_outputs.npy"), onp.array(outputs))
-    print(f"Compliance = {fn(np.ones(len(problem.flex_inds)))} for full material")
+    print(f"Compliance = {J_total(np.ones(len(problem.flex_inds)))} for full material")
 
 
 if __name__=="__main__":

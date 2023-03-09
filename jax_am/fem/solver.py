@@ -474,7 +474,7 @@ def solver(problem, linear=False, precond=True, initial_guess=None, use_petsc=Fa
 
 
 ################################################################################
-# Adjoint solve - Improved implementation
+# Implicit differentiation with the adjoint method
 
 def implicit_vjp(problem, sol, params, v):
     def constraint_fn(dofs, params):
@@ -517,7 +517,6 @@ def implicit_vjp(problem, sol, params, v):
     problem.set_params(params)
     problem.newton_update(sol).reshape(-1)
     A_fn = get_A_fn(problem, use_petsc=False)
-    A_fn = row_elimination(A_fn, problem)
     adjoint_linear_fn = get_vjp_contraint_fn_dofs(sol.reshape(-1))
     adjoint = jax_solve(problem, adjoint_linear_fn, v.reshape(-1), None, True)
     vjp_linear_fn = get_vjp_contraint_fn_params(params, sol)
@@ -527,105 +526,22 @@ def implicit_vjp(problem, sol, params, v):
     return vjp_result
 
 
-################################################################################
-# Adjoint method for inverse problem - For the JAX-FEM paper
-
-def adjoint_method(problem, J_fn, output_sol, linear=False):
-    """Adjoint method with automatic differentiation.
-
-    Currently, the function cannot deal with periodic B.C.,
-    but it should not be easy to add.
-    """
-    def fn(params):
-        """J(u(p), p)
-        """
-        print(f"\nStep {fn.counter}")
+def ad_wrapper(problem, linear=False):
+    @jax.custom_vjp
+    def fwd_pred(params):
         problem.set_params(params)
-        sol = solver(problem, linear=linear)
-        dofs = sol.reshape(-1)
-        obj_val = J_fn(dofs, params)
-        fn.dofs = dofs
-        output_sol(params, dofs, obj_val)
-        fn.counter += 1
-        return obj_val
+        sol = solver(problem, linear)
+        return sol
+ 
+    def f_fwd(params):
+        sol = fwd_pred(params)
+        return sol, (params, sol)
 
-    fn.counter = 0
+    def f_bwd(res, v):
+        print("\nRunning backward...")
+        params, sol = res 
+        vjp_result = implicit_vjp(problem, sol, params, v)
+        return (vjp_result,)
 
-    def constraint_fn(dofs, params):
-        """c(u, p)
-        """
-        # problem.params = params
-        problem.set_params(params)
-        res_fn = problem.compute_residual
-        res_fn = get_flatten_fn(res_fn, problem)
-        res_fn = apply_bc(res_fn, problem)
-        return res_fn(dofs)
-
-    def get_partial_dofs_c_fn(params):
-        """c(u, p=p)
-        """
-        def partial_dofs_c_fn(dofs):
-            return constraint_fn(dofs, params)
-        return partial_dofs_c_fn
-
-    def get_partial_params_c_fn(dofs):
-        """c(u=u, p)
-        """
-        def partial_params_c_fn(params):
-            return constraint_fn(dofs, params)
-        return partial_params_c_fn
-
-    def get_vjp_contraint_fn_dofs_slow(params, dofs):
-        """v*(partial dc/du)
-        This version is slow.
-        Linearization from "problem.compute_residual" with vjp (or jvp) is slow!
-        """
-        partial_c_fn = get_partial_dofs_c_fn(params)
-        def adjoint_linear_fn(adjoint):
-            primals, f_vjp = jax.vjp(partial_c_fn, dofs)
-            val, = f_vjp(adjoint)
-            return val
-        return adjoint_linear_fn
-
-    def get_vjp_contraint_fn_dofs(params, dofs):
-        """v*(partial dc/du)
-        """
-        #TODO: The following line not useful?
-        problem.set_params(params)
-        A_fn = get_A_fn(problem, use_petsc=False)
-        A_fn = row_elimination(A_fn, problem)
-        def adjoint_linear_fn(adjoint):
-            primals, f_vjp = jax.vjp(A_fn, dofs)
-            val, = f_vjp(adjoint)
-            return val
-        return adjoint_linear_fn
-
-    def get_vjp_contraint_fn_params(params, dofs):
-        """v*(partial dc/dp)
-        """
-        partial_c_fn = get_partial_params_c_fn(dofs)
-        def vjp_linear_fn(v):
-            primals, f_vjp = jax.vjp(partial_c_fn, params)
-            val, = f_vjp(v)
-            return val
-        return vjp_linear_fn
-
-    def fn_grad(params):
-        """total dJ/dp
-        """
-        dofs = fn.dofs
-        partial_dJ_du = jax.grad(J_fn, argnums=0)(dofs, params)
-        partial_dJ_dp = jax.grad(J_fn, argnums=1)(dofs, params)
-        adjoint_linear_fn = get_vjp_contraint_fn_dofs(params, dofs)
-        vjp_linear_fn = get_vjp_contraint_fn_params(params, dofs)
-        # test_jacobi_precond(problem, jacobi_preconditioner(problem), adjoint_linear_fn)
-        problem.newton_update(dofs.reshape((problem.num_total_nodes, problem.vec)))
-        pc = get_jacobi_precond(jacobi_preconditioner(problem))
-        start = time.time()
-        adjoint, info = jax.scipy.sparse.linalg.bicgstab(adjoint_linear_fn, partial_dJ_du, x0=None, M=pc, tol=1e-10, atol=1e-10, maxiter=10000)
-        end = time.time()
-        print(f"Adjoint solve took {end - start} [s]")
-        total_dJ_dp = -vjp_linear_fn(adjoint) + partial_dJ_dp
-        return total_dJ_dp
-
-    return fn, fn_grad
+    fwd_pred.defvjp(f_fwd, f_bwd)
+    return fwd_pred

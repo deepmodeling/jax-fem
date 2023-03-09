@@ -8,7 +8,7 @@ import glob
 import scipy.optimize as opt
 
 from jax_am.fem.core import FEM
-from jax_am.fem.solver import solver, get_flatten_fn, apply_bc, row_elimination, get_jacobi_precond, jacobi_preconditioner, get_A_fn
+from jax_am.fem.solver import solver, ad_wrapper
 from jax_am.fem.utils import modify_vtu_file, save_sol
 from jax_am.fem.generate_mesh import Mesh, box_mesh
 
@@ -27,114 +27,6 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
-
-
-
-################################################################################
-# Adjoint method for inverse problem
-# This is the original version for the JAX-FEM paper
-# Manually compute gradient
-
-def adjoint_method(problem, J_fn, output_sol, linear=False):
-    """Adjoint method with automatic differentiation.
-
-    Currently, the function cannot deal with periodic B.C.,
-    but it should not be easy to add.
-    """
-    def fn(params):
-        """J(u(p), p)
-        """
-        print(f"\nStep {fn.counter}")
-        problem.set_params(params)
-        sol = solver(problem, linear=linear)
-        dofs = sol.reshape(-1)
-        obj_val = J_fn(dofs, params)
-        fn.dofs = dofs
-        output_sol(params, dofs, obj_val)
-        fn.counter += 1
-        return obj_val
-
-    fn.counter = 0
-
-    def constraint_fn(dofs, params):
-        """c(u, p)
-        """
-        # problem.params = params
-        problem.set_params(params)
-        res_fn = problem.compute_residual
-        res_fn = get_flatten_fn(res_fn, problem)
-        res_fn = apply_bc(res_fn, problem)
-        return res_fn(dofs)
-
-    def get_partial_dofs_c_fn(params):
-        """c(u, p=p)
-        """
-        def partial_dofs_c_fn(dofs):
-            return constraint_fn(dofs, params)
-        return partial_dofs_c_fn
-
-    def get_partial_params_c_fn(dofs):
-        """c(u=u, p)
-        """
-        def partial_params_c_fn(params):
-            return constraint_fn(dofs, params)
-        return partial_params_c_fn
-
-    def get_vjp_contraint_fn_dofs_slow(params, dofs):
-        """v*(partial dc/du)
-        This version is slow.
-        Linearization from "problem.compute_residual" with vjp (or jvp) is slow!
-        """
-        partial_c_fn = get_partial_dofs_c_fn(params)
-        def adjoint_linear_fn(adjoint):
-            primals, f_vjp = jax.vjp(partial_c_fn, dofs)
-            val, = f_vjp(adjoint)
-            return val
-        return adjoint_linear_fn
-
-    def get_vjp_contraint_fn_dofs(params, dofs):
-        """v*(partial dc/du)
-        """
-        #TODO: The following line not useful?
-        problem.set_params(params)
-        A_fn = get_A_fn(problem, use_petsc=False)
-        A_fn = row_elimination(A_fn, problem)
-        def adjoint_linear_fn(adjoint):
-            primals, f_vjp = jax.vjp(A_fn, dofs)
-            val, = f_vjp(adjoint)
-            return val
-        return adjoint_linear_fn
-
-    def get_vjp_contraint_fn_params(params, dofs):
-        """v*(partial dc/dp)
-        """
-        partial_c_fn = get_partial_params_c_fn(dofs)
-        def vjp_linear_fn(v):
-            primals, f_vjp = jax.vjp(partial_c_fn, params)
-            val, = f_vjp(v)
-            return val
-        return vjp_linear_fn
-
-    def fn_grad(params):
-        """total dJ/dp
-        """
-        dofs = fn.dofs
-        partial_dJ_du = jax.grad(J_fn, argnums=0)(dofs, params)
-        partial_dJ_dp = jax.grad(J_fn, argnums=1)(dofs, params)
-        adjoint_linear_fn = get_vjp_contraint_fn_dofs(params, dofs)
-        vjp_linear_fn = get_vjp_contraint_fn_params(params, dofs)
-        # test_jacobi_precond(problem, jacobi_preconditioner(problem), adjoint_linear_fn)
-        problem.newton_update(dofs.reshape((problem.num_total_nodes, problem.vec)))
-        pc = get_jacobi_precond(jacobi_preconditioner(problem))
-        start = time.time()
-        adjoint, info = jax.scipy.sparse.linalg.bicgstab(adjoint_linear_fn, partial_dJ_du, x0=None, M=pc, tol=1e-10, atol=1e-10, maxiter=10000)
-        end = time.time()
-        print(f"Adjoint solve took {end - start} [s]")
-        total_dJ_dp = -vjp_linear_fn(adjoint) + partial_dJ_dp
-        return total_dJ_dp
-
-    return fn, fn_grad
-
 
 
 class LinearPoisson(FEM):
@@ -237,6 +129,8 @@ def param_id():
 
     problem_inv_name = "inverse"
     problem_inv = LinearPoisson(jax_mesh, vec=1, dim=3, dirichlet_bc_info=dirichlet_bc_info, additional_info=(problem_inv_name,))
+    fwd_pred = ad_wrapper(problem_inv, linear=True)
+
     files = glob.glob(os.path.join(data_dir, f'vtk/{problem_inv_name}/*'))
     for f in files:
         os.remove(f)
@@ -254,10 +148,20 @@ def param_id():
         # print(f"{bcolors.HEADER}Predicted force L2 integral = {problem_fwd.compute_L2(params)}{bcolors.ENDC}")
         return l2_loss
 
+
+    def J_total(params):
+        """J(u(p), p)
+        """     
+        sol = fwd_pred(params)
+        dofs = sol.reshape(-1)
+        obj_val = J_fn(dofs, params)
+        return obj_val
+
     outputs = []
-    def output_sol(params, dofs, obj_val):
-        sol = dofs.reshape((problem_inv.num_total_nodes, problem_inv.vec))
-        vtu_path = os.path.join(data_dir, f"vtk/{problem_inv_name}/sol_{fn.counter:03d}.vtu")
+    def output_sol(params, obj_val):
+        print(f"\nOutput solution - need to solve the forward problem again...")
+        sol = fwd_pred(params)
+        vtu_path = os.path.join(data_dir, f"vtk/{problem_inv_name}/sol_{output_sol.counter:03d}.vtu")
         save_sol(problem_inv, sol, vtu_path, point_infos=[('source', params)])
         rel_error_sol = (np.sqrt(problem_fwd.compute_L2(true_sol - sol))/
                          np.sqrt(problem_fwd.compute_L2(true_sol)))
@@ -268,18 +172,23 @@ def param_id():
         print(f"max opt source = {np.max(params)}, min source = {np.min(params)}, mean source = {np.mean(params)}")
         print(f"rel_error_sol = {rel_error_sol}, rel_error_force = {rel_error_force}")
         outputs.append([obj_val, rel_error_sol, rel_error_force])
+        output_sol.counter += 1
 
-    fn, fn_grad = adjoint_method(problem_inv, J_fn, output_sol, linear=True)
+    output_sol.counter = 0
+
+    fn, fn_grad = J_total, jax.grad(J_total)
     params_ini = onp.zeros(problem_inv.num_total_nodes * problem_inv.vec)
     taylor_tests(data_dir, params_ini, fn, fn_grad)
 
     def objective_wrapper(x):
-        obj_val = fn(x)
+        obj_val, dJ = jax.value_and_grad(J_total)(x)
+        objective_wrapper.dJ = dJ
+        output_sol(x, obj_val)
         print(f"{bcolors.HEADER}obj_val = {obj_val}{bcolors.ENDC}")
         return obj_val
 
     def derivative_wrapper(x):
-        grads = fn_grad(x)
+        grads = objective_wrapper.dJ
         print(f"grads.shape = {grads.shape}")
         # 'L-BFGS-B' requires the following conversion, otherwise we get an error message saying
         # -- input not fortran contiguous -- expected elsize=8 but got 4

@@ -4,9 +4,6 @@ import jax.numpy as np
 import os
 import glob
 import os
-import scipy.optimize as opt
-from scipy.optimize import LinearConstraint
-from scipy.optimize import Bounds
 import meshio
 import time
 
@@ -18,10 +15,8 @@ from applications.fem.top_opt.fem_model import Elasticity
 from applications.fem.top_opt.mma import optimize
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-
-
+ 
 def topology_optimization():
-    linear_flag = False
     problem_name = 'plate'
     root_path = os.path.join(os.path.dirname(__file__), 'data') 
 
@@ -46,8 +41,8 @@ def topology_optimization():
 
     dirichlet_bc_info = [[fixed_location]*3, [0, 1, 2], [dirichlet_val]*3]
     neumann_bc_info = [[load_location], [neumann_val]]
-    problem = Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(linear_flag,))
-    fwd_pred = ad_wrapper(problem, linear=linear_flag)
+    problem = Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(problem_name,))
+    fwd_pred = ad_wrapper(problem, linear=False)
 
     def J_fn(dofs, params):
         """J(u, p)
@@ -69,7 +64,7 @@ def topology_optimization():
         print(f"\nOutput solution - need to solve the forward problem again...")
         sol = fwd_pred(params)
         vtu_path = os.path.join(root_path, f'vtk/{problem_name}/sol_{output_sol.counter:03d}.vtu')
-        save_sol(problem, sol, vtu_path, cell_infos=[('theta', problem.full_params)])
+        save_sol(problem, sol, vtu_path, cell_infos=[('theta', problem.full_params[:, 0])])
         print(f"compliance = {obj_val}")
         print(f"max theta = {np.max(params)}, min theta = {np.min(params)}, mean theta = {np.mean(params)}")
         outputs.append(obj_val)
@@ -89,14 +84,14 @@ def topology_optimization():
             g = np.mean(rho)/vf - 1.
             return g
         c, gradc = jax.value_and_grad(computeGlobalVolumeConstraint)(rho)
-        c, gradc = c.reshape((1, 1)), gradc.reshape((1, -1))
+        c, gradc = c.reshape((1,)), gradc[None, ...]
         return c, gradc
 
-    optimizationParams = {'maxIters':100, 'minIters':100, 'relTol':0.05}
-    rho_ini = vf*np.ones(len(problem.flex_inds))
+    optimizationParams = {'maxIters':7, 'minIters':7, 'relTol':0.05}
+    rho_ini = vf*np.ones((len(problem.flex_inds), 1))
     optimize(problem, rho_ini, optimizationParams, objectiveHandle, computeConstraints, numConstraints=1)
     onp.save(os.path.join(root_path, f"numpy/{problem_name}_outputs.npy"), onp.array(outputs))
-    print(f"Compliance = {J_total(np.ones(len(problem.flex_inds)))} for full material")
+    print(f"Compliance = {J_total(np.ones((len(problem.flex_inds), 1)))} for full material")
 
 
 if __name__=="__main__":

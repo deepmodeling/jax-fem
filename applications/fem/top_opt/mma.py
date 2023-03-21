@@ -4,6 +4,8 @@ Under GNU General Public License v3.0
 
 No projection filter is considered.
 
+Original copy from https://github.com/arjendeetman/GCMMA-MMA-Python/blob/master/Code/MMA.py
+
 """
 from numpy import diag as diags
 from numpy.linalg import solve
@@ -45,18 +47,24 @@ def compute_filter_kd_tree(problem):
     H_sp = scipy.sparse.csc_array((V, (I, J)), shape=(flex_num_cells, flex_num_cells))
     # TODO: No need the create the full matrix. 
     H = H_sp.todense()
-    Hs = np.sum(H,1)
+    Hs = np.sum(H, 1)
     return H, Hs
 
 
-def applySensitivityFilter(ft, x, dc, dv):
-    if (ft['type'] == 1):
-        dc = np.matmul(ft['H'],\
-                         np.multiply(x, dc)/ft['Hs']/np.maximum(1e-3,x));
-    elif (ft['type'] == 2):
-        dc = np.matmul(ft['H'], (dc/ft['Hs']));
-        dv = np.matmul(ft['H'], (dv/ft['Hs']));
-    return dc, dv;
+def applySensitivityFilter(ft, rho, dJ, dvc):
+
+    # print(ft['H'].shape)
+    # print(rho.shape)
+    # print(dJ.shape)
+    # print(dvc.shape)
+    # exit()
+
+
+    dJ = np.matmul(ft['H'], rho*dJ/np.maximum(1e-3, rho)/ft['Hs'][:, None])
+ 
+    # dJ = np.matmul(ft['H'], rho*dJ/ft['Hs']/np.maximum(1e-3, rho))
+ 
+    return dJ, dvc
 
 
 #%% Optimizer
@@ -194,71 +202,6 @@ class MMA:
         self.slack = s;
         self.lowAsymp, self.upAsymp = low, upp;
 
-
-# Function for the GCMMA sub problem
-def gcmmasub(m,n,iter,epsimin,xval,xmin,xmax,low,upp,raa0,raa,f0val,df0dx,\
-             fval,dfdx,a0,a,c,d):
-    eeen = np.ones((n,1))
-    zeron = np.zeros((n,1))
-    # Calculations of the bounds alfa and beta
-    albefa = 0.1
-    zzz = low+albefa*(xval-low)
-    alfa = np.maximum(zzz,xmin)
-    zzz = upp-albefa*(upp-xval)
-    beta = np.minimum(zzz,xmax)
-    # Calculations of p0, q0, r0, P, Q, r and b.
-    xmami = xmax-xmin
-    xmamieps = 0.00001*eeen
-    xmami = np.maximum(xmami,xmamieps)
-    xmamiinv = eeen/xmami
-    ux1 = upp-xval
-    ux2 = ux1*ux1
-    xl1 = xval-low
-    xl2 = xl1*xl1
-    uxinv = eeen/ux1
-    xlinv = eeen/xl1
-    #
-    p0 = zeron.copy()
-    q0 = zeron.copy()
-    p0 = np.maximum(df0dx,0)
-    q0 = np.maximum(-df0dx,0)
-    pq0 = p0+q0
-    p0 = p0+0.001*pq0
-    q0 = q0+0.001*pq0
-    p0 = p0+raa0*xmamiinv
-    q0 = q0+raa0*xmamiinv
-    p0 = p0*ux2
-    q0 = q0*xl2
-    r0 = f0val-np.dot(p0.T,uxinv)-np.dot(q0.T,xlinv)
-    #
-    P = np.zeros((m,n)) ## @@ make sparse with scipy?
-    Q = np.zeros((m,n)) ## @@ make sparse with scipy
-    P = (diags(ux2.flatten(),0).dot(P.T)).T
-    Q = (diags(xl2.flatten(),0).dot(Q.T)).T
-    b = (np.dot(P,uxinv)+np.dot(Q,xlinv)-fval)
-    P = np.maximum(dfdx,0)
-    Q = np.maximum(-dfdx,0)
-    PQ = P+Q
-    P = P+0.001*PQ
-    Q = Q+0.001*PQ
-    P = P+np.dot(raa,xmamiinv.T)
-    Q = Q+np.dot(raa,xmamiinv.T)
-    P = (diags(ux2.flatten(),0).dot(P.T)).T
-    Q = (diags(xl2.flatten(),0).dot(Q.T)).T
-    r = fval-np.dot(P,uxinv)-np.dot(Q,xlinv)
-    b = -r
-    # Solving the subproblem by a primal-dual Newton method
-    xmma,ymma,zmma,lam,xsi,eta,mu,zet,s = subsolv(m,n,epsimin,low,upp,alfa,\
-                                                  beta,p0,q0,P,Q,a0,a,b,c,d)
-    # Calculations of f0app and fapp.
-    ux1 = upp-xmma
-    xl1 = xmma-low
-    uxinv = eeen/ux1
-    xlinv = eeen/xl1
-    f0app = r0+np.dot(p0.T,uxinv)+np.dot(q0.T,xlinv)
-    fapp = r+np.dot(P,uxinv)+np.dot(Q,xlinv)
-    # Return values
-    return xmma,ymma,zmma,lam,xsi,eta,mu,zet,s,f0app,fapp
 
 def subsolv(m,n,epsimin,low,upp,alfa,beta,p0,q0,P,Q,a0,a,b,c,d):
     een = np.ones((n,1))
@@ -462,162 +405,76 @@ def subsolv(m,n,epsimin,low,upp,alfa,beta,p0,q0,P,Q,a0,a,b,c,d):
     return xmma,ymma,zmma,lamma,xsimma,etamma,mumma,zetmma,smma
 
 
-def kktcheck(m,n,x,y,z,lam,xsi,eta,mu,zet,s,xmin,xmax,df0dx,fval,dfdx,a0,a,c,d):
-
-    rex = df0dx+np.dot(dfdx.T,lam)-xsi+eta
-    rey = c+d*y-mu-lam
-    rez = a0-zet-np.dot(a.T,lam)
-    relam = fval-a*z-y+s
-    rexsi = xsi*(x-xmin)
-    reeta = eta*(xmax-x)
-    remu = mu*y
-    rezet = zet*z
-    res = lam*s
-    residu1 = np.concatenate((rex,rey,rez),axis = 0)
-    residu2 = np.concatenate((relam,rexsi,reeta,remu,rezet,res), axis = 0)
-    residu = np.concatenate((residu1,residu2),axis = 0)
-    residunorm = np.sqrt((np.dot(residu.T,residu)).item())
-    residumax = np.max(np.abs(residu))
-    return residu,residunorm,residumax
-
-
-def raaupdate(xmma,xval,xmin,xmax,low,upp,f0valnew,\
-              fvalnew,f0app,fapp,raa0,raa,raa0eps,raaeps,epsimin):
-
-    raacofmin = 1e-12
-    eeem = np.ones((raa.size,1))
-    eeen = np.ones((xmma.size,1))
-    xmami = xmax-xmin
-    xmamieps = 0.00001*eeen
-    xmami = np.maximum(xmami,xmamieps)
-    xxux = (xmma-xval)/(upp-xmma)
-    xxxl = (xmma-xval)/(xmma-low)
-    xxul = xxux*xxxl
-    ulxx = (upp-low)/xmami
-    raacof = np.dot(xxul.T,ulxx)
-    raacof = np.maximum(raacof,raacofmin)
-    #
-    f0appe = f0app+0.5*epsimin
-    if np.all(f0valnew>f0appe) == True:
-        deltaraa0 = (1.0/raacof)*(f0valnew-f0app)
-        zz0 = 1.1*(raa0+deltaraa0)
-        zz0 = np.minimum(zz0,10*raa0)
-        raa0 = zz0
-    #
-    fappe = fapp+0.5*epsimin*eeem;
-    fdelta = fvalnew-fappe
-    deltaraa = (1/raacof)*(fvalnew-fapp)
-    zzz = 1.1*(raa+deltaraa)
-    zzz = np.minimum(zzz,10*raa)
-    raa[np.where(fdelta>0)] = zzz[np.where(fdelta>0)]
-    #
-    return raa0,raa
-
-
-def concheck(m,epsimin,f0app,f0valnew,fapp,fvalnew):
-
-    eeem = np.ones((m,1))
-    f0appe = f0app+epsimin
-    fappe = fapp+epsimin*eeem
-    arr1 = np.concatenate((f0appe.flatten(),fappe.flatten()))
-    arr2 = np.concatenate((f0valnew.flatten(),fvalnew.flatten()))
-    if np.all(arr1 >= arr2) == True:
-        conserv = 1
-    else:
-        conserv = 0
-    return conserv
-
-
-def asymp(outeriter,n,xval,xold1,xold2,xmin,xmax,low,upp,raa0,raa,\
-          raa0eps,raaeps,df0dx,dfdx):
-    eeen = np.ones((n,1))
-    asyinit = 0.5
-    asyincr = 1.2
-    asydecr = 0.7
-    xmami = xmax-xmin
-    xmamieps = 0.00001*eeen
-    xmami = np.maximum(xmami,xmamieps)
-    raa0 = np.dot(np.abs(df0dx).T,xmami)
-    raa0 = np.maximum(raa0eps,(0.1/n)*raa0)
-    raa = np.dot(np.abs(dfdx),xmami)
-    raa = np.maximum(raaeps,(0.1/n)*raa)
-    if outeriter <= 2:
-        low = xval-asyinit*xmami
-        upp = xval+asyinit*xmami
-    else:
-        xxx = (xval-xold1)*(xold1-xold2)
-        factor = eeen.copy()
-        factor[np.where(xxx>0)] = asyincr
-        factor[np.where(xxx<0)] = asydecr
-        low = xval-factor*(xold1-low)
-        upp = xval+factor*(upp-xold1)
-        lowmin = xval-10*xmami
-        lowmax = xval-0.01*xmami
-        uppmin = xval+0.01*xmami
-        uppmax = xval+10*xmami
-        low = np.maximum(low,lowmin)
-        low = np.minimum(low,lowmax)
-        upp = np.minimum(upp,uppmax)
-        upp=np.maximum(upp,uppmin)
-    return low,upp,raa0,raa
-
-
 def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, numConstraints):
     H, Hs = compute_filter_kd_tree(problem)
     ft = {'type':1, 'H':H, 'Hs':Hs}
 
     rho = rho_ini
 
-    loop = 0; 
-    change = 1.;
-    m = numConstraints; # num constraints
-    n = len(problem.flex_inds) # num params
+    loop = 0
+    change = 1.
+    m = numConstraints # num constraints
+    n = len(rho.reshape(-1)) # num params
 
-    mma = MMA();
-    mma.setNumConstraints(numConstraints);
-    mma.setNumDesignVariables(n);
+    mma = MMA()
+    mma.setNumConstraints(numConstraints)
+    mma.setNumDesignVariables(n)
     mma.setMinandMaxBoundsForDesignVariables\
-        (np.zeros((n,1)),np.ones((n,1)));
-    
-    xval = rho[np.newaxis].T 
-    xold1, xold2 = xval.copy(), xval.copy();
-    mma.registerMMAIter(xval, xold1, xold2);
-    mma.setLowerAndUpperAsymptotes(np.ones((n,1)), np.ones((n,1)));
+        (np.zeros((n,1)),np.ones((n,1)))
+
+    xval = rho.reshape(-1)[:, None] 
+    xold1, xold2 = xval.copy(), xval.copy()
+    mma.registerMMAIter(xval, xold1, xold2)
+    mma.setLowerAndUpperAsymptotes(np.ones((n,1)), np.ones((n,1)))
     mma.setScalingParams(1.0, np.zeros((m,1)), \
                          10000*np.ones((m,1)), np.zeros((m,1)))
-    mma.setMoveLimit(0.2);
+    mma.setMoveLimit(0.2)
     
 
     while( (change > optimizationParams['relTol']) \
            and (loop < optimizationParams['maxIters'])\
            or (loop < optimizationParams['minIters'])):
-        loop = loop + 1;
+        loop = loop + 1
         
-        J, dJ = objectiveHandle(rho); 
-        vc, dvc = consHandle(rho, loop);
-        dJ, dvc = applySensitivityFilter(ft, rho, dJ, dvc)
-        J, dJ = J, dJ[np.newaxis].T
+        J, dJ = objectiveHandle(rho)
+        vc, dvc = consHandle(rho, loop)
 
-        rho, J, dJ, vc, dvc = np.array(rho), np.array(J), np.array(dJ), np.array(vc), np.array(dvc)
+        dJ, dvc = applySensitivityFilter(ft, rho, dJ, dvc)
+
+        J, dJ = J, dJ.reshape(-1)[:, None]
+        vc, dvc = vc[:, None], dvc.reshape(dvc.shape[0], -1)
+
+        print(f"J.shape = {J.shape}")
+        print(f"dJ.shape = {dJ.shape}")
+        print(f"vc.shape = {vc.shape}")
+        print(f"dvc.shape = {dvc.shape}")
+
+        J, dJ, vc, dvc = np.array(J), np.array(dJ), np.array(vc), np.array(dvc)
 
         print(f"MMA solver...")
 
         start = time.time()
 
-        mma.setObjectiveWithGradient(J, dJ);
-        mma.setConstraintWithGradient(vc, dvc);
-        xval = rho.copy()[np.newaxis].T;
-        mma.mmasub(xval);
-        xmma, _, _ = mma.getOptimalValues();
-        xold2 = xold1.copy();
-        xold1 = xval.copy();
-        rho = xmma.copy().flatten()
-        mma.registerMMAIter(rho, xval.copy(), xold1.copy())
+        mma.setObjectiveWithGradient(J, dJ)
+        mma.setConstraintWithGradient(vc, dvc)
+        mma.mmasub(xval)
+        xmma, _, _ = mma.getOptimalValues()
+
+        xold2 = xold1.copy()
+        xold1 = xval.copy()
+        xval = xmma.copy()
+
+        # There is a BUG in the AuTO project:
+        # mma.registerMMAIter(xval, xold1, xold1)
+        mma.registerMMAIter(xval, xold1, xold2)
+        rho = xval.reshape(rho.shape)
 
         end = time.time()
 
         print(f"MMA took {end - start} [s]")
 
-        print(f'Iter {loop:d}; J {J:.5f}; vf {np.mean(rho):.5f}\n\n\n')
-            
-    return rho;
+        # print(f'Iter {loop:d}; J {J:.5f}; vf {np.mean(xval):.5f}\n\n\n')
+  
+        print(f'Iter {loop:d}; J {J:.5f}; vc {np.mean(vc):.5f}\n\n\n')
+
+    return rho

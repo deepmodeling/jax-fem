@@ -6,15 +6,18 @@ from jax_am.fem.core import FEM
 
 
 class Elasticity(FEM):
-    def custom_init(self, linear_flag):
+    def custom_init(self, case_flag):
         self.neumann_boundary_inds = self.get_boundary_conditions_inds(self.neumann_bc_info[0])[0]
         self.cell_centroids = onp.mean(onp.take(self.points, self.cells, axis=0), axis=1)
         self.flex_inds = np.arange(len(self.cells))
-        # self.params = np.ones_like(self.flex_inds)
-        if linear_flag:
+        if case_flag == 'freecad':
             self.get_tensor_map = self.get_tensor_map_linearelasticity
-        else:
+        elif case_flag == 'plate':
             self.get_tensor_map = self.get_tensor_map_hyperelasticity
+        elif case_flag == 'multi_material':
+            self.get_tensor_map = self.get_tensor_map_multi_material
+        else:
+            raise ValueError(f"Unknown case_flag = {case_flag}")
 
     def get_tensor_map_linearelasticity(self):
         def stress(u_grad, theta):
@@ -22,7 +25,7 @@ class Elasticity(FEM):
             Emin = 70.
             nu = 0.3
             penal = 3.
-            E = Emin + (Emax - Emin)*(theta+0.01)**penal
+            E = Emin + (Emax - Emin)*(theta[0]+0.01)**penal
             mu = E/(2.*(1. + nu))
             lmbda = E*nu/((1+nu)*(1-2*nu))
             epsilon = 0.5*(u_grad + u_grad.T)
@@ -36,7 +39,7 @@ class Elasticity(FEM):
             Emin = 1.
             nu = 0.3
             penal = 3.
-            E = Emin + (Emax - Emin)*(theta+0.01)**penal
+            E = Emin + (Emax - Emin)*(theta[0]+0.01)**penal
             mu = E/(2.*(1. + nu))
             kappa = E/(3.*(1. - 2.*nu))
             J = np.linalg.det(F)
@@ -53,10 +56,45 @@ class Elasticity(FEM):
             return P
         return first_PK_stress
 
+    def get_tensor_map_multi_material(self):
+        def stress(u_grad, theta):
+            Emax = 70.e3
+            Emin = 70.
+            nu = 0.3
+            penal = 3.
+
+            # E1 = Emax
+            # E2 = 0.5*Emax
+
+            E1 = Emax
+            E2 = 0.5*Emax
+
+            rho_r = 0.4
+            E_r = 0.2
+
+            theta1, theta2 = theta
+
+            # val1 = E_r*theta**penal/rho_r**penal
+            # val2 = (1 - E_r)/(1 - rho_r**penal)*(theta**penal - rho_r**penal) + E_r
+            # ratio = np.where(theta < rho_r, val1, val2)
+            # E = Emin + (Emax - Emin)*ratio
+            # E = Emin + (Emax - Emin)*(theta)**penal
+            # E = Emax*theta**penal + 0.5*Emax*(1-theta)**penal
+
+            E = Emin + theta1**penal*(theta2**penal*E1 + (1 - theta2**penal)*E2)
+
+            mu = E/(2.*(1. + nu))
+            lmbda = E*nu/((1+nu)*(1-2*nu))
+            epsilon = 0.5*(u_grad + u_grad.T)
+            sigma = lmbda*np.trace(epsilon)*np.eye(self.dim) + 2*mu*epsilon
+            return sigma
+        return stress 
+
+
     def set_params(self, params):
-        full_params = np.ones(self.num_cells)
+        full_params = np.ones((self.num_cells, params.shape[1]))
         full_params = full_params.at[self.flex_inds].set(params)
-        thetas = np.repeat(full_params[:, None], self.num_quads, axis=1)
+        thetas = np.repeat(full_params[:, None, :], self.num_quads, axis=1)
         self.full_params = full_params
         self.internal_vars['laplace'] = [thetas]
 

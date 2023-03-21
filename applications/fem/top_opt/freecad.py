@@ -4,9 +4,6 @@ import jax.numpy as np
 import os
 import glob
 import os
-import scipy.optimize as opt
-from scipy.optimize import LinearConstraint
-from scipy.optimize import Bounds
 import meshio
 import time
 
@@ -18,7 +15,7 @@ from applications.fem.top_opt.fem_model import Elasticity
 from applications.fem.top_opt.mma import optimize
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
-
+case_flag = 'freecad'
 
 def get_boundary_info():
     left_cx = -21.
@@ -60,7 +57,6 @@ def get_boundary_info():
 def human_design():
     """Take a human design, run the forward problem.
     """
-    linear_flag = True
     problem_name = 'human_design'
     root_path = os.path.join(os.path.dirname(__file__), 'data') 
 
@@ -76,9 +72,9 @@ def human_design():
 
     dirichlet_bc_info = [[fixed_location]*3, [0, 1, 2], [dirichlet_val]*3]
     neumann_bc_info = [[load_location], [neumann_val]]
-    problem = Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(linear_flag,))
-    problem.set_params(np.ones_like(problem.flex_inds))
-    sol = solver(problem, linear=linear_flag, use_petsc=False)
+    problem = Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(case_flag,))
+    problem.set_params(np.ones((len(problem.flex_inds), 1)))
+    sol = solver(problem, linear=True, use_petsc=False)
 
     compliance = problem.compute_compliance(neumann_val, sol)
     print(f"Human design compliance = {compliance}")
@@ -99,7 +95,6 @@ def human_design():
 def computer_design():
     """Inverse design with topology optimization.
     """
-    linear_flag = True
     problem_name = 'computer_design'
     root_path = os.path.join(os.path.dirname(__file__), 'data') 
     files = glob.glob(os.path.join(root_path, f'vtk/{problem_name}/*'))
@@ -114,9 +109,9 @@ def computer_design():
 
     dirichlet_bc_info = [[fixed_location]*3, [0, 1, 2], [dirichlet_val]*3]
     neumann_bc_info = [[load_location], [neumann_val]]
-    problem = Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(linear_flag,))
+    problem = Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(case_flag,))
     problem.flex_inds = np.argwhere(jax.vmap(flex_location)(problem.cell_centroids)).reshape(-1)
-    fwd_pred = ad_wrapper(problem, linear=linear_flag)
+    fwd_pred = ad_wrapper(problem, linear=True)
 
     def J_fn(dofs, params):
         """J(u, p)
@@ -139,7 +134,7 @@ def computer_design():
         sol = fwd_pred(params)
         vtu_path = os.path.join(root_path, f'vtk/{problem_name}/sol_{output_sol.counter:03d}.vtu')
         design_box = np.ones(problem.num_cells).at[problem.flex_inds].set(0.)
-        save_sol(problem, sol, vtu_path, cell_infos=[('theta', problem.full_params), ('design', design_box)])
+        save_sol(problem, sol, vtu_path, cell_infos=[('theta', problem.full_params[:, 0]), ('design', design_box)])
         print(f"compliance = {obj_val}, compliance_human = {compliance_human}")
         print(f"max theta = {np.max(params)}, min theta = {np.min(params)}, mean theta = {np.mean(params)}")
         outputs.append(obj_val)
@@ -161,15 +156,15 @@ def computer_design():
         def computeGlobalVolumeConstraint(rho):
             g = np.mean(rho)/vf - 1.
             return g
-        c, gradc = jax.value_and_grad(computeGlobalVolumeConstraint)(rho);
-        c, gradc = c.reshape((1, 1)), gradc.reshape((1, -1))
+        c, gradc = jax.value_and_grad(computeGlobalVolumeConstraint)(rho)
+        c, gradc = c.reshape((1,)), gradc[None, ...]
         return c, gradc
 
     optimizationParams = {'maxIters':30, 'minIters':30, 'relTol':0.05}
-    rho_ini = vf*np.ones(len(problem.flex_inds))
+    rho_ini = vf*np.ones((len(problem.flex_inds), 1))
     optimize(problem, rho_ini, optimizationParams, objectiveHandle, computeConstraints, numConstraints=1)
     onp.save(os.path.join(root_path, f"numpy/{problem_name}_outputs.npy"), onp.array(outputs))
-    print(f"Compliance = {J_total(np.ones(len(problem.flex_inds)))} for full material")
+    print(f"Compliance = {J_total(np.ones((len(problem.flex_inds), 1)))} for full material")
 
 
 if __name__ == "__main__":

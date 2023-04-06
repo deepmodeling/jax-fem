@@ -67,12 +67,10 @@ class Elasticity(FEM):
             # E2 = 0.5*Emax
 
             E1 = Emax
-            E2 = 0.5*Emax
+            E2 = 0.2*Emax
 
-            rho_r = 0.4
-            E_r = 0.2
-
-            theta1, theta2 = theta
+            # rho_r = 0.4
+            # E_r = 0.2
 
             # val1 = E_r*theta**penal/rho_r**penal
             # val2 = (1 - E_r)/(1 - rho_r**penal)*(theta**penal - rho_r**penal) + E_r
@@ -81,6 +79,7 @@ class Elasticity(FEM):
             # E = Emin + (Emax - Emin)*(theta)**penal
             # E = Emax*theta**penal + 0.5*Emax*(1-theta)**penal
 
+            theta1, theta2 = theta
             E = Emin + theta1**penal*(theta2**penal*E1 + (1 - theta2**penal)*E2)
 
             mu = E/(2.*(1. + nu))

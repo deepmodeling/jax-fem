@@ -52,18 +52,7 @@ def compute_filter_kd_tree(problem):
 
 
 def applySensitivityFilter(ft, rho, dJ, dvc):
-
-    # print(ft['H'].shape)
-    # print(rho.shape)
-    # print(dJ.shape)
-    # print(dvc.shape)
-    # exit()
-
-
     dJ = np.matmul(ft['H'], rho*dJ/np.maximum(1e-3, rho)/ft['Hs'][:, None])
- 
-    # dJ = np.matmul(ft['H'], rho*dJ/ft['Hs']/np.maximum(1e-3, rho))
- 
     return dJ, dvc
 
 
@@ -464,7 +453,7 @@ def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, 
         xold1 = xval.copy()
         xval = xmma.copy()
 
-        # There is a BUG in the AuTO project:
+        # There was a BUG in the AuTO project:
         # mma.registerMMAIter(xval, xold1, xold1)
         mma.registerMMAIter(xval, xold1, xold2)
         rho = xval.reshape(rho.shape)
@@ -475,6 +464,6 @@ def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, 
 
         # print(f'Iter {loop:d}; J {J:.5f}; vf {np.mean(xval):.5f}\n\n\n')
   
-        print(f'Iter {loop:d}; J {J:.5f}; vc {np.mean(vc):.5f}\n\n\n')
+        print(f'Iter {loop:d}; J {J:.5f}; constraint {vc}\n\n\n')
 
     return rho

@@ -4,9 +4,6 @@ import jax.numpy as np
 import os
 import glob
 import os
-import scipy.optimize as opt
-from scipy.optimize import LinearConstraint
-from scipy.optimize import Bounds
 import meshio
 import time
 

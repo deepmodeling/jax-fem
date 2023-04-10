@@ -53,7 +53,7 @@ def box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir, ele_type='HEX8'):
 
     msh_dir = os.path.join(data_dir, 'msh')
     os.makedirs(msh_dir, exist_ok=True)
-    msh_file = os.path.join(msh_dir, 'box_order_2.msh')
+    msh_file = os.path.join(msh_dir, 'box.msh')
 
     offset_x = 0.
     offset_y = 0.

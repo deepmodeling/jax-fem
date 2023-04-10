@@ -21,7 +21,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 class Plasticity(Elasticity):
     def custom_init(self):
-        self.neumann_boundary_inds = self.get_boundary_conditions_inds(self.neumann_bc_info[0])[0]
         self.cell_centroids = onp.mean(onp.take(self.points, self.cells, axis=0), axis=1)
         self.flex_inds = np.arange(len(self.cells))
 
@@ -99,6 +98,8 @@ class Plasticity(Elasticity):
         return sigmas_old, epsilons_old, thetas
 
     def inspect(self):
+        '''For debugging purpose
+        '''
         sigmas_old = self.internal_vars['laplace'][0]
         return np.mean(np.sqrt(np.sum(sigmas_old*sigmas_old, axis=(2, 3))), axis=1)
         # return np.mean(sigmas_old, axis=1)
@@ -143,9 +144,8 @@ def topology_optimization():
     def fwd_pred_seq(theta):
         params = problem.init_params(theta)
         for i in range(len(rs)):
-            print(f"\nStep {i + 1} in {len(rs)}") 
-            problem.neumann_bc_info = [[load_location], [get_neumann_val(rs[i]*max_load)]] 
-            problem.neumann = problem.compute_Neumann_integral()
+            print(f"\nStep {i + 1} in {len(rs)}")
+            problem.neumann_value_fns = [get_neumann_val(rs[i]*max_load)]
             sol = fwd_pred(params)
             params = problem.update_stress_strain(sol, params)  
         return sol     

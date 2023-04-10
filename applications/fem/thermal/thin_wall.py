@@ -93,8 +93,6 @@ def ded_thin_wall():
             for j in range(num_laser_off):
                 print(f"\n############################################################")
                 print(f"Laser off: i = {i} in {toolpath.shape[0]} , j = {j} in {num_laser_off}")
-                # old_sol = full_sol[points_map_active]
-                # problem.old_sol = old_sol
                 sol = solver(problem, linear=True)
                 problem.update_int_vars(sol)
                 full_sol = full_sol.at[points_map_active].set(sol)

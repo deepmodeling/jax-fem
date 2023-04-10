@@ -117,7 +117,7 @@ def get_shape_vals_and_grads(ele_type):
     vals_and_grads = element.tabulate(1, quad_points)[:, :, re_order, :]
     shape_values = vals_and_grads[0, :, :, 0]
     shape_grads_ref = onp.transpose(vals_and_grads[1:, :, :, 0], axes=(1, 2, 0))
-    print(f"ele_type = {ele_type}, quad_points.shape= {quad_points.shape}")
+    print(f"ele_type = {ele_type}, quad_points.shape = {quad_points.shape}")
     return shape_values, shape_grads_ref, weights
 
 

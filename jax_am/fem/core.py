@@ -107,16 +107,16 @@ class FEM:
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(self.dirichlet_bc_info)
         self.p_node_inds_list_A, self.p_node_inds_list_B, self.p_vec_inds_list = self.periodic_boundary_conditions()
 
-        self.neumann = self.compute_Neumann_integral()
-        self.body_force = self.compute_body_force_by_fn()
-
         # (num_cells, num_quads, num_nodes, 1, dim)
         self.v_grads_JxW = self.shape_grads[:, :, :, None, :] * self.JxW[:, :, None, None, None]
 
-        self.internal_vars = {}
-
         end = time.time()
         compute_time = end - start
+
+        self.internal_vars = {}
+        self.compute_Neumann_boundary_inds()
+        self.body_force = self.compute_body_force_by_fn()
+
         print(f"Done pre-computations, took {compute_time} [s]")
         print(f"Solving a problem with {len(self.cells)} cells, {self.num_total_nodes}x{self.vec} = {self.num_total_dofs} dofs.")
 
@@ -351,16 +351,25 @@ class FEM:
                 integral = integral.at[subset_cells.reshape(-1)].add(int_vals)   
         return integral
 
-    def compute_Neumann_integral(self):
+
+    def compute_Neumann_boundary_inds(self):
         """Child class should override if internal variables exist
         """
-        neumann = 0.
         if self.neumann_bc_info is not None:
             self.neumann_location_fns, self.neumann_value_fns = self.neumann_bc_info
             if self.neumann_location_fns is not None:
                 self.neumann_boundary_inds_list = self.get_boundary_conditions_inds(self.neumann_location_fns)
-                neumann = self.compute_Neumann_integral_vars()    
-        return neumann
+
+    # def compute_Neumann_integral(self):
+    #     """Child class should override if internal variables exist
+    #     """
+    #     neumann = 0.
+    #     if self.neumann_bc_info is not None:
+    #         self.neumann_location_fns, self.neumann_value_fns = self.neumann_bc_info
+    #         if self.neumann_location_fns is not None:
+    #             self.neumann_boundary_inds_list = self.get_boundary_conditions_inds(self.neumann_location_fns)
+    #             neumann = self.compute_Neumann_integral_vars(*self.internal_vars)    
+    #     return neumann
 
     def compute_body_force_by_fn(self):
         """In the weak form, we have (body_force, v) * dx, and this function computes this
@@ -578,19 +587,24 @@ class FEM:
         if 'body_vars' in internal_vars.keys():
             self.body_force = self.compute_body_force_by_sol(internal_vars['body_vars'], self.get_body_map())
 
-        if 'neumann_vars' in internal_vars.keys():
-            old_sol = internal_vars['neumann_vars']
-            cells_old_sol = sol[self.cells] # (num_cells, num_nodes, vec)
-            surface_old_T = []
-            crt_t = []
-            for i in range(len(self.neumann_value_fns)):
-                boundary_inds = self.neumann_boundary_inds_list[i]
-                selected_cell_sols = cells_old_sol[boundary_inds[:, 0]] # (num_selected_faces, num_nodes, vec))
-                selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)
-                # (num_selected_faces, 1, num_nodes, vec) * (num_selected_faces, num_face_quads, num_nodes, 1) -> (num_selected_faces, num_face_quads, vec) 
-                u = np.sum(selected_cell_sols[:, None, :, :] * selected_face_shape_vals[:, :, :, None], axis=2)
-                surface_old_T.append(u)
-            self.neumann =  self.compute_Neumann_integral_vars(surface_old_T)
+        if self.neumann_bc_info is not None:
+            if 'neumann_vars' in internal_vars.keys():
+                old_sol = internal_vars['neumann_vars']
+                cells_old_sol = sol[self.cells] # (num_cells, num_nodes, vec)
+                surface_old_T = []
+                crt_t = []
+                for i in range(len(self.neumann_value_fns)):
+                    boundary_inds = self.neumann_boundary_inds_list[i]
+                    selected_cell_sols = cells_old_sol[boundary_inds[:, 0]] # (num_selected_faces, num_nodes, vec))
+                    selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)
+                    # (num_selected_faces, 1, num_nodes, vec) * (num_selected_faces, num_face_quads, num_nodes, 1) -> (num_selected_faces, num_face_quads, vec) 
+                    u = np.sum(selected_cell_sols[:, None, :, :] * selected_face_shape_vals[:, :, :, None], axis=2)
+                    surface_old_T.append(u)
+                self.neumann =  self.compute_Neumann_integral_vars(surface_old_T)
+            else:
+                self.neumann = self.compute_Neumann_integral_vars()    
+        else:
+            self.neumann = 0.
 
         res = res - self.body_force - self.neumann
         return res

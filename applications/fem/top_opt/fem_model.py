@@ -7,7 +7,6 @@ from jax_am.fem.core import FEM
 
 class Elasticity(FEM):
     def custom_init(self, case_flag):
-        self.neumann_boundary_inds = self.get_boundary_conditions_inds(self.neumann_bc_info[0])[0]
         self.cell_centroids = onp.mean(onp.take(self.points, self.cells, axis=0), axis=1)
         self.flex_inds = np.arange(len(self.cells))
         if case_flag == 'freecad':
@@ -98,7 +97,7 @@ class Elasticity(FEM):
         self.internal_vars['laplace'] = [thetas]
 
     def compute_compliance(self, neumann_fn, sol):
-        boundary_inds = self.neumann_boundary_inds
+        boundary_inds = self.neumann_boundary_inds_list[0]
         _, nanson_scale = self.get_face_shape_grads(boundary_inds)
         # (num_selected_faces, 1, num_nodes, vec) * # (num_selected_faces, num_face_quads, num_nodes, 1)    
         u_face = sol[self.cells][boundary_inds[:, 0]][:, None, :, :] * self.face_shape_vals[boundary_inds[:, 1]][:, :, :, None]

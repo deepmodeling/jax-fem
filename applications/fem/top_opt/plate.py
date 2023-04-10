@@ -87,7 +87,7 @@ def topology_optimization():
         c, gradc = c.reshape((1,)), gradc[None, ...]
         return c, gradc
 
-    optimizationParams = {'maxIters':7, 'minIters':7, 'relTol':0.05}
+    optimizationParams = {'maxIters':51, 'minIters':51, 'relTol':0.05}
     rho_ini = vf*np.ones((len(problem.flex_inds), 1))
     optimize(problem, rho_ini, optimizationParams, objectiveHandle, computeConstraints, numConstraints=1)
     onp.save(os.path.join(root_path, f"numpy/{problem_name}_outputs.npy"), onp.array(outputs))

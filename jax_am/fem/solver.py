@@ -526,11 +526,11 @@ def implicit_vjp(problem, sol, params, v):
     return vjp_result
 
 
-def ad_wrapper(problem, linear=False):
+def ad_wrapper(problem, linear=False, use_petsc=False):
     @jax.custom_vjp
     def fwd_pred(params):
         problem.set_params(params)
-        sol = solver(problem, linear)
+        sol = solver(problem, linear=linear, use_petsc=use_petsc)
         return sol
  
     def f_fwd(params):

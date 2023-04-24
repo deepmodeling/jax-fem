@@ -30,8 +30,14 @@ def compute_filter_kd_tree(problem):
 
     V = np.sum(problem.JxW)
     avg_elem_V = V/problem.num_cells
-    rmin = 1.5*avg_elem_V
-    # print(f"avg_elem_V = {avg_elem_V}")
+
+    avg_elem_size = avg_elem_V**(1./problem.dim)
+
+    # Legacy version - freecad uses this, but this is bad.
+    # rmin = 1.5*avg_elem_V
+
+    rmin = 1.5*avg_elem_size
+
     kd_tree = scipy.spatial.KDTree(flex_cell_centroids)
     I = []
     J = []
@@ -45,14 +51,23 @@ def compute_filter_kd_tree(problem):
         J += ii.tolist()
         V += vals.tolist()
     H_sp = scipy.sparse.csc_array((V, (I, J)), shape=(flex_num_cells, flex_num_cells))
-    # TODO: No need the create the full matrix. 
+    # TODO: No need to create the full matrix. 
     H = H_sp.todense()
     Hs = np.sum(H, 1)
     return H, Hs
 
 
+# def applySensitivityFilter(ft, rho, dJ, dvc):
+#     dJ = np.matmul(ft['H'], rho*dJ/np.maximum(1e-3, rho)/ft['Hs'][:, None])
+#     return dJ, dvc
+
+
 def applySensitivityFilter(ft, rho, dJ, dvc):
+    # dJ = np.matmul(ft['H'], (dJ/ft['Hs'][:, None]))
+    # dvc = np.matmul(ft['H'][None, :, :], (dvc/ft['Hs'][None, :, None]))
+    
     dJ = np.matmul(ft['H'], rho*dJ/np.maximum(1e-3, rho)/ft['Hs'][:, None])
+    dvc = np.matmul(ft['H'][None, :, :], rho[None, :, :]*dvc/np.maximum(1e-3, rho[None, :, :])/ft['Hs'][None, :, None])
     return dJ, dvc
 
 
@@ -394,7 +409,7 @@ def subsolv(m,n,epsimin,low,upp,alfa,beta,p0,q0,P,Q,a0,a,b,c,d):
     return xmma,ymma,zmma,lamma,xsimma,etamma,mumma,zetmma,smma
 
 
-def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, numConstraints):
+def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, numConstraints, movelimit=0.2):
     H, Hs = compute_filter_kd_tree(problem)
     ft = {'type':1, 'H':H, 'Hs':Hs}
 
@@ -417,8 +432,7 @@ def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, 
     mma.setLowerAndUpperAsymptotes(np.ones((n,1)), np.ones((n,1)))
     mma.setScalingParams(1.0, np.zeros((m,1)), \
                          10000*np.ones((m,1)), np.zeros((m,1)))
-    mma.setMoveLimit(0.2)
-    
+    mma.setMoveLimit(movelimit) # Move limit is an important parameter that affects TO result
 
     while( (change > optimizationParams['relTol']) \
            and (loop < optimizationParams['maxIters'])\

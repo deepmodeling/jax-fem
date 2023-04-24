@@ -351,7 +351,6 @@ class FEM:
                 integral = integral.at[subset_cells.reshape(-1)].add(int_vals)   
         return integral
 
-
     def compute_Neumann_boundary_inds(self):
         """Child class should override if internal variables exist
         """
@@ -359,17 +358,6 @@ class FEM:
             self.neumann_location_fns, self.neumann_value_fns = self.neumann_bc_info
             if self.neumann_location_fns is not None:
                 self.neumann_boundary_inds_list = self.get_boundary_conditions_inds(self.neumann_location_fns)
-
-    # def compute_Neumann_integral(self):
-    #     """Child class should override if internal variables exist
-    #     """
-    #     neumann = 0.
-    #     if self.neumann_bc_info is not None:
-    #         self.neumann_location_fns, self.neumann_value_fns = self.neumann_bc_info
-    #         if self.neumann_location_fns is not None:
-    #             self.neumann_boundary_inds_list = self.get_boundary_conditions_inds(self.neumann_location_fns)
-    #             neumann = self.compute_Neumann_integral_vars(*self.internal_vars)    
-    #     return neumann
 
     def compute_body_force_by_fn(self):
         """In the weak form, we have (body_force, v) * dx, and this function computes this

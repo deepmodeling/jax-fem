@@ -9,14 +9,40 @@ class Elasticity(FEM):
     def custom_init(self, case_flag):
         self.cell_centroids = onp.mean(onp.take(self.points, self.cells, axis=0), axis=1)
         self.flex_inds = np.arange(len(self.cells))
+        self.case_flag = case_flag
         if case_flag == 'freecad':
             self.get_tensor_map = self.get_tensor_map_linearelasticity
         elif case_flag == 'plate':
             self.get_tensor_map = self.get_tensor_map_hyperelasticity
         elif case_flag == 'multi_material':
             self.get_tensor_map = self.get_tensor_map_multi_material
+        elif case_flag == 'plate2D' or case_flag == 'L_shape':
+            self.get_tensor_map = self.get_tensor_map_plane_stress
         else:
             raise ValueError(f"Unknown case_flag = {case_flag}")
+
+    def get_tensor_map_plane_stress(self):
+        def stress(u_grad, theta):
+            # Reference: https://engcourses-uofa.ca/books/introduction-to-solid-mechanics/
+            # constitutive-laws/linear-elastic-materials/plane-isotropic-linear-elastic-materials-constitutive-laws/
+            Emax = 70.e9
+            Emin = 1e-3*Emax
+            nu = 0.3
+            penal = 3.
+            E = Emin + (Emax - Emin)*theta[0]**penal
+            epsilon = 0.5*(u_grad + u_grad.T)
+
+            eps11 = epsilon[0, 0]
+            eps22 = epsilon[1, 1]
+            eps12 = epsilon[0, 1]
+
+            sig11 = E/(1 + nu)/(1 - nu)*(eps11 + nu*eps22) 
+            sig22 = E/(1 + nu)/(1 - nu)*(nu*eps11 + eps22)
+            sig12 = E/(1 + nu)*eps12
+
+            sigma = np.array([[sig11, sig12], [sig12, sig22]])
+            return sigma
+        return stress
 
     def get_tensor_map_linearelasticity(self):
         def stress(u_grad, theta):
@@ -62,21 +88,8 @@ class Elasticity(FEM):
             nu = 0.3
             penal = 3.
 
-            # E1 = Emax
-            # E2 = 0.5*Emax
-
             E1 = Emax
             E2 = 0.2*Emax
-
-            # rho_r = 0.4
-            # E_r = 0.2
-
-            # val1 = E_r*theta**penal/rho_r**penal
-            # val2 = (1 - E_r)/(1 - rho_r**penal)*(theta**penal - rho_r**penal) + E_r
-            # ratio = np.where(theta < rho_r, val1, val2)
-            # E = Emin + (Emax - Emin)*ratio
-            # E = Emin + (Emax - Emin)*(theta)**penal
-            # E = Emax*theta**penal + 0.5*Emax*(1-theta)**penal
 
             theta1, theta2 = theta
             E = Emin + theta1**penal*(theta2**penal*E1 + (1 - theta2**penal)*E2)
@@ -87,7 +100,6 @@ class Elasticity(FEM):
             sigma = lmbda*np.trace(epsilon)*np.eye(self.dim) + 2*mu*epsilon
             return sigma
         return stress 
-
 
     def set_params(self, params):
         full_params = np.ones((self.num_cells, params.shape[1]))
@@ -109,12 +121,37 @@ class Elasticity(FEM):
         return val
 
     def get_von_mises_stress_fn(self):
-        stress_fn = self.get_tensor_map_linearelasticity()
-        def vm_stress_fn(u_grad, theta):
-            sigma = stress_fn(u_grad, theta)
-            s_dev = sigma - 1./self.dim*np.trace(sigma)*np.eye(self.dim)
+
+        # TODO:
+        # stress_fn = self.get_tensor_map_linearelasticity()
+
+        def stress_fn(u_grad, theta):
+            Emax = 70.e9
+            nu = 0.3
+            penal = 0.5
+            E = theta[0]**penal*Emax
+            mu = E/(2.*(1. + nu))
+            lmbda = E*nu/((1+nu)*(1-2*nu))
+            epsilon = 0.5*(u_grad + u_grad.T)
+            sigma = lmbda*np.trace(epsilon)*np.eye(self.dim) + 2*mu*epsilon
+            return sigma
+
+        def vm_stress_fn_helper(sigma):
+            dim = 3
+            s_dev = sigma - 1./dim*np.trace(sigma)*np.eye(dim)
             vm_s = np.sqrt(3./2.*np.sum(s_dev*s_dev))
             return vm_s
+
+        if self.case_flag == 'plate2D' or self.case_flag == 'L_shape':
+            def vm_stress_fn(u_grad, theta):
+                sigma2d = stress_fn(u_grad, theta)
+                sigma3d = np.array([[sigma2d[0, 0], sigma2d[0, 1], 0.], [sigma2d[1, 0], sigma2d[1, 1], 0.], [0., 0., 0.]])
+                return vm_stress_fn_helper(sigma3d)
+        else:
+            def vm_stress_fn(u_grad, theta):
+                sigma = stress_fn(u_grad, theta)
+                return vm_stress_fn_helper(sigma)
+
         return vm_stress_fn
 
     def compute_von_mises_stress(self, sol):

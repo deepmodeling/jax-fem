@@ -515,7 +515,7 @@ def implicit_vjp(problem, sol, params, v):
         return vjp_linear_fn
 
     problem.set_params(params)
-    problem.newton_update(sol).reshape(-1)
+    problem.newton_update(sol)
     A_fn = get_A_fn(problem, use_petsc=False)
     adjoint_linear_fn = get_vjp_contraint_fn_dofs(sol.reshape(-1))
     adjoint = jax_solve(problem, adjoint_linear_fn, v.reshape(-1), None, True)

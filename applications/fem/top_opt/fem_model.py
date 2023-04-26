@@ -16,7 +16,7 @@ class Elasticity(FEM):
             self.get_tensor_map = self.get_tensor_map_hyperelasticity
         elif case_flag == 'multi_material':
             self.get_tensor_map = self.get_tensor_map_multi_material
-        elif case_flag == 'plate2D' or case_flag == 'L_shape':
+        elif case_flag == 'plate2D' or case_flag == 'L_shape' or case_flag == 'eigen':
             self.get_tensor_map = self.get_tensor_map_plane_stress
         else:
             raise ValueError(f"Unknown case_flag = {case_flag}")
@@ -45,6 +45,7 @@ class Elasticity(FEM):
         return stress
 
     def get_tensor_map_linearelasticity(self):
+        # Unit is not in SI, used for freecad example
         def stress(u_grad, theta):
             Emax = 70.e3
             Emin = 70.
@@ -59,6 +60,7 @@ class Elasticity(FEM):
         return stress
 
     def get_tensor_map_hyperelasticity(self):
+        # Unit is not in SI, used for 3D plate example
         def psi(F, theta):
             Emax = 1e3
             Emin = 1.
@@ -121,7 +123,6 @@ class Elasticity(FEM):
         return val
 
     def get_von_mises_stress_fn(self):
-
         # TODO:
         # stress_fn = self.get_tensor_map_linearelasticity()
 

@@ -204,6 +204,10 @@ def get_A_fn(problem, use_petsc):
     else:
         A = row_elimination(compute_linearized_residual, problem)
 
+
+    # prof_dir = 'applications/fem/demo/data/prof/memory_solver.prof'
+    # jax.profiler.save_device_memory_profile(prof_dir)
+
     return A
 
 

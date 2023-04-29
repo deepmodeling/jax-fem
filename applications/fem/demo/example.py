@@ -1,6 +1,7 @@
 import jax
 import jax.numpy as np
 import os
+import glob
 
 from jax_am.fem.models import LinearElasticity
 from jax_am.fem.solver import solver
@@ -44,8 +45,14 @@ def problem():
     vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
     save_sol(problem, sol, vtk_path)
 
+
     prof_dir = os.path.join(data_dir, f'prof')
     os.makedirs(prof_dir, exist_ok=True)
+
+    files = glob.glob(os.path.join(prof_dir, f'*'))
+    for f in files:
+        os.remove(f)
+
     jax.profiler.save_device_memory_profile(os.path.join(prof_dir, f'memory.prof'))
 
 

@@ -7,48 +7,47 @@ import os
 import meshio
 import time
 
-from jax_am.fem.generate_mesh import Mesh
+from jax_am.fem.generate_mesh import Mesh, box_mesh
 from jax_am.fem.solver import ad_wrapper
 from jax_am.fem.utils import save_sol
-from jax_am.common import rectangle_mesh
+from jax_am.common import walltime
 
 from applications.fem.top_opt.fem_model import Elasticity
 from applications.fem.top_opt.mma import optimize
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
- 
-def topology_optimization():
-    problem_name = 'plate2D'
-    root_path = os.path.join(os.path.dirname(__file__), 'data') 
 
-    files = glob.glob(os.path.join(root_path, f'vtk/{problem_name}/*'))
+
+def topology_optimization():
+    problem_name = 'box'
+    data_path = os.path.join(os.path.dirname(__file__), 'data') 
+
+    files = glob.glob(os.path.join(data_path, f'vtk/{problem_name}/*'))
     for f in files:
         os.remove(f)
 
-    L = 60.
-    W = 30.
-    N_L = 60
-    N_W = 30
-    meshio_mesh = rectangle_mesh(N_L, N_W, L, W)
-    jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['quad'])
+    Lx, Ly, Lz = 2., 0.5, 1.
+    Nx, Ny, Nz = 80, 20, 40
+
+    meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_path)
+    jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def fixed_location(point):
         return np.isclose(point[0], 0., atol=1e-5)
         
     def load_location(point):
-        return np.logical_and(np.isclose(point[0], L, atol=1e-5), np.isclose(point[1], 0., atol=1.+1e-5))
+        return np.logical_and(np.isclose(point[0], Lx, atol=1e-5), np.isclose(point[2], 0., atol=0.1*Lz+1e-5))
 
     def dirichlet_val(point):
         return 0.
 
     def neumann_val(point):
-        return np.array([0., -10.e6])
+        return np.array([0., 0., -1e6])
 
-    dirichlet_bc_info = [[fixed_location]*2, [0, 1], [dirichlet_val]*2]
+    dirichlet_bc_info = [[fixed_location]*3, [0, 1, 2], [dirichlet_val]*3]
     neumann_bc_info = [[load_location], [neumann_val]]
-    problem = Elasticity(jax_mesh, vec=2, dim=2, ele_type='QUAD4', dirichlet_bc_info=dirichlet_bc_info, 
-        neumann_bc_info=neumann_bc_info, additional_info=(problem_name,))
-    fwd_pred = ad_wrapper(problem, linear=True, use_petsc=True)
+    problem = Elasticity(jax_mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info, additional_info=(problem_name,))
+    fwd_pred = ad_wrapper(problem, linear=True, use_petsc=False)
 
     def J_fn(dofs, params):
         """J(u, p)
@@ -69,8 +68,8 @@ def topology_optimization():
     def output_sol(params, obj_val):
         print(f"\nOutput solution - need to solve the forward problem again...")
         sol = fwd_pred(params)
-        vtu_path = os.path.join(root_path, f'vtk/{problem_name}/sol_{output_sol.counter:03d}.vtu')
-        save_sol(problem, sol, vtu_path, cell_infos=[('theta', problem.full_params[:, 0])], cell_type='quad')
+        vtu_path = os.path.join(data_path, f'vtk/{problem_name}/sol_{output_sol.counter:03d}.vtu')
+        save_sol(problem, sol, vtu_path, cell_infos=[('theta', problem.full_params[:, 0])])
         print(f"compliance = {obj_val}")
         print(f"max theta = {np.max(params)}, min theta = {np.min(params)}, mean theta = {np.mean(params)}")
         outputs.append(obj_val)
@@ -78,7 +77,7 @@ def topology_optimization():
 
     output_sol.counter = 0
         
-    vf = 0.5
+    vf = 0.2
 
     def objectiveHandle(rho):
         J, dJ = jax.value_and_grad(J_total)(rho)
@@ -93,10 +92,15 @@ def topology_optimization():
         c, gradc = c.reshape((1,)), gradc[None, ...]
         return c, gradc
 
-    optimizationParams = {'maxIters':51, 'minIters':51, 'relTol':0.05}
+    optimizationParams = {'maxIters':41, 'minIters':41, 'relTol':0.05}
     rho_ini = vf*np.ones((len(problem.flex_inds), 1))
-    optimize(problem, rho_ini, optimizationParams, objectiveHandle, computeConstraints, numConstraints=1)
-    onp.save(os.path.join(root_path, f"numpy/{problem_name}_outputs.npy"), onp.array(outputs))
+    _, mma_walltime = walltime(os.path.join(data_path, 'txt'))(optimize)(problem, rho_ini, optimizationParams, 
+        objectiveHandle, computeConstraints, numConstraints=1, movelimit=0.1)
+    mma_walltime = onp.array(mma_walltime)
+    print(mma_walltime)
+    print(onp.sum(mma_walltime))
+    onp.save(os.path.join(data_path, f"numpy/{problem_name}_mma_walltime.npy"), mma_walltime)
+    onp.save(os.path.join(data_path, f"numpy/{problem_name}_outputs.npy"), onp.array(outputs))
     print(f"Compliance = {J_total(np.ones((len(problem.flex_inds), 1)))} for full material")
 
 

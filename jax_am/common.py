@@ -1,8 +1,11 @@
+import jax
+import jax.numpy as np
+import numpy as onp
 import os
 import meshio
-import numpy as onp
 import json
 import yaml
+import time
 
 
 def json_parse(json_filepath):
@@ -74,3 +77,24 @@ def make_video(data_dir):
     # TODO
     os.system(f'ffmpeg -y -framerate 10 -i {data_dir}/png/tmp/u.%04d.png -pix_fmt yuv420p -vf \
                "crop=trunc(iw/2)*2:trunc(ih/2)*2" {data_dir}/mp4/test.mp4')
+
+
+def walltime(txt_dir=None, filename=None):
+    def decorate(func):
+        def wrapper(*list_args, **keyword_args):
+            start_time = time.time()
+            return_values = func(*list_args, **keyword_args)
+            end_time = time.time()
+            time_elapsed = end_time - start_time
+            platform = jax.lib.xla_bridge.get_backend().platform
+            print(f"Time elapsed {time_elapsed} of function {func.__name__} on platform {platform}")
+            if txt_dir is not None:
+                os.makedirs(txt_dir, exist_ok=True)
+                fname = 'walltime'
+                if filename is not None:
+                    fname = filename
+                with open(os.path.join(txt_dir, f"{fname}_{platform}.txt"), 'w') as f:
+                    f.write(f'{start_time}, {end_time}, {time_elapsed}\n')
+            return return_values
+        return wrapper
+    return decorate

@@ -2,8 +2,6 @@
 Copied and modified from https://github.com/UW-ERSL/AuTO
 Under GNU General Public License v3.0
 
-No projection filter is considered.
-
 Original copy from https://github.com/arjendeetman/GCMMA-MMA-Python/blob/master/Code/MMA.py
 
 """
@@ -65,7 +63,7 @@ def compute_filter_kd_tree(problem):
 def applySensitivityFilter(ft, rho, dJ, dvc):
     # dJ = np.matmul(ft['H'], (dJ/ft['Hs'][:, None]))
     # dvc = np.matmul(ft['H'][None, :, :], (dvc/ft['Hs'][None, :, None]))
-    
+
     dJ = np.matmul(ft['H'], rho*dJ/np.maximum(1e-3, rho)/ft['Hs'][:, None])
     dvc = np.matmul(ft['H'][None, :, :], rho[None, :, :]*dvc/np.maximum(1e-3, rho[None, :, :])/ft['Hs'][None, :, None])
     return dJ, dvc
@@ -434,6 +432,8 @@ def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, 
                          10000*np.ones((m,1)), np.zeros((m,1)))
     mma.setMoveLimit(movelimit) # Move limit is an important parameter that affects TO result
 
+    mma_walltime = []
+
     while( (change > optimizationParams['relTol']) \
            and (loop < optimizationParams['maxIters'])\
            or (loop < optimizationParams['minIters'])):
@@ -474,10 +474,13 @@ def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, 
 
         end = time.time()
 
-        print(f"MMA took {end - start} [s]")
+        time_elapsed = end - start
+        mma_walltime.append(time_elapsed)
+
+        print(f"MMA took {time_elapsed} [s]")
 
         # print(f'Iter {loop:d}; J {J:.5f}; vf {np.mean(xval):.5f}\n\n\n')
   
         print(f'Iter {loop:d}; J {J:.5f}; constraint {vc}\n\n\n')
 
-    return rho
+    return rho, mma_walltime

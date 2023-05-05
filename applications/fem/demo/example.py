@@ -45,7 +45,6 @@ def problem():
     vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
     save_sol(problem, sol, vtk_path)
 
-
     prof_dir = os.path.join(data_dir, f'prof')
     os.makedirs(prof_dir, exist_ok=True)
 

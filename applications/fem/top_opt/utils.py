@@ -92,8 +92,6 @@ def plot_L_shape():
     obj_no = onp.load(os.path.join(data_dir, f"numpy/{problem_name_no_cstr}_outputs.npy"))
     max_vm_stress_no = onp.load(os.path.join(data_dir, f"numpy/{problem_name_no_cstr}_max_vm_stresses.npy"))
 
-    print(max_vm_stress_no[-1])
-
     plt.figure(figsize=(8, 6))
     plt.plot(onp.arange(len(obj_w)) + 1, obj_w, linestyle='-', linewidth=2, color='red', label='With stress constraint')
     plt.plot(onp.arange(len(obj_no)) + 1, obj_no, linestyle='-', linewidth=2, color='blue', label='Without stress constraint')
@@ -122,6 +120,9 @@ def plot_L_shape():
   
 def plot_box():
     obj = onp.load(os.path.join(data_dir, f"numpy/box_outputs.npy"))
+    print(obj)
+    print(onp.diff(obj))
+    print(len(obj))
     plt.figure(figsize=(8, 6))
     plt.plot(onp.arange(len(obj)) + 1, obj, linestyle='-', linewidth=2, color='black')
     plt.xlabel(r"Optimization step", fontsize=20)
@@ -135,7 +136,7 @@ if __name__=="__main__":
     # plot_topopt()
     # plot_plasticity()
     # plot_eigen()
-    plot_L_shape()
-    # plot_box()
+    # plot_L_shape()
+    plot_box()
     plt.show()
     # make_video(data_dir)

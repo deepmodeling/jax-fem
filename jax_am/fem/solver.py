@@ -204,10 +204,6 @@ def get_A_fn(problem, use_petsc):
     else:
         A = row_elimination(compute_linearized_residual, problem)
 
-
-    # prof_dir = 'applications/fem/demo/data/prof/memory_solver.prof'
-    # jax.profiler.save_device_memory_profile(prof_dir)
-
     return A
 
 
@@ -471,6 +467,8 @@ def solver(problem, linear=False, precond=True, initial_guess=None, use_petsc=Fa
     """periodic B.C. is a special form of adding a linear constraint. 
     Lagrange multiplier seems to be convenient to impose this constraint.
     """
+    # TODO: print platform jax.lib.xla_bridge.get_backend().platform
+    # and suggest PETSc or jax solver
     if problem.periodic_bc_info is None:
         return solver_row_elimination(problem, linear, precond, initial_guess, use_petsc)
     else:

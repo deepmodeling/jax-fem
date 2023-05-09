@@ -41,8 +41,9 @@ class Thermal(FEM):
         return self.get_mass_map()
 
     def set_params(self, old_sol):
+        surface_old_sol_walls = self.convert_neumann_from_dof(old_sol, 1)
+        self.internal_vars['neumann_vars'] = [[], [surface_old_sol_walls]]
         self.internal_vars['body_vars'] = old_sol
-        self.internal_vars['neumann_vars'] = old_sol
 
 
 class Plasticity(FEM):
@@ -173,7 +174,7 @@ def simulation():
         return np.logical_or(np.logical_or(np.logical_or(left, right), front), back)
 
     # Neumann BC values for thermal problem
-    def thermal_neumann_top(point, old_T):
+    def thermal_neumann_top(point):
         # q is the heat flux into the domain
         d2 = (point[0] - laser_center[0])**2 + (point[1] - laser_center[1])**2
         q_laser = 2*eta*P/(np.pi*rb**2) * np.exp(-2*d2/rb**2)

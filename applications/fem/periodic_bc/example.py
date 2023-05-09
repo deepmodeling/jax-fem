@@ -101,7 +101,7 @@ def problem():
     problem = LinearPoisson(mesh, vec=1, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, 
                             periodic_bc_info=periodic_bc_info, source_info=body_force)
 
-    sol = solver(problem, linear=True)
+    sol = solver(problem, linear=True, use_petsc=True)
 
     vtk_dir = os.path.join(data_dir, 'vtk')
     os.makedirs(vtk_dir, exist_ok=True)

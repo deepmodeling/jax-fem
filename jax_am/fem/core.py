@@ -324,7 +324,7 @@ class FEM:
             boundary_inds_list.append(boundary_inds)
         return boundary_inds_list
 
-    def compute_Neumann_integral_vars(self, *internal_vars):
+    def compute_Neumann_integral_vars(self, **internal_vars):
         """In the weak form, we have the Neumann integral: (traction, v) * ds, and this function computes this.
 
         Returns
@@ -334,11 +334,14 @@ class FEM:
         """
         integral = np.zeros((self.num_total_nodes, self.vec))
         if self.neumann_bc_info is not None:
-            integral = np.zeros((self.num_total_nodes, self.vec))
             for i, boundary_inds in enumerate(self.neumann_boundary_inds_list):
+                if 'neumann_vars' in internal_vars.keys():
+                    int_vars = internal_vars['neumann_vars'][i]
+                else:
+                    int_vars = ()
                 # (num_cells, num_faces, num_face_quads, dim) -> (num_selected_faces, num_face_quads, dim)
                 subset_quad_points = self.get_physical_surface_quad_points(boundary_inds)
-                int_vars = [x[i] for x in internal_vars]
+                # int_vars = [x[i] for x in internal_vars]
                 traction = jax.vmap(jax.vmap(self.neumann_value_fns[i]))(subset_quad_points, *int_vars) # (num_selected_faces, num_face_quads, vec)
                 assert len(traction.shape) == 3
                 _, nanson_scale = self.get_face_shape_grads(boundary_inds) # (num_selected_faces, num_face_quads)
@@ -561,6 +564,28 @@ class FEM:
 
         return values, selected_cells
 
+    def convert_neumann_from_dof(self, sol, index):
+        """Obtain surface solution from nodal solution
+        
+        Parameters
+        ----------
+        sol : np.DeviceArray
+            (num_total_nodes, vec)
+        index : int
+
+        Returns
+        -------
+        u : np.DeviceArray
+            (num_selected_faces, num_face_quads, vec) 
+        """
+        cells_old_sol = sol[self.cells] # (num_cells, num_nodes, vec)
+        boundary_inds = self.neumann_boundary_inds_list[index]
+        selected_cell_sols = cells_old_sol[boundary_inds[:, 0]] # (num_selected_faces, num_nodes, vec))
+        selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)
+        # (num_selected_faces, 1, num_nodes, vec) * (num_selected_faces, num_face_quads, num_nodes, 1) -> (num_selected_faces, num_face_quads, vec) 
+        u = np.sum(selected_cell_sols[:, None, :, :] * selected_face_shape_vals[:, :, :, None], axis=2)
+        return u
+
     def compute_residual_vars_helper(self, sol, weak_form, **internal_vars):
         res = np.zeros((self.num_total_nodes, self.vec))
         weak_form = weak_form.reshape(-1, self.vec) # (num_cells*num_nodes, vec)
@@ -575,24 +600,7 @@ class FEM:
         if 'body_vars' in internal_vars.keys():
             self.body_force = self.compute_body_force_by_sol(internal_vars['body_vars'], self.get_body_map())
 
-        if self.neumann_bc_info is not None:
-            if 'neumann_vars' in internal_vars.keys():
-                old_sol = internal_vars['neumann_vars']
-                cells_old_sol = sol[self.cells] # (num_cells, num_nodes, vec)
-                surface_old_T = []
-                crt_t = []
-                for i in range(len(self.neumann_value_fns)):
-                    boundary_inds = self.neumann_boundary_inds_list[i]
-                    selected_cell_sols = cells_old_sol[boundary_inds[:, 0]] # (num_selected_faces, num_nodes, vec))
-                    selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)
-                    # (num_selected_faces, 1, num_nodes, vec) * (num_selected_faces, num_face_quads, num_nodes, 1) -> (num_selected_faces, num_face_quads, vec) 
-                    u = np.sum(selected_cell_sols[:, None, :, :] * selected_face_shape_vals[:, :, :, None], axis=2)
-                    surface_old_T.append(u)
-                self.neumann =  self.compute_Neumann_integral_vars(surface_old_T)
-            else:
-                self.neumann = self.compute_Neumann_integral_vars()    
-        else:
-            self.neumann = 0.
+        self.neumann = self.compute_Neumann_integral_vars(**internal_vars)    
 
         res = res - self.body_force - self.neumann
         return res

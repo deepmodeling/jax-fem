@@ -16,6 +16,19 @@ class Mesh():
         self.cells = cells
 
 
+def check_mesh_TET4(points, cells):
+    # TODO
+    def quality(pts):
+        p1, p2, p3, p4 = pts
+        v1 = p2 - p1
+        v2 = p3 - p1
+        v12 = np.cross(v1, v2)
+        v3 = p4 - p1
+        return np.dot(v12, v3)
+    qlts = jax.vmap(quality)(points[cells])
+    return qlts
+
+
 def get_meshio_cell_type(ele_type):
     """Reference:
     https://github.com/nschloe/meshio/blob/9dc6b0b05c9606cad73ef11b8b7785dd9b9ea325/src/meshio/xdmf/common.py#L36

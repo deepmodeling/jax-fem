@@ -70,13 +70,13 @@ def plot_eigen():
         colors = ['red', 'blue', 'green']
         labels = ['1st eigenvalue', '2nd eigenvalue', '3rd eigenvalue']
         for i in range(eigen_vals.shape[1]):
-            plt.plot(onp.arange(len(eigen_vals)) + 1, eigen_vals[:, i]/1e6, linestyle='-', linewidth=2, color=colors[i])
+            plt.plot(onp.arange(len(eigen_vals)) + 1, eigen_vals[:, i]/1e6, linestyle='-', linewidth=2, color=colors[i], label=labels[i])
         plt.xlabel(r"Optimization step", fontsize=20)
         plt.ylabel(r"Eigenvalue $\omega^2$ [kHz$^2$]", fontsize=20)
         plt.tick_params(labelsize=20)
         plt.tick_params(labelsize=20)
         plt.ylim((0., 2.8))
-        plt.legend(fontsize=20, frameon=False)
+        plt.legend(fontsize=18, frameon=False)
         plt.savefig(os.path.join(data_dir, f'pdf/{problem_name}_eigen_vals.pdf'), bbox_inches='tight')
 
     helper('eigen_w_cstr')
@@ -135,8 +135,8 @@ def plot_box():
 if __name__=="__main__":
     # plot_topopt()
     # plot_plasticity()
-    # plot_eigen()
+    plot_eigen()
     # plot_L_shape()
-    plot_box()
+    # plot_box()
     plt.show()
     # make_video(data_dir)

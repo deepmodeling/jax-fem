@@ -23,18 +23,6 @@ from applications.fem.top_opt.mma import optimize
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
  
 
-def check_mesh_TET4(points, cells):
-    def quality(pts):
-        p1, p2, p3, p4 = pts
-        v1 = p2 - p1
-        v2 = p3 - p1
-        v12 = np.cross(v1, v2)
-        v3 = p4 - p1
-        return np.dot(v12, v3)
-    qlts = jax.vmap(quality)(points[cells])
-    return qlts
- 
-
 class Stiffness(FEM):
     def get_tensor_map(self):
         def stress(u_grad, theta):

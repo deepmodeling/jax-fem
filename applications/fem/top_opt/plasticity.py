@@ -145,6 +145,8 @@ def topology_optimization():
         params = problem.init_params(theta)
         for i in range(len(rs)):
             print(f"\nStep {i + 1} in {len(rs)}")
+            # This is a bug, but not affecting the result.
+            # In back-propagation, problem.neumann_value_fns takes unexpected values.
             problem.neumann_value_fns = [get_neumann_val(rs[i]*max_load)]
             sol = fwd_pred(params)
             params = problem.update_stress_strain(sol, params)  

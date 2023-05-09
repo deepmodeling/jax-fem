@@ -1,6 +1,5 @@
 import os
-
-from jax_am.phase_field.utils import make_video
+from jax_am.common import make_video
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data') 
 

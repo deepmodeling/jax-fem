@@ -564,6 +564,25 @@ class FEM:
 
         return values, selected_cells
 
+    def convert_from_dof_to_quad(self, sol):
+        """Obtain quad values from nodal solution
+
+        Parameters
+        ----------
+        sol : np.DeviceArray
+            (num_total_nodes, vec)
+
+        Returns
+        -------
+        u : np.DeviceArray
+            (num_cells, num_quads, vec)
+        """
+        # (num_total_nodes, vec) -> (num_cells, num_nodes, vec)
+        cells_sol = sol[self.cells] 
+        # (num_cells, 1, num_nodes, vec) * (1, num_quads, num_nodes, 1) -> (num_cells, num_quads, num_nodes, vec) -> (num_cells, num_quads, vec)
+        u = np.sum(cells_sol[:, None, :, :] * self.shape_vals[None, :, :, None], axis=2)
+        return u
+
     def convert_neumann_from_dof(self, sol, index):
         """Obtain surface solution from nodal solution
         

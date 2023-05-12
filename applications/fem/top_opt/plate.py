@@ -1,3 +1,5 @@
+"""Not working properly now - see eigen.py
+"""
 import numpy as onp
 import jax
 import jax.numpy as np

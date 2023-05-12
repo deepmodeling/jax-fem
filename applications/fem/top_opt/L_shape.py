@@ -25,7 +25,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "3"
  
 def topology_optimization():
     p_name = 'L_shape'
-    problem_name = p_name + '_with_cstr'
+    problem_name = p_name + '_w_cstr'
     root_path = os.path.join(os.path.dirname(__file__), 'data') 
 
     files = glob.glob(os.path.join(root_path, f'vtk/{problem_name}/*'))
@@ -110,6 +110,8 @@ def topology_optimization():
             cp = qn*computeConstraints.max_vm_stress/(max_allowed_stress*computeConstraints.vm_stress_PN) + (1 - qn)*computeConstraints.cp
             g2 = cp*vm_stress_PN - 1.
             return np.array([g1, g2]), (cp, max_vm_stress, vm_stress_PN)
+            # If no constraint, set the following
+            # return np.array([g1, 0]), (cp, max_vm_stress, vm_stress_PN)
 
         computeGlobalVolumeConstraint = lambda *args: computeGlobalVolumeConstraintFull(*args)[0]
         c, (computeConstraints.cp, computeConstraints.max_vm_stress, computeConstraints.vm_stress_PN) = computeGlobalVolumeConstraintFull(rho)

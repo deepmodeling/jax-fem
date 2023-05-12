@@ -15,7 +15,7 @@ from jax_am.common import walltime
 from applications.fem.top_opt.fem_model import Elasticity
 from applications.fem.top_opt.mma import optimize
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 
 def topology_optimization():

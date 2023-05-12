@@ -63,10 +63,6 @@ class Elasticity(FEM):
             tr_epsilon_minus = np.minimum(np.trace(epsilon), 0.)
             return bulk_mod/2.*tr_epsilon_minus**2
 
-        def psi(epsilon):
-            eps_dev = epsilon - 1./self.dim*np.trace(epsilon)*np.eye(self.dim)
-            return bulk_mod/2.*np.trace(epsilon)**2 + mu*np.sum(eps_dev*eps_dev)
-
         def strain(u_grad):
             epsilon = 0.5*(u_grad + u_grad.T)
             return epsilon
@@ -74,8 +70,6 @@ class Elasticity(FEM):
         def stress_fn(u_grad, d):
             epsilon = strain(u_grad)
             sigma = ((1 - d[0])**2 + 1e-3) * jax.grad(psi_plus)(epsilon) + jax.grad(psi_minus)(epsilon) 
-            # sigma = jax.grad(psi_plus)(epsilon) + jax.grad(psi_minus)(epsilon) 
-            # sigma = jax.grad(psi)(epsilon)
             return sigma
 
         def psi_plus_fn(u_grad):

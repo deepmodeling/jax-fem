@@ -4,6 +4,7 @@ Under GNU General Public License v3.0
 
 Original copy from https://github.com/arjendeetman/GCMMA-MMA-Python/blob/master/Code/MMA.py
 
+Improvement is made so that the MMA solver is more scalable.
 """
 from numpy import diag as diags
 from numpy.linalg import solve
@@ -192,8 +193,12 @@ class MMA:
         PQ = 0.001*(P+Q)+raa0*np.dot(eeem,xmamiinv.T)
         P = P+PQ
         Q = Q+PQ
-        P = (diags(ux2.flatten(),0).dot(P.T)).T
-        Q = (diags(xl2.flatten(),0).dot(Q.T)).T
+
+        # P = (diags(ux2.flatten(),0).dot(P.T)).T
+        # Q = (diags(xl2.flatten(),0).dot(Q.T)).T
+        P = ux2.T*P
+        Q = xl2.T*Q
+
         b = (np.dot(P,uxinv)+np.dot(Q,xlinv)-fval)
         # Solving the subproblem by a primal-dual Newton method
         xmma,ymma,zmma,lam,xsi,eta,mu,zet,s = subsolv(m,n,epsimin,low,upp,alfa,\
@@ -269,8 +274,11 @@ def subsolv(m,n,epsimin,low,upp,alfa,beta,p0,q0,P,Q,a0,a,b,c,d):
             plam = p0+np.dot(P.T,lam)
             qlam = q0+np.dot(Q.T,lam)
             gvec = np.dot(P,uxinv1)+np.dot(Q,xlinv1)
-            GG = (diags(uxinv2.flatten(),0).dot(P.T)).T-(diags\
-                                     (xlinv2.flatten(),0).dot(Q.T)).T
+
+            # GG = (diags(uxinv2.flatten(),0).dot(P.T)).T-(diags\
+            #                          (xlinv2.flatten(),0).dot(Q.T)).T
+            GG = uxinv2.T*P - xlinv2.T*Q
+
             dpsidx = plam/ux2-qlam/xl2
             delx = dpsidx-epsvecn/(x-alfa)+epsvecn/(beta-x)
             dely = c+d*y-lam-epsvecm/y
@@ -287,8 +295,11 @@ def subsolv(m,n,epsimin,low,upp,alfa,beta,p0,q0,P,Q,a0,a,b,c,d):
             if m < n:
                 blam = dellam+dely/diagy-np.dot(GG,(delx/diagx))
                 bb = np.concatenate((blam,delz),axis = 0)
-                Alam = np.asarray(diags(diaglamyi.flatten(),0) \
-                    +(diags(diagxinv.flatten(),0).dot(GG.T).T).dot(GG.T))
+                
+                # Alam = np.asarray(diags(diaglamyi.flatten(),0) \
+                #     +(diags(diagxinv.flatten(),0).dot(GG.T).T).dot(GG.T))
+                Alam = diags(diaglamyi.flatten(),0) + (diagxinv.T*GG).dot(GG.T)
+
                 AAr1 = np.concatenate((Alam,a),axis = 1)
                 AAr2 = np.concatenate((a,-zet/z),axis = 0).T
                 AA = np.concatenate((AAr1,AAr2),axis = 0)
@@ -467,8 +478,6 @@ def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, 
         xold1 = xval.copy()
         xval = xmma.copy()
 
-        # There was a BUG in the AuTO project:
-        # mma.registerMMAIter(xval, xold1, xold1)
         mma.registerMMAIter(xval, xold1, xold2)
         rho = xval.reshape(rho.shape)
 
@@ -479,8 +488,6 @@ def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, 
 
         print(f"MMA took {time_elapsed} [s]")
 
-        # print(f'Iter {loop:d}; J {J:.5f}; vf {np.mean(xval):.5f}\n\n\n')
-  
         print(f'Iter {loop:d}; J {J:.5f}; constraint {vc}\n\n\n')
 
     return rho, mma_walltime

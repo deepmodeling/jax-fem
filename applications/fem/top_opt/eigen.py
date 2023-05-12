@@ -64,7 +64,7 @@ class Mass(FEM):
 
 def topology_optimization():
     p_name = 'eigen'
-    problem_name = p_name + '_no_cstr'
+    problem_name = p_name + '_w_cstr'
     data_path = os.path.join(os.path.dirname(__file__), 'data') 
 
     files1 = glob.glob(os.path.join(data_path, f'vtk/{problem_name}-TO/*'))
@@ -247,9 +247,9 @@ def topology_optimization():
         def min_eigen_vals_cstr(eigen_vals):
             alpha = 10.
             g2 = -1./alpha*jax.scipy.special.logsumexp(-alpha*eigen_vals)
-            # return 1. - g2/min_freq
+            return 1. - g2/min_freq
             # If without constraint, adopt the following line.
-            return 0.
+            # return 0.
 
         eigen_vals, d_eigen_vals = eigen_analysis(rho)
         c2 = min_eigen_vals_cstr(eigen_vals)

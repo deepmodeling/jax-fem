@@ -3,6 +3,7 @@ import jax.numpy as np
 import numpy as onp
 import meshio
 import os
+import glob
 
 from jax_am.fem.models import LinearElasticity
 from jax_am.fem.solver import solver
@@ -52,7 +53,16 @@ def problem():
     problem = LinearElasticity(mesh, vec=3, dim=3, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info)
     sol = solver(problem, linear=True, precond=True)
     vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
-    save_sol(problem, sol, vtk_path, cell_type=cell_type)
+    save_sol(problem, sol, vtk_path)
+
+    prof_dir = os.path.join(data_dir, f'prof')
+    os.makedirs(prof_dir, exist_ok=True)
+
+    files = glob.glob(os.path.join(prof_dir, f'*'))
+    for f in files:
+        os.remove(f)
+
+    jax.profiler.save_device_memory_profile(os.path.join(prof_dir, f'memory.prof'))
 
 
 if __name__ == "__main__":

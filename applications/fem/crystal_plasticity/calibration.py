@@ -92,7 +92,7 @@ def problem():
             # F_p_zz, slip_resistance_0, slip_0 = problem.inspect_interval_vars(params)
             # print(f"stress_zz = {stress_zz}")
             # vtk_path = os.path.join(vtk_dir, f'u_{i:03d}.vtu')
-            # save_sol(problem, sol, vtk_path, cell_type=cell_type)
+            # save_sol(problem, sol, vtk_path)
             # results_to_save.append([ts[i + 1], disps[i + 1]/Lz, F_p_zz, slip_resistance_0, slip_0, stress_zz])
 
         # results_to_save = onp.array(results_to_save)

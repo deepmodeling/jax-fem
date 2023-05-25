@@ -47,6 +47,10 @@ def get_meshio_cell_type(ele_type):
         cell_type = 'triangle'
     elif ele_type == 'TRI6':
         cell_type = 'triangle6'
+    elif ele_type == 'QUAD4':
+        cell_type = 'quad'
+    elif ele_type == 'QUAD8':
+        cell_type = 'quad8'
     else:
         raise NotImplementedError
     return cell_type

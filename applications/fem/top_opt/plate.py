@@ -72,7 +72,7 @@ def topology_optimization():
         print(f"\nOutput solution - need to solve the forward problem again...")
         sol = fwd_pred(params)
         vtu_path = os.path.join(root_path, f'vtk/{problem_name}/sol_{output_sol.counter:03d}.vtu')
-        save_sol(problem, sol, vtu_path, cell_infos=[('theta', problem.full_params[:, 0])], cell_type='quad')
+        save_sol(problem, sol, vtu_path, cell_infos=[('theta', problem.full_params[:, 0])])
         print(f"compliance = {obj_val}")
         print(f"max theta = {np.max(params)}, min theta = {np.min(params)}, mean theta = {np.mean(params)}")
         outputs.append(obj_val)

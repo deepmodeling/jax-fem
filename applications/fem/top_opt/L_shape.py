@@ -81,7 +81,7 @@ def topology_optimization():
         volume_avg_vm_stress = problem.compute_von_mises_stress(sol)
         vtu_path = os.path.join(root_path, f'vtk/{problem_name}/sol_{output_sol.counter:03d}.vtu')
         save_sol(problem, np.hstack((sol, np.zeros((len(sol), 1)))), vtu_path, 
-            cell_infos=[('theta', problem.full_params[:, 0]), ('vm_stress', volume_avg_vm_stress)], cell_type='quad')
+            cell_infos=[('theta', problem.full_params[:, 0]), ('vm_stress', volume_avg_vm_stress)])
         print(f"compliance = {obj_val}")
         print(f"max theta = {np.max(params)}, min theta = {np.min(params)}, mean theta = {np.mean(params)}")
         outputs.append(obj_val)

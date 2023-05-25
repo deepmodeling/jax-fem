@@ -60,7 +60,7 @@ def problem(ele_type, N, data_dir):
     vtk_dir = os.path.join(data_dir, 'vtk')
     os.makedirs(vtk_dir, exist_ok=True)
     vtk_file = os.path.join(vtk_dir, f"u.vtu")
-    save_sol(problem, sol, vtk_file, cell_type=cell_type)
+    save_sol(problem, sol, vtk_file)
 
     l2_error = problem.compute_l2_norm_error(sol, true_u_fn)
     h1_error = problem.compute_h1_norm_error(sol, true_u_fn)

@@ -2,9 +2,12 @@ import meshio
 import os
 import numpy as onp
 
+from jax_am.fem.generate_mesh import get_meshio_cell_type
 
-def save_sol(problem, sol, sol_file, cell_infos=None, point_infos=None, cell_type='hexahedron'):
-    # TODO: infer cell_type from problem
+
+def save_sol(problem, sol, sol_file, cell_infos=None, point_infos=None):
+    # TODO: infer cell_type from problem, needs test
+    cell_type = get_meshio_cell_type(problem.ele_type)
     sol_dir = os.path.dirname(sol_file)
     os.makedirs(sol_dir, exist_ok=True)
     out_mesh = meshio.Mesh(points=problem.points, cells={cell_type: problem.cells})

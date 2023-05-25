@@ -187,7 +187,7 @@ def topology_optimization():
 
                 vtu_path = os.path.join(data_path, f'vtk/{problem_name}-modes/sol_{i:03d}.vtu')
                 sol3D = np.hstack((eigen_vec.reshape(sol.shape), np.zeros((len(sol), 1))))
-                save_sol(problem_K, sol3D, vtu_path, cell_type='quad')
+                save_sol(problem_K, sol3D, vtu_path)
 
         eigen_vals = np.array(eigen_vals)
         d_eigen_vals = np.stack(d_eigen_vals)
@@ -216,7 +216,7 @@ def topology_optimization():
         print(f"\nOutput solution - need to solve the forward problem again...")
         sol = fwd_pred(params)
         vtu_path = os.path.join(data_path, f'vtk/{problem_name}-TO/sol_{output_sol.counter:03d}.vtu')
-        save_sol(problem, np.hstack((sol, np.zeros((len(sol), 1)))), vtu_path, cell_infos=[('theta', problem.full_params[:, 0])], cell_type='quad')
+        save_sol(problem, np.hstack((sol, np.zeros((len(sol), 1)))), vtu_path, cell_infos=[('theta', problem.full_params[:, 0])])
 
         eigen_vals, _ = eigen_analysis(params)
         e_vals.append(eigen_vals)

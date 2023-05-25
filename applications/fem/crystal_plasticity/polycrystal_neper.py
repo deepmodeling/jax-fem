@@ -136,7 +136,7 @@ def problem():
         F_p_zz, slip_resistance_0, slip_0 = problem.inspect_interval_vars(params)
         print(f"stress = {sigma_cell_data[0]}, max stress = {np.max(sigma_cell_data)}")
         vtk_path = os.path.join(vtk_dir, f'u_{i:03d}.vtu')
-        save_sol(problem, sol, vtk_path, cell_infos=[('cell_ori_inds', cell_ori_inds), ('sigma', sigma_cell_data)], cell_type=cell_type)
+        save_sol(problem, sol, vtk_path, cell_infos=[('cell_ori_inds', cell_ori_inds), ('sigma', sigma_cell_data)])
 
 
 if __name__ == "__main__":

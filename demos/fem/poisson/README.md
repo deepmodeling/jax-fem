@@ -6,9 +6,9 @@ The Poisson's equation is the canonical elliptic partial differential equation. 
 
 $$
 \begin{align*}
-    -\nabla^2 u = b & \quad \textrm{in }    \Omega, \\
-    u = 0 &  \quad\textrm{on }   \Gamma_D,  \\
-    \nabla u  \cdot \boldsymbol{n} = t  & \quad \textrm{on }   \Gamma_N.
+    -\nabla^2 u = b & \quad \textrm{in}  \nobreakspace \nobreakspace \Omega, \\
+    u = 0 &  \quad\textrm{on} \nobreakspace \nobreakspace \Gamma_D,  \\
+    \nabla u  \cdot \boldsymbol{n} = t  & \quad \textrm{on} \nobreakspace \nobreakspace \Gamma_N.
 \end{align*}
 $$
 
@@ -16,7 +16,7 @@ The weak form gives
 
 $$
 \begin{align*}
-\int_{\Omega} \nabla u \cdot \nabla v  \nobreakspace \textrm{d}x = \int_{\Omega} b  v  \textrm{d}x + \int_{\Gamma_N} t v  \textrm{d}s.
+\int_{\Omega} \nabla u \cdot \nabla v \nobreakspace \nobreakspace \textrm{d}x = \int_{\Omega} b \nobreakspace v \nobreakspace \textrm{d}x + \int_{\Gamma_N} t\nobreakspace v \nobreakspace\nobreakspace \textrm{d}s.
 \end{align*}
 $$
 
@@ -24,7 +24,7 @@ We have the following definitions:
 * $\Omega=[0,1]\times[0,1]$ (a unit square)
 * $\Gamma_D=\{(0, x_2)\cup (1, x_2)\subset\partial\Omega\}$ (Dirichlet boundary)
 * $\Gamma_N=\{(x_1, 0)\cup (x_1, 1)\subset\partial\Omega\}$ (Neumann boundary)
-* $b=10\textrm{exp}\big(-((x_1-0.5)^2+(x_2-0.5)^2)/0.02 \big)$
+* $b=10\nobreakspace\textrm{exp}\big(-((x_1-0.5)^2+(x_2-0.5)^2)/0.02 \big)$
 * $t=\textrm{sin}(5x_1)$
 
 ## Implementation

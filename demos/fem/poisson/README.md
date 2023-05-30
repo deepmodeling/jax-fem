@@ -4,26 +4,26 @@
 
 The Poisson's equation is the canonical elliptic partial differential equation. Consider a domain $\Omega \subset \mathbb{R}^\textrm{d}$ with boundary $\partial \Omega = \Gamma_D \cup \Gamma_N$, the strong form gives
 $$
-\begin{align*}  
+\begin{aligned}  
     -\nabla^2 u = b & \quad \textrm{in}  \, \, \Omega, \\
     u = 0 &  \quad\textrm{on} \, \, \Gamma_D,  \\
     \nabla u  \cdot \boldsymbol{n} = t  & \quad \textrm{on} \, \, \Gamma_N.
-\end{align*}
+\end{aligned}
 $$
 
 The weak form gives
 $$
-\begin{align*}
+\begin{aligned}
 \int_{\Omega} \nabla u \cdot \nabla v \, \, \textrm{d}x = \int_{\Omega} b \, v \, \textrm{d}x + \int_{\Gamma_N} t\, v \,\, \textrm{d}s.
-\end{align*}
+\end{aligned}
 $$
 
 We have the following definitions:
-* $$\Omega=[0,1]\times[0,1]$$ (a unit square)
-* $$\Gamma_D=\{(0, x_2)\cup (1, x_2)\subset\partial\Omega\}$$ (Dirichlet boundary)
-* $$\Gamma_N=\{(x_1, 0)\cup (x_1, 1)\subset\partial\Omega\}$$ (Neumann boundary)
-* $$b=10\,\textrm{exp}\big(-((x_1-0.5)^2+(x_2-0.5)^2)/0.02 \big)$$
-* $$t=\textrm{sin}(5x_1)$$
+* $\Omega=[0,1]\times[0,1]$ (a unit square)
+* $\Gamma_D=\{(0, x_2)\cup (1, x_2)\subset\partial\Omega\}$ (Dirichlet boundary)
+* $\Gamma_N=\{(x_1, 0)\cup (x_1, 1)\subset\partial\Omega\}$ (Neumann boundary)
+* $b=10\,\textrm{exp}\big(-((x_1-0.5)^2+(x_2-0.5)^2)/0.02 \big)$
+* $t=\textrm{sin}(5x_1)$
 
 ### Implementation
 
@@ -43,7 +43,7 @@ from jax_am.fem.generate_mesh import get_meshio_cell_type, Mesh
 from jax_am.common import rectangle_mesh
 ```
 
-Define constitutive relationship. The `get_tensor_map` function overrides base class method. *JAX-FEM* generally solves $$-\nabla \cdot f(\nabla u) = b$$. Here, we define $$f$$ to be the identity function. We will see how $$f$$ is defined as more complicated to solve non-linear problems in later examples.
+Define constitutive relationship. The `get_tensor_map` function overrides base class method. *JAX-FEM* generally solves $-\nabla \cdot f(\nabla u) = b$. Here, we define $f$ to be the identity function. We will see how $f$ is defined as more complicated to solve non-linear problems in later examples.
 ```python
 class Poisson(FEM):
     def get_tensor_map(self):
@@ -75,7 +75,7 @@ def top(point):
 ```
 
 
-Define Dirichlet boundary values. This means on the `left` side, we apply the function `dirichlet_val_left` to the `0` component of the solution variable $$u$$; on the `right` side, we apply `dirichlet_val_right` to the `0` component.
+Define Dirichlet boundary values. This means on the `left` side, we apply the function `dirichlet_val_left` to the `0` component of the solution variable $u$; on the `right` side, we apply `dirichlet_val_right` to the `0` component.
 ```python
 def dirichlet_val_left(point):
     return 0.
@@ -89,7 +89,7 @@ vecs = [0, 0]
 dirichlet_bc_info = [location_fns, vecs, value_fns]
 ```
 
-Define Neumann boundary value $$t$$. Note that Neumann values are not imposed component-wisely as what we did in Dirichlet values. Rather, Neumann values are imposed with a vector value. This is why `neumann_val` returns a shape `(1,)` array, rather than a scalar value.
+Define Neumann boundary value $t$. Note that Neumann values are not imposed component-wisely as what we did in Dirichlet values. Rather, Neumann values are imposed with a vector value. This is why `neumann_val` returns a shape `(1,)` array, rather than a scalar value.
 ```python
 def neumann_val(point):
     return np.array([np.sin(5.*point[0])])
@@ -97,13 +97,13 @@ def neumann_val(point):
 neumann_bc_info = [[bottom, top], [neumann_val, neumann_val]]
 ```
 
-Define the source term $$b$$:
+Define the source term $b$:
 ```python
 def body_force(point):
     return np.array([10*np.exp(-(np.power(point[0] - 0.5, 2) + np.power(point[1] - 0.5, 2)) / 0.02)])
 ```
 
-Create an instance of the `Poisson` class. Here, `vec` is the number of components for the solution $$u$$. 
+Create an instance of the `Poisson` class. Here, `vec` is the number of components for the solution $u$. 
 ```python
 problem = Poisson(mesh=mesh, vec=1, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, 
     neumann_bc_info=neumann_bc_info, source_info=body_force)

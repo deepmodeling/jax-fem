@@ -3,15 +3,17 @@
 ### Formulation
 
 The Poisson's equation is the canonical elliptic partial differential equation. Consider a domain $\Omega \subset \mathbb{R}^\textrm{d}$ with boundary $\partial \Omega = \Gamma_D \cup \Gamma_N$, the strong form gives
+
 $$
-\begin{aligned}  
+\begin{align}
     -\nabla^2 u = b & \quad \textrm{in}  \, \, \Omega, \\
     u = 0 &  \quad\textrm{on} \, \, \Gamma_D,  \\
     \nabla u  \cdot \boldsymbol{n} = t  & \quad \textrm{on} \, \, \Gamma_N.
-\end{aligned}
+\end{align}
 $$
 
 The weak form gives
+
 $$
 \begin{aligned}
 \int_{\Omega} \nabla u \cdot \nabla v \, \, \textrm{d}x = \int_{\Omega} b \, v \, \textrm{d}x + \int_{\Gamma_N} t\, v \,\, \textrm{d}s.

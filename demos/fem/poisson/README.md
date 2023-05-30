@@ -1,33 +1,33 @@
 # Poisson's equation
 
-### Formulation
+## Formulation
 
 The Poisson's equation is the canonical elliptic partial differential equation. Consider a domain $\Omega \subset \mathbb{R}^\textrm{d}$ with boundary $\partial \Omega = \Gamma_D \cup \Gamma_N$, the strong form gives
 
 $$
-\begin{align}
-    -\nabla^2 u = b & \quad \textrm{in}  \, \, \Omega, \\
-    u = 0 &  \quad\textrm{on} \, \, \Gamma_D,  \\
-    \nabla u  \cdot \boldsymbol{n} = t  & \quad \textrm{on} \, \, \Gamma_N.
-\end{align}
+\begin{align*}
+    -\nabla^2 u = b & \quad \textrm{in }    \Omega, \\
+    u = 0 &  \quad\textrm{on }   \Gamma_D,  \\
+    \nabla u  \cdot \boldsymbol{n} = t  & \quad \textrm{on }   \Gamma_N.
+\end{align*}
 $$
 
 The weak form gives
 
 $$
-\begin{aligned}
-\int_{\Omega} \nabla u \cdot \nabla v \, \, \textrm{d}x = \int_{\Omega} b \, v \, \textrm{d}x + \int_{\Gamma_N} t\, v \,\, \textrm{d}s.
-\end{aligned}
+\begin{align*}
+\int_{\Omega} \nabla u \cdot \nabla v  \nobreakspace \textrm{d}x = \int_{\Omega} b  v  \textrm{d}x + \int_{\Gamma_N} t v  \textrm{d}s.
+\end{align*}
 $$
 
 We have the following definitions:
 * $\Omega=[0,1]\times[0,1]$ (a unit square)
 * $\Gamma_D=\{(0, x_2)\cup (1, x_2)\subset\partial\Omega\}$ (Dirichlet boundary)
 * $\Gamma_N=\{(x_1, 0)\cup (x_1, 1)\subset\partial\Omega\}$ (Neumann boundary)
-* $b=10\,\textrm{exp}\big(-((x_1-0.5)^2+(x_2-0.5)^2)/0.02 \big)$
+* $b=10\textrm{exp}\big(-((x_1-0.5)^2+(x_2-0.5)^2)/0.02 \big)$
 * $t=\textrm{sin}(5x_1)$
 
-### Implementation
+## Implementation
 
 Import some generally useful packages:
 ```python
@@ -123,7 +123,7 @@ vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
 save_sol(problem, sol, vtk_path)
 ```
 
-### Execution
+## Execution
 Run
 ```bash
 python -m demos.fem.poisson.example
@@ -131,7 +131,7 @@ python -m demos.fem.poisson.example
 from the `jax-am/` directory.
 
 
-### Results
+## Results
 
 <p align="middle">
   <img src="materials/sol.png" width="500" />
@@ -141,7 +141,7 @@ from the `jax-am/` directory.
 </p>
 
 
-### References
+## References
 
 [1] https://fenicsproject.org/olddocs/dolfin/1.3.0/python/demo/documented/poisson/python/documentation.html
 

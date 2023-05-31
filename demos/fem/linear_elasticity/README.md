@@ -20,14 +20,14 @@ $$
 \end{align*}
 $$
 
-In this example, we consider a vertical bending load applied to the right end of the beam ($\boldsymbol{t}=[0, 0, -100]$) while fixing the left end ($\boldsymbol{u}_D=[0,0,0]$), and ignore body force ($\boldsymbol{b}=[0,0,0]$).
+In this example, we consider a vertical bending load applied to the right side of the beam ($\boldsymbol{t}=[0, 0, -100]$) while fixing the left side ($\boldsymbol{u}_D=[0,0,0]$), and ignore body force ($\boldsymbol{b}=[0,0,0]$).
 
 The constitutive relationship is given by
 
 
 $$
 \begin{align*}
-     \boldsymbol{\sigma} &=  \lambda \, \textrm{tr}(\boldsymbol{\varepsilon}) \boldsymbol{I} + 2\mu \, \boldsymbol{\varepsilon}, \\
+     \boldsymbol{\sigma} &=  \lambda \nobreakspace \textrm{tr}(\boldsymbol{\varepsilon}) \boldsymbol{I} + 2\mu \nobreakspace \boldsymbol{\varepsilon}, \\
     \boldsymbol{\varepsilon} &= \frac{1}{2}\left[\nabla\boldsymbol{u} + (\nabla\boldsymbol{u})^{\top}\right].
 \end{align*}
 $$
@@ -117,7 +117,7 @@ from the `jax-am/` directory.
 
 ## Results
 
-Visualized with *ParaWiew*. 
+Visualized with *ParaWiew*:
 
 <p align="middle">
   <img src="materials/sol.png" width="500" />

@@ -46,10 +46,10 @@ dirichlet_bc_info = [location_fns, vecs, value_fns]
 def neumann_val(point):
     return np.array([np.sin(5.*point[0])])
 
+neumann_bc_info = [[bottom, top], [neumann_val, neumann_val]]
+
 def body_force(point):
     return np.array([10*np.exp(-(np.power(point[0] - 0.5, 2) + np.power(point[1] - 0.5, 2)) / 0.02)])
-
-neumann_bc_info = [[bottom, top], [neumann_val, neumann_val]]
 
 problem = Poisson(mesh=mesh, vec=1, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, 
     neumann_bc_info=neumann_bc_info, source_info=body_force)

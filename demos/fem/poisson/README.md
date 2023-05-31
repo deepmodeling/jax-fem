@@ -1,4 +1,4 @@
-# Poisson's equation
+# Poisson's Equation
 
 ## Formulation
 

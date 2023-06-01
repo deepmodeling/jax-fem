@@ -36,7 +36,7 @@ where $\boldsymbol{F}$ is the deformation gradient and $W$ is the strain energy 
 We have the following definitions:
 * $\Omega=(0,1)\times(0,1)\times(0,1)$ (a unit cube)
 * $\Gamma_{D_1}=0\times(0,1)\times(0,1)$ (first part of Dirichlet boundary)
-* $ \boldsymbol{u}_{D_1}= [0,(0.5+(x_2−0.5)\textrm{cos}(\pi/3)−(x_3−0.5)\textrm{sin}(\pi/3)−x_2)/2, (0.5+(x_2−0.5)\textrm{sin}(\pi/3)+(x_3−0.5)\textrm{cos}(\pi/3)−x_3))/2)] $
+* $\boldsymbol{u}_{D_1}= [0,(0.5+(x_2−0.5)\textrm{cos}(\pi/3)−(x_3−0.5)\textrm{sin}(\pi/3)−x_2)/2, (0.5+(x_2−0.5)\textrm{sin}(\pi/3)+(x_3−0.5)\textrm{cos}(\pi/3)−x_3))/2)] $
 * $\Gamma_{D_2}=1\times(0,1)\times(0,1)$ (second part of Dirichlet boundary)
 * $\boldsymbol{u}_{D_2}=[0,0,0]$ 
 * $b=[0, 0, 0]$

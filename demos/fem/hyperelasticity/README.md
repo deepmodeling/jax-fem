@@ -21,6 +21,7 @@ $$
 $$
 
 Here, $\boldsymbol{P}$ is the first Piola-Kirchhoff stress and is given by
+
 $$
 \begin{align*} 
     \boldsymbol{P} &= \frac{\partial W}{\partial \boldsymbol{F}},  \\

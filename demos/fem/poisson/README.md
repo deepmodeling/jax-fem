@@ -21,7 +21,7 @@ $$
 $$
 
 We have the following definitions:
-* $\Omega=[0,1]\times[0,1]$ (a unit square)
+* $\Omega=(0,1)\times(0,1)$ (a unit square)
 * $\Gamma_D=\{(0, x_2)\cup (1, x_2)\subset\partial\Omega\}$ (Dirichlet boundary)
 * $\Gamma_N=\{(x_1, 0)\cup (x_1, 1)\subset\partial\Omega\}$ (Neumann boundary)
 * $b=10\nobreakspace\textrm{exp}\big(-((x_1-0.5)^2+(x_2-0.5)^2)/0.02 \big)$

@@ -6,27 +6,27 @@ For perfect J2-plasticity model [1], we assume that the total strain $\boldsymbo
 
 $$
 \begin{align*} 
-    -\nabla \cdot \big(\boldsymbol{\sigma}^k (\nabla \boldsymbol{u}^k, \boldsymbol{\varepsilon}^{k-1}, \boldsymbol{\sigma}^{k-1}) \big) = \boldsymbol{b} & \quad \textrm{in}  \, \, \Omega, \nonumber \\
-    \boldsymbol{u}^k = \boldsymbol{u}_D &  \quad\textrm{on} \, \, \Gamma_D,  \nonumber \\
-    \boldsymbol{\sigma}^k \cdot \boldsymbol{n} = \boldsymbol{t}  & \quad \textrm{on} \, \, \Gamma_N.
+    -\nabla \cdot \big(\boldsymbol{\sigma}^k (\nabla \boldsymbol{u}^k, \boldsymbol{\varepsilon}^{k-1}, \boldsymbol{\sigma}^{k-1}) \big) = \boldsymbol{b} & \quad \textrm{in}  \nobreakspace \nobreakspace \Omega, \nonumber \\
+    \boldsymbol{u}^k = \boldsymbol{u}_D &  \quad\textrm{on} \nobreakspace \nobreakspace \Gamma_D,  \nonumber \\
+    \boldsymbol{\sigma}^k \cdot \boldsymbol{n} = \boldsymbol{t}  & \quad \textrm{on} \nobreakspace \nobreakspace \Gamma_N.
 \end{align*}
 $$
 
 The stress $\boldsymbol{\sigma}^k$ is defined with the following relationships:
 
-$$
+```math
 \begin{align*}
     \boldsymbol{\sigma}_\textrm{trial} &= \boldsymbol{\sigma}^{k-1} + \Delta \boldsymbol{\sigma}, \nonumber\\
-    \Delta \boldsymbol{\sigma} &= \lambda \, \textrm{tr}(\Delta \boldsymbol{\varepsilon}) \boldsymbol{I} + 2\mu \, \Delta \boldsymbol{\varepsilon}, \nonumber \\
+    \Delta \boldsymbol{\sigma} &= \lambda \nobreakspace \textrm{tr}(\Delta \boldsymbol{\varepsilon}) \boldsymbol{I} + 2\mu \nobreakspace \Delta \boldsymbol{\varepsilon}, \nonumber \\
     \Delta \boldsymbol{\varepsilon} &= \boldsymbol{\varepsilon}^k  - \boldsymbol{\varepsilon}^{k-1} = \frac{1}{2}\left[\nabla\boldsymbol{u}^k + (\nabla\boldsymbol{u}^k)^{\top}\right] - \boldsymbol{\varepsilon}^{k-1}, \nonumber\\
     \boldsymbol{s} &= \boldsymbol{\sigma}_\textrm{trial} - \frac{1}{3}\textrm{tr}(\boldsymbol{\sigma}_\textrm{trial})\boldsymbol{I},\nonumber\\
     s &= \sqrt{\frac{3}{2}\boldsymbol{s}:\boldsymbol{s}}, \nonumber\\
     f_{\textrm{yield}} &= s - \sigma_{\textrm{yield}}, \nonumber\\
     \boldsymbol{\sigma}^k &= \boldsymbol{\sigma}_\textrm{trial} -  \frac{\boldsymbol{s}}{s} \langle f_{\textrm{yield}} \rangle_{+}, \nonumber
 \end{align*}
-$$
+```
 
-where $\boldsymbol{\sigma}_\textrm{trial}$ is the elastic trial stress, $\boldsymbol{s}$ is the devitoric part of $\boldsymbol{\sigma}_\textrm{trial}$, $f_{\textrm{yield}}$ is the yield function, $\sigma_{\textrm{yeild}}$ is the yield strength, ${\langle x \rangle_{+}}:=\frac{1}{2}(x+|x|)$ is the ramp function, and $\boldsymbol{\sigma}^k$ is the stress at the currently loading step.
+where $`\boldsymbol{\sigma}_\textrm{trial}`$ is the elastic trial stress, $`\boldsymbol{s}`$ is the devitoric part of $`\boldsymbol{\sigma}_\textrm{trial}`$, $`f_{\textrm{yield}}`$ is the yield function, $`\sigma_{\textrm{yield}}`$ is the yield strength, $`{\langle x \rangle_{+}}:=\frac{1}{2}(x+|x|)`$ is the ramp function, and $`\boldsymbol{\sigma}^k`$ is the stress at the currently loading step.
 
 
 The weak form gives

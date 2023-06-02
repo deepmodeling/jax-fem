@@ -605,6 +605,25 @@ class FEM:
         u = np.sum(selected_cell_sols[:, None, :, :] * selected_face_shape_vals[:, :, :, None], axis=2)
         return u
 
+    def sol_to_grad(self, sol):
+        """Obtain solution gradient from nodal solution
+        
+        Parameters
+        ----------
+        sol : np.DeviceArray
+            (num_total_nodes, vec)
+        index : int
+
+        Returns
+        -------
+        u_grads : np.DeviceArray
+            (num_cells, num_quads, vec, dim)
+        """
+        # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
+        u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
+        u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim)
+        return u_grads
+
     def compute_residual_vars_helper(self, sol, weak_form, **internal_vars):
         res = np.zeros((self.num_total_nodes, self.vec))
         weak_form = weak_form.reshape(-1, self.vec) # (num_cells*num_nodes, vec)

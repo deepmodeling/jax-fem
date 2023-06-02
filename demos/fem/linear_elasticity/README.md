@@ -24,7 +24,6 @@ In this example, we consider a vertical bending load applied to the right side o
 
 The constitutive relationship is given by
 
-
 $$
 \begin{align*}
      \boldsymbol{\sigma} &=  \lambda \nobreakspace \textrm{tr}(\boldsymbol{\varepsilon}) \boldsymbol{I} + 2\mu \nobreakspace \boldsymbol{\varepsilon}, \\

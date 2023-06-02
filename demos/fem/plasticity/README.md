@@ -218,6 +218,7 @@ Results can be visualized with *ParaWiew*.
 <p align="middle">
     <em >Deformation (x50)</em>
 </p>
+
 Plot of the $`z-z`$ component of volume-averaged stress versus displacement of the top surface:
 
 

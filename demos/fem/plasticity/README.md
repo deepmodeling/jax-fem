@@ -58,7 +58,7 @@ from jax_am.fem.utils import save_sol
 from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 ```
 
-Define constitutive relationship. The `get_tensor_map` function overrides base class method. Generally, *JAX-FEM* solves $-\nabla \cdot \boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N) = \boldsymbol{b}$. Here, we have $\boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N)=\boldsymbol{\sigma}^k (\nabla \boldsymbol{u}^k, \boldsymbol{\varepsilon}^{k-1}, \boldsymbol{\sigma}^{k-1})$, reflected by the function `stress_return_map`.
+Define constitutive relationship. The `get_tensor_map` function overrides base class method. Generally, *JAX-FEM* solves $`-\nabla \cdot \boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N) = \boldsymbol{b}`$. Here, we have $`\boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N)=\boldsymbol{\sigma}^k (\nabla \boldsymbol{u}^k, \boldsymbol{\varepsilon}^{k-1}, \boldsymbol{\sigma}^{k-1})`$, reflected by the function `stress_return_map`.
 
 ```python
 class Plasticity(FEM):
@@ -218,7 +218,7 @@ Results can be visualized with *ParaWiew*.
 <p align="middle">
     <em >Deformation (x50)</em>
 </p>
-Plot of the $z$-$z$ component of volume-averaged stress versus displacement of the top surface:
+Plot of the $`z`$-$`z`$ component of volume-averaged stress versus displacement of the top surface:
 
 
 <p align="middle">

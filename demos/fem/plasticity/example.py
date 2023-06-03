@@ -11,7 +11,8 @@ from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
 class Plasticity(FEM):
     def custom_init(self):
-        """Initializing total strain and stress.
+        """Override base class method.
+        Initializing total strain and stress.
         Note that 'laplace' is a reserved keywork that speficically refers to the internal variables.
         """
         self.epsilons_old = np.zeros((len(self.cells), self.num_quads, self.vec, self.dim))
@@ -39,7 +40,7 @@ class Plasticity(FEM):
             return epsilon
 
         def stress(epsilon):
-            E = 70e3
+            E = 70.e3
             nu = 0.3
             mu = E/(2.*(1. + nu))
             lmbda = E*nu/((1+nu)*(1-2*nu))

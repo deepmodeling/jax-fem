@@ -1,3 +1,3 @@
-# Instruction
+# Information
 
-The folder contains examples presented in the JAX-FEM paper.
+The folder contains some examples presented in the JAX-FEM paper.

@@ -679,3 +679,8 @@ class FEM:
 
     def newton_update(self, sol):
         return self.compute_newton_vars(sol, **self.internal_vars)
+
+    def set_params(self, params):
+        """Used for solving inverse problems.
+        """
+        raise NotImplementedError("Child class must implement this function!")

@@ -6,7 +6,6 @@ from jax_am.fem.generate_mesh import get_meshio_cell_type
 
 
 def save_sol(problem, sol, sol_file, cell_infos=None, point_infos=None):
-    # TODO: infer cell_type from problem, needs test
     cell_type = get_meshio_cell_type(problem.ele_type)
     sol_dir = os.path.dirname(sol_file)
     os.makedirs(sol_dir, exist_ok=True)
@@ -37,3 +36,11 @@ def modify_vtu_file(input_file_path, output_file_path):
         fout.write(line.replace('<VTKFile type="UnstructuredGrid" version="2.2">', '<VTKFile type="UnstructuredGrid" version="1.0">'))
     fin.close()
     fout.close()
+
+
+def read_abaqus_and_write_vtk(abaqus_file, vtk_file):
+    """Used for a quick inspection. Paraview can't open .inp file so we convert it to .vtu
+    """
+    meshio_mesh = meshio.read(abaqus_file)
+    meshio_mesh.write(vtk_file)
+

@@ -562,9 +562,7 @@ def DynamicRelaxSolve(problem, initial_guess,
                       tol = 1e-6, nKMat = 50, nPrint = 1000, 
                       info = True, info_force = True):
 
-    tol = 1e-4
-
-    dofs = initial_guess.reshape(-1)
+    dofs = np.array(initial_guess).reshape(-1)
     dofs = assign_bc(dofs, problem)
 
     sol_shape = (problem.num_total_nodes, problem.vec)
@@ -572,11 +570,11 @@ def DynamicRelaxSolve(problem, initial_guess,
     def newton_update_helper(dofs):
         res_vec = problem.newton_update(dofs.reshape(sol_shape)).reshape(-1)
         res_vec = apply_bc_vec(res_vec, dofs, problem)
-        A_fn = get_A_fn(problem, use_petsc=True)
+        A_fn = get_A_fn(problem, use_petsc=False)
         return res_vec, A_fn
     
     res_vec, A_fn = newton_update_helper(dofs)
-    dofs = linear_guess_solve(problem, A_fn, precond=True, use_petsc=True)
+    dofs = linear_guess_solve(problem, A_fn, precond=True, use_petsc=False)
  
     # parameters not to change
     cmin  = 1e-3; cmax = 3.9; h_tilde=1.1; h=1.
@@ -601,6 +599,14 @@ def DynamicRelaxSolve(problem, initial_guess,
 
     timeZ = time.time() #Measurement of loop time.
     
+
+    assert onp.all(onp.isfinite(M)), f"M not finite"
+    assert onp.all(onp.isfinite(q)), f"q not finite"
+    assert onp.all(onp.isfinite(qdot)), f"qdot not finite"
+
+
+    error = onp.max(onp.absolute(R))
+ 
     while error > tol:
 
         print(f"error = {error}")

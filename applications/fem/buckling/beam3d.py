@@ -73,10 +73,10 @@ def right_dirichlet_val_x1(point):
     return -0.2*Lx
 
 def right_dirichlet_val_x2(point):
-    return 1*Ly
+    return 2.*Ly
 
 def right_dirichlet_val_x3(point):
-    return 1*Lz
+    return 0.*Lz
 
 
 dirichlet_bc_info = [[left]*3 + [right]*3, 
@@ -87,9 +87,9 @@ dirichlet_bc_info = [[left]*3 + [right]*3,
 
 problem = HyperElasticity(mesh, vec=3, dim=3, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info)
 
-# sol = np.zeros((problem.num_total_nodes, problem.vec))
-# sol = DynamicRelaxSolve(problem, sol)
+sol = np.zeros((problem.num_total_nodes, problem.vec))
+sol = DynamicRelaxSolve(problem, sol, tol=1e-6)
 
-sol = solver(problem, use_petsc=True)
+# sol = solver(problem, use_petsc=True)
 vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
 save_sol(problem, sol, vtk_path)

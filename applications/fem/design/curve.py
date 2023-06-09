@@ -70,6 +70,13 @@ def simulation():
     print(f"Lx={Lx}, Ly={Ly}")
 
 
+    def left_corner(point):
+        return np.isclose(point[0], 0., atol=1e-5)
+
+    def right_corner(point):
+        return np.isclose(point[0], Lx, atol=1e-5)
+
+
     # def left_corner(point):
     #     return np.logical_and(np.isclose(point[0], 0., atol=1e-5), np.isclose(point[1], 0., atol=1e-5))
 
@@ -77,11 +84,11 @@ def simulation():
     #     return np.logical_and(np.isclose(point[0], Lx, atol=1e-5), np.isclose(point[1], 0., atol=1e-5))
 
 
-    def left_corner(point):
-        return np.logical_and(np.isclose(point[0], 0., atol=1e-5), np.isclose(point[1], 0.1, atol=0.11))
+    # def left_corner(point):
+    #     return np.logical_and(np.isclose(point[0], 0., atol=1e-5), np.isclose(point[1], 0.1, atol=0.11))
 
-    def right_corner(point):
-        return np.logical_and(np.isclose(point[0], Lx, atol=1e-5), np.isclose(point[1], 0.1, atol=0.11))
+    # def right_corner(point):
+    #     return np.logical_and(np.isclose(point[0], Lx, atol=1e-5), np.isclose(point[1], 0.1, atol=0.11))
 
 
     def left_dirichlet_val_x1(point):

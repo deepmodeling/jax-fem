@@ -61,6 +61,8 @@ def box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir, ele_type='HEX8'):
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/master/examples/api/hex.py
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/gmsh_4_7_1/tutorial/python/t1.py
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/gmsh_4_7_1/tutorial/python/t3.py
+
+    Accepts ele_type = 'HEX8', 'TET4' or 'TET10'
     """
 
     assert ele_type != 'HEX20', f"gmsh cannot produce HEX20 mesh?"

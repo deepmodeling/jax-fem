@@ -308,7 +308,8 @@ class FEM:
         -------
         boundary_inds_list : List[onp.ndarray]
             (num_selected_faces, 2)
-            boundary_inds_list[k][i, j] returns the index of face j of cell i of surface k
+            boundary_inds_list[k][i, 0] returns the global cell index of the ith selected face of boundary subset k
+            boundary_inds_list[k][i, 1] returns the local face index of the ith selected face of boundary subset k
         """
         cell_points = onp.take(self.points, self.cells, axis=0) # (num_cells, num_nodes, dim)
         cell_face_points = onp.take(cell_points, self.face_inds, axis=1) # (num_cells, num_faces, num_face_nodes, dim)
@@ -684,3 +685,32 @@ class FEM:
         """Used for solving inverse problems.
         """
         raise NotImplementedError("Child class must implement this function!")
+
+    def print_BC_info(self):
+        """Print boundary condition information for debugging purposes.
+        """
+        if hasattr(self, 'neumann_boundary_inds_list'):
+            print(f"\n\n### Neumann B.C. is specified")
+            for i in range(len(self.neumann_boundary_inds_list)):
+                print(f"\nNeumann Boundary part {i + 1} information:")
+                print(self.neumann_boundary_inds_list[i]) 
+                print(f"Array.shape = (num_selected_faces, 2) = {self.neumann_boundary_inds_list[i].shape}")
+                print(f"Interpretation:")
+                print(f"    Array[i, 0] returns the global cell index of the ith selected face")
+                print(f"    Array[i, 1] returns the local face index of the ith selected face")
+        else:
+            print(f"\n\n### No Neumann B.C. found.")
+
+        if len(self.node_inds_list) != 0:
+            print(f"\n\n### Dirichlet B.C. is specified")
+            for i in range(len(self.node_inds_list)):
+                print(f"\nDirichlet Boundary part {i + 1} information:")
+                bc_array = onp.stack([self.node_inds_list[i], self.vec_inds_list[i], self.vals_list[i]]).T
+                print(bc_array)
+                print(f"Array.shape = (num_selected_dofs, 3) = {bc_array.shape}")
+                print(f"Interpretation:")
+                print(f"    Array[i, 0] returns the node index of the ith selected dof")
+                print(f"    Array[i, 1] returns the vec index of the ith selected dof")
+                print(f"    Array[i, 2] returns the value assigned to ith selected dof")
+        else:
+            print(f"\n\n### No Dirichlet B.C. found.")

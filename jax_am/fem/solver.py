@@ -205,10 +205,9 @@ def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc):
 def get_A_fn(problem, use_petsc):
     print(f"Creating sparse matrix with scipy...")
     A_sp_scipy = scipy.sparse.csr_array((problem.V, (problem.I, problem.J)), shape=(problem.num_total_dofs, problem.num_total_dofs))
-    print(f"Creating sparse matrix from scipy using JAX BCOO...")
+    # print(f"Creating sparse matrix from scipy using JAX BCOO...")
     A_sp = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
-    print(f"self.A_sp.data.shape = {A_sp.data.shape}")
-    print(f"Global sparse matrix takes about {A_sp.data.shape[0]*8*3/2**30} G memory to store.")
+    # print(f"Global sparse matrix takes about {A_sp.data.shape[0]*8*3/2**30} G memory to store.")
     problem.A_sp_scipy = A_sp_scipy
 
     def compute_linearized_residual(dofs):
@@ -417,10 +416,9 @@ def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
 
     print(f"Aug - Creating sparse matrix with scipy...")
     A_sp_scipy_aug = scipy.sparse.csc_array((V, (I, J)), shape=(group_index, group_index))
-    print(f"Aug - Creating sparse matrix from scipy using JAX BCOO...")
+    # print(f"Aug - Creating sparse matrix from scipy using JAX BCOO...")
     A_sp_aug = BCOO.from_scipy_sparse(A_sp_scipy_aug).sort_indices()
-    print(f"Aug - self.A_sp.data.shape = {A_sp_aug.data.shape}")
-    print(f"Aug - Global sparse matrix takes about {A_sp_aug.data.shape[0]*8*3/2**30} G memory to store.")
+    # print(f"Aug - Global sparse matrix takes about {A_sp_aug.data.shape[0]*8*3/2**30} G memory to store.")
 
     # TODO: Potential bug: Shouldn't this be problem.A_sp_scipy = A_sp_scipy_aug?
     problem.A_sp_scipy_aug = A_sp_scipy_aug
@@ -462,7 +460,9 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
         p_num_eps = problem.p_num_eps
     else:
         p_num_eps = 1.
-    print(f"Setting p_num_eps = {p_num_eps}. If periodic B.C. fails to be applied, consider modifying this parameter.")
+
+    if not use_petsc:
+        print(f"Setting p_num_eps = {p_num_eps}. If periodic B.C. fails to be applied, consider modifying this parameter.")
 
     def newton_update_helper(dofs_aug):
         res_vec = problem.newton_update(dofs_aug[:problem.num_total_dofs].reshape(sol_shape)).reshape(-1)
@@ -763,7 +763,7 @@ def ad_wrapper(problem, linear=False, use_petsc=False):
         return sol, (params, sol)
 
     def f_bwd(res, v):
-        print("\nRunning backward...")
+        print("\nRunning backward and solving the adjoint problem...")
         params, sol = res 
         vjp_result = implicit_vjp(problem, sol, params, v, use_petsc)
         return (vjp_result,)

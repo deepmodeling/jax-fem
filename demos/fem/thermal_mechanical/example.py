@@ -16,8 +16,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 crt_file_path = os.path.dirname(__file__)
 data_dir = os.path.join(crt_file_path, 'data')
 
-dt = 1e-6
-
 
 class Thermal(FEM):
     """We solve the following equation (weak form of FEM):
@@ -31,19 +29,17 @@ class Thermal(FEM):
         return fn
  
     def get_mass_map(self):
-        def T_map(T):
+        def T_map(T, T_old):
             Cp = 500.
             rho = 8440.
-            return rho*Cp*T/dt
+            return rho*Cp*(T - T_old)/dt
         return T_map
 
-    def get_body_map(self):
-        return self.get_mass_map()
-
-    def set_params(self, old_sol):
-        surface_old_sol_walls = self.convert_neumann_from_dof(old_sol, 1)
-        self.internal_vars['neumann_vars'] = [[], [surface_old_sol_walls]]
-        self.internal_vars['body_vars'] = old_sol
+    def set_params(self, params):
+        sol_T_old, laser_center = params
+        self.internal_vars['neumann'] = [[], [self.convert_neumann_from_dof(sol_T_old, 1)]]
+        self.internal_vars['mass'] = [self.convert_from_dof_to_quad(sol_T_old)]
+        self.neumann_value_fns[0] = get_thermal_neumann_top(laser_center)
 
 
 class Plasticity(FEM):
@@ -139,40 +135,44 @@ class Plasticity(FEM):
         return sigmas, epsilons, dT_update
 
     def set_params(self, params):
+        sol_T_old, 
         self.internal_vars['laplace'] = params
 
 
-def simulation():
-    # Inconel 625 material
-    # All units in SI standard
-    vel = 0.5 # laser scanning velocity
-    T0 = 300. # ambient temperature
-    h = 100. # heat convection coefficient
-    rb = 0.1e-3 # laser beam size
-    eta = 0.4 # absorption rate
-    P = 100. # laser power
-    ele_type = 'HEX8'
-    vtk_dir = os.path.join(data_dir, 'vtk')
-    problem_name = 'example'
-    Nx, Ny, Nz = 100, 25, 25
-    Lx, Ly, Lz = 1.e-3, 0.25e-3, 0.25e-3 # domain size
-    meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
-    mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
+dt = 1e-6
 
-    # Define boundaries
-    def top(point):
-        return np.isclose(point[2], Lz, atol=1e-5)
+# Inconel 625 material
+# All units in SI standard
+vel = 0.5 # laser scanning velocity
+T0 = 300. # ambient temperature
+h = 100. # heat convection coefficient
+rb = 0.1e-3 # laser beam size
+eta = 0.4 # absorption rate
+P = 100. # laser power
+ele_type = 'HEX8'
+vtk_dir = os.path.join(data_dir, 'vtk')
+problem_name = 'example'
+Nx, Ny, Nz = 100, 25, 25
+Lx, Ly, Lz = 1.e-3, 0.25e-3, 0.25e-3 # domain size
+meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
+mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
-    def bottom(point):
-        return np.isclose(point[2], 0., atol=1e-5)
+# Define boundaries
+def top(point):
+    return np.isclose(point[2], Lz, atol=1e-5)
 
-    def walls(point):
-        left = np.isclose(point[0], 0., atol=1e-5)
-        right = np.isclose(point[0], Lx, atol=1e-5)
-        front = np.isclose(point[1], 0., atol=1e-5)
-        back = np.isclose(point[1], Ly, atol=1e-5)
-        return np.logical_or(np.logical_or(np.logical_or(left, right), front), back)
+def bottom(point):
+    return np.isclose(point[2], 0., atol=1e-5)
 
+def walls(point):
+    left = np.isclose(point[0], 0., atol=1e-5)
+    right = np.isclose(point[0], Lx, atol=1e-5)
+    front = np.isclose(point[1], 0., atol=1e-5)
+    back = np.isclose(point[1], Ly, atol=1e-5)
+    return np.logical_or(np.logical_or(np.logical_or(left, right), front), back)
+
+
+def get_thermal_neumann_top(laser_center):
     # Neumann BC values for thermal problem
     def thermal_neumann_top(point):
         # q is the heat flux into the domain
@@ -180,82 +180,77 @@ def simulation():
         q_laser = 2*eta*P/(np.pi*rb**2) * np.exp(-2*d2/rb**2)
         q = q_laser
         return np.array([q])
+    return thermal_neumann_top
 
-    def thermal_neumann_walls(point, old_T):
-        # q is the heat flux into the domain
-        q_conv = h*(T0 - old_T[0])
-        q = q_conv
-        return np.array([q])
+def thermal_neumann_walls(point, old_T):
+    # q is the heat flux into the domain
+    q_conv = h*(T0 - old_T[0])
+    q = q_conv
+    return np.array([q])
 
-    # Dirichlet BC values for thermal problem
-    def thermal_dirichlet_bottom(point):
-        return T0
+# Dirichlet BC values for thermal problem
+def thermal_dirichlet_bottom(point):
+    return T0
 
-    # Dirichlet BC values for mechanical problem
-    def displacement_dirichlet_bottom(point):
-        return 0.
+# Dirichlet BC values for mechanical problem
+def displacement_dirichlet_bottom(point):
+    return 0.
 
-    # Define thermal problem
-    dirichlet_bc_info_T = [[bottom], [0], [thermal_dirichlet_bottom]]
-    neumann_bc_info_T = [[top, walls], [thermal_neumann_top, thermal_neumann_walls]]
-    sol_T_old = T0*np.ones((len(mesh.points), 1))
-    problem_T = Thermal(mesh, vec=1, dim=3, dirichlet_bc_info=dirichlet_bc_info_T, neumann_bc_info=neumann_bc_info_T)
+# Define thermal problem
+dirichlet_bc_info_T = [[bottom], [0], [thermal_dirichlet_bottom]]
+neumann_bc_info_T = [[top, walls], [None, thermal_neumann_walls]]
+sol_T_old = T0*np.ones((len(mesh.points), 1))
+problem_T = Thermal(mesh, vec=1, dim=3, dirichlet_bc_info=dirichlet_bc_info_T, neumann_bc_info=neumann_bc_info_T)
 
-    # Define mechanical problem
-    dirichlet_bc_info_u = [[bottom]*3, [0, 1, 2], [displacement_dirichlet_bottom]*3]
-    problem_u = Plasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info_u)
-    params_u = problem_u.internal_vars['laplace']
+# Define mechanical problem
+dirichlet_bc_info_u = [[bottom]*3, [0, 1, 2], [displacement_dirichlet_bottom]*3]
+problem_u = Plasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info_u)
+params_u = problem_u.internal_vars['laplace']
 
-    # Clean folder
-    files = glob.glob(os.path.join(vtk_dir, f'{problem_name}/*'))
-    for f in files:
-        os.remove(f)
+# Clean folder
+files = glob.glob(os.path.join(vtk_dir, f'{problem_name}/*'))
+for f in files:
+    os.remove(f)
 
-    # Save initial solution
-    vtk_path = os.path.join(vtk_dir, f"{problem_name}/u_{0:05d}.vtu")
-    save_sol(problem_T, sol_T_old, vtk_path, point_infos=[('u', np.zeros((len(sol_T_old), 3)))], cell_infos=[('f_plus', np.zeros(len(mesh.cells)))])
+# Save initial solution
+vtk_path = os.path.join(vtk_dir, f"{problem_name}/u_{0:05d}.vtu")
+save_sol(problem_T, sol_T_old, vtk_path, point_infos=[('u', np.zeros((len(sol_T_old), 3)))], cell_infos=[('f_plus', np.zeros(len(mesh.cells)))])
 
-    total_t = 0.2*Lx/vel
-    ts = np.arange(0., total_t, dt)
-    for i in range(len(ts[1:])):
-        # TODO: Plasticity equation is more computational expensive to solve than thermal equation.
-        # Could solve thermal equation for a couple of steps, and then solve plasticity equation for one step.
-        print(f"\nStep {i + 1}, total step = {len(ts)}, laser_x = {Lx*0.2 + vel*ts[i + 1]}")
+total_t = 0.2*Lx/vel
+ts = np.arange(0., total_t, dt)
+for i in range(len(ts[1:])):
+    # TODO: Plasticity equation is more computational expensive to solve than thermal equation.
+    # Could solve thermal equation for a couple of steps, and then solve plasticity equation for one step.
+    print(f"\nStep {i + 1}, total step = {len(ts)}, laser_x = {Lx*0.2 + vel*ts[i + 1]}")
 
-        # TODO: laser_center is a global varibale called in the function thermal_neumann_top
-        # This is OK for forward problem, but for inverse design problem (differentiable simulation), this is going to be a bug.
-        laser_center = np.array([Lx*0.2 + vel*ts[i + 1], Ly/2., Lz])
+    laser_center = np.array([Lx*0.2 + vel*ts[i + 1], Ly/2., Lz])
 
-        # Temperature solution from previous step affects current step solution
-        problem_T.set_params(sol_T_old)
+    # Temperature solution from previous step affects current step solution
+    problem_T.set_params([sol_T_old, laser_center])
 
-        # Solve for T solution. If you're using CPU, we recommend to set use_petsc=True
-        # If you're using GPU, we recommend to set use_petsc=False
-        sol_T_new = solver(problem_T, use_petsc=True)
+    # Solve for T solution. If you're using CPU, we recommend to set use_petsc=True
+    # If you're using GPU, we recommend to set use_petsc=False
+    sol_T_new = solver(problem_T, use_petsc=True)
 
-        # Sometimes T solution is smaller than T0=300K. This is a known problem with FEM for thermal problem. OK for now.
-        # First update dT and let problem_u know this update
-        dT = sol_T_new - sol_T_old
-        print(f"max dT = {np.max(dT)}")
-        params_u = problem_u.update_dT(dT, params_u)
-        problem_u.set_params(params_u)
+    # Sometimes T solution is smaller than T0=300K. This is a known problem with FEM for thermal problem. OK for now.
+    # First update dT and let problem_u know this update
+    dT = sol_T_new - sol_T_old
+    print(f"max dT = {np.max(dT)}")
+    params_u = problem_u.update_dT(dT, params_u)
+    problem_u.set_params(params_u)
 
-        # Solve for u solution.
-        sol_u = solver(problem_u, use_petsc=True)
+    # Solve for u solution.
+    sol_u = solver(problem_u, use_petsc=True)
 
-        # For plasticity problem, we need to update the total strain and stress for convenience of next step
-        params_u, f_yield_vals = problem_u.update_stress_strain(sol_u, params_u) 
+    # For plasticity problem, we need to update the total strain and stress for convenience of next step
+    params_u, f_yield_vals = problem_u.update_stress_strain(sol_u, params_u) 
 
-        # Update T solution
-        sol_T_old = sol_T_new
+    # Update T solution
+    sol_T_old = sol_T_new
 
-        # Check if plastic deformation occurs (with f_yield_vals > 0.)
-        print(f"max f_yield_vals = {np.max(f_yield_vals)}")
-        
-        if (i + 1) % 1 == 0:
-            vtk_path = os.path.join(vtk_dir, f"{problem_name}/u_{i + 1:05d}.vtu")
-            save_sol(problem_T, sol_T_old, vtk_path, point_infos=[('u', sol_u)], cell_infos=[('f_plus', np.max(f_yield_vals, axis=1))])
- 
-
-if __name__ == "__main__":
-    simulation()
+    # Check if plastic deformation occurs (with f_yield_vals > 0.)
+    print(f"max f_yield_vals = {np.max(f_yield_vals)}")
+    
+    if (i + 1) % 1 == 0:
+        vtk_path = os.path.join(vtk_dir, f"{problem_name}/u_{i + 1:05d}.vtu")
+        save_sol(problem_T, sol_T_old, vtk_path, point_infos=[('u', sol_u)], cell_infos=[('f_plus', np.max(f_yield_vals, axis=1))])

@@ -147,6 +147,7 @@ def topology_optimization():
             print(f"\nStep {i + 1} in {len(rs)}")
             # This is a bug, but not affecting the result.
             # In back-propagation, problem.neumann_value_fns takes unexpected values.
+            # TODO: there is quite decent way to resolve this.
             problem.neumann_value_fns = [get_neumann_val(rs[i]*max_load)]
             sol = fwd_pred(params)
             params = problem.update_stress_strain(sol, params)  

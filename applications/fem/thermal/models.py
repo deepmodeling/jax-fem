@@ -37,8 +37,8 @@ class Thermal(FEM):
     def update_int_vars(self, old_sol):
         surface_old_sol_top = self.convert_neumann_from_dof(old_sol, 0)
         surface_old_sol_walls = self.convert_neumann_from_dof(old_sol, 1)
-        self.internal_vars['neumann_vars'] = [[surface_old_sol_top], [surface_old_sol_walls]]
-        self.internal_vars['body_vars'] = old_sol
+        self.internal_vars['neumann'] = [[surface_old_sol_top], [surface_old_sol_walls]]
+        self.internal_vars['body'] = old_sol
 
     def update_Neumann_boundary_inds(self):
         cell_points = onp.take(self.points, self.cells, axis=0) # (num_cells, num_nodes, dim)

@@ -731,12 +731,12 @@ def implicit_vjp(problem, sol, params, v, use_petsc):
     if use_petsc:
         A_transpose = A_fn.transpose()
 
-        # TODO: Eliminating rows make A better conditioned. 
+        # Remark: Eliminating rows seems to make A better conditioned. 
         # If Dirichlet B.C. is part of the design variable, the following should NOT be implemented.
-        for i in range(len(problem.node_inds_list)):
-            row_inds = onp.array(problem.node_inds_list[i]*problem.vec + problem.vec_inds_list[i], dtype=onp.int32)
-            A_transpose.zeroRows(row_inds)
-        v = assign_zeros_bc(v, problem)
+        # for i in range(len(problem.node_inds_list)):
+        #     row_inds = onp.array(problem.node_inds_list[i]*problem.vec + problem.vec_inds_list[i], dtype=onp.int32)
+        #     A_transpose.zeroRows(row_inds)
+        # v = assign_zeros_bc(v, problem)
 
         adjoint = petsc_solve(A_transpose, v.reshape(-1), 'bcgsl', 'ilu')
 

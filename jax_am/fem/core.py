@@ -115,7 +115,6 @@ class FEM:
 
         self.internal_vars = {}
         self.compute_Neumann_boundary_inds()
-        self.body_force = self.compute_body_force_by_fn()
 
         print(f"Done pre-computations, took {compute_time} [s]")
         print(f"Solving a problem with {len(self.cells)} cells, {self.num_total_nodes}x{self.vec} = {self.num_total_dofs} dofs.")
@@ -336,8 +335,8 @@ class FEM:
         integral = np.zeros((self.num_total_nodes, self.vec))
         if self.neumann_bc_info is not None:
             for i, boundary_inds in enumerate(self.neumann_boundary_inds_list):
-                if 'neumann_vars' in internal_vars.keys():
-                    int_vars = internal_vars['neumann_vars'][i]
+                if 'neumann' in internal_vars.keys():
+                    int_vars = internal_vars['neumann'][i]
                 else:
                     int_vars = ()
                 # (num_cells, num_faces, num_face_quads, dim) -> (num_selected_faces, num_face_quads, dim)
@@ -405,7 +404,7 @@ class FEM:
         val = val.reshape(-1, self.vec) # (num_cells*num_nodes, vec)
         body_force = np.zeros_like(sol)
         body_force = body_force.at[self.cells.reshape(-1)].add(val) 
-        return body_force 
+        return body_force
 
     def get_laplace_kernel(self, tensor_map):
         def laplace_kernel(cell_sol, cell_shape_grads, cell_v_grads_JxW, *cell_internal_vars):
@@ -636,8 +635,9 @@ class FEM:
             values = values.reshape(-1, self.vec)
             res = res.at[selected_cells.reshape(-1)].add(values) 
 
-        if 'body_vars' in internal_vars.keys():
-            self.body_force = self.compute_body_force_by_sol(internal_vars['body_vars'], self.get_body_map())
+        self.body_force = self.compute_body_force_by_fn()
+        if 'body' in internal_vars.keys():
+            self.body_force = self.compute_body_force_by_sol(internal_vars['body'], self.get_body_map())
 
         self.neumann = self.compute_Neumann_integral_vars(**internal_vars)    
 

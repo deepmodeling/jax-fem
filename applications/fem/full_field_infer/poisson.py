@@ -46,7 +46,7 @@ class LinearPoisson(FEM):
         return np.sum(val)
 
     def set_params(self, params):
-        self.internal_vars['body_vars'] = params.reshape((self.num_total_nodes, self.vec))
+        self.internal_vars['body'] = params.reshape((self.num_total_nodes, self.vec))
 
 def taylor_tests(data_dir, m, fn, fn_grad):
     """See https://www.dolfin-adjoint.org/en/latest/documentation/verification.html

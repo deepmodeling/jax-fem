@@ -2,45 +2,45 @@
 
 ## Formulation
 
-For perfect J2-plasticity model [1], we assume that the total strain $\boldsymbol{\varepsilon}^{k-1}$ and stress $\boldsymbol{\sigma}^{k-1}$ from the previous loading step are known, and the problem states that find the displacement field $\boldsymbol{u}^k$ at the current loading step such that
+For perfect J2-plasticity model [1], we assume that the total strain $\boldsymbol{\varepsilon}^{n-1}$ and stress $\boldsymbol{\sigma}^{n-1}$ from the previous loading step are known, and the problem states that find the displacement field $\boldsymbol{u}^n$ at the current loading step such that
 
 $$
 \begin{align*} 
-    -\nabla \cdot \big(\boldsymbol{\sigma}^k (\nabla \boldsymbol{u}^k, \boldsymbol{\varepsilon}^{k-1}, \boldsymbol{\sigma}^{k-1}) \big) = \boldsymbol{b} & \quad \textrm{in}  \nobreakspace \nobreakspace \Omega, \nonumber \\
-    \boldsymbol{u}^k = \boldsymbol{u}_D &  \quad\textrm{on} \nobreakspace \nobreakspace \Gamma_D,  \nonumber \\
-    \boldsymbol{\sigma}^k \cdot \boldsymbol{n} = \boldsymbol{t}  & \quad \textrm{on} \nobreakspace \nobreakspace \Gamma_N.
+    -\nabla \cdot \big(\boldsymbol{\sigma}^n (\nabla \boldsymbol{u}^n, \boldsymbol{\varepsilon}^{n-1}, \boldsymbol{\sigma}^{n-1}) \big) = \boldsymbol{b} & \quad \textrm{in}  \nobreakspace \nobreakspace \Omega, \nonumber \\
+    \boldsymbol{u}^n = \boldsymbol{u}_D &  \quad\textrm{on} \nobreakspace \nobreakspace \Gamma_D,  \nonumber \\
+    \boldsymbol{\sigma}^n \cdot \boldsymbol{n} = \boldsymbol{t}  & \quad \textrm{on} \nobreakspace \nobreakspace \Gamma_N.
 \end{align*}
 $$
 
-The stress $\boldsymbol{\sigma}^k$ is defined with the following relationships:
+The stress $\boldsymbol{\sigma}^n$ is defined with the following relationships:
 
 ```math
 \begin{align*}
-    \boldsymbol{\sigma}_\textrm{trial} &= \boldsymbol{\sigma}^{k-1} + \Delta \boldsymbol{\sigma}, \nonumber\\
+    \boldsymbol{\sigma}_\textrm{trial} &= \boldsymbol{\sigma}^{n-1} + \Delta \boldsymbol{\sigma}, \nonumber\\
     \Delta \boldsymbol{\sigma} &= \lambda \nobreakspace \textrm{tr}(\Delta \boldsymbol{\varepsilon}) \boldsymbol{I} + 2\mu \nobreakspace \Delta \boldsymbol{\varepsilon}, \nonumber \\
-    \Delta \boldsymbol{\varepsilon} &= \boldsymbol{\varepsilon}^k  - \boldsymbol{\varepsilon}^{k-1} = \frac{1}{2}\left[\nabla\boldsymbol{u}^k + (\nabla\boldsymbol{u}^k)^{\top}\right] - \boldsymbol{\varepsilon}^{k-1}, \nonumber\\
+    \Delta \boldsymbol{\varepsilon} &= \boldsymbol{\varepsilon}^n  - \boldsymbol{\varepsilon}^{n-1} = \frac{1}{2}\left[\nabla\boldsymbol{u}^n + (\nabla\boldsymbol{u}^n)^{\top}\right] - \boldsymbol{\varepsilon}^{n-1}, \nonumber\\
     \boldsymbol{s} &= \boldsymbol{\sigma}_\textrm{trial} - \frac{1}{3}\textrm{tr}(\boldsymbol{\sigma}_\textrm{trial})\boldsymbol{I},\nonumber\\
     s &= \sqrt{\frac{3}{2}\boldsymbol{s}:\boldsymbol{s}}, \nonumber\\
     f_{\textrm{yield}} &= s - \sigma_{\textrm{yield}}, \nonumber\\
-    \boldsymbol{\sigma}^k &= \boldsymbol{\sigma}_\textrm{trial} -  \frac{\boldsymbol{s}}{s} \langle f_{\textrm{yield}} \rangle_{+}, \nonumber
+    \boldsymbol{\sigma}^n &= \boldsymbol{\sigma}_\textrm{trial} -  \frac{\boldsymbol{s}}{s} \langle f_{\textrm{yield}} \rangle_{+}, \nonumber
 \end{align*}
 ```
 
-where $`\boldsymbol{\sigma}_\textrm{trial}`$ is the elastic trial stress, $`\boldsymbol{s}`$ is the devitoric part of $`\boldsymbol{\sigma}_\textrm{trial}`$, $`f_{\textrm{yield}}`$ is the yield function, $`\sigma_{\textrm{yield}}`$ is the yield strength, $`{\langle x \rangle_{+}}:=\frac{1}{2}(x+|x|)`$ is the ramp function, and $`\boldsymbol{\sigma}^k`$ is the stress at the currently loading step.
+where $`\boldsymbol{\sigma}_\textrm{trial}`$ is the elastic trial stress, $`\boldsymbol{s}`$ is the devitoric part of $`\boldsymbol{\sigma}_\textrm{trial}`$, $`f_{\textrm{yield}}`$ is the yield function, $`\sigma_{\textrm{yield}}`$ is the yield strength, $`{\langle x \rangle_{+}}:=\frac{1}{2}(x+|x|)`$ is the ramp function, and $`\boldsymbol{\sigma}^n`$ is the stress at the currently loading step.
 
 
 The weak form gives
 
 $$
 \begin{align*}
-\int_{\Omega}  \boldsymbol{\sigma}^k : \nabla \boldsymbol{v} \nobreakspace \nobreakspace \textrm{d}x = \int_{\Omega} \boldsymbol{b}  \cdot \boldsymbol{v} \nobreakspace \textrm{d}x + \int_{\Gamma_N} \boldsymbol{t} \cdot \boldsymbol{v} \nobreakspace\nobreakspace \textrm{d}s.
+\int_{\Omega}  \boldsymbol{\sigma}^n : \nabla \boldsymbol{v} \nobreakspace \nobreakspace \textrm{d}x = \int_{\Omega} \boldsymbol{b}  \cdot \boldsymbol{v} \nobreakspace \textrm{d}x + \int_{\Gamma_N} \boldsymbol{t} \cdot \boldsymbol{v} \nobreakspace\nobreakspace \textrm{d}s.
 \end{align*}
 $$
 
 In this example, we consider a displacement-controlled uniaxial tensile loading condition. We assume free traction ($\boldsymbol{t}=[0, 0, 0]$) and ignore body force ($\boldsymbol{b}=[0,0,0]$). We assume quasi-static loadings from 0 to 0.1 mm and then unload from 0.1 mm to 0.
 
 
-> :ghost: A remarkable feature of *JAX-FEM* is that automatic differentiation is used to enhance the development efficiency. In this example, deriving the fourth-order elastoplastic tangent moduli tensor $\mathbb{C}=\frac{\partial \boldsymbol{\sigma}^k}{\partial \boldsymbol{\varepsilon}^k}$ is usually required by traditional FEM implementation, but is **NOT** needed in our program due to automatic differentiation.
+> :ghost: A remarkable feature of *JAX-FEM* is that automatic differentiation is used to enhance the development efficiency. In this example, deriving the fourth-order elastoplastic tangent moduli tensor $\mathbb{C}=\frac{\partial \boldsymbol{\sigma}^n}{\partial \boldsymbol{\varepsilon}^n}$ is usually required by traditional FEM implementation, but is **NOT** needed in our program due to automatic differentiation.
 
 
 ## Implementation
@@ -58,13 +58,13 @@ from jax_am.fem.utils import save_sol
 from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 ```
 
-Define constitutive relationship. The `get_tensor_map` function overrides base class method. Generally, *JAX-FEM* solves $`-\nabla \cdot \boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N) = \boldsymbol{b}`$. Here, we have $`\boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N)=\boldsymbol{\sigma}^k (\nabla \boldsymbol{u}^k, \boldsymbol{\varepsilon}^{k-1}, \boldsymbol{\sigma}^{k-1})`$, reflected by the function `stress_return_map`.
+Define constitutive relationship. The `get_tensor_map` function overrides base class method. Generally, *JAX-FEM* solves $`-\nabla \cdot \boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N) = \boldsymbol{b}`$. Here, we have $`\boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N)=\boldsymbol{\sigma}^n (\nabla \boldsymbol{u}^n, \boldsymbol{\varepsilon}^{n-1}, \boldsymbol{\sigma}^{n-1})`$, reflected by the function `stress_return_map`.
 
 ```python
 class Plasticity(FEM):
     def custom_init(self):
         """Initializing total strain and stress.
-        Note that 'laplace' is a reserved keywork that speficically refers to the internal variables.
+        Note that 'laplace' is a reserved keyword that speficically refers to the internal variables.
         """
         self.epsilons_old = np.zeros((len(self.cells), self.num_quads, self.vec, self.dim))
         self.sigmas_old = np.zeros_like(self.epsilons_old)

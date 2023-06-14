@@ -1,20 +1,19 @@
-import numpy as onp
+
 import jax
 import jax.numpy as np
 import os
 import glob
-import meshio
 
-from jax_am.fem.generate_mesh import box_mesh, Mesh
+from jax_am.fem.generate_mesh import box_mesh, Mesh, get_meshio_cell_type
 from jax_am.fem.solver import solver
 from jax_am.fem.core import FEM
 from jax_am.fem.utils import save_sol
 
-# If you have multiple GPUs, set the one to use.
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 crt_file_path = os.path.dirname(__file__)
 data_dir = os.path.join(crt_file_path, 'data')
+vtk_dir = os.path.join(data_dir, 'vtk')
 
 
 class Thermal(FEM):
@@ -23,19 +22,24 @@ class Thermal(FEM):
     where T_crt is the trial function, and Q is the test function.
     """
     def get_tensor_map(self):
+        """Override base class method.
+        """
         def fn(u_grad):
-            k = 15.
             return k*u_grad
         return fn
  
     def get_mass_map(self):
+        """Override base class method.
+        """
         def T_map(T, T_old):
-            Cp = 588.
-            rho = 8440.
+
             return rho*Cp*(T - T_old)/dt
         return T_map
 
     def set_params(self, params):
+        """Override base class method.
+        Note that 'neumann' and 'mass' are reserved keywords.
+        """
         sol_T_old, laser_center, switch = params
         self.internal_vars['neumann'] = [[self.convert_neumann_from_dof(sol_T_old, 0)], 
                                          [self.convert_neumann_from_dof(sol_T_old, 1)]]
@@ -49,6 +53,9 @@ class Plasticity(FEM):
     where u is the trial function, and v is the test function.
     """
     def custom_init(self):
+        """Initializing total strain, stress, temperature increment, and material phase.
+        Note that 'laplace' is a reserved keywork that speficically refers to the internal variables.
+        """
         sigmas_old = np.zeros((len(self.cells), self.num_quads, self.vec, self.dim))
         epsilons_old = np.zeros_like(sigmas_old)
         dT = np.zeros((len(self.cells), self.num_quads, 1))
@@ -56,6 +63,8 @@ class Plasticity(FEM):
         self.internal_vars['laplace'] = [sigmas_old, epsilons_old, dT, phase]
     
     def get_tensor_map(self):
+        """Override base class method.
+        """
         _, stress_return_map, _ = self.get_maps()
         return stress_return_map
 
@@ -93,7 +102,7 @@ class Plasticity(FEM):
             f_yield = s_norm - sig0
             f_yield_plus = np.where(f_yield > 0., f_yield, 0.)
             sigma = sigma_trial - safe_divide(f_yield_plus*s_dev, s_norm)
-            return sigma, sigma[0, 0]
+            return sigma, (f_yield_plus, sigma[0, 0])
 
         stress_return_map = lambda *args: stress_return_maps(*args)[0]
         yield_val_fn = lambda *args: stress_return_maps(*args)[1]
@@ -109,8 +118,8 @@ class Plasticity(FEM):
 
     def update_stress_strain(self, sol, params):
         """Update sigmas and epsilons
-        Keep dT unchanged
-        Output f_yield_vals for debugging purpose: we hope to know if plastic deformation occurs
+        Keep dT and phase unchanged
+        Output plastic_info for debugging purpose: we want to know if plastic deformation occurs, and the x-x direction stress
         """
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
         u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
@@ -119,51 +128,52 @@ class Plasticity(FEM):
         sigmas_old, epsilons_old, dT, phase = params
         sigmas_update = vmap_stress_rm(u_grads, sigmas_old, epsilons_old, dT, phase)
         epsilons_update = vmap_strain(u_grads)
-        f_yield_vals = vmap_yield_val_fn(u_grads, sigmas_old, epsilons_old, dT, phase)
-        return [sigmas_update, epsilons_update, dT, phase], f_yield_vals
+        plastic_info = vmap_yield_val_fn(u_grads, sigmas_old, epsilons_old, dT, phase)
+        return [sigmas_update, epsilons_update, dT, phase], plastic_info
 
-    def update_params(self, dT, T, params):
-        """Update dT
+    def update_dT_and_phase(self, dT, T, params):
+        """Update dT and phase
         Keep sigmas and epsilons unchanged
         """
         sigmas, epsilons, _, phase = params
-        dT_update = self.convert_from_dof_to_quad(dT)
+        dT_quad = self.convert_from_dof_to_quad(dT)
         T_quad = self.convert_from_dof_to_quad(T)
         powder_to_liquid = (phase == POWDER) & (T_quad > Tl)
         liquid_to_solid = (phase == LIQUID) & (T_quad < Tl)
         phase = phase.at[powder_to_liquid].set(LIQUID)
         phase = phase.at[liquid_to_solid].set(SOLID)
-        return sigmas, epsilons, dT_update, phase
+        return sigmas, epsilons, dT_quad, phase
 
     def set_params(self, params):
+        """Override base class method.
+        """
         self.internal_vars['laplace'] = params
 
 
-dt = 2*1e-6
-
-POWDER = 0
-LIQUID = 1
-SOLID = 2 
-
-# Inconel 625 material
-# All units in SI standard
-vel = 0.5 # laser scanning velocity
-T0 = 300. # ambient temperature
+Cp = 588. # heat capacity
+rho = 8440. # material density
+k = 15. # thermal conductivity
 Tl = 1623 # liquidus temperature
-h = 100. # heat convection coefficient
-rb = 0.05e-3 # laser beam size
+h = 100. # heat convection coefficien
 eta = 0.25 # absorption rate
-P = 50. # laser power
 SB_constant = 5.67e-8 # Stefan-Boltzmann constant
 emissivity = 0.3 # emissivity
+T0 = 300. # ambient temperature
+POWDER = 0 # powder flag
+LIQUID = 1 # liquid flag
+SOLID = 2 # solid flag
+
+vel = 0.5 # laser scanning velocity
+rb = 0.05e-3 # laser beam size
+P = 50. # laser power
+
 ele_type = 'HEX8'
-vtk_dir = os.path.join(data_dir, 'vtk')
+cell_type = get_meshio_cell_type(ele_type)
 Nx, Ny, Nz = 50, 20, 5
 Lx, Ly, Lz = 0.5e-3, 0.2e-3, 0.05e-3 # domain size
 meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
-mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
-
-# Define boundaries
+mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
+ 
 def top(point):
     return np.isclose(point[2], Lz, atol=1e-5)
 
@@ -217,61 +227,48 @@ problem_u = Plasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info_u
 params_u = problem_u.internal_vars['laplace']
 sol_u = np.zeros((problem_u.num_total_nodes, problem_u.vec))
 
-# Clean folder
 files = glob.glob(os.path.join(vtk_dir, f'*'))
 for f in files:
     os.remove(f)
 
-# Save initial solution
 vtk_path = os.path.join(vtk_dir, f"u_{0:05d}.vtu")
 save_sol(problem_T, sol_T_old, vtk_path, point_infos=[('u', np.zeros((len(sol_T_old), 3)))], 
-                                         cell_infos=[('plastic', np.zeros(len(mesh.cells))),
+                                         cell_infos=[('f_plus', np.zeros(len(mesh.cells))),
+                                                     ('stress_xx', np.zeros(len(mesh.cells))),
                                                      ('phase', np.mean(params_u[-1][:, :, 0], axis=1))])
 
+dt = 2*1e-6
 laser_on_t = 0.5*Lx/vel
 simulation_t = 2*laser_on_t
-ts = np.arange(0., simulation_t + dt, dt)
+ts = np.arange(0., simulation_t, dt)
 for i in range(len(ts[1:])):
     laser_center = np.array([Lx*0.25 + vel*ts[i + 1], Ly/2., Lz])
-    print(f"\nStep {i + 1}, total step = {len(ts[1:])}, laser_x = {laser_center[0]}, Lx = {Lx}")
-    if ts[i + 1] >= laser_on_t:
-        print(f"### LASER TURNED OFF...")
+    switch = np.where(ts[i + 1] < laser_on_t, 1., 0.) # Turn off the laser after some time
+    print(f"\nStep {i + 1}, total step = {len(ts[1:])}, laser_x = {laser_center[0]}, Lx = {Lx}, laser ON = {ts[i + 1] < laser_on_t}")
 
-    switch = np.where(ts[i + 1] < laser_on_t, 1., 0.)
-
+    # Set parameter and solve for T
     problem_T.set_params([sol_T_old, laser_center, switch])
-    sol_T_new = solver(problem_T, use_petsc=False)
+    sol_T_new = solver(problem_T, use_petsc=False) # The flag use_petsc=False will use JAX solver - Good for GPU 
 
+    # Since mechanics problem is more expensive to solve, we may skip some steps of the thermal problem.
     if (i + 1) % 10 == 0:
-        # Sometimes T solution is smaller than T0=300K. This is a known problem with FEM for thermal problem. OK for now.
+        params_u = problem_u.update_dT_and_phase(sol_T_new - sol_T_old_for_u, sol_T_new, params_u)
 
-        T_new_modified = sol_T_new
-        T_new_modified = np.where(T_new_modified < T0, T0, T_new_modified)
-        T_new_modified = np.where(T_new_modified > Tl, Tl, T_new_modified)
-        T_old_modified = sol_T_old_for_u
-        T_old_modified = np.where(sol_T_old < T0, T0, T_old_modified)
-        T_old_modified = np.where(sol_T_old > Tl, Tl, T_old_modified)
-
-        dT = T_new_modified - T_old_modified
-        print(f"max dT = {np.max(dT)}")
-        params_u = problem_u.update_params(dT, sol_T_new, params_u)
-
-        # Solve for u solution.
+        # Set parameter and solve for u
         problem_u.set_params(params_u)
-        sol_u = solver(problem_u, initial_guess=sol_u, use_petsc=False)
+        sol_u = solver(problem_u, initial_guess=sol_u, use_petsc=False) 
 
-        # For plasticity problem, we need to update the total strain and stress for convenience of next step
         params_u, plastic_info = problem_u.update_stress_strain(sol_u, params_u) 
 
         # Check if plastic deformation occurs (with f_yield_vals > 0.)
-        print(f"max plastic_info = {np.max(plastic_info)}")
-    
-        # Update T solution
-        sol_T_old_for_u = sol_T_new
+        print(f"max f_plus = {np.max(plastic_info[0])}, max stress_xx = {np.max(plastic_info[1])}")
 
+        # Update T solution for u
+        sol_T_old_for_u = sol_T_new
         vtk_path = os.path.join(vtk_dir, f"u_{i + 1:05d}.vtu")
         save_sol(problem_T, sol_T_old, vtk_path, point_infos=[('u', sol_u)], 
-                                                 cell_infos=[('plastic', np.mean(plastic_info, axis=1)),
+                                                 cell_infos=[('f_plus', np.mean(plastic_info[0], axis=1)),
+                                                             ('stress_xx', np.mean(plastic_info[1], axis=1)),
                                                              ('phase', np.max(params_u[-1][:, :, 0], axis=1))])
     # Update T solution
     sol_T_old = sol_T_new

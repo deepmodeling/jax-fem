@@ -254,11 +254,16 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
         A_fn = get_A_fn(problem, use_petsc)
         return res_vec, A_fn
 
-    # TODO: detect np.nan and assert
     if linear:
         dofs = assign_bc(dofs, problem)
         res_vec, A_fn = newton_update_helper(dofs)
         dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc)
+
+
+        res_vec, A_fn = newton_update_helper(dofs)
+        res_val = np.linalg.norm(res_vec)
+        print(f"Linear solve, res l_2 = {res_val}")
+
     else:
         if initial_guess is None:
             res_vec, A_fn = newton_update_helper(dofs)
@@ -420,8 +425,9 @@ def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
     A_sp_aug = BCOO.from_scipy_sparse(A_sp_scipy_aug).sort_indices()
     # print(f"Aug - Global sparse matrix takes about {A_sp_aug.data.shape[0]*8*3/2**30} G memory to store.")
 
-    # TODO: Potential bug: Shouldn't this be problem.A_sp_scipy = A_sp_scipy_aug?
-    problem.A_sp_scipy_aug = A_sp_scipy_aug
+    # TODO: Potential bug
+    # Used only in jacobi_preconditioner
+    # problem.A_sp_scipy = A_sp_scipy_aug
 
     def compute_linearized_residual(dofs_aug):
         return A_sp_aug @ dofs_aug

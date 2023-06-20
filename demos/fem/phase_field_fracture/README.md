@@ -458,5 +458,3 @@ Results can be visualized with *ParaWiew*.
 [2] Xue, Tianju, Sigrid Adriaenssens, and Sheng Mao. "Mapped phase field method for brittle fracture." *Computer Methods in Applied Mechanics and Engineering* 385 (2021): 114046.
 
 [3] Miehe, Christian, and Matthias Lambrecht. "Algorithms for computation of stresses and elasticity moduli in terms of Seth–Hill's family of generalized strain tensors." *Communications in numerical methods in engineering* 17.5 (2001): 337-353.
-
-[3] https://mooseframework.inl.gov/source/materials/ComputeLinearElasticPFFractureStress.html

@@ -282,11 +282,11 @@ Plot of compliance versus design iterations:
 
 ## References
 
-[1] Bendsoe, Martin Philip, and Ole Sigmund. Topology optimization: theory, methods, and applications. Springer Science & Business Media, 2003.
+[1] Bendsoe, Martin Philip, and Ole Sigmund. *Topology optimization: theory, methods, and applications*. Springer Science & Business Media, 2003.
 
 [2] Svanberg, Krister. "The method of moving asymptotes—a new method for structural optimization." *International journal for numerical methods in engineering* 24.2 (1987): 359-373.
 
-[3] Xue, Tianju, et al. "JAX-FEM: A differentiable GPU-accelerated 3D finite element solver for automatic inverse design and mechanistic data science." Computer Physics Communications (2023): 108802.
+[3] Xue, Tianju, et al. "JAX-FEM: A differentiable GPU-accelerated 3D finite element solver for automatic inverse design and mechanistic data science." *Computer Physics Communications* (2023): 108802.
 
-[4] Chandrasekhar, Aaditya, Saketh Sridhara, and Krishnan Suresh. "Auto: a framework for automatic differentiation in topology optimization." Structural and Multidisciplinary Optimization 64.6 (2021): 4355-4365.
+[4] Chandrasekhar, Aaditya, Saketh Sridhara, and Krishnan Suresh. "Auto: a framework for automatic differentiation in topology optimization." *Structural and Multidisciplinary Optimization* 64.6 (2021): 4355-4365.
 

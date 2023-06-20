@@ -451,4 +451,4 @@ Results can be visualized with *ParaWiew*.
 
 ## References
 
-[1] Liao, Shuheng, et al. "Efficient GPU-accelerated thermomechanical solver for residual stress prediction in additive manufacturing." Computational Mechanics 71.5 (2023): 879-893.
+[1] Liao, Shuheng, et al. "Efficient GPU-accelerated thermomechanical solver for residual stress prediction in additive manufacturing." *Computational Mechanics* 71.5 (2023): 879-893.

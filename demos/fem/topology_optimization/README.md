@@ -171,9 +171,9 @@ Define forward problem:
 problem = Elasticity(mesh, vec=2, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info)
 ```
 
-Apply the automatic differentiation wrapper. The flag `linear` and `use_petsc` specifies how the forward problem (could be linear or nonlinear) should be solved. The backward adjoint problem is always linear. This is a critical step that makes the problem solver differentiable.
+Apply the automatic differentiation wrapper. The flag `use_petsc` specifies how the forward problem (could be linear or nonlinear) and the backward adjoint problem (always linear) should be solved. This is a critical step that makes the problem solver differentiable.
 ```python
-fwd_pred = ad_wrapper(problem, linear=True, use_petsc=True)
+fwd_pred = ad_wrapper(problem, linear=True, use_petsc=False)
 ```
 
 Define the objective function $\widehat{J}(\boldsymbol{\Theta})$. In the following, `sol = fwd_pred(params)` basically says $\boldsymbol{U}=\boldsymbol{U}(\boldsymbol{\Theta})$.

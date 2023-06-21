@@ -92,7 +92,7 @@ dirichlet_bc_info = [[fixed_location]*2, [0, 1], [dirichlet_val]*2]
 neumann_bc_info = [[load_location], [neumann_val]]
 problem = Elasticity(mesh, vec=2, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info)
 
-fwd_pred = ad_wrapper(problem, linear=True, use_petsc=True)
+fwd_pred = ad_wrapper(problem, linear=True, use_petsc=False)
 
 def J_total(params):
     """J(u(theta), theta)

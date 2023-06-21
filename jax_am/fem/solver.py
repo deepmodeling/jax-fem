@@ -744,7 +744,7 @@ def implicit_vjp(problem, sol, params, v, use_petsc):
         #     A_transpose.zeroRows(row_inds)
         # v = assign_zeros_bc(v, problem)
 
-        adjoint = petsc_solve(A_transpose, v.reshape(-1), 'bcgsl', 'ilu')
+        adjoint = petsc_solve(A_transpose, v.reshape(-1), 'minres', 'ilu')
 
     else:
         adjoint_linear_fn = get_vjp_contraint_fn_dofs(sol.reshape(-1))

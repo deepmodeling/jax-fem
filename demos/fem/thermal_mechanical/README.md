@@ -161,7 +161,7 @@ class Thermal(FEM):
         self.neumann_value_fns[0] = get_thermal_neumann_top(laser_center, switch)
 ```
 
-Define the mechanics problem. Generally, *JAX-FEM* handles $\int_{\Omega}`\boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N): \nabla \delta \boldsymbol{u}` \nobreakspace \nobreakspace \textrm{d}x$ in the weak form. Here, we have $`\boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N)=\boldsymbol{\sigma}^n (\nabla \boldsymbol{u}^n, \boldsymbol{\varepsilon}^{n-1}, \boldsymbol{\sigma}^{n-1}, \Delta T^n, \zeta^n)`$ with $\zeta^n$ being the phase state variable. This is reflected by the function `stress_return_map`.
+Define the mechanics problem. Generally, *JAX-FEM* handles $`\int_{\Omega}`\boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N): \nabla \delta \boldsymbol{u}` \nobreakspace \nobreakspace \textrm{d}x`$ in the weak form. Here, we have $`\boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N)=\boldsymbol{\sigma}^n (\nabla \boldsymbol{u}^n, \boldsymbol{\varepsilon}^{n-1}, \boldsymbol{\sigma}^{n-1}, \Delta T^n, \zeta^n)`$ with $\zeta^n$ being the phase state variable. This is reflected by the function `stress_return_map`.
 ```python
 class Plasticity(FEM):
     """We solve the following equation (weak form of FEM):

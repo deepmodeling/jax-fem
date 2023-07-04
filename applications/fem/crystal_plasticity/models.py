@@ -166,6 +166,8 @@ class CrystalPlasticity(Mechanics):
                 return Fp_inv_new, slip_resistance_new, slip_new, Fe, F
 
             def implicit_residual(x, y):
+                # TODO: unflatten_fn_params may only need to perform on u_grad
+                # Modification may increase computational speed
                 u_grad, Fp_inv_old, slip_resistance_old, slip_old, rot_mat = unflatten_fn_params(x)
                 S = unflatten_fn(y)
                 _, _, _, Fe, _ = helper(u_grad, Fp_inv_old, slip_resistance_old, slip_old, rot_mat, S)

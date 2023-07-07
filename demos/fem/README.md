@@ -27,7 +27,7 @@ As developers, we are actively using _JAX-FEM_ to solve inverse problems (or PDE
 
 Since _JAX_ itself is a framework for machine learning, _JAX-FEM_ trivially has access to the ecosystem of _JAX_. If you have a material model represented by a neural network, and you want to deploy that model into the computation of FEM, _JAX-FEM_ will be a perfect tool. No need to hard code the neural network coefficients into a Fortran file and run _Abaqus_!
 
-## Heads up! 
+## Heads Up! 
 
 1. **Kernels**. _JAX-FEM_ uses kernels to handle different terms in the FEM weak form, a concept similar as in [_MOOSE_](https://mooseframework.inl.gov/syntax/Kernels/). Currently, we only handle the "Laplace kernel" $\int_{\Omega} f(\nabla u)\cdot \nabla v$ and the "mass kernel" $\int_{\Omega}h(u)v$ in the weak form. This covers solving typical second-order elliptic equations like those occurring in quasi-static solid mechanics, or time-dependent parabolic problems like a heat equation. At this stage, we do not have the intention to support other kernels, e.g., no support for fluid mechanics problems that need to solve the Navier-Stokes equation with advection terms.
 

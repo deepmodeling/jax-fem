@@ -91,8 +91,14 @@ def problem():
     def front(point):
         return np.isclose(point[1], 0., atol=1e-3)
 
+    def back(point):
+        return np.isclose(point[1], Ly, atol=1e-3)
+
     def bottom(point):
         return np.isclose(point[2], 0., atol=1e-3)
+
+    def top(point):
+        return np.isclose(point[2], Lz, atol=1e-3)
 
 
     dirichlet_bc_info = [[corner, corner, corner2, left, right], 
@@ -100,9 +106,9 @@ def problem():
                          [zero_dirichlet_val, zero_dirichlet_val, zero_dirichlet_val, zero_dirichlet_val, get_dirichlet_top(disps[0])]]
 
 
-    # dirichlet_bc_info = [[left, front, bottom, right], 
-    #                      [0, 1, 2, 0], 
-    #                      [zero_dirichlet_val, zero_dirichlet_val, zero_dirichlet_val, get_dirichlet_top(disps[0])]]
+    # dirichlet_bc_info = [[left, front, back, bottom, top, right], 
+    #                      [0, 1, 1, 2, 2, 0], 
+    #                      [zero_dirichlet_val]*5 + [get_dirichlet_top(disps[0])]]
 
 
     # dirichlet_bc_info = [[left, left, left, right, right, right], 
@@ -125,7 +131,7 @@ def problem():
         problem.set_params(params)
 
         # sol = solver(problem, use_petsc=True)
-        sol = solver(problem, initial_guess=sol, use_petsc=True)   
+        sol = solver(problem, initial_guess=sol, use_petsc=False)   
 
         print(f"Computing stress...")
         sigma_cell_data = problem.compute_avg_stress(sol, params)[:, 0, 0]

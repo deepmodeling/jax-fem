@@ -11,7 +11,7 @@ from jax_am.fem.solver import solver
 from jax_am.fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
 from jax_am.fem.utils import save_sol
 
-from jax_am.phase_field.utils import make_video
+from jax_am.common import make_video
 
 from applications.fem.crystal_plasticity.models import CrystalPlasticity
 

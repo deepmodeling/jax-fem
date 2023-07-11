@@ -31,14 +31,14 @@ input_path = os.path.join(os.path.dirname(__file__), 'input')
 def style_transfer(problem, rho_initial):
     model_fp = os.path.join(input_path, "models/vgg19_weights_tf_dim_ordering_tf_kernels_notop.h5")
 
-    content_fp = os.path.join(input_path, "styles/tree.png")
-    style_fp = os.path.join(input_path, "styles/tree.png")
+    # content_fp = os.path.join(input_path, "styles/tree.png")
+    # style_fp = os.path.join(input_path, "styles/tree.png")
 
-    # content_fp = "input/styles/square.png"
-    # style_fp = "input/styles/square.png"
+    content_fp = os.path.join(input_path, "styles/circles.png")
+    style_fp = os.path.join(input_path, "styles/circles.png")
 
-    content_image = load_image(content_fp, "content", args.image_size, reverse=True)
-    style_image = load_image(style_fp, "style", args.image_size, reverse=True)
+    content_image = load_image(content_fp, "content", args.image_size, reverse=False)
+    style_image = load_image(style_fp, "style", args.image_size, reverse=False)
 
     style_image_grey = np.repeat(np.mean(style_image, axis=1)[:, None, :, :], 3, axis=1)
 
@@ -47,11 +47,11 @@ def style_transfer(problem, rho_initial):
     #                       [0., 0., 1.], 
     #                       [1., 0., 1.]])
     # debug_img = np.repeat(debug_img[None, None, :, :], 3, axis=1)
-    # checkpoint(debug_img, args.out_dir, f"debug.jpg", reverse=False)
+    # checkpoint(debug_img, os.path.join(args.output_path, 'jpg'), f"debug.jpg", reverse=False)
 
  
 
-    checkpoint(style_image_grey, args.out_dir, f"style_basis.jpg", reverse=True)
+    checkpoint(style_image_grey, os.path.join(args.output_path, 'jpg'), f"style_basis.jpg", reverse=True)
 
     weights = {"content_loss": args.content_weight,
                "style_loss": args.style_weight}
@@ -71,15 +71,11 @@ def style_transfer(problem, rho_initial):
     def smooth_loss(image_theta):
         image_theta = np.mean(image_theta, axis=(0, 1))
         
-        # x_grad_loss = (image_theta[:-2, 1:-1] + image_theta[2:, 1:-1] - 2*image_theta[1:-1, 1:-1])**2
-        # y_grad_loss = (image_theta[1:-1, :-2] + image_theta[1:-1, 2:] - 2*image_theta[1:-1, 1:-1])**2
-        # grad_loss = np.sum((x_grad_loss + y_grad_loss)**1.25)
-        # alpha = 0.1
-        # result = alpha*grad_loss
-
-        # penalty = np.sum(image_theta*(1 - image_theta))
-        # alpha = 1e-3
-        # result = alpha*penalty
+        x_grad_loss = (image_theta[:-2, 1:-1] + image_theta[2:, 1:-1] - 2*image_theta[1:-1, 1:-1])**2
+        y_grad_loss = (image_theta[1:-1, :-2] + image_theta[1:-1, 2:] - 2*image_theta[1:-1, 1:-1])**2
+        grad_loss = np.sum((x_grad_loss + y_grad_loss)**1.25)
+        alpha = 0.1
+        result = alpha*grad_loss
 
         result = 0.
 
@@ -164,7 +160,7 @@ def style_transfer(problem, rho_initial):
         print(f"{bcolors.HEADER}Iteration: {step} Content loss: {c_loss:.4f} Style loss: {s_loss:.4f} Smooth loss: {g_loss:.4f}{bcolors.ENDC}")
 
         if step % args.save_image_every == 0:
-            checkpoint(image_theta, args.out_dir, f"styled_it{step:03d}.jpg", reverse=True)
+            checkpoint(image_theta, os.path.join(args.output_path, 'jpg'), f"styled_it{step:03d}.jpg", reverse=True)
 
         config.update("jax_enable_x64", True)
 

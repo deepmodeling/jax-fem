@@ -1,5 +1,5 @@
 import argparse
-
+import os
 
 parser = argparse.ArgumentParser()
 parser.parse_args()
@@ -13,7 +13,8 @@ parser.add_argument("--save_image_every", type=int, default=1, help="Saves the i
 parser.add_argument("--content_weight", type=float, default=1., help="Content loss weight.")
 parser.add_argument("--style_weight", type=float, default=1., help="Style loss weight.")
 
-parser.add_argument("--out_dir", type=str, default="output/jpg", help="Output directory to save the styled images to.")
+output_path = os.path.join(os.path.dirname(__file__), 'output') 
+parser.add_argument("--output_path", type=str, default=output_path, help="Output directory to save the styled images to.")
 # parser.add_argument("--content_layers", default=['conv_4'], 
 #     help="Names of network layers for which to capture content loss.")
 parser.add_argument("--content_layers", default={"conv_14": 0.1}, 
@@ -21,6 +22,25 @@ parser.add_argument("--content_layers", default={"conv_14": 0.1},
 
 parser.add_argument("--style_layers", default={"conv_3": 1e1, "conv_5": 1e1}, 
     help="Names of network layers for which to capture style loss.")
+
+
+# parser.add_argument("--style_layers", default={"conv_1": 1, 
+#                                                "conv_2": 1, 
+#                                                "conv_3": 1, 
+#                                                "conv_4": 1, 
+#                                                "conv_5": 1,
+#                                                "conv_6": 1,
+#                                                "conv_7": 1,
+#                                                "conv_8": 1,
+#                                                "conv_9": 1,
+#                                                "conv_10": 1,
+#                                                "conv_11": 1,
+#                                                "conv_12": 1,
+#                                                "conv_13": 1,
+#                                                "conv_14": 1,
+#                                                "conv_15": 1,
+#                                                "conv_16": 1},
+#     help="Names of network layers for which to capture style loss.")
 
 parser.add_argument("--Lx", type=float, default=1., help="Length of domain.")
 parser.add_argument("--Ly", type=float, default=1., help="Width of domain.")

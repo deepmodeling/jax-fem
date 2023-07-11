@@ -127,42 +127,15 @@ output_sol.counter = 0
 
 vf = 0.3
 rho_ini = vf*np.ones((len(problem.flex_inds), 1))
-optimizationParams = {'maxIters':201, 'movelimit':0.1}
-numConstraints = 2
+optimizationParams = {'maxIters':11, 'movelimit':0.1}
+numConstraints = 1
 
 config.update("jax_enable_x64", False)
 style_value_and_grad, initial_loss = style_transfer(problem, rho_ini)
 config.update("jax_enable_x64", True)
 
  
-# def objectiveHandle(rho):
-#     """MMA solver requires (J, dJ) as inputs
-#     J has shape ()
-#     dJ has shape (...) = rho.shape
-#     """
-#     J_to, dJ_to = jax.value_and_grad(J_total)(rho)
-#     J_style, dJ_style = style_value_and_grad(rho, output_sol.counter)
-
-#     J = J_to + J_style
-#     dJ = dJ_to + dJ_style
-
-#     output_sol(rho, J_to)
-#     return J, dJ
-
-# def consHandle(rho, epoch):
-#     """MMA solver requires (c, dc) as inputs
-#     c should have shape (numConstraints,)
-#     gradc should have shape (numConstraints, ...)
-#     """
-#     def computeGlobalVolumeConstraint(rho):
-#         g = np.mean(rho)/vf - 1.
-#         return g
-#     c, gradc = jax.value_and_grad(computeGlobalVolumeConstraint)(rho)
-#     c, gradc = c.reshape((1,)), gradc[None, ...]
-#     return c, gradc
-
-
-def objectiveHandle(rho):
+def objectiveHandleCompliance(rho):
     """MMA solver requires (J, dJ) as inputs
     J has shape ()
     dJ has shape (...) = rho.shape
@@ -170,6 +143,16 @@ def objectiveHandle(rho):
     J_to, dJ_to = jax.value_and_grad(J_total)(rho)
     output_sol(rho, J_to)
     return J_to, dJ_to
+
+def objectiveHandleStyle(rho):
+    """MMA solver requires (J, dJ) as inputs
+    J has shape ()
+    dJ has shape (...) = rho.shape
+    """
+    J_style, dJ_style = style_value_and_grad(rho, output_sol.counter)
+    output_sol(rho, J_style)
+    return J_style, dJ_style
+
 
 def consHandle(rho, epoch):
     """MMA solver requires (c, dc) as inputs
@@ -179,36 +162,16 @@ def consHandle(rho, epoch):
     def computeGlobalVolumeConstraint(rho):
         g = np.mean(rho)/vf - 1.
         return g
-
-    s_ratio = np.maximum(2./3., 1. - epoch/100.)
-    print(f"s_ratio = {s_ratio}")
-    s_max = s_ratio * initial_loss
-
-    Js, dJ_s = style_value_and_grad(rho, output_sol.counter)
-
-
-
-
-    cs, gradc_s = Js/s_max - 1, dJ_s/s_max
-
-    if (epoch // 10) % 2 == 0:
-        cs = np.zeros_like(cs)
-        gradc_s = np.zeros_like(gradc_s)
-    
-    cv, gradc_v = jax.value_and_grad(computeGlobalVolumeConstraint)(rho)
-
-    c, gradc = np.array([cv, cs]), np.stack((gradc_v, gradc_s), axis=0)
+    c, gradc = jax.value_and_grad(computeGlobalVolumeConstraint)(rho)
+    c, gradc = c.reshape((1,)), gradc[None, ...]
     return c, gradc
 
 
-optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, numConstraints)
+rho = rho_ini
+for i in range(10):
+    rho = optimize(problem, rho, optimizationParams, objectiveHandleCompliance, consHandle, numConstraints)
+    rho = optimize(problem, rho, optimizationParams, objectiveHandleStyle, consHandle, numConstraints)
+
 print(f"As a reminder, compliance = {J_total(np.ones((len(problem.flex_inds), 1)))} for full material")
 
-obj = onp.array(outputs)
-plt.figure(figsize=(10, 8))
-plt.plot(onp.arange(len(obj)) + 1, obj, linestyle='-', linewidth=2, color='black')
-plt.xlabel(r"Optimization step", fontsize=20)
-plt.ylabel(r"Objective value", fontsize=20)
-plt.tick_params(labelsize=20)
-plt.tick_params(labelsize=20)
-plt.show()
+ 

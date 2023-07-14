@@ -10,10 +10,11 @@ import glob
 import matplotlib.pyplot as plt
 
 from jax_am.fem.core import FEM
-from jax_am.fem.solver import solver
+from jax_am.fem.solver import solver, DynamicRelaxSolve
 from jax_am.fem.utils import save_sol
 from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
+from applications.fem.forming.optimizer import external_solve
 
 def simulation():
     class Plasticity(FEM):
@@ -170,7 +171,10 @@ def simulation():
             return np.array([0., 0., -traction_z])
         return neumann_top
 
-    scales = 40*np.hstack((np.linspace(0., 1., 5), np.linspace(1, 0., 5)))
+    # scales = 40*np.hstack((np.linspace(0., 1., 5), np.linspace(1, 0., 5)))
+
+    scales = 50*np.hstack((np.linspace(0., 1., 5), np.linspace(1, 0., 5)))
+
 
     location_fns = [walls]*3
     value_fns = [dirichlet_val]*3
@@ -183,10 +187,29 @@ def simulation():
     sol = np.zeros(((problem.num_total_nodes, problem.vec)))
  
     int_vars = problem.internal_vars['laplace']
+
+    int_vars_initial = problem.internal_vars['laplace']
+
     for i, scale in enumerate(scales):
         print(f"\nStep {i} in {len(scales)}, scale = {scale}")
+
+
+        problem.set_params([int_vars_initial, scale])
+
+        if i == 4 or True:
+            sol = DynamicRelaxSolve(problem, sol, tol=0.1)
+        else:
+            sol = solver(problem, initial_guess=None, use_petsc=False)
+
+
         problem.set_params([int_vars, scale])
+
+
+        # sol = external_solve(problem, sol, [int_vars, scale])
+
         sol = solver(problem, initial_guess=sol, use_petsc=False)
+
+
         int_vars_copy = int_vars
         int_vars = problem.update_int_vars_gp(sol, int_vars)
         sigmas = problem.compute_stress(sol, int_vars_copy).mean(axis=1)

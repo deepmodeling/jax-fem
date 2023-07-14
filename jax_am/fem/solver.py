@@ -510,12 +510,13 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
 ################################################################################
 # Dynamic relaxation solver
 
-def assembleVec(problem, dofs):
-    res_fn = get_flatten_fn(problem.compute_residual, problem)
-    res_vec = res_fn(dofs)
-    res_vec = assign_zeros_bc(res_vec, problem)
-    res_vec = onp.array(res_vec)
-    return res_vec
+# @partial(jax.jit, static_argnums=(0,))
+# def assembleVec(problem, dofs):
+#     res_fn = get_flatten_fn(problem.compute_residual, problem)
+#     res_vec = res_fn(dofs)
+#     res_vec = assign_zeros_bc(res_vec, problem)
+#     res_vec = onp.array(res_vec)
+#     return res_vec
 
 
 def assembleCSR(problem, dofs):
@@ -594,7 +595,19 @@ def DynamicRelaxSolve(problem, initial_guess,
     #initialize the M, eps, R_old arrays
     eps, M, R, R_old = onp.zeros(N), onp.zeros(N), onp.zeros(N), onp.zeros(N)
  
-    R = assembleVec(problem, dofs)
+
+    @jax.jit
+    def assembleVec(dofs):
+        res_fn = get_flatten_fn(problem.compute_residual, problem)
+        res_vec = res_fn(dofs)
+        res_vec = assign_zeros_bc(res_vec, problem)
+        return res_vec
+
+
+
+    # R = assembleVec(problem, dofs)
+    R = onp.array(assembleVec(dofs))
+
     KCSR = assembleCSR(problem, dofs)
 
     M[:] = h_tilde*h_tilde/4. * onp.array(onp.absolute(KCSR).sum(axis = 1)).squeeze()
@@ -622,7 +635,9 @@ def DynamicRelaxSolve(problem, initial_guess,
         q[:] += h*qdot; dofs = np.array(q)
 
         # assembleVec(F, bcs, RVec, R)
-        R = assembleVec(problem, dofs)
+        # R = assembleVec(problem, dofs)
+
+        R = onp.array(assembleVec(dofs))
 
         nIters += 1; iKMat += 1; error = onp.max(onp.absolute(R))
         

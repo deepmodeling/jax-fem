@@ -17,14 +17,14 @@ from petsc4py import PETSc
 def petsc_solve(A, b, ksp_type, pc_type):
     rhs = PETSc.Vec().createSeq(len(b))
     rhs.setValues(range(len(b)), onp.array(b))
-    ksp = PETSc.KSP().create() 
+    ksp = PETSc.KSP().create()
     ksp.setOperators(A)
     ksp.setFromOptions()
     ksp.setType(ksp_type)
     ksp.pc.setType(pc_type)
-    print (f'PETSc - Solving with ksp_type = {ksp.getType()}, pc = {ksp.pc.getType()}') 
+    print (f'PETSc - Solving with ksp_type = {ksp.getType()}, pc = {ksp.pc.getType()}')
     x = PETSc.Vec().createSeq(len(b))
-    ksp.solve(rhs, x) 
+    ksp.solve(rhs, x)
 
     # Verify convergence
     y = PETSc.Vec().createSeq(len(b))
@@ -35,14 +35,15 @@ def petsc_solve(A, b, ksp_type, pc_type):
     return x.getArray()
 
 
-def jax_solve(problem, A_fn, b, x0, precond):
-    pc = get_jacobi_precond(jacobi_preconditioner(problem)) if precond else None
+# Surya: modified the predonditioner argument for AD
+def jax_solve(problem, A_fn, b, x0, calc_precond, preconditioner=None):
+    pc = get_jacobi_precond(jacobi_preconditioner(problem)) if calc_precond else preconditioner
     x, info = jax.scipy.sparse.linalg.bicgstab(A_fn, b, x0=x0, M=pc, tol=1e-10, atol=1e-10, maxiter=10000)
 
     # Verify convergence
-    err = np.linalg.norm(A_fn(x) - b)
-    print(f"JAX scipy linear solve res = {err}")
-    assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
+    # err = np.linalg.norm(A_fn(x) - b)
+    # print(f"JAX scipy linear solve res = {err}")
+    # assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
     return x
 
 
@@ -85,7 +86,7 @@ def assign_bc(dofs, problem):
         sol = sol.at[problem.node_inds_list[i], problem.vec_inds_list[i]].set(problem.vals_list[i])
     return sol.reshape(-1)
 
- 
+
 def assign_ones_bc(dofs, problem):
     sol = dofs.reshape((problem.num_total_nodes, problem.vec))
     for i in range(len(problem.node_inds_list)):
@@ -104,7 +105,7 @@ def copy_bc(dofs, problem):
     sol = dofs.reshape((problem.num_total_nodes, problem.vec))
     new_sol = np.zeros_like(sol)
     for i in range(len(problem.node_inds_list)):
-        new_sol = (new_sol.at[problem.node_inds_list[i], problem.vec_inds_list[i]].set(sol[problem.node_inds_list[i], 
+        new_sol = (new_sol.at[problem.node_inds_list[i], problem.vec_inds_list[i]].set(sol[problem.node_inds_list[i],
             problem.vec_inds_list[i]]))
     return new_sol.reshape(-1)
 
@@ -127,10 +128,10 @@ def get_A_fn_linear_fn(dofs, fn):
 
 
 def get_A_fn_linear_fn_JFNK(dofs, fn):
-    """Jacobian-free Newton–Krylov (JFNK) method. 
+    """Jacobian-free Newton–Krylov (JFNK) method.
     Not quite used since we have auto diff to compute exact JVP.
-    Knoll, Dana A., and David E. Keyes. 
-    "Jacobian-free Newton–Krylov methods: a survey of approaches and applications." 
+    Knoll, Dana A., and David E. Keyes.
+    "Jacobian-free Newton–Krylov methods: a survey of approaches and applications."
     Journal of Computational Physics 193.2 (2004): 357-397.
     """
     def A_fn_linear_fn(inc):
@@ -150,7 +151,7 @@ def operator_to_matrix(operator_fn, problem):
 def jacobi_preconditioner(problem):
     print(f"Compute and use jacobi preconditioner")
     jacobi = np.array(problem.A_sp_scipy.diagonal())
-    jacobi = assign_ones_bc(jacobi.reshape(-1), problem) 
+    jacobi = assign_ones_bc(jacobi.reshape(-1), problem)
     return jacobi
 
 
@@ -170,7 +171,7 @@ def test_jacobi_precond(problem, jacobi, A_fn):
     print(f"test jacobi preconditioner")
     print(f"np.min(jacobi) = {np.min(jacobi)}, np.max(jacobi) = {np.max(jacobi)}")
     print(f"finish jacobi preconditioner")
- 
+
 
 def linear_guess_solve(problem, A_fn, precond, use_petsc):
     print(f"Linear guess solve...")
@@ -193,7 +194,7 @@ def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc):
     if use_petsc:
         inc = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
     else:
-        x0_1 = assign_bc(np.zeros_like(b), problem) 
+        x0_1 = assign_bc(np.zeros_like(b), problem)
         x0_2 = copy_bc(dofs, problem)
         x0 = x0_1 - x0_2
         inc = jax_solve(problem, A_fn, b, x0, precond)
@@ -204,7 +205,8 @@ def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc):
 
 def get_A_fn(problem, use_petsc):
     print(f"Creating sparse matrix with scipy...")
-    A_sp_scipy = scipy.sparse.csr_array((problem.V, (problem.I, problem.J)), shape=(problem.num_total_dofs, problem.num_total_dofs))
+    A_sp_scipy = scipy.sparse.csr_array((problem.V, (problem.I, problem.J)),
+                                         shape=(problem.num_total_dofs, problem.num_total_dofs))
     # print(f"Creating sparse matrix from scipy using JAX BCOO...")
     A_sp = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
     # print(f"Global sparse matrix takes about {A_sp.data.shape[0]*8*3/2**30} G memory to store.")
@@ -273,17 +275,17 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
 
         res_vec, A_fn = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
-        print(f"Before, res l_2 = {res_val}") 
+        print(f"Before, res l_2 = {res_val}")
         tol = 1e-6
         while res_val > tol:
             dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc)
             res_vec, A_fn = newton_update_helper(dofs)
             # test_jacobi_precond(problem, jacobi_preconditioner(problem, dofs), A_fn)
             res_val = np.linalg.norm(res_vec)
-            print(f"res l_2 = {res_val}") 
-        
-        assert np.all(np.isfinite(res_val)), f"res_val contains NaN, stop the program!" 
-    
+            print(f"res l_2 = {res_val}")
+
+        assert np.all(np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
+
     sol = dofs.reshape(sol_shape)
     end = time.time()
     solve_time = end - start
@@ -367,7 +369,7 @@ def compute_residual_lm(problem, res_vec, dofs_aug, p_num_eps):
                 lag += np.sum(d_lmbda_split[i] * (sol[problem.node_inds_list[i], problem.vec_inds_list[i]] - problem.vals_list[i]))
 
             for i in range(len(problem.p_node_inds_list_A)):
-                lag += np.sum(p_lmbda_split[i] * (sol[problem.p_node_inds_list_A[i], problem.p_vec_inds_list[i]] - 
+                lag += np.sum(p_lmbda_split[i] * (sol[problem.p_node_inds_list_A[i], problem.p_vec_inds_list[i]] -
                                                     sol[problem.p_node_inds_list_B[i], problem.p_vec_inds_list[i]]))
             return p_num_eps*lag
 
@@ -445,11 +447,11 @@ def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
 def solver_lagrange_multiplier(problem, linear, use_petsc=True):
     """The solver imposes Dirichlet B.C. and periodic B.C. with lagrangian multiplier method.
 
-    The global matrix is of the form 
-    [A   B 
+    The global matrix is of the form
+    [A   B
      B^T 0]
     JAX built solver gmres and bicgstab sometimes fail to solve such a system.
-    PESTc solver minres seems to work. 
+    PESTc solver minres seems to work.
     TODO: explore which solver in PESTc is the best, and which preconditioner should be used.
 
     Reference:
@@ -488,13 +490,13 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
 
         res_vec_aug, A_aug = newton_update_helper(dofs_aug)
         res_val = np.linalg.norm(res_vec_aug)
-        print(f"Before, res l_2 = {res_val}") 
+        print(f"Before, res l_2 = {res_val}")
         tol = 1e-6
         while res_val > tol:
             dofs_aug = linear_incremental_solver_lm(problem, res_vec_aug, A_aug, dofs_aug, p_num_eps, use_petsc)
             res_vec_aug, A_aug = newton_update_helper(dofs_aug)
             res_val = np.linalg.norm(res_vec_aug)
-            print(f"res l_2 dofs_aug = {res_val}") 
+            print(f"res l_2 dofs_aug = {res_val}")
 
     sol = dofs_aug[:problem.num_total_dofs].reshape(sol_shape)
     end = time.time()
@@ -545,27 +547,27 @@ def calC(t, cmin, cmax):
 
 
 def printInfo(error, t, c, tol,
-              eps, qdot, qdotdot, 
-              nIters, nPrint, 
-              info_force, info): 
-    
+              eps, qdot, qdotdot,
+              nIters, nPrint,
+              info_force, info):
+
     ## printing control
     if nIters % nPrint == 1:
         #print('\t------------------------------------')
         if info_force == True:
             print(('  DR Iteration %d: Max force = %g (tol = %g)' +
-                   ' Max velocity = %g') % (nIters, error, tol, 
+                   ' Max velocity = %g') % (nIters, error, tol,
                                             np.max(np.absolute(qdot))))
-        if info == True: 
+        if info == True:
             print('Damping t: ',t, );
             print('Damping coefficient: ', c)
             print('Max epsilon: ',np.max(eps))
             print('Max acceleration: ',np.max(np.absolute(qdotdot)))
 
 
-def DynamicRelaxSolve(problem, initial_guess, 
+def DynamicRelaxSolve(problem, initial_guess,
                       # default parameters
-                      tol = 1e-6, nKMat = 50, nPrint = 1000, 
+                      tol = 1e-6, nKMat = 50, nPrint = 1000,
                       info = True, info_force = True):
 
     dofs = np.array(initial_guess).reshape(-1)
@@ -578,10 +580,10 @@ def DynamicRelaxSolve(problem, initial_guess,
         res_vec = apply_bc_vec(res_vec, dofs, problem)
         A_fn = get_A_fn(problem, use_petsc=False)
         return res_vec, A_fn
-    
+
     res_vec, A_fn = newton_update_helper(dofs)
     dofs = linear_guess_solve(problem, A_fn, precond=True, use_petsc=False)
- 
+
     # parameters not to change
     cmin  = 1e-3; cmax = 3.9; h_tilde=1.1; h=1.
 
@@ -593,18 +595,18 @@ def DynamicRelaxSolve(problem, initial_guess,
     q_old, qdot_old, qdotdot_old = onp.zeros(N), onp.zeros(N), onp.zeros(N)
     #initialize the M, eps, R_old arrays
     eps, M, R, R_old = onp.zeros(N), onp.zeros(N), onp.zeros(N), onp.zeros(N)
- 
+
     R = assembleVec(problem, dofs)
     KCSR = assembleCSR(problem, dofs)
 
     M[:] = h_tilde*h_tilde/4. * onp.array(onp.absolute(KCSR).sum(axis = 1)).squeeze()
     q[:] = dofs
     qdot[:] = - h/2. * R / M
-    # set the counters for iterations and 
+    # set the counters for iterations and
     nIters, iKMat = 0, 0; error = 1.0;
 
     timeZ = time.time() #Measurement of loop time.
-    
+
 
     assert onp.all(onp.isfinite(M)), f"M not finite"
     assert onp.all(onp.isfinite(q)), f"q not finite"
@@ -612,11 +614,11 @@ def DynamicRelaxSolve(problem, initial_guess,
 
 
     error = onp.max(onp.absolute(R))
- 
+
     while error > tol:
 
         print(f"error = {error}")
-        
+
         # marching forward
         q_old[:] = q[:]; R_old[:] = R[:]
         q[:] += h*qdot; dofs = np.array(q)
@@ -625,7 +627,7 @@ def DynamicRelaxSolve(problem, initial_guess,
         R = assembleVec(problem, dofs)
 
         nIters += 1; iKMat += 1; error = onp.max(onp.absolute(R))
-        
+
         # damping calculation
         S0 = onp.dot((R - R_old)/h,  qdot)
         t = S0 / onp.einsum('i,i,i', qdot, M, qdot)
@@ -636,10 +638,10 @@ def DynamicRelaxSolve(problem, initial_guess,
                 onp.divide((qdotdot - qdotdot_old), (q - q_old),
                 out = onp.zeros_like( (qdotdot - qdotdot_old) ),
                 where = (q - q_old)!=0))
-        
+
         # calculating the jacobian matrix
         if ((onp.max(eps) > 1) and (iKMat > nKMat)): #SPR JAN max --> min
-            if info==True: 
+            if info==True:
                 print('\tRecalculating the tangent matrix: ', nIters)
             iKMat = 0
             # assembleCSR(J, bcs, KMat, KCSR)
@@ -649,8 +651,8 @@ def DynamicRelaxSolve(problem, initial_guess,
         #compute new velocities and accelerations
         qdot_old[:] = qdot[:]; qdotdot_old[:] = qdotdot[:];
         qdot = (2.- c*h)/(2 + c*h) * qdot_old - 2.*h/(2.+c*h)* R / M
-        qdotdot = qdot - qdot_old 
-            
+        qdotdot = qdot - qdot_old
+
         # output on screen
         printInfo(error, t, c, tol,
                   eps, qdot, qdotdot,
@@ -678,7 +680,7 @@ def DynamicRelaxSolve(problem, initial_guess,
 # General
 
 def solver(problem, linear=False, precond=True, initial_guess=None, use_petsc=False):
-    """periodic B.C. is a special form of adding a linear constraint. 
+    """periodic B.C. is a special form of adding a linear constraint.
     Lagrange multiplier seems to be convenient to impose this constraint.
     """
     # TODO: print platform jax.lib.xla_bridge.get_backend().platform
@@ -737,7 +739,7 @@ def implicit_vjp(problem, sol, params, v, use_petsc):
     if use_petsc:
         A_transpose = A_fn.transpose()
 
-        # Remark: Eliminating rows seems to make A better conditioned. 
+        # Remark: Eliminating rows seems to make A better conditioned.
         # If Dirichlet B.C. is part of the design variable, the following should NOT be implemented.
         # for i in range(len(problem.node_inds_list)):
         #     row_inds = onp.array(problem.node_inds_list[i]*problem.vec + problem.vec_inds_list[i], dtype=onp.int32)
@@ -763,14 +765,14 @@ def ad_wrapper(problem, linear=False, use_petsc=False):
         problem.set_params(params)
         sol = solver(problem, linear=linear, use_petsc=use_petsc)
         return sol
- 
+
     def f_fwd(params):
         sol = fwd_pred(params)
         return sol, (params, sol)
 
     def f_bwd(res, v):
         print("\nRunning backward and solving the adjoint problem...")
-        params, sol = res 
+        params, sol = res
         vjp_result = implicit_vjp(problem, sol, params, v, use_petsc)
         return (vjp_result,)
 

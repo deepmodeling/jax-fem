@@ -6,6 +6,8 @@ from functools import partial
 # https://stackoverflow.com/questions/7811247/how-to-fill-specific-positional-arguments-with-partial-in-python
 # ToDo: incorporate sparsity
 # Backward solve in custom_linear_solve ?
+# Wrap Petsc in pure_function
+
 
 def implicit_jvp_helper(problem, sol0, params0, params_dot0, use_petsc):
 
@@ -35,7 +37,7 @@ def implicit_jvp_helper(problem, sol0, params0, params_dot0, use_petsc):
 
     # Call a black-box solver
     if use_petsc:
-        # I may need to wrap teh petsc one in pure_callback ?
+        # I may need to wrap the petsc one in pure_callback ?
         petsc_solver_modified = lambda matvec, v : petsc_solve(matvec, v.reshape(-1),
                                                                 'minres', 'ilu')
         chosen_bb_solver = petsc_solver_modified

@@ -1,8 +1,7 @@
 import numpy as onp
 import jax
 import jax.numpy as np
-from jax.experimental.sparse import BCOO
-import scipy
+
 import sys
 import time
 import functools
@@ -11,7 +10,7 @@ from typing import Any, Callable, Optional, List, Union
 
 from jax_am.fem.generate_mesh import Mesh
 from jax_am.fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grads
-
+from jax_am.fem.autodiff_utils import jax_array_list_to_numpy_diff
 from jax.config import config
 config.update("jax_enable_x64", True)
 
@@ -21,7 +20,7 @@ onp.set_printoptions(threshold=sys.maxsize, linewidth=1000, suppress=True, preci
 @dataclass
 class FEM:
     """
-    Solving second-order elliptic PDE problems whose FEM weak form is 
+    Solving second-order elliptic PDE problems whose FEM weak form is
     (f(u_grad), v_grad) * dx - (traction, v) * ds - (body_force, v) * dx = 0,
     where u and v are trial and test functions, respectively, and f is a general function.
     This covers
@@ -38,7 +37,7 @@ class FEM:
         The mesh object stores points (coordinates) and cells (connectivity).
     vec : int
         The number of vector variable components of the solution.
-        E.g., a 3D displacement field has u_x, u_y and u_z components, so vec=3 
+        E.g., a 3D displacement field has u_x, u_y and u_z components, so vec=3
     dim : int
         The dimension of the problem.
     ele_type : str
@@ -47,7 +46,7 @@ class FEM:
         location_fns : List[Callable]
             Callable : a function that inputs a point and returns if the point satisfies the location condition
         vecs: List[int]
-            integer value must be in the range of 0 to vec - 1, 
+            integer value must be in the range of 0 to vec - 1,
             specifying which component of the (vector) variable to apply Dirichlet condition to
         value_fns : List[Callable]
             Callable : a function that inputs a point and returns the Dirichlet value
@@ -59,7 +58,7 @@ class FEM:
         mappings : List[Callable]
             Callable: function mapping a point from boundary A to boundary B
         vecs: List[int]
-            which component of the (vector) variable to apply periodic condition to 
+            which component of the (vector) variable to apply periodic condition to
     neumann_bc_info : [location_fns, value_fns]
         location_fns : List[Callable]
             Callable : location function for Neumann boundary
@@ -79,7 +78,7 @@ class FEM:
     vec: int
     dim: int
     ele_type: str = 'HEX8'
-    dirichlet_bc_info: Optional[List[Union[List[Callable], List[int], List[Callable]]]] = None 
+    dirichlet_bc_info: Optional[List[Union[List[Callable], List[int], List[Callable]]]] = None
     periodic_bc_info: Optional[List[Union[List[Callable], List[Callable], List[Callable], List[int]]]] = None
     neumann_bc_info: Optional[List[Union[List[Callable], List[Callable]]]] = None
     cauchy_bc_info: Optional[List[Union[List[Callable], List[Callable]]]] = None
@@ -131,11 +130,11 @@ class FEM:
         The gradient is w.r.t physical coordinates.
         See Hughes, Thomas JR. The finite element method: linear static and dynamic finite element analysis. Courier Corporation, 2012.
         Page 147, Eq. (3.9.3)
-        
+
         Returns
         -------
         shape_grads_physical : onp.ndarray
-            (num_cells, num_quads, num_nodes, dim)  
+            (num_cells, num_quads, num_nodes, dim)
         JxW : onp.ndarray
             (num_cells, num_quads)
         """
@@ -155,12 +154,12 @@ class FEM:
         """Face shape function gradients and JxW (for surface integral)
         Nanson's formula is used to map physical surface ingetral to reference domain
         Reference: https://en.wikiversity.org/wiki/Continuum_mechanics/Volume_change_and_area_change
-        
+
         Parameters
         ----------
         boundary_inds : List[onp.ndarray]
             (num_selected_faces, 2)
-        
+
         Returns
         -------
         face_shape_grads_physical : onp.ndarray
@@ -192,40 +191,40 @@ class FEM:
 
     def get_physical_quad_points(self):
         """Compute physical quadrature points
-        
+
         Returns
         -------
         physical_quad_points : onp.ndarray
-            (num_cells, num_quads, dim) 
+            (num_cells, num_quads, dim)
         """
         physical_coos = onp.take(self.points, self.cells, axis=0)
-        # (1, num_quads, num_nodes, 1) * (num_cells, 1, num_nodes, dim) -> (num_cells, num_quads, dim) 
+        # (1, num_quads, num_nodes, 1) * (num_cells, 1, num_nodes, dim) -> (num_cells, num_quads, dim)
         physical_quad_points = onp.sum(self.shape_vals[None, :, :, None] * physical_coos[:, None, :, :], axis=2)
         return physical_quad_points
 
     def get_physical_surface_quad_points(self, boundary_inds):
         """Compute physical quadrature points on the surface
-        
+
         Parameters
         ----------
         boundary_inds : List[onp.ndarray]
             ndarray shape: (num_selected_faces, 2)
-        
+
         Returns
         -------
         physical_surface_quad_points : ndarray
-            (num_selected_faces, num_face_quads, dim) 
+            (num_selected_faces, num_face_quads, dim)
         """
         physical_coos = onp.take(self.points, self.cells, axis=0)
         selected_coos = physical_coos[boundary_inds[:, 0]] # (num_selected_faces, num_nodes, dim)
-        selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)  
-        # (num_selected_faces, num_face_quads, num_nodes, 1) * (num_selected_faces, 1, num_nodes, dim) -> (num_selected_faces, num_face_quads, dim) 
+        selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)
+        # (num_selected_faces, num_face_quads, num_nodes, 1) * (num_selected_faces, 1, num_nodes, dim) -> (num_selected_faces, num_face_quads, dim)
         physical_surface_quad_points = onp.sum(selected_face_shape_vals[:, :, :, None] * selected_coos[:, None, :, :], axis=2)
         return physical_surface_quad_points
 
     def Dirichlet_boundary_conditions(self, dirichlet_bc_info):
-        """Indices and values for Dirichlet B.C. 
-        
+        """Indices and values for Dirichlet B.C.
+
         Parameters
         ----------
         dirichlet_bc_info : [location_fns, vecs, value_fns]
@@ -257,7 +256,7 @@ class FEM:
     def update_Dirichlet_boundary_conditions(self, dirichlet_bc_info):
         """Reset Dirichlet boundary conditions.
         Useful when a time-dependent problem is solved, and at each iteration the boundary condition needs to be updated.
-        
+
         Parameters
         ----------
         dirichlet_bc_info : [location_fns, vecs, value_fns]
@@ -295,14 +294,14 @@ class FEM:
         return p_node_inds_list_A, p_node_inds_list_B, p_vec_inds_list
 
     def get_boundary_conditions_inds(self, location_fns):
-        """Given location functions, compute which faces satisfy the condition. 
-        
+        """Given location functions, compute which faces satisfy the condition.
+
         Parameters
         ----------
         location_fns : List[Callable]
             Callable: a function that inputs a point (ndarray) and returns if the point satisfies the location condition
                       e.g., lambda x: np.isclose(x[0], 0.)
-        
+
         Returns
         -------
         boundary_inds_list : List[onp.ndarray]
@@ -350,8 +349,8 @@ class FEM:
                 v_vals = np.repeat(v_vals[:, :, :, None], self.vec, axis=-1) # (num_selected_faces, num_face_quads, num_nodes, vec)
                 subset_cells = np.take(self.cells, boundary_inds[:, 0], axis=0) # (num_selected_faces, num_nodes)
                 # (num_selected_faces, num_nodes, vec) -> (num_selected_faces*num_nodes, vec)
-                int_vals = np.sum(v_vals * traction[:, :, None, :] * nanson_scale[:, :, None, None], axis=1).reshape(-1, self.vec) 
-                integral = integral.at[subset_cells.reshape(-1)].add(int_vals)   
+                int_vals = np.sum(v_vals * traction[:, :, None, :] * nanson_scale[:, :, None, None], axis=1).reshape(-1, self.vec)
+                integral = integral.at[subset_cells.reshape(-1)].add(int_vals)
         return integral
 
     def compute_Neumann_boundary_inds(self):
@@ -373,26 +372,26 @@ class FEM:
         rhs = np.zeros((self.num_total_nodes, self.vec))
         if self.source_info is not None:
             body_force_fn = self.source_info
-            physical_quad_points = self.get_physical_quad_points() # (num_cells, num_quads, dim) 
-            body_force = jax.vmap(jax.vmap(body_force_fn))(physical_quad_points) # (num_cells, num_quads, vec) 
+            physical_quad_points = self.get_physical_quad_points() # (num_cells, num_quads, dim)
+            body_force = jax.vmap(jax.vmap(body_force_fn))(physical_quad_points) # (num_cells, num_quads, vec)
             assert len(body_force.shape) == 3
             v_vals = np.repeat(self.shape_vals[None, :, :, None], self.num_cells, axis=0) # (num_cells, num_quads, num_nodes, 1)
             v_vals = np.repeat(v_vals, self.vec, axis=-1) # (num_cells, num_quads, num_nodes, vec)
             # (num_cells, num_nodes, vec) -> (num_cells*num_nodes, vec)
-            rhs_vals = np.sum(v_vals * body_force[:, :, None, :] * self.JxW[:, :, None, None], axis=1).reshape(-1, self.vec) 
-            rhs = rhs.at[self.cells.reshape(-1)].add(rhs_vals) 
+            rhs_vals = np.sum(v_vals * body_force[:, :, None, :] * self.JxW[:, :, None, None], axis=1).reshape(-1, self.vec)
+            rhs = rhs.at[self.cells.reshape(-1)].add(rhs_vals)
         return rhs
 
     def compute_body_force_by_sol(self, sol, mass_map):
         """In the weak form, we have (old_solution, v) * dx, and this function computes this
-        
+
         Parameters
         ----------
         sol : np.DeviceArray
             (num_total_nodes, vec)
         mass_map : Callable
             Transformation on sol
-        
+
         Returns
         -------
         body_force : np.DeviceArray
@@ -403,17 +402,17 @@ class FEM:
         val = jax.vmap(mass_kernel)(cells_sol, self.JxW) # (num_cells, num_nodes, vec)
         val = val.reshape(-1, self.vec) # (num_cells*num_nodes, vec)
         body_force = np.zeros_like(sol)
-        body_force = body_force.at[self.cells.reshape(-1)].add(val) 
+        body_force = body_force.at[self.cells.reshape(-1)].add(val)
         return body_force
 
     def get_laplace_kernel(self, tensor_map):
         def laplace_kernel(cell_sol, cell_shape_grads, cell_v_grads_JxW, *cell_internal_vars):
             # (1, num_nodes, vec, 1) * (num_quads, num_nodes, 1, dim) -> (num_quads, num_nodes, vec, dim)
-            u_grads = cell_sol[None, :, :, None] * cell_shape_grads[:, :, None, :] 
+            u_grads = cell_sol[None, :, :, None] * cell_shape_grads[:, :, None, :]
             u_grads = np.sum(u_grads, axis=1) # (num_quads, vec, dim)
-            u_grads_reshape = u_grads.reshape(-1, self.vec, self.dim) # (num_quads, vec, dim) 
-            # (num_quads, vec, dim) 
-            u_physics = jax.vmap(tensor_map)(u_grads_reshape, *cell_internal_vars).reshape(u_grads.shape) 
+            u_grads_reshape = u_grads.reshape(-1, self.vec, self.dim) # (num_quads, vec, dim)
+            # (num_quads, vec, dim)
+            u_physics = jax.vmap(tensor_map)(u_grads_reshape, *cell_internal_vars).reshape(u_grads.shape)
             # (num_quads, num_nodes, vec, dim) -> (num_nodes, vec) -> (num_nodes, vec)
             val = np.sum(u_physics[:, None, :, :] * cell_v_grads_JxW, axis=(0, -1))
             return val
@@ -423,17 +422,17 @@ class FEM:
         def mass_kernel(cell_sol, cell_JxW, *cell_internal_vars):
             # (1, num_nodes, vec) * (num_quads, num_nodes, 1) -> (num_quads, num_nodes, vec) -> (num_quads, vec)
             u = np.sum(cell_sol[None, :, :] * self.shape_vals[:, :, None], axis=1)
-            u_physics = jax.vmap(mass_map)(u, *cell_internal_vars) # (num_quads, vec) 
+            u_physics = jax.vmap(mass_map)(u, *cell_internal_vars) # (num_quads, vec)
             # (num_quads, 1, vec) * (num_quads, num_nodes, 1) * (num_quads, 1, 1) -> (num_nodes, vec)
             val = np.sum(u_physics[:, None, :] * self.shape_vals[:, :, None] * cell_JxW[:, None, None], axis=0)
             return val
-        return mass_kernel    
+        return mass_kernel
 
     def get_cauchy_kernel(self, cauchy_map):
         def cauchy_kernel(cell_sol, face_shape_vals, face_nanson_scale):
-            # (1, num_nodes, vec) * (num_face_quads, num_nodes, 1) -> (num_face_quads, vec) 
+            # (1, num_nodes, vec) * (num_face_quads, num_nodes, 1) -> (num_face_quads, vec)
             u = np.sum(cell_sol[None, :, :] * face_shape_vals[:, :, None], axis=1)
-            u_physics = jax.vmap(cauchy_map)(u) # (num_face_quads, vec) 
+            u_physics = jax.vmap(cauchy_map)(u) # (num_face_quads, vec)
             # (num_face_quads, 1, vec) * (num_face_quads, num_nodes, 1) * (num_face_quads, 1, 1) -> (num_nodes, vec)
             val = np.sum(u_physics[:, None, :] * face_shape_vals[:, :, None] * face_nanson_scale[:, None, None], axis=0)
             return val
@@ -450,8 +449,9 @@ class FEM:
         else:
             laplace_internal_vars = ()
 
-        return [mass_internal_vars, laplace_internal_vars]        
+        return [mass_internal_vars, laplace_internal_vars]
 
+# Surya: Modified this code to be always differentiable
     def split_and_compute_cell(self, cells_sol, np_version, jac_flag, **internal_vars):
         def value_and_jacrev(f, x):
             y, pullback = jax.vjp(f, x)
@@ -478,7 +478,7 @@ class FEM:
                     laplace_val = laplace_kernel(cell_sol, cell_shape_grads, cell_v_grads_JxW, *cell_laplace_internal_vars)
                 else:
                     laplace_val = 0.
-                
+
                 return laplace_val + mass_val
 
             def kernel_jac(cell_sol, *args):
@@ -512,9 +512,14 @@ class FEM:
                 jacs.append(jac)
 
             # np_version set to jax.numpy allows for auto diff, but uses GPU memory
-            # np_version set to ordinary numpy saves GPU memory, but can't use auto diff 
-            values = np_version.vstack(values)
-            jacs = np_version.vstack(jacs)
+            if np_version.__name__ == 'jax.numpy':
+                values = np_version.vstack(values)
+                jacs = np_version.vstack(jacs)
+            else:
+                # np_version set to ordinary numpy saves GPU memory
+                values = jax_array_list_to_numpy_diff(values)
+                jacs = jax_array_list_to_numpy_diff(jacs)
+
             return values, jacs
         else:
             values = []
@@ -530,7 +535,7 @@ class FEM:
             return values
 
     def compute_face(self, cells_sol, np_version, jac_flag):
-        def get_kernel_fn_face(cauchy_map): 
+        def get_kernel_fn_face(cauchy_map):
             def kernel(cell_sol, face_shape_vals, face_nanson_scale):
                 cauchy_kernel = self.get_cauchy_kernel(cauchy_map)
                 val = cauchy_kernel(cell_sol, face_shape_vals, face_nanson_scale)
@@ -553,10 +558,10 @@ class FEM:
             kernel, kernel_jac = get_kernel_fn_face(value_fns[i])
             fn = kernel_jac if jac_flag else kernel
             vmap_fn = jax.jit(jax.vmap(fn))
-            val = vmap_fn(selected_cell_sols, selected_face_shape_vals, nanson_scale)   
+            val = vmap_fn(selected_cell_sols, selected_face_shape_vals, nanson_scale)
             values.append(val)
             selected_cells.append(self.cells[boundary_inds[:, 0]])
-        
+
         values = np_version.vstack(values)
         selected_cells = onp.vstack(selected_cells)
 
@@ -578,14 +583,14 @@ class FEM:
             (num_cells, num_quads, vec)
         """
         # (num_total_nodes, vec) -> (num_cells, num_nodes, vec)
-        cells_sol = sol[self.cells] 
+        cells_sol = sol[self.cells]
         # (num_cells, 1, num_nodes, vec) * (1, num_quads, num_nodes, 1) -> (num_cells, num_quads, num_nodes, vec) -> (num_cells, num_quads, vec)
         u = np.sum(cells_sol[:, None, :, :] * self.shape_vals[None, :, :, None], axis=2)
         return u
 
     def convert_neumann_from_dof(self, sol, index):
         """Obtain surface solution from nodal solution
-        
+
         Parameters
         ----------
         sol : np.DeviceArray
@@ -595,19 +600,19 @@ class FEM:
         Returns
         -------
         u : np.DeviceArray
-            (num_selected_faces, num_face_quads, vec) 
+            (num_selected_faces, num_face_quads, vec)
         """
         cells_old_sol = sol[self.cells] # (num_cells, num_nodes, vec)
         boundary_inds = self.neumann_boundary_inds_list[index]
         selected_cell_sols = cells_old_sol[boundary_inds[:, 0]] # (num_selected_faces, num_nodes, vec))
         selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)
-        # (num_selected_faces, 1, num_nodes, vec) * (num_selected_faces, num_face_quads, num_nodes, 1) -> (num_selected_faces, num_face_quads, vec) 
+        # (num_selected_faces, 1, num_nodes, vec) * (num_selected_faces, num_face_quads, num_nodes, 1) -> (num_selected_faces, num_face_quads, vec)
         u = np.sum(selected_cell_sols[:, None, :, :] * selected_face_shape_vals[:, :, :, None], axis=2)
         return u
 
     def sol_to_grad(self, sol):
         """Obtain solution gradient from nodal solution
-        
+
         Parameters
         ----------
         sol : np.DeviceArray
@@ -619,27 +624,27 @@ class FEM:
         u_grads : np.DeviceArray
             (num_cells, num_quads, vec, dim)
         """
-        # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
-        u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
+        # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim)
+        u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :]
         u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim)
         return u_grads
 
     def compute_residual_vars_helper(self, sol, weak_form, **internal_vars):
         res = np.zeros((self.num_total_nodes, self.vec))
         weak_form = weak_form.reshape(-1, self.vec) # (num_cells*num_nodes, vec)
-        res = res.at[self.cells.reshape(-1)].add(weak_form) 
+        res = res.at[self.cells.reshape(-1)].add(weak_form)
 
         if self.cauchy_bc_info is not None:
             cells_sol = sol[self.cells]
             values, selected_cells = self.compute_face(cells_sol, np, False)
             values = values.reshape(-1, self.vec)
-            res = res.at[selected_cells.reshape(-1)].add(values) 
+            res = res.at[selected_cells.reshape(-1)].add(values)
 
         self.body_force = self.compute_body_force_by_fn()
         if 'body' in internal_vars.keys():
             self.body_force = self.compute_body_force_by_sol(internal_vars['body'], self.get_body_map())
 
-        self.neumann = self.compute_Neumann_integral_vars(**internal_vars)    
+        self.neumann = self.compute_Neumann_integral_vars(**internal_vars)
 
         res = res - self.body_force - self.neumann
         return res
@@ -649,7 +654,7 @@ class FEM:
         cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
         weak_form = self.split_and_compute_cell(cells_sol, np, False, **internal_vars) # (num_cells, num_nodes, vec)
         return self.compute_residual_vars_helper(sol, weak_form, **internal_vars)
-    
+
     def compute_newton_vars(self, sol, **internal_vars):
         print(f"Compute cell Jacobian and cell residual...")
         cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
@@ -673,7 +678,7 @@ class FEM:
             self.J = onp.hstack((self.J, J_face))
             self.V = onp.hstack((self.V, V_face))
 
-        return self.compute_residual_vars_helper(sol, weak_form, **internal_vars) 
+        return self.compute_residual_vars_helper(sol, weak_form, **internal_vars)
 
     def compute_residual(self, sol):
         return self.compute_residual_vars(sol, **self.internal_vars)
@@ -693,7 +698,7 @@ class FEM:
             print(f"\n\n### Neumann B.C. is specified")
             for i in range(len(self.neumann_boundary_inds_list)):
                 print(f"\nNeumann Boundary part {i + 1} information:")
-                print(self.neumann_boundary_inds_list[i]) 
+                print(self.neumann_boundary_inds_list[i])
                 print(f"Array.shape = (num_selected_faces, 2) = {self.neumann_boundary_inds_list[i].shape}")
                 print(f"Interpretation:")
                 print(f"    Array[i, 0] returns the global cell index of the ith selected face")
@@ -714,3 +719,5 @@ class FEM:
                 print(f"    Array[i, 2] returns the value assigned to ith selected dof")
         else:
             print(f"\n\n### No Dirichlet B.C. found.")
+
+

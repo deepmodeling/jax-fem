@@ -2,6 +2,8 @@ from jax_am.fem.solver import (apply_bc, get_flatten_fn, solver,
                                petsc_solve, jax_solve,
                                get_jacobi_precond, jacobi_preconditioner)
 import jax
+import jax.numpy as np
+import numpy as onp
 from functools import partial
 # https://stackoverflow.com/questions/7811247/how-to-fill-specific-positional-arguments-with-partial-in-python
 # ToDo: incorporate sparsity
@@ -23,7 +25,7 @@ def implicit_jvp_helper(problem, sol0, params0, params_dot0, use_petsc):
         return res_fn(dofs)
 
     problem.set_params(params0)
-    problem.newton_update(sol0)
+    problem.newton_update(sol0) # ---------------------------> Should be autodiff capable
 
     # Construct terms for JVP calculation
     partial_fn_of_params = partial(residual, sol0)  # r(u=sol, rho)
@@ -75,7 +77,20 @@ def ad_wrapper_jvp(problem, linear=False, use_petsc=True):
 
 
 
+@jax.custom_jvp
+def jax_array_list_to_numpy_diff(jax_array_list):
+    # Convert jax array to numpy array
+    numpy_array = onp.vstack(jax_array_list)
+    return numpy_array
 
+@jax_array_list_to_numpy_diff.defjvp
+def jax_array_list_to_numpy_diff_jvp(primals, tangents):
+    jax_array_list, = primals
+    jax_array_list_dot, = tangents
+    numpy_array = jax_array_list_to_numpy_diff(jax_array_list)
+    # Reroute the tangents
+    numpy_array_dot = jax_array_list_to_numpy_diff(jax_array_list_dot)
+    return numpy_array, numpy_array_dot
 
 
 

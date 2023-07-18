@@ -14,7 +14,6 @@ from jax_am.fem.solver import solver, DynamicRelaxSolve
 from jax_am.fem.utils import save_sol
 from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
-from applications.fem.forming.optimizer import external_solve
 
 def simulation():
     class Plasticity(FEM):

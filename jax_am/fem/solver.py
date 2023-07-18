@@ -199,7 +199,47 @@ def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc):
         inc = jax_solve(problem, A_fn, b, x0, precond)
 
     dofs = dofs + inc
+
+    # dofs = line_search(problem, dofs, inc)
+
     return dofs
+
+
+def line_search(problem, dofs, inc):
+    res_fn = problem.compute_residual
+    res_fn = get_flatten_fn(res_fn, problem)
+    res_fn = apply_bc(res_fn, problem)
+
+    def res_norm_fn(alpha):
+        res_vec = res_fn(dofs + alpha*inc)
+        return np.linalg.norm(res_vec)
+
+    # grad_res_norm_fn = jax.grad(res_norm_fn)
+    # hess_res_norm_fn = jax.hessian(res_norm_fn)
+
+    # tol = 1e-3
+    # alpha = 1.
+    # lr = 1.
+    # grad_alpha = 1.
+    # while np.abs(grad_alpha) > tol:
+    #     grad_alpha = grad_res_norm_fn(alpha)
+    #     hess_alpha = hess_res_norm_fn(alpha)
+    #     alpha = alpha - 1./hess_alpha*grad_alpha
+    #     print(f"alpha = {alpha}, grad_alpha = {grad_alpha}, hess_alpha = {hess_alpha}")
+
+    alpha = 1.
+    res_norm = res_norm_fn(alpha)
+    for i in range(3):
+        alpha *= 0.5
+        res_norm_half = res_norm_fn(alpha)
+        print(f"i = {i}, res_norm = {res_norm}, res_norm_half = {res_norm_half}")
+        if res_norm_half > res_norm:
+            alpha *= 2.
+            break
+        res_norm = res_norm_half
+
+
+    return dofs + alpha*inc
 
 
 def get_A_fn(problem, use_petsc):
@@ -258,12 +298,9 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
         dofs = assign_bc(dofs, problem)
         res_vec, A_fn = newton_update_helper(dofs)
         dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc)
-
-
         res_vec, A_fn = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
         print(f"Linear solve, res l_2 = {res_val}")
-
     else:
         if initial_guess is None:
             res_vec, A_fn = newton_update_helper(dofs)
@@ -510,14 +547,6 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
 ################################################################################
 # Dynamic relaxation solver
 
-# @partial(jax.jit, static_argnums=(0,))
-# def assembleVec(problem, dofs):
-#     res_fn = get_flatten_fn(problem.compute_residual, problem)
-#     res_vec = res_fn(dofs)
-#     res_vec = assign_zeros_bc(res_vec, problem)
-#     res_vec = onp.array(res_vec)
-#     return res_vec
-
 
 def assembleCSR(problem, dofs):
     problem.newton_update(dofs.reshape((problem.num_total_nodes, problem.vec))).reshape(-1)
@@ -554,32 +583,37 @@ def printInfo(error, t, c, tol,
     if nIters % nPrint == 1:
         #print('\t------------------------------------')
         if info_force == True:
-            print(('  DR Iteration %d: Max force = %g (tol = %g)' +
-                   ' Max velocity = %g') % (nIters, error, tol, 
+            print(('\nDR Iteration %d: Max force (residual error) = %g (tol = %g)' +
+                   'Max velocity = %g') % (nIters, error, tol, 
                                             np.max(np.absolute(qdot))))
         if info == True: 
-            print('Damping t: ',t, );
+            print('\nDamping t: ',t, );
             print('Damping coefficient: ', c)
             print('Max epsilon: ',np.max(eps))
             print('Max acceleration: ',np.max(np.absolute(qdotdot)))
 
 
-def DynamicRelaxSolve(problem, initial_guess, 
-                      # default parameters
-                      tol = 1e-6, nKMat = 50, nPrint = 1000, 
-                      info = True, info_force = True):
+def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, info_force=True):
 
-    dofs = np.array(initial_guess).reshape(-1)
-    dofs = assign_bc(dofs, problem)
+    """
+    Implementation of
 
-    sol_shape = (problem.num_total_nodes, problem.vec)
-    dofs = np.zeros(sol_shape).reshape(-1)
+    Luet, David Joseph. Bounding volume hierarchy and non-uniform rational B-splines for contact enforcement 
+    in large deformation finite element analysis of sheet metal forming. Diss. Princeton University, 2016.
+    Chapter 4.3 Nonlinear System Solution
+
+    Particularly good for handling buckling behavior.
+    There is a FEniCS version of this dynamic relaxation algorithm.
+    The code below is a direct translation from the FEniCS version.
+    """
     def newton_update_helper(dofs):
         res_vec = problem.newton_update(dofs.reshape(sol_shape)).reshape(-1)
         res_vec = apply_bc_vec(res_vec, dofs, problem)
         A_fn = get_A_fn(problem, use_petsc=False)
         return res_vec, A_fn
-    
+
+    sol_shape = (problem.num_total_nodes, problem.vec)
+    dofs = np.zeros(sol_shape).reshape(-1)
     res_vec, A_fn = newton_update_helper(dofs)
     dofs = linear_guess_solve(problem, A_fn, precond=True, use_petsc=False)
  
@@ -595,7 +629,6 @@ def DynamicRelaxSolve(problem, initial_guess,
     #initialize the M, eps, R_old arrays
     eps, M, R, R_old = onp.zeros(N), onp.zeros(N), onp.zeros(N), onp.zeros(N)
  
-
     @jax.jit
     def assembleVec(dofs):
         res_fn = get_flatten_fn(problem.compute_residual, problem)
@@ -603,11 +636,7 @@ def DynamicRelaxSolve(problem, initial_guess,
         res_vec = assign_zeros_bc(res_vec, problem)
         return res_vec
 
-
-
-    # R = assembleVec(problem, dofs)
     R = onp.array(assembleVec(dofs))
-
     KCSR = assembleCSR(problem, dofs)
 
     M[:] = h_tilde*h_tilde/4. * onp.array(onp.absolute(KCSR).sum(axis = 1)).squeeze()
@@ -618,25 +647,17 @@ def DynamicRelaxSolve(problem, initial_guess,
 
     timeZ = time.time() #Measurement of loop time.
     
-
     assert onp.all(onp.isfinite(M)), f"M not finite"
     assert onp.all(onp.isfinite(q)), f"q not finite"
     assert onp.all(onp.isfinite(qdot)), f"qdot not finite"
 
-
     error = onp.max(onp.absolute(R))
  
     while error > tol:
-
-        print(f"error = {error}")
-        
+        # print(f"error = {error}")
         # marching forward
         q_old[:] = q[:]; R_old[:] = R[:]
         q[:] += h*qdot; dofs = np.array(q)
-
-        # assembleVec(F, bcs, RVec, R)
-        # R = assembleVec(problem, dofs)
-
         R = onp.array(assembleVec(dofs))
 
         nIters += 1; iKMat += 1; error = onp.max(onp.absolute(R))
@@ -654,10 +675,10 @@ def DynamicRelaxSolve(problem, initial_guess,
         
         # calculating the jacobian matrix
         if ((onp.max(eps) > 1) and (iKMat > nKMat)): #SPR JAN max --> min
-            if info==True: 
-                print('\tRecalculating the tangent matrix: ', nIters)
+            if info == True: 
+                print('\nRecalculating the tangent matrix: ', nIters)
+
             iKMat = 0
-            # assembleCSR(J, bcs, KMat, KCSR)
             KCSR = assembleCSR(problem, dofs)
             M[:] = h_tilde*h_tilde/4. * onp.array(onp.absolute(KCSR).sum(axis = 1)).squeeze()
 
@@ -679,14 +700,13 @@ def DynamicRelaxSolve(problem, initial_guess,
 
     # print final info
     if convergence:
-        print("  DRSolve finished in %d iterations and %fs" % \
+        print("DRSolve finished in %d iterations and %fs" % \
               (nIters, time.time() - timeZ))
     else:
-        print("  FAILED to converged")
+        print("FAILED to converged")
 
     sol = dofs.reshape((problem.num_total_nodes, problem.vec))
     return sol
-
 
 
 ################################################################################

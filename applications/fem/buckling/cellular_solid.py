@@ -5,7 +5,7 @@ import glob
 import meshio
 
 from jax_am.fem.core import FEM
-from jax_am.fem.solver import solver, DynamicRelaxSolve
+from jax_am.fem.solver import solver, dynamic_relax_solve
 from jax_am.fem.utils import save_sol
 from jax_am.fem.generate_mesh import get_meshio_cell_type, Mesh
 from jax_am.common import rectangle_mesh
@@ -13,21 +13,10 @@ from jax_am.common import rectangle_mesh
 
 class Elasticity(FEM):
     def get_tensor_map(self):
-        # def psi(F_2d):
-        #     F = np.array([[F_2d[0, 0], F_2d[0, 1], 0.], 
-        #                   [F_2d[1, 0], F_2d[1, 1], 0.],
-        #                   [0., 0., 1.]])
-        #     E = 70.e3
-        #     nu = 0.3
-        #     mu = E/(2.*(1. + nu))
-        #     kappa = E/(3.*(1. - 2.*nu))
-        #     J = np.linalg.det(F)
-        #     I1 = np.trace(F.T @ F)
-        #     Jinv = J**(-2./3.)
-        #     energy = (mu/2.)*(Jinv*I1 - 3.) + (kappa/2.) * (J - 1.)**2.
-        #     return energy
-
-        def psi(F):
+        def psi(F_2d):
+            F = np.array([[F_2d[0, 0], F_2d[0, 1], 0.], 
+                          [F_2d[1, 0], F_2d[1, 1], 0.],
+                          [0., 0., 1.]])
             E = 70.e3
             nu = 0.3
             mu = E/(2.*(1. + nu))
@@ -35,7 +24,7 @@ class Elasticity(FEM):
             J = np.linalg.det(F)
             I1 = np.trace(F.T @ F)
             Jinv = J**(-2./3.)
-            energy = (mu/2.)*(Jinv*(I1 + 1.) - 3.) + (kappa/2.) * (J - 1.)**2.
+            energy = (mu/2.)*(Jinv*I1 - 3.) + (kappa/2.) * (J - 1.)**2.
             return energy
 
         P_fn = jax.grad(psi)
@@ -90,15 +79,11 @@ def simulation():
 
     problem = Elasticity(mesh, ele_type=ele_type, vec=2, dim=2, dirichlet_bc_info=dirichlet_bc_info)
 
-    sol = np.zeros((problem.num_total_nodes, problem.vec))
     for i, disp in enumerate(disps):
         print(f"\nStep {i + 1} in {len(disps)}, disp = {disp}")
         dirichlet_bc_info[-1][-1] = get_dirichlet_top(disp)
         problem.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
-
-        # sol = solver(problem, initial_guess=None, use_petsc=False)
-        sol = DynamicRelaxSolve(problem, sol, tol=1e-6)
-
+        sol = dynamic_relax_solve(problem, tol=1e-6)
         vtk_path = os.path.join(data_dir, f'vtk/u_{i + 1:03d}.vtu')
         save_sol(problem, np.hstack((sol, np.zeros((len(sol), 1)))), vtk_path)
 

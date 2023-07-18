@@ -127,8 +127,8 @@ def simulation():
         def set_params(self, params):
             int_vars, scale = params
             self.internal_vars['laplace'] = int_vars
-            self.neumann_value_fns[0] = get_neumann_top(scale)
-
+            self.dirichlet_bc_info[-1][-1] = get_dirichlet_top(scale)
+            self.update_Dirichlet_boundary_conditions(self.dirichlet_bc_info)
 
     ele_type = 'HEX8'
     cell_type = get_meshio_cell_type(ele_type)
@@ -153,62 +153,39 @@ def simulation():
     def top(point):
         return np.isclose(point[2], Lz, atol=1e-5)
 
-    def bottom(point):
-        return np.isclose(point[2], 0., atol=1e-5)
-
     def dirichlet_val(point):
         return 0.
 
-    def get_neumann_top(scale):
-        def neumann_top(point):
-            x = point[0]
-            y = point[1]
-            xc = 0.5*Lx
-            yc = 0.5*Ly
-            lx = 0.25*Lx
-            ly = 0.25*Ly
-            traction_z = scale * np.exp(-((x - xc)**2 + (y - yc)**2)/(lx**2 + ly**2))
-            return np.array([0., 0., -traction_z])
-        return neumann_top
-
-    scales = 40*np.hstack((np.linspace(0., 1., 5), np.linspace(1, 0., 5)))
-
-    # scales = 50*np.hstack((np.linspace(0., 1., 5), np.linspace(1, 0., 5)))
+    def get_dirichlet_top(scale):
+        def val_fn(point):
+            x, y = point[0], point[1]
+            sdf = np.min(np.array([np.abs(x), np.abs(Lx - x), np.abs(y), np.abs(Ly - y)]))
+            scaled_sdf = sdf/(0.5*np.minimum(Lx, Ly))
+            alpha = 3.
+            EPS = 1e-10
+            z_disp = -scale*Lx*(1./(1. + (1./(scaled_sdf + EPS) - 1.)))
+            return z_disp
+        return val_fn
 
 
-    location_fns = [walls]*3
-    value_fns = [dirichlet_val]*3
-    vecs = [0, 1, 2]
+    scales = 0.2*np.hstack((np.linspace(0., 1., 5), np.linspace(1, 0., 5)))
+
+
+    location_fns = [walls]*3 + [top]
+    value_fns = [dirichlet_val]*3 + [get_dirichlet_top(0.)]
+    vecs = [0, 1, 2, 2]
     dirichlet_bc_info = [location_fns, vecs, value_fns]
 
-    neumann_bc_info = [[top], [None]]
-
-    problem = Plasticity(mesh, ele_type=ele_type, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info)
+    problem = Plasticity(mesh, ele_type=ele_type, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info)
     sol = np.zeros(((problem.num_total_nodes, problem.vec)))
  
     int_vars = problem.internal_vars['laplace']
 
-    int_vars_initial = problem.internal_vars['laplace']
-
     for i, scale in enumerate(scales):
         print(f"\nStep {i} in {len(scales)}, scale = {scale}")
 
-
-        # problem.set_params([int_vars_initial, scale])
-
-        # if i == 4 or False:
-        #     sol = DynamicRelaxSolve(problem, sol, tol=0.1)
-        # else:
-        #     sol = solver(problem, initial_guess=None, use_petsc=False)
-
-
         problem.set_params([int_vars, scale])
-
-
-        # sol = external_solve(problem, sol, [int_vars, scale])
-
         sol = solver(problem, initial_guess=sol, use_petsc=False)
-
 
         int_vars_copy = int_vars
         int_vars = problem.update_int_vars_gp(sol, int_vars)
@@ -217,6 +194,7 @@ def simulation():
         print(sigmas[0])
         vtk_path = os.path.join(vtk_dir, f'u_{i:03d}.vtu')
         save_sol(problem, sol, vtk_path, cell_infos=[('s_norm', np.linalg.norm(sigmas, axis=(1, 2)))])
+
 
 if __name__=="__main__":
     simulation()

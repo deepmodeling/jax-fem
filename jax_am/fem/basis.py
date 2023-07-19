@@ -1,9 +1,12 @@
 import basix
 import numpy as onp
 
+import logging
+import jax_am.logging_config
+
 
 # def get_full_integration_poly_degree(ele_type, lag_order, dim):
-#     """Only works for weak forms of (grad_u, grad_v). 
+#     """Only works for weak forms of (grad_u, grad_v).
 #     TODO: Is this correct?
 #     Reference:
 #     https://zhuanlan.zhihu.com/p/521630645
@@ -22,7 +25,7 @@ def get_elements(ele_type):
     https://web.mit.edu/calculix_v2.7/CalculiX/ccx_2.7/doc/ccx/node33.html
     The troublesome thing is that basix has a different ordering. As shown below
     https://defelement.com/elements/lagrange.html
-    The consequence is that we need to define this "re_order" variable to make sure the 
+    The consequence is that we need to define this "re_order" variable to make sure the
     ordering is correct.
     """
     element_family = basix.ElementFamily.P
@@ -34,7 +37,7 @@ def get_elements(ele_type):
         degree = 1
     elif ele_type == 'HEX27':
         print(f"Warning: 27-node hexahedron is rarely used in practice and not recommended.")
-        re_order = [0, 1, 3, 2, 4, 5, 7, 6, 8, 11, 13, 9, 16, 18, 19, 
+        re_order = [0, 1, 3, 2, 4, 5, 7, 6, 8, 11, 13, 9, 16, 18, 19,
                     17, 10, 12, 15, 14, 22, 23, 21, 24, 20, 25, 26]
         basix_ele = basix.CellType.hexahedron
         basix_face_ele = basix.CellType.quadrilateral
@@ -71,20 +74,20 @@ def get_elements(ele_type):
         element_family = basix.ElementFamily.serendipity
         basix_ele = basix.CellType.quadrilateral
         basix_face_ele = basix.CellType.interval
-        gauss_order = 2 
-        degree = 2 
+        gauss_order = 2
+        degree = 2
     elif ele_type == 'TRI3':
         re_order = [0, 1, 2]
         basix_ele = basix.CellType.triangle
         basix_face_ele = basix.CellType.interval
-        gauss_order = 0 # 1, full integration    
-        degree = 1    
+        gauss_order = 0 # 1, full integration
+        degree = 1
     elif  ele_type == 'TRI6':
         re_order = [0, 1, 2, 5, 3, 4]
         basix_ele = basix.CellType.triangle
         basix_face_ele = basix.CellType.interval
-        gauss_order = 2 # 3, full integration 
-        degree = 2 
+        gauss_order = 2 # 3, full integration
+        degree = 2
     else:
         raise NotImplementedError
 
@@ -93,7 +96,7 @@ def get_elements(ele_type):
 
 def reorder_inds(inds, re_order):
     new_inds = []
-    for ind in inds.reshape(-1): 
+    for ind in inds.reshape(-1):
         new_inds.append(onp.argwhere(re_order == ind))
     new_inds = onp.array(new_inds).reshape(inds.shape)
     return new_inds
@@ -103,7 +106,7 @@ def get_shape_vals_and_grads(ele_type):
     """TODO: Add comments
 
     Returns
-    ------- 
+    -------
     shape_values: ndarray
         (8, 8) = (num_quads, num_nodes)
     shape_grads_ref: ndarray
@@ -112,12 +115,12 @@ def get_shape_vals_and_grads(ele_type):
         (8,) = (num_quads,)
     """
     element_family, basix_ele, basix_face_ele, gauss_order, degree, re_order = get_elements(ele_type)
-    quad_points, weights = basix.make_quadrature(basix_ele, gauss_order)  
+    quad_points, weights = basix.make_quadrature(basix_ele, gauss_order)
     element = basix.create_element(element_family, basix_ele, degree)
     vals_and_grads = element.tabulate(1, quad_points)[:, :, re_order, :]
     shape_values = vals_and_grads[0, :, :, 0]
     shape_grads_ref = onp.transpose(vals_and_grads[1:, :, :, 0], axes=(1, 2, 0))
-    print(f"ele_type = {ele_type}, quad_points.shape = (num_quads, dim) = {quad_points.shape}")
+    logging.info(f"ele_type = {ele_type}, quad_points.shape = (num_quads, dim) = {quad_points.shape}")
     return shape_values, shape_grads_ref, weights
 
 
@@ -125,7 +128,7 @@ def get_face_shape_vals_and_grads(ele_type):
     """TODO: Add comments
 
     Returns
-    ------- 
+    -------
     face_shape_vals: ndarray
         (6, 4, 8) = (num_faces, num_face_quads, num_nodes)
     face_shape_grads_ref: ndarray
@@ -147,7 +150,7 @@ def get_face_shape_vals_and_grads(ele_type):
     values = lagrange_map.tabulate(0, points)[0, :, :, 0]
     vertices = basix.geometry(basix_ele)
     dim = len(vertices[0])
-    facets = basix.cell.sub_entity_connectivity(basix_ele)[dim - 1] 
+    facets = basix.cell.sub_entity_connectivity(basix_ele)[dim - 1]
     # Map face points
     # Reference: https://docs.fenicsproject.org/basix/main/python/demo/demo_facet_integral.py.html
     face_quad_points = []
@@ -179,5 +182,5 @@ def get_face_shape_vals_and_grads(ele_type):
     face_shape_vals = vals_and_grads[0, :, :, 0].reshape(num_faces, num_face_quads, -1)
     face_shape_grads_ref = vals_and_grads[1:, :, :, 0].reshape(dim, num_faces, num_face_quads, -1)
     face_shape_grads_ref = onp.transpose(face_shape_grads_ref, axes=(1, 2, 3, 0))
-    print(f"face_quad_points.shape = (num_faces, num_face_quads, dim) = {face_quad_points.shape}")
+    logging.info(f"face_quad_points.shape = (num_faces, num_face_quads, dim) = {face_quad_points.shape}")
     return face_shape_vals, face_shape_grads_ref, face_weights, face_normals, face_inds

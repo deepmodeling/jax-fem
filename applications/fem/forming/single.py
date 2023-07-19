@@ -14,7 +14,6 @@ from jax_am.fem.solver import solver, DynamicRelaxSolve
 from jax_am.fem.utils import save_sol
 from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
-from applications.fem.forming.optimizer import external_solve
 
 def simulation():
     class Plasticity(FEM):
@@ -127,8 +126,8 @@ def simulation():
         def set_params(self, params):
             int_vars, scale = params
             self.internal_vars['laplace'] = int_vars
-            self.neumann_value_fns[0] = get_neumann_top(scale)
-
+            self.dirichlet_bc_info[-1][-1] = get_dirichlet_top(scale)
+            self.update_Dirichlet_boundary_conditions(self.dirichlet_bc_info)
 
     ele_type = 'HEX8'
     cell_type = get_meshio_cell_type(ele_type)
@@ -139,16 +138,9 @@ def simulation():
     for f in files:
         os.remove(f)
 
-    Lx, Ly, Lz = 10., 10., 0.25
-    meshio_mesh = box_mesh(Nx=40, Ny=40, Nz=1, Lx=Lx, Ly=Ly, Lz=Lz, data_dir=data_dir, ele_type=ele_type)
+    Lx, Ly, Lz = 1., 1., 1.
+    meshio_mesh = box_mesh(Nx=1, Ny=1, Nz=1, Lx=Lx, Ly=Ly, Lz=Lz, data_dir=data_dir, ele_type=ele_type)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
-
-    def walls(point):
-        left = np.isclose(point[0], 0., atol=1e-5)
-        right = np.isclose(point[0], Lx, atol=1e-5)
-        front = np.isclose(point[1], 0., atol=1e-5)
-        back = np.isclose(point[1], Ly, atol=1e-5)
-        return left | right | front | back
 
     def top(point):
         return np.isclose(point[2], Lz, atol=1e-5)
@@ -156,59 +148,32 @@ def simulation():
     def bottom(point):
         return np.isclose(point[2], 0., atol=1e-5)
 
-    def dirichlet_val(point):
+    def get_dirichlet_top(scale):
+        def val_fn(point):
+            z_disp = scale*Lz
+            return z_disp
+        return val_fn
+
+    def dirichlet_val_bottom(point):
         return 0.
 
-    def get_neumann_top(scale):
-        def neumann_top(point):
-            x = point[0]
-            y = point[1]
-            xc = 0.5*Lx
-            yc = 0.5*Ly
-            lx = 0.25*Lx
-            ly = 0.25*Ly
-            traction_z = scale * np.exp(-((x - xc)**2 + (y - yc)**2)/(lx**2 + ly**2))
-            return np.array([0., 0., -traction_z])
-        return neumann_top
+    scales = 0.01*np.hstack((np.linspace(0., 1., 11), np.linspace(1, 0., 11)))
 
-    # scales = 40*np.hstack((np.linspace(0., 1., 5), np.linspace(1, 0., 5)))
-
-    scales = 50*np.hstack((np.linspace(0., 1., 5), np.linspace(1, 0., 5)))
-
-
-    location_fns = [walls]*3
-    value_fns = [dirichlet_val]*3
-    vecs = [0, 1, 2]
+    location_fns = [bottom, top]
+    value_fns = [dirichlet_val_bottom, get_dirichlet_top(0.)]
+    vecs = [2, 2]
     dirichlet_bc_info = [location_fns, vecs, value_fns]
 
-    neumann_bc_info = [[top], [None]]
-
-    problem = Plasticity(mesh, ele_type=ele_type, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info)
+    problem = Plasticity(mesh, ele_type=ele_type, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info)
     sol = np.zeros(((problem.num_total_nodes, problem.vec)))
  
     int_vars = problem.internal_vars['laplace']
 
-    int_vars_initial = problem.internal_vars['laplace']
-
     for i, scale in enumerate(scales):
         print(f"\nStep {i} in {len(scales)}, scale = {scale}")
 
-
-        problem.set_params([int_vars_initial, scale])
-
-        if i == 4 or True:
-            sol = DynamicRelaxSolve(problem, sol, tol=0.1)
-        else:
-            sol = solver(problem, initial_guess=None, use_petsc=False)
-
-
         problem.set_params([int_vars, scale])
-
-
-        # sol = external_solve(problem, sol, [int_vars, scale])
-
         sol = solver(problem, initial_guess=sol, use_petsc=False)
-
 
         int_vars_copy = int_vars
         int_vars = problem.update_int_vars_gp(sol, int_vars)
@@ -217,6 +182,7 @@ def simulation():
         print(sigmas[0])
         vtk_path = os.path.join(vtk_dir, f'u_{i:03d}.vtu')
         save_sol(problem, sol, vtk_path, cell_infos=[('s_norm', np.linalg.norm(sigmas, axis=(1, 2)))])
+
 
 if __name__=="__main__":
     simulation()

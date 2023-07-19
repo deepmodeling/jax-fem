@@ -788,6 +788,8 @@ class FEM:
             res = res.at[selected_cells.reshape(-1)].add(values)
 
         self.body_force = self.compute_body_force_by_fn()
+
+        # TODO: Should be useless since mass_map will handle it.
         if 'body' in internal_vars.keys():
             self.body_force = self.compute_body_force_by_sol(
                 internal_vars['body'], self.get_body_map())

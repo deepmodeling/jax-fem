@@ -47,7 +47,11 @@ def compute_filter_kd_tree(problem):
         J += ii.tolist()
         V += vals.tolist()
     H_sp = scipy.sparse.csc_array((V, (I, J)), shape=(flex_num_cells, flex_num_cells))
-    # TODO: No need to create the full matrix. 
+
+    # TODO(Tianju): No need to create the full matrix. 
+    # Will cause memory issue for large size problem.
+    # High priority!
+
     H = H_sp.todense()
     Hs = np.sum(H, 1)
     return H, Hs

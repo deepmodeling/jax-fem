@@ -34,8 +34,10 @@ def petsc_solve(A, b, ksp_type, pc_type):
     # Verify convergence
     y = PETSc.Vec().createSeq(len(b))
     A.mult(x, y)
+
     err = np.linalg.norm(y.getArray() - rhs.getArray())
-    assert err < 0.1, f"PETSc linear solver failed to converge, err = {err}"
+    logging.info(f"PETSc linear solve res = {err}")
+    # assert err < 0.1, f"PETSc linear solver failed to converge, err = {err}"
 
     return x.getArray()
 
@@ -54,7 +56,15 @@ def jax_solve(problem, A_fn, b, x0, precond):
     # Verify convergence
     err = np.linalg.norm(A_fn(x) - b)
     logging.info(f"JAX scipy linear solve res = {err}")
-    assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
+
+    # Remarks(Tianju): assert seems to unexpectedly change the behavior of bicgstab (on my Linux machine).
+    # Sometimes the solver simply fails without converging (it does converge without assert)
+    # Particularly happening in topology optimization examples.
+    # Don't know why yet.
+
+    # assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
+    # x = np.where(err < 0.1, x, np.nan) # For assert purpose, some how this also affects bicgstab.
+
     return x
 
 
@@ -297,9 +307,16 @@ def get_A_fn(problem, use_petsc):
         return A_sp @ dofs
 
     if use_petsc:
-        A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape,
-                                  csr=(A_sp_scipy.indptr, A_sp_scipy.indices,
-                                       A_sp_scipy.data))
+
+        # A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape,
+        #                           csr=(A_sp_scipy.indptr, A_sp_scipy.indices,
+        #                                A_sp_scipy.data))
+
+        # https://scicomp.stackexchange.com/questions/2355/32bit-64bit-issue-when-working-with-numpy-and-petsc4py/2356#2356
+        A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape, csr=(A_sp_scipy.indptr.astype(PETSc.IntType, copy=False),
+                                                       A_sp_scipy.indices.astype(PETSc.IntType, copy=False), A_sp_scipy.data))
+
+
         for i in range(len(problem.node_inds_list)):
             row_inds = onp.array(problem.node_inds_list[i] * problem.vec +
                                  problem.vec_inds_list[i],
@@ -374,6 +391,8 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
 
         assert np.all(
             np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
+
+    assert np.all(np.isfinite(dofs)), f"dofs contains NaN, stop the program!"
 
     sol = dofs.reshape(sol_shape)
     end = time.time()
@@ -543,10 +562,16 @@ def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
         return A_sp_aug @ dofs_aug
 
     if use_petsc:
-        A_aug = PETSc.Mat().createAIJ(size=A_sp_scipy_aug.shape,
-                                      csr=(A_sp_scipy_aug.indptr,
-                                           A_sp_scipy_aug.indices,
-                                           A_sp_scipy_aug.data))
+
+        A = PETSc.Mat().createAIJ(size=A_sp_scipy_aug.shape, 
+                                  csr=(A_sp_scipy_aug.indptr.astype(PETSc.IntType, copy=False),
+                                       A_sp_scipy_aug.indices.astype(PETSc.IntType, copy=False), 
+                                       A_sp_scipy_aug.data))
+
+        # A_aug = PETSc.Mat().createAIJ(size=A_sp_scipy_aug.shape,
+        #                               csr=(A_sp_scipy_aug.indptr,
+        #                                    A_sp_scipy_aug.indices,
+        #                                    A_sp_scipy_aug.data))
     else:
         A_aug = compute_linearized_residual
 

@@ -5,12 +5,15 @@
     Only test reverse mode since it is derived from
     the specified forward mode
 3. Check that hessian-vector product is not nan
+
+Check_grads reference:
+https://github.com/google/jax/blob/fe30d3fd4bbf92b890c97a75c4c47f4275ab77d1/jax/_src/public_test_util.py#L249
 """
 import pytest
 import jax
 import jax.numpy as np
 from jax.test_util import check_grads
-from jax_am.fem.models import Elasticity
+from elasticity2d_code import Elasticity
 from jax_am.fem.generate_mesh import get_meshio_cell_type, Mesh
 from jax_am.common import rectangle_mesh
 from jax_am.fem.solver import ad_wrapper
@@ -71,7 +74,7 @@ def test_ad_wrapper_jvp():
     # -------------For hessian-vector product
     new_obj = lambda params: objective(params, False)
     hvp = jax.jvp(jax.grad(new_obj), (input_params, ), ((input_params,)))[1]
-    assert np.any(np.isnan(hvp)) is False
+    assert np.any(np.isnan(hvp)) == False
 
     ######################################
 
@@ -106,6 +109,7 @@ def test_ad_wrapper_jvp():
     # -------------For hessian-vector product
     new_obj = lambda params: objective(params, False)
     hvp = jax.jvp(jax.grad(new_obj), (input_params, ), ((input_params,)))[1]
-    assert np.any(np.isnan(hvp)) is False
+    assert np.any(np.isnan(hvp)) == False
 
 
+# test_ad_wrapper_jvp()

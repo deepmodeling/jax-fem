@@ -2,16 +2,19 @@ from jax_am.fem.solver import (apply_bc, get_flatten_fn, solver,
                                petsc_solve, jax_solve,
                                get_jacobi_precond, jacobi_preconditioner)
 import jax
-import jax.numpy as np
 import numpy as onp
 from functools import partial
 # https://stackoverflow.com/questions/7811247/how-to-fill-specific-positional-arguments-with-partial-in-python
-# ToDo: incorporate sparsity
-# Backward solve in custom_linear_solve ?
-# Wrap Petsc in pure_function
+# ToDo:
+# 1. Make PETSc work for backward solve [Not too important]
+#   a. petsc_solve should be made as a callback
+#   b. JVP has to be defined for this callback
+# 2. Working with sparsity [Might be important]
+#   a. Matrix creation function needs to be a callback
+#   b. JVP has to be defined for this callback
 
 
-def implicit_jvp_helper(problem, sol0, params0, params_dot0, use_petsc):
+def implicit_jvp_helper(problem, sol0, params0, params_dot0):
 
     # create residual function
 
@@ -25,7 +28,7 @@ def implicit_jvp_helper(problem, sol0, params0, params_dot0, use_petsc):
         return res_fn(dofs)
 
     problem.set_params(params0)
-    problem.newton_update(sol0) # ---------------------------> Should be autodiff capable
+    problem.newton_update(sol0)
 
     # Construct terms for JVP calculation
     partial_fn_of_params = partial(residual, sol0)  # r(u=sol, rho)
@@ -37,18 +40,12 @@ def implicit_jvp_helper(problem, sol0, params0, params_dot0, use_petsc):
     # dr/drho . v --> need a negative sign here - will provide later in actual func
     _, backward_rhs = jax.jvp(partial_fn_of_params, (params0, ), (params_dot0, ))
 
-    # Call a black-box solver
-    if use_petsc:
-        # I may need to wrap the petsc one in pure_callback ?
-        petsc_solver_modified = lambda matvec, v : petsc_solve(matvec, v.reshape(-1),
-                                                                'minres', 'ilu')
-        chosen_bb_solver = petsc_solver_modified
-    else:
-        precond_matrix = get_jacobi_precond(jacobi_preconditioner(problem))
-        jax_solver_modified = lambda matvec, v : jax_solve(problem, matvec,
-                                                            v.reshape(-1), None, False,
-                                                            precond_matrix)
-        chosen_bb_solver = jax_solver_modified
+    # Call a JAX solver
+    precond_matrix = get_jacobi_precond(jacobi_preconditioner(problem))
+    jax_solver_modified = lambda matvec, v : jax_solve(problem, matvec,
+                                                        v.reshape(-1), None, False,
+                                                        precond_matrix)
+    chosen_bb_solver = jax_solver_modified
     # Find adjoint value
     tangent_out = jax.lax.custom_linear_solve(backward_matvec, -1*backward_rhs,
                                           chosen_bb_solver,
@@ -75,12 +72,26 @@ def ad_wrapper_jvp(problem, linear=False, use_petsc=True):
     return forward_solve
 
 
+def petsc_solve_pure(A, b, ksp_type, pc_type):
+    result_dtype_shape = jax.ShapeDtypeStruct(shape=b.shape, dtype=b.dtype)
+    solution = jax.pure_callback(petsc_solve, result_dtype_shape, A, b, ksp_type, pc_type)
+    return solution
+
+
 
 
 @jax.custom_jvp
 def jax_array_list_to_numpy_diff(jax_array_list):
+    # For compatibility with JIT
+    _numpy_vstack = lambda x: onp.vstack(x).astype(x[0].dtype)
+    out_shape = list(jax_array_list[0].shape)
+    out_shape[0] *= len(jax_array_list)
+    output_shape_type = jax.ShapeDtypeStruct(shape=tuple(out_shape),
+                                             dtype=jax_array_list[0].dtype)
     # Convert jax array to numpy array
-    numpy_array = onp.vstack(jax_array_list)
+    #numpy_array = onp.vstack(jax_array_list)
+    numpy_array = jax.pure_callback(_numpy_vstack, output_shape_type,
+                                    jax_array_list)
     return numpy_array
 
 @jax_array_list_to_numpy_diff.defjvp

@@ -199,13 +199,13 @@ def consHandle(rho, epoch):
     return c, gradc
 
 rho_flex = rho_ini
-for i in range(3):
+for i in range(4):
     rho_flex = optimize(problem, rho_flex, optimizationParams, objectiveHandleCompliance, consHandle, numConstraints)
     rho_full = rho_flex2full(rho_flex)
     rho_full = optimize(problem, rho_full, optimizationParams, objectiveHandleStyle, consHandle, numConstraints)
     rho_flex = rho_full2flex(rho_full)
 
-rho_flex = optimize(problem, rho_flex, optimizationParams, objectiveHandleCompliance, consHandle, numConstraints)
+rho_flex = optimize(problem, rho_flex, {'maxIters':21, 'movelimit':0.1}, objectiveHandleCompliance, consHandle, numConstraints)
 
 print(f"As a reminder, compliance = {J_total(np.ones((len(problem.flex_inds), 1)))} for full material")
 

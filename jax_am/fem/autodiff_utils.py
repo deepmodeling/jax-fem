@@ -68,7 +68,7 @@ def ad_wrapper_jvp(problem, linear: bool = False,
         params_dot, = tangents
         sol = forward_solve(params)
         sol_dot = implicit_jvp_helper(
-            problem, sol, params, params_dot, use_petsc)
+            problem, sol, params, params_dot)
         return sol.reshape(sol.shape), sol_dot.reshape(sol.shape)
 
     return forward_solve
@@ -114,6 +114,7 @@ def implicit_jvp_helper(problem, sol0: Array,
     problem.newton_update(sol0)
     # Construct terms for JVP calculation
     partial_fn_of_params = partial(residual, sol0)  # r(u=sol, p)
+
     def change_arg_order_fn(params, dofs): return residual(dofs, params)
     partial_fn_of_u = partial(change_arg_order_fn, params0)  # r(u, p=params)
     # dr/du . x
@@ -127,7 +128,8 @@ def implicit_jvp_helper(problem, sol0: Array,
     precond_matrix = get_jacobi_precond(jacobi_preconditioner(problem))
 
     def jax_solver_modified(matvec, v): return jax_solve(problem, matvec,
-                                                         v.reshape(-1), None, False,
+                                                         v.reshape(-1), None,
+                                                         False,
                                                          precond_matrix)
     chosen_bb_solver = jax_solver_modified
     # Find adjoint value
@@ -156,6 +158,7 @@ def jax_array_list_to_numpy_diff(jax_array_list:
         numpy_array that vertically stacks the jax_array_list
     """
     # For compatibility with JIT
+
     def _numpy_vstack(x): return onp.vstack(x).astype(x[0].dtype)
     out_shape = list(jax_array_list[0].shape)
     out_shape[0] *= len(jax_array_list)

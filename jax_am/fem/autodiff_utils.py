@@ -23,6 +23,7 @@ Todo:
 # =============================================================================
 # Standard
 from functools import partial
+from typing import List
 # Third-party
 import jax
 from jax import Array
@@ -141,7 +142,7 @@ def implicit_jvp_helper(problem, sol0: Array,
 
 @jax.custom_jvp
 def jax_array_list_to_numpy_diff(jax_array_list:
-                                 list[Array]) -> onp.ndarray:
+                                 List[Array]) -> onp.ndarray:
     """Convert a list of JAX arrays to a single numpy array.
     This function is JITable. However, reverse-mode differentiation
     is not supported. This is used in the split_and_compute_cell

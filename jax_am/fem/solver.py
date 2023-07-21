@@ -42,7 +42,17 @@ def petsc_solve(A, b, ksp_type, pc_type):
     return x.getArray()
 
 
-def jax_solve(problem, A_fn, b, x0, precond):
+def jax_solve(problem, A_fn, b, x0, precond: bool, pc_matrix=None):
+    """Solves the equilibrium equation using a JAX solver.
+    Is fully traceable and runs on GPU.
+
+    Parameters
+    ----------
+    precond
+        Whether to calculate the preconditioner or not
+    pc_matrix
+        The matrix to use as preconditioner
+    """
     pc = get_jacobi_precond(
         jacobi_preconditioner(problem)) if precond else None
     x, info = jax.scipy.sparse.linalg.bicgstab(A_fn,
@@ -825,16 +835,11 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
 
 ################################################################################
 # General
-<<<<<<< HEAD
-
-def solver(problem, linear=False, precond=True, initial_guess=None, use_petsc=False):
-=======
 def solver(problem,
            linear=False,
            precond=True,
            initial_guess=None,
            use_petsc=False):
->>>>>>> main
     """periodic B.C. is a special form of adding a linear constraint.
     Lagrange multiplier seems to be convenient to impose this constraint.
     """

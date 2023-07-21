@@ -524,10 +524,6 @@ class FEM:
                          cell_JxW[:, None, None],
                          axis=0)
             return val
-<<<<<<< HEAD
-=======
-
->>>>>>> main
         return mass_kernel
 
     def get_cauchy_kernel(self, cauchy_map):

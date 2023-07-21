@@ -19,6 +19,7 @@ from jax_am.common import rectangle_mesh
 from applications.fem.aesthetic.style_loss import style_transfer
 from applications.fem.aesthetic.arguments import args, bcolors
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 class Elasticity(FEM):
     def custom_init(self):
@@ -72,8 +73,10 @@ class Elasticity(FEM):
         val = np.sum(traction * u_face * nanson_scale[:, :, None])
         return val
 
+problem_name = 'tree'
 data_path = args.output_path
-files_vtk = glob.glob(os.path.join(data_path, f'vtk/*'))
+vtk_path = os.path.join(data_path, f'vtk/{problem_name}')
+files_vtk = glob.glob(os.path.join(vtk_path, f'*'))
 files_jpg = glob.glob(os.path.join(data_path, f'jpg/*'))
 for f in files_vtk + files_jpg:
     os.remove(f)
@@ -118,7 +121,7 @@ outputs = []
 def output_sol(params, obj_val):
     print(f"\nOutput solution - need to solve the forward problem again...")
     sol = fwd_pred(params)
-    vtu_path = os.path.join(data_path, f'vtk/sol_{output_sol.counter:03d}.vtu')
+    vtu_path = os.path.join(vtk_path, f'sol_{output_sol.counter:03d}.vtu')
     save_sol(problem, np.hstack((sol, np.zeros((len(sol), 1)))), vtu_path, cell_infos=[('theta', 1. - problem.full_params[:, 0])])
     print(f"{bcolors.HEADER}compliance = {obj_val}{bcolors.ENDC}")
     outputs.append(obj_val)
@@ -131,7 +134,7 @@ optimizationParams = {'maxIters':11, 'movelimit':0.1}
 numConstraints = 1
 
 config.update("jax_enable_x64", False)
-style_value_and_grad, initial_loss = style_transfer(problem, rho_ini)
+style_value_and_grad, initial_loss = style_transfer(problem, rho_ini, image_path='styles/circle.png', reverse=False)
 config.update("jax_enable_x64", True)
 
  
@@ -168,10 +171,11 @@ def consHandle(rho, epoch):
 
 
 rho = rho_ini
-for i in range(10):
+for i in range(8):
     rho = optimize(problem, rho, optimizationParams, objectiveHandleCompliance, consHandle, numConstraints)
     rho = optimize(problem, rho, optimizationParams, objectiveHandleStyle, consHandle, numConstraints)
 
+rho = optimize(problem, rho, optimizationParams, objectiveHandleCompliance, consHandle, numConstraints)
 print(f"As a reminder, compliance = {J_total(np.ones((len(problem.flex_inds), 1)))} for full material")
 
  

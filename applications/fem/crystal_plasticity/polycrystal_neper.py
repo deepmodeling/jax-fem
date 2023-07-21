@@ -33,7 +33,7 @@ def problem():
     pf_args['domain_y'] = 0.1
     pf_args['domain_z'] = 0.1
     pf_args['num_oris'] = 10
-    pre_processing(pf_args)
+    pre_processing(pf_args, neper_path=f'neper/{case_name}')
 
     ele_type = 'HEX8'
     cell_type = get_meshio_cell_type(ele_type)

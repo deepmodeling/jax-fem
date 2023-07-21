@@ -28,17 +28,17 @@ np.set_printoptions(threshold=1000, linewidth=75, suppress=False, precision=8)
 
 input_path = os.path.join(os.path.dirname(__file__), 'input') 
 
-def style_transfer(problem, rho_initial):
+def style_transfer(problem, rho_initial, image_path, reverse):
     model_fp = os.path.join(input_path, "models/vgg19_weights_tf_dim_ordering_tf_kernels_notop.h5")
 
     # content_fp = os.path.join(input_path, "styles/tree.png")
     # style_fp = os.path.join(input_path, "styles/tree.png")
 
-    content_fp = os.path.join(input_path, "styles/circles.png")
-    style_fp = os.path.join(input_path, "styles/circles.png")
+    content_fp = os.path.join(input_path, image_path)
+    style_fp = os.path.join(input_path, image_path)
+    content_image = load_image(content_fp, "content", args.image_size, reverse=reverse)
+    style_image = load_image(style_fp, "style", args.image_size, reverse=reverse)
 
-    content_image = load_image(content_fp, "content", args.image_size, reverse=False)
-    style_image = load_image(style_fp, "style", args.image_size, reverse=False)
 
     style_image_grey = np.repeat(np.mean(style_image, axis=1)[:, None, :, :], 3, axis=1)
 
@@ -48,8 +48,6 @@ def style_transfer(problem, rho_initial):
     #                       [1., 0., 1.]])
     # debug_img = np.repeat(debug_img[None, None, :, :], 3, axis=1)
     # checkpoint(debug_img, os.path.join(args.output_path, 'jpg'), f"debug.jpg", reverse=False)
-
- 
 
     checkpoint(style_image_grey, os.path.join(args.output_path, 'jpg'), f"style_basis.jpg", reverse=True)
 
@@ -128,7 +126,7 @@ def style_transfer(problem, rho_initial):
     def resize_bwd(image_data):
         print("resize bwd...")
         image_data = np.array(image_data)
-        interp_bwd = RegularGridInterpolator((xc_image[:, 0], yc_image[0, :]), image_data, method='linear')
+        interp_bwd = RegularGridInterpolator((xc_image[:, 0], yc_image[0, :]), image_data, method='linear', bounds_error=False, fill_value=None)
         return interp_bwd(cell_centroids)
 
     def style_vg_and_state(image_theta):

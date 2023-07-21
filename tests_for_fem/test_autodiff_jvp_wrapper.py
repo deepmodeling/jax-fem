@@ -13,7 +13,7 @@ import pytest
 import jax
 import jax.numpy as np
 from jax.test_util import check_grads
-from elasticity2d_code import Elasticity
+from tests_for_fem.elasticity2d_code import Elasticity
 from jax_am.fem.generate_mesh import get_meshio_cell_type, Mesh
 from jax_am.common import rectangle_mesh
 from jax_am.fem.solver import ad_wrapper

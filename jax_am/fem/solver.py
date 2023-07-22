@@ -306,7 +306,7 @@ def line_search(problem, dofs, inc):
 def get_A_fn(problem, use_petsc):
     logging.info(f"Creating sparse matrix with scipy...")
     A_sp_scipy = scipy.sparse.csr_array(
-        (problem.V, (problem.I, problem.J)),
+        (onp.array(problem.V), (problem.I, problem.J)),
         shape=(problem.num_total_dofs, problem.num_total_dofs))
     # logging.info(f"Creating sparse matrix from scipy using JAX BCOO...")
     A_sp = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()

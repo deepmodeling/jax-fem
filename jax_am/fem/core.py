@@ -640,8 +640,14 @@ class FEM:
                 jacs = np_version.vstack(jacs)
             else:
                 # np_version set to ordinary numpy saves GPU memory
-                values = jax_array_list_to_numpy_diff(values)
-                jacs = jax_array_list_to_numpy_diff(jacs)
+                # values = jax_array_list_to_numpy_diff(values)
+                # jacs = jax_array_list_to_numpy_diff(jacs)
+
+                # Putting the large matrix on CPU - This allows
+                # differentiation as well
+                cpu = jax.devices("cpu")[0]
+                values = np.vstack(jax.device_put(values, cpu))
+                jacs = np.vstack(jax.device_put(jacs, cpu))
 
             return values, jacs
         else:
@@ -821,7 +827,8 @@ class FEM:
                        axis=1).reshape(-1)
         self.I = I
         self.J = J
-        self.V = V
+        self.V = V  # This is a jax array for now but in CPU memory
+        del V, I, J
 
         if self.cauchy_bc_info is not None:
             D_face, selected_cells = self.compute_face(cells_sol, onp, True)

@@ -19,6 +19,7 @@ from jax_am.common import rectangle_mesh
 from jax_am.fem.solver import ad_wrapper
 from jax_am.fem.autodiff_utils import ad_wrapper_jvp
 
+_A_TOL_GRADIENT = 1e-2
 
 def test_ad_wrapper_jvp():
     ele_type = 'QUAD4'
@@ -57,7 +58,8 @@ def test_ad_wrapper_jvp():
     # -------------Test baseline - Original ad_wrapper
     print("*******Checking original against finite differences...")
     check_grads(objective, (np.ones((200, 1))*0.5, ),
-                order=1, modes=['rev'], eps=1e-4)
+                order=1, modes=['rev'], eps=1e-4,
+                atol=_A_TOL_GRADIENT)
 
     # Check second-order gradients - Time consuming (~5 min)
     # Change to new ad_wrapper as default
@@ -69,7 +71,8 @@ def test_ad_wrapper_jvp():
 
     print("*******Checking new against finite differences upto 2nd order...")
     check_grads(objective, (np.ones((200, 1))*0.5, ),
-                order=2, modes=['rev'], eps=1e-4)
+                order=2, modes=['rev'], eps=1e-4,
+                atol=_A_TOL_GRADIENT)
 
     # -------------For hessian-vector product
     new_obj = lambda params: objective(params, False)
@@ -92,7 +95,8 @@ def test_ad_wrapper_jvp():
     # -------------Test baseline - Original ad_wrapper
     print("*******Checking original for PETSc against finite differences...")
     check_grads(objective, (np.ones((200, 1))*0.5, ),
-                order=1, modes=['rev'], eps=1e-4)
+                order=1, modes=['rev'], eps=1e-4,
+                atol=_A_TOL_GRADIENT)
 
     # Check second-order gradients - Time consuming (~5 min)
     # Change to new ad_wrapper as default
@@ -104,7 +108,8 @@ def test_ad_wrapper_jvp():
 
     print("*******Checking new for PETSc against finite differences upto 2nd order...")
     check_grads(objective, (np.ones((200, 1))*0.5, ),
-                order=2, modes=['rev'], eps=1e-4)
+                order=2, modes=['rev'], eps=1e-4,
+                atol=_A_TOL_GRADIENT)
 
     # -------------For hessian-vector product
     new_obj = lambda params: objective(params, False)

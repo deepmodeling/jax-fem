@@ -1,9 +1,6 @@
 import numpy as onp
 import jax
 import jax.numpy as np
-from jax.experimental.sparse import BCOO
-import scipy
-from functools import partial
 import sys
 import time
 import functools
@@ -13,7 +10,7 @@ from typing import Any, Callable, Optional, List, Union
 from jax_am.common import timeit
 from jax_am.fem.generate_mesh import Mesh
 from jax_am.fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grads
-
+from jax_am.fem.autodiff_utils import jax_array_list_to_numpy_diff
 from jax.config import config
 
 import logging
@@ -89,14 +86,10 @@ class FEM:
     vec: int
     dim: int
     ele_type: str = 'HEX8'
-    dirichlet_bc_info: Optional[List[Union[List[Callable], List[int],
-                                           List[Callable]]]] = None
-    periodic_bc_info: Optional[List[Union[List[Callable], List[Callable],
-                                          List[Callable], List[int]]]] = None
-    neumann_bc_info: Optional[List[Union[List[Callable],
-                                         List[Callable]]]] = None
-    cauchy_bc_info: Optional[List[Union[List[Callable],
-                                        List[Callable]]]] = None
+    dirichlet_bc_info: Optional[List[Union[List[Callable], List[int], List[Callable]]]] = None
+    periodic_bc_info: Optional[List[Union[List[Callable], List[Callable], List[Callable], List[int]]]] = None
+    neumann_bc_info: Optional[List[Union[List[Callable], List[Callable]]]] = None
+    cauchy_bc_info: Optional[List[Union[List[Callable], List[Callable]]]] = None
     source_info: Callable = None
     additional_info: Any = ()
 
@@ -531,7 +524,6 @@ class FEM:
                          cell_JxW[:, None, None],
                          axis=0)
             return val
-
         return mass_kernel
 
     def get_cauchy_kernel(self, cauchy_map):
@@ -643,9 +635,20 @@ class FEM:
                 jacs.append(jac)
 
             # np_version set to jax.numpy allows for auto diff, but uses GPU memory
-            # np_version set to ordinary numpy saves GPU memory, but can't use auto diff
-            values = np_version.vstack(values)
-            jacs = np_version.vstack(jacs)
+            if np_version.__name__ == 'jax.numpy':
+                values = np_version.vstack(values)
+                jacs = np_version.vstack(jacs)
+            else:
+                # np_version set to ordinary numpy saves GPU memory
+                # values = jax_array_list_to_numpy_diff(values)
+                # jacs = jax_array_list_to_numpy_diff(jacs)
+
+                # Putting the large matrix on CPU - This allows
+                # differentiation as well
+                cpu = jax.devices("cpu")[0]
+                values = np.vstack(jax.device_put(values, cpu))
+                jacs = np.vstack(jax.device_put(jacs, cpu))
+
             return values, jacs
         else:
             values = []
@@ -824,7 +827,8 @@ class FEM:
                        axis=1).reshape(-1)
         self.I = I
         self.J = J
-        self.V = V
+        self.V = V  # This is a jax array for now but in CPU memory
+        del V, I, J
 
         if self.cauchy_bc_info is not None:
             D_face, selected_cells = self.compute_face(cells_sol, onp, True)
@@ -900,3 +904,5 @@ class FEM:
                 )
         else:
             print(f"\n\n### No Dirichlet B.C. found.")
+
+

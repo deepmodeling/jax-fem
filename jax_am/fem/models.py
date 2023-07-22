@@ -1,8 +1,8 @@
 import numpy as onp
 import jax
-import jax.numpy as np 
+import jax.numpy as np
 
-from jax_am.fem.core import FEM 
+from jax_am.fem.core import FEM
 
 
 class LinearPoisson(FEM):
@@ -13,7 +13,7 @@ class LinearPoisson(FEM):
         cells_sol = sol[self.cells] # (num_cells, num_nodes, vec)
         # (num_cells, 1, num_nodes, vec) * (1, num_quads, num_nodes, 1) -> (num_cells, num_quads, vec)
         u = np.sum(cells_sol[:, None, :, :] * self.shape_vals[None, :, :, None], axis=2)
-        physical_quad_points = self.get_physical_quad_points() # (num_cells, num_quads, dim) 
+        physical_quad_points = self.get_physical_quad_points() # (num_cells, num_quads, dim)
         true_u = jax.vmap(jax.vmap(true_u_fn))(physical_quad_points) # (num_cells, num_quads, vec)
         # (num_cells, num_quads, vec) * (num_cells, num_quads, 1)
         l2_error = np.sqrt(np.sum((u - true_u)**2 * self.JxW[:, :, None]))
@@ -24,9 +24,9 @@ class LinearPoisson(FEM):
         # (num_cells, 1, num_nodes, vec) * (1, num_quads, num_nodes, 1) -> (num_cells, num_quads, vec)
         u = np.sum(cells_sol[:, None, :, :] * self.shape_vals[None, :, :, None], axis=2)
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim)
-        u_grads = cells_sol[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
+        u_grads = cells_sol[:, None, :, :, None] * self.shape_grads[:, :, :, None, :]
         u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim)
-        physical_quad_points = self.get_physical_quad_points() # (num_cells, num_quads, dim) 
+        physical_quad_points = self.get_physical_quad_points() # (num_cells, num_quads, dim)
         true_u = jax.vmap(jax.vmap(true_u_fn))(physical_quad_points) # (num_cells, num_quads, vec)
         true_u_grads = jax.vmap(jax.vmap(jax.jacrev(true_u_fn)))(physical_quad_points) # (num_cells, num_quads, vec, dim)
         # (num_cells, num_quads, vec) * (num_cells, num_quads, 1)
@@ -65,7 +65,7 @@ class Mechanics(FEM):
         traction = surface_fn(u_grads_face) # (num_selected_faces, num_face_quads, vec)
         # (num_selected_faces, num_face_quads, vec) * (num_selected_faces, num_face_quads, 1)
         int_val = np.sum(traction * nanson_scale[:, :, None], axis=(0, 1))
-        return int_val    
+        return int_val
 
     def compute_traction(self, location_fn, sol):
         """For post-processing only
@@ -75,7 +75,7 @@ class Mechanics(FEM):
         def traction_fn(u_grads):
             """
             Returns
-            ------- 
+            -------
             traction: ndarray
                 (num_selected_faces, num_face_quads, vec)
             """
@@ -147,7 +147,7 @@ class Plasticity(Mechanics):
         return stress_return_map
 
     def get_maps(self):
-        def safe_sqrt(x):  
+        def safe_sqrt(x):
             safe_x = np.where(x > 0., np.sqrt(x), 0.)
             return safe_x
 
@@ -187,8 +187,8 @@ class Plasticity(Mechanics):
         return vmap_strain, vmap_stress_return_map
 
     def update_stress_strain(self, sol):
-        # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
-        u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
+        # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim)
+        u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :]
         u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim)
         vmap_strain, vmap_stress_rm = self.stress_strain_fns()
         self.sigmas_old = vmap_stress_rm(u_grads, self.sigmas_old, self.epsilons_old)

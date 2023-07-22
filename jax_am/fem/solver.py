@@ -42,7 +42,17 @@ def petsc_solve(A, b, ksp_type, pc_type):
     return x.getArray()
 
 
-def jax_solve(problem, A_fn, b, x0, precond):
+def jax_solve(problem, A_fn, b, x0, precond: bool, pc_matrix=None):
+    """Solves the equilibrium equation using a JAX solver.
+    Is fully traceable and runs on GPU.
+
+    Parameters
+    ----------
+    precond
+        Whether to calculate the preconditioner or not
+    pc_matrix
+        The matrix to use as preconditioner
+    """
     pc = get_jacobi_precond(
         jacobi_preconditioner(problem)) if precond else None
     x, info = jax.scipy.sparse.linalg.bicgstab(A_fn,
@@ -296,7 +306,7 @@ def line_search(problem, dofs, inc):
 def get_A_fn(problem, use_petsc):
     logging.info(f"Creating sparse matrix with scipy...")
     A_sp_scipy = scipy.sparse.csr_array(
-        (problem.V, (problem.I, problem.J)),
+        (onp.array(problem.V), (problem.I, problem.J)),
         shape=(problem.num_total_dofs, problem.num_total_dofs))
     # logging.info(f"Creating sparse matrix from scipy using JAX BCOO...")
     A_sp = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
@@ -307,16 +317,9 @@ def get_A_fn(problem, use_petsc):
         return A_sp @ dofs
 
     if use_petsc:
-
-        # A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape,
-        #                           csr=(A_sp_scipy.indptr, A_sp_scipy.indices,
-        #                                A_sp_scipy.data))
-
         # https://scicomp.stackexchange.com/questions/2355/32bit-64bit-issue-when-working-with-numpy-and-petsc4py/2356#2356
         A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape, csr=(A_sp_scipy.indptr.astype(PETSc.IntType, copy=False),
                                                        A_sp_scipy.indices.astype(PETSc.IntType, copy=False), A_sp_scipy.data))
-
-
         for i in range(len(problem.node_inds_list)):
             row_inds = onp.array(problem.node_inds_list[i] * problem.vec +
                                  problem.vec_inds_list[i],
@@ -563,9 +566,9 @@ def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
 
     if use_petsc:
 
-        A = PETSc.Mat().createAIJ(size=A_sp_scipy_aug.shape, 
+        A = PETSc.Mat().createAIJ(size=A_sp_scipy_aug.shape,
                                   csr=(A_sp_scipy_aug.indptr.astype(PETSc.IntType, copy=False),
-                                       A_sp_scipy_aug.indices.astype(PETSc.IntType, copy=False), 
+                                       A_sp_scipy_aug.indices.astype(PETSc.IntType, copy=False),
                                        A_sp_scipy_aug.data))
 
         # A_aug = PETSc.Mat().createAIJ(size=A_sp_scipy_aug.shape,
@@ -700,9 +703,9 @@ def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info_force,
         #logging.info('\t------------------------------------')
         if info_force == True:
             print(('\nDR Iteration %d: Max force (residual error) = %g (tol = %g)' +
-                   'Max velocity = %g') % (nIters, error, tol, 
+                   'Max velocity = %g') % (nIters, error, tol,
                                             np.max(np.absolute(qdot))))
-        if info == True: 
+        if info == True:
             print('\nDamping t: ',t, );
             print('Damping coefficient: ', c)
             print('Max epsilon: ',np.max(eps))
@@ -713,7 +716,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
     """
     Implementation of
 
-    Luet, David Joseph. Bounding volume hierarchy and non-uniform rational B-splines for contact enforcement 
+    Luet, David Joseph. Bounding volume hierarchy and non-uniform rational B-splines for contact enforcement
     in large deformation finite element analysis of sheet metal forming. Diss. Princeton University, 2016.
     Chapter 4.3 Nonlinear System Solution
 
@@ -776,7 +779,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
         # marching forward
         q_old[:] = q[:]; R_old[:] = R[:]
         q[:] += h*qdot; dofs = np.array(q)
-        
+
         R = onp.array(assembleVec(dofs))
 
         nIters += 1
@@ -797,7 +800,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
         # calculating the jacobian matrix
 
         if ((onp.max(eps) > 1) and (iKMat > nKMat)): #SPR JAN max --> min
-            if info == True: 
+            if info == True:
                 print('\nRecalculating the tangent matrix: ', nIters)
 
             iKMat = 0
@@ -806,15 +809,13 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
                 onp.absolute(KCSR).sum(axis=1)).squeeze()
 
         #compute new velocities and accelerations
+        # qdot_old[:] = qdot[:]; qdotdot_old[:] = qdotdot[:];
+        # qdot = (2.- c*h)/(2 + c*h) * qdot_old - 2.*h/(2.+c*h)* R / M
         qdot_old[:] = qdot[:]
-        qdotdot_old[:] = qdotdot[:]
-        qdot = (2. - c * h) / (2 + c * h) * qdot_old - 2. * h / (2. +
-                                                                 c * h) * R / M
         qdotdot = qdot - qdot_old
 
         # output on screen
-        printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint,
-                  info_force, info)
+        printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint)
 
     # check if converged
     convergence = True

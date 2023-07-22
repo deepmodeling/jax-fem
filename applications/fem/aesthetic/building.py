@@ -144,7 +144,7 @@ def output_sol(params, obj_val):
     sol = fwd_pred(params)
     vtu_path = os.path.join(vtk_path, f'sol_{output_sol.counter:03d}.vtu')
     save_sol(problem, np.hstack((sol, np.zeros((len(sol), 1)))), vtu_path, cell_infos=[('theta', 1. - problem.full_params[:, 0])])
-    print(f"{bcolors.HEADER}compliance = {obj_val}{bcolors.ENDC}")
+    print(f"{bcolors.HEADER}Case = {problem_name}, compliance = {obj_val}{bcolors.ENDC}")
     outputs.append(obj_val)
     output_sol.counter += 1
 output_sol.counter = 0
@@ -159,11 +159,10 @@ def rho_flex2full(rho_flex):
 
 vf = 0.5
 rho_ini = vf*np.ones((len(problem.flex_inds), 1))
-optimizationParams = {'maxIters':11, 'movelimit':0.1}
 numConstraints = 1
 
 config.update("jax_enable_x64", False)
-style_value_and_grad, initial_loss = style_transfer(problem, rho_flex2full(rho_ini), image_path='styles/calligraphy.png', reverse=True)
+style_value_and_grad, initial_loss = style_transfer(problem, rho_flex2full(rho_ini), image_path='styles/moha.png', reverse=True)
 config.update("jax_enable_x64", True)
 
  
@@ -198,14 +197,20 @@ def consHandle(rho, epoch):
     c, gradc = c.reshape((1,)), gradc[None, ...]
     return c, gradc
 
-rho_flex = rho_ini
-for i in range(4):
-    rho_flex = optimize(problem, rho_flex, optimizationParams, objectiveHandleCompliance, consHandle, numConstraints)
-    rho_full = rho_flex2full(rho_flex)
-    rho_full = optimize(problem, rho_full, optimizationParams, objectiveHandleStyle, consHandle, numConstraints)
-    rho_flex = rho_full2flex(rho_full)
 
-rho_flex = optimize(problem, rho_flex, {'maxIters':21, 'movelimit':0.1}, objectiveHandleCompliance, consHandle, numConstraints)
+optimizationParamsCompliance = {'maxIters':5, 'movelimit':0.05}
+optimizationParamsStyle = {'maxIters':10, 'movelimit':0.1}
+
+rho_flex = rho_ini
+for i in range(3):
+    rho_flex = optimize(problem, rho_flex, optimizationParamsCompliance, objectiveHandleCompliance, consHandle, numConstraints)
+    # rho_full = rho_flex2full(rho_flex)
+    # rho_full = optimize(problem, rho_full, optimizationParamsStyle, objectiveHandleStyle, consHandle, numConstraints)
+    # rho_flex = rho_full2flex(rho_full)
+
+for i in range(10):
+    rho_flex = optimize(problem, rho_flex, {'maxIters':10, 'movelimit':0.05}, objectiveHandleCompliance, consHandle, numConstraints)
+ 
 
 print(f"As a reminder, compliance = {J_total(np.ones((len(problem.flex_inds), 1)))} for full material")
 

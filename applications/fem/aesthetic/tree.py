@@ -118,23 +118,22 @@ def J_total(params):
     return compliance
 
 outputs = []
-def output_sol(params, obj_val):
+def output_sol(params, obj_val, mode):
     print(f"\nOutput solution - need to solve the forward problem again...")
     sol = fwd_pred(params)
     vtu_path = os.path.join(vtk_path, f'sol_{output_sol.counter:03d}.vtu')
     save_sol(problem, np.hstack((sol, np.zeros((len(sol), 1)))), vtu_path, cell_infos=[('theta', 1. - problem.full_params[:, 0])])
-    print(f"{bcolors.HEADER}compliance = {obj_val}{bcolors.ENDC}")
+    print(f"{bcolors.HEADER}Case = {problem_name}, Mode = {mode}, compliance = {obj_val}{bcolors.ENDC}")
     outputs.append(obj_val)
     output_sol.counter += 1
 output_sol.counter = 0
 
 vf = 0.3
 rho_ini = vf*np.ones((len(problem.flex_inds), 1))
-optimizationParams = {'maxIters':11, 'movelimit':0.1}
 numConstraints = 1
 
 config.update("jax_enable_x64", False)
-style_value_and_grad, initial_loss = style_transfer(problem, rho_ini, image_path='styles/circle.png', reverse=False)
+style_value_and_grad, initial_loss = style_transfer(problem, rho_ini, image_path='styles/circles_ppt_made.png', reverse=True)
 config.update("jax_enable_x64", True)
 
  
@@ -144,7 +143,7 @@ def objectiveHandleCompliance(rho):
     dJ has shape (...) = rho.shape
     """
     J_to, dJ_to = jax.value_and_grad(J_total)(rho)
-    output_sol(rho, J_to)
+    output_sol(rho, J_to, 'compliance')
     return J_to, dJ_to
 
 def objectiveHandleStyle(rho):
@@ -153,7 +152,7 @@ def objectiveHandleStyle(rho):
     dJ has shape (...) = rho.shape
     """
     J_style, dJ_style = style_value_and_grad(rho, output_sol.counter)
-    output_sol(rho, J_style)
+    output_sol(rho, J_style, 'style')
     return J_style, dJ_style
 
 
@@ -170,12 +169,18 @@ def consHandle(rho, epoch):
     return c, gradc
 
 
-rho = rho_ini
-for i in range(8):
-    rho = optimize(problem, rho, optimizationParams, objectiveHandleCompliance, consHandle, numConstraints)
-    rho = optimize(problem, rho, optimizationParams, objectiveHandleStyle, consHandle, numConstraints)
+optimizationParamsCompliance = {'maxIters':5, 'movelimit':0.1}
+optimizationParamsStyle = {'maxIters':10, 'movelimit':0.1}
 
-rho = optimize(problem, rho, optimizationParams, objectiveHandleCompliance, consHandle, numConstraints)
+rho = rho_ini
+for i in range(3):
+    rho = optimize(problem, rho, optimizationParamsCompliance, objectiveHandleCompliance, consHandle, numConstraints)
+    # rho = optimize(problem, rho, optimizationParamsStyle, objectiveHandleStyle, consHandle, numConstraints)
+
+for i in range(10):
+    rho = optimize(problem, rho, {'maxIters':10, 'movelimit':0.05}, objectiveHandleCompliance, consHandle, numConstraints)
+ 
+
 print(f"As a reminder, compliance = {J_total(np.ones((len(problem.flex_inds), 1)))} for full material")
 
  

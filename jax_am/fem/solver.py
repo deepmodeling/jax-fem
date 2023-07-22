@@ -389,8 +389,8 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
             res_val = np.linalg.norm(res_vec)
             logging.info(f"res l_2 = {res_val}")
 
-        assert np.all(
-            np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
+    assert np.all(
+        np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
 
     assert np.all(np.isfinite(dofs)), f"dofs contains NaN, stop the program!"
 

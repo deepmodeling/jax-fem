@@ -4,16 +4,55 @@ import numpy as onp
 import meshio
 
 from jax_am.fem.basis import get_elements
+from jax_am.fem.basis import get_face_shape_vals_and_grads
+
+import jax
+import jax.numpy as np
 
 
 class Mesh():
-    """A custom mesh manager might be better than just use third-party packages like meshio?
     """
-    def __init__(self, points, cells):
+    A custom mesh manager might be better using a third-party library like
+    meshio.
+    """
+    def __init__(self, points, cells, ele_type='TET4'):
         # TODO: Assert that cells must have correct orders
         # TODO: first cells, then points?
         self.points = points
         self.cells = cells
+        self.ele_type = ele_type
+
+    def count_selected_faces(self, location_fn):
+        """Given location functions, compute the count of faces that satisfy
+        the location function. Useful for setting up distributed load
+        conditions.
+
+        Parameters
+        ----------
+        location_fns : List[Callable]
+            Callable: a function that inputs a point and returns a boolean
+            value describing whether the boundary condition should be applied.
+
+        Returns
+        -------
+        face_count : int
+        """
+
+        _, _, _, _, face_inds = get_face_shape_vals_and_grads(self.ele_type)
+        cell_points = onp.take(self.points, self.cells, axis=0)
+        cell_face_points = onp.take(cell_points, face_inds, axis=1)
+
+        vmap_location_fn = jax.vmap(location_fn)
+
+        def on_boundary(cell_points):
+            boundary_flag = vmap_location_fn(cell_points)
+            return onp.all(boundary_flag)
+
+        vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
+        boundary_flags = vvmap_on_boundary(cell_face_points)
+        boundary_inds = onp.argwhere(boundary_flags)
+        return boundary_inds.shape[0]
+
 
 
 def check_mesh_TET4(points, cells):
@@ -99,7 +138,7 @@ def box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir, ele_type='HEX8'):
     gmsh.model.mesh.setOrder(degree)
     gmsh.write(msh_file)
     gmsh.finalize()
-      
+
     mesh = meshio.read(msh_file)
     points = mesh.points # (num_total_nodes, dim)
     cells =  mesh.cells_dict[cell_type] # (num_cells, num_nodes)
@@ -122,7 +161,7 @@ def cylinder_mesh(data_dir, R=5, H=10, circle_mesh=5, hight_mesh=20, rect_ratio=
     os.makedirs(msh_dir, exist_ok=True)
     geo_file = os.path.join(msh_dir, 'cylinder.geo')
     msh_file = os.path.join(msh_dir, 'cylinder.msh')
-    
+
     string='''
         Point(1) = {{0, 0, 0, 1.0}};
         Point(2) = {{-{rect_coor}, {rect_coor}, 0, 1.0}};

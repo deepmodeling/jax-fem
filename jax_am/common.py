@@ -8,8 +8,7 @@ import yaml
 import time
 from functools import wraps
 
-import logging
-logger = logging.getLogger(__name__)
+from jax_am import logger
 
 
 def json_parse(json_filepath):
@@ -96,7 +95,7 @@ def timeit(func):
         result = func(*args, **kwargs)
         end_time = time.perf_counter()
         total_time = end_time - start_time
-        logger.info(f'Function {func.__name__} took {total_time:.4f} seconds')
+        logger.debug(f'Function {func.__name__} took {total_time:.4f} seconds')
         return result
 
     return timeit_wrapper

@@ -79,7 +79,7 @@ def zero_dirichlet_val(point):
 
 def bottom(point):
     return np.isclose(point[2], 0., atol=1e-5)
-    
+
 
 def top(point):
     return np.isclose(point[2], Lz, atol=1e-5)
@@ -87,7 +87,7 @@ def top(point):
 
 dirichlet_bc_info = [[bottom]*3, [0, 1, 2], [zero_dirichlet_val]*2 + [get_dirichlet_bottom(1.)]]
 neumann_bc_info = [[top], [None]]
-problem = HyperElasticity(mesh, vec=3, dim=3, ele_type=ele_type, 
+problem = HyperElasticity(mesh, vec=3, dim=3, ele_type=ele_type,
     dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info)
 
 

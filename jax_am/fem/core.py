@@ -12,9 +12,7 @@ from jax_am.fem.generate_mesh import Mesh
 from jax_am.fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grads
 from jax_am.fem.autodiff_utils import jax_array_list_to_numpy_diff
 from jax.config import config
-
-import logging
-logger = logging.getLogger(__name__)
+from jax_am import logger
 
 
 config.update("jax_enable_x64", True)
@@ -101,7 +99,7 @@ class FEM:
         self.num_total_dofs = self.num_total_nodes * self.vec
 
         start = time.time()
-        logging.info(f"Computing shape function values, gradients, etc.")
+        logger.debug(f"Computing shape function values, gradients, etc.")
 
         self.shape_vals, self.shape_grads_ref, self.quad_weights = get_shape_vals_and_grads(
             self.ele_type)
@@ -128,8 +126,8 @@ class FEM:
         self.internal_vars = {}
         self.compute_Neumann_boundary_inds()
 
-        logging.info(f"Done pre-computations, took {compute_time} [s]")
-        logging.info(
+        logger.debug(f"Done pre-computations, took {compute_time} [s]")
+        logger.info(
             f"Solving a problem with {len(self.cells)} cells, {self.num_total_nodes}x{self.vec} = {self.num_total_dofs} dofs."
         )
 
@@ -803,7 +801,7 @@ class FEM:
         return res
 
     def compute_residual_vars(self, sol, **internal_vars):
-        logging.info(f"Computing cell residual...")
+        logger.debug(f"Computing cell residual...")
         cells_sol = sol[self.cells]  # (num_cells, num_nodes, vec)
         weak_form = self.split_and_compute_cell(
             cells_sol, np, False,
@@ -812,7 +810,7 @@ class FEM:
                                                  **internal_vars)
 
     def compute_newton_vars(self, sol, **internal_vars):
-        logging.info(f"Computing cell Jacobian and cell residual...")
+        logger.debug(f"Computing cell Jacobian and cell residual...")
         cells_sol = sol[self.cells]  # (num_cells, num_nodes, vec)
         # (num_cells, num_nodes, vec), (num_cells, num_nodes, vec, num_nodes, vec)
         weak_form, cells_jac = self.split_and_compute_cell(

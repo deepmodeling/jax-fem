@@ -8,9 +8,7 @@ import time
 # petsc4py.init()
 from petsc4py import PETSc
 
-import logging
-
-logger = logging.getLogger(__name__)
+from jax_am import logger
 
 ################################################################################
 # PETSc linear solver or JAX linear solver
@@ -24,7 +22,7 @@ def petsc_solve(A, b, ksp_type, pc_type):
     ksp.setFromOptions()
     ksp.setType(ksp_type)
     ksp.pc.setType(pc_type)
-    logging.info(
+    logger.debug(
         f'PETSc - Solving with ksp_type = {ksp.getType()}, '
         f'pc = {ksp.pc.getType()}'
     )
@@ -36,7 +34,7 @@ def petsc_solve(A, b, ksp_type, pc_type):
     A.mult(x, y)
 
     err = np.linalg.norm(y.getArray() - rhs.getArray())
-    logging.info(f"PETSc linear solve res = {err}")
+    logger.debug(f"PETSc linear solve res = {err}")
     # assert err < 0.1, f"PETSc linear solver failed to converge, err = {err}"
 
     return x.getArray()
@@ -65,7 +63,7 @@ def jax_solve(problem, A_fn, b, x0, precond: bool, pc_matrix=None):
 
     # Verify convergence
     err = np.linalg.norm(A_fn(x) - b)
-    logging.info(f"JAX scipy linear solve res = {err}")
+    logger.debug(f"JAX scipy linear solve res = {err}")
 
     # Remarks(Tianju): assert seems to unexpectedly change the behavior of bicgstab (on my Linux machine).
     # Sometimes the solver simply fails without converging (it does converge without assert)
@@ -202,7 +200,7 @@ def operator_to_matrix(operator_fn, problem):
 
 
 def jacobi_preconditioner(problem):
-    logging.info(f"Compute and use jacobi preconditioner")
+    logger.debug(f"Compute and use jacobi preconditioner")
     jacobi = np.array(problem.A_sp_scipy.diagonal())
     jacobi = assign_ones_bc(jacobi.reshape(-1), problem)
     return jacobi
@@ -221,19 +219,19 @@ def test_jacobi_precond(problem, jacobi, A_fn):
     for ind in range(500):
         test_vec = np.zeros(num_total_dofs)
         test_vec = test_vec.at[ind].set(1.)
-        logging.info(
+        logger.debug(
             f"{A_fn(test_vec)[ind]}, {jacobi[ind]}, ratio = {A_fn(test_vec)[ind]/jacobi[ind]}"
         )
 
-    logging.info(f"test jacobi preconditioner")
-    logging.info(
+    logger.debug(f"test jacobi preconditioner")
+    logger.debug(
         f"np.min(jacobi) = {np.min(jacobi)}, np.max(jacobi) = {np.max(jacobi)}"
     )
-    logging.info(f"finish jacobi preconditioner")
+    logger.debug(f"finish jacobi preconditioner")
 
 
 def linear_guess_solve(problem, A_fn, precond, use_petsc):
-    logging.info(f"Linear guess solve...")
+    logger.debug(f"Linear guess solve...")
     # b = np.zeros((problem.num_total_nodes, problem.vec))
     b = problem.body_force + problem.neumann
     b = assign_bc(b, problem)
@@ -248,7 +246,7 @@ def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond,
                               use_petsc):
     """Lift solver
     """
-    logging.info(f"Solving linear system with lift solver...")
+    logger.debug(f"Solving linear system with lift solver...")
     b = -res_vec
 
     if use_petsc:
@@ -304,13 +302,13 @@ def line_search(problem, dofs, inc):
 
 
 def get_A_fn(problem, use_petsc):
-    logging.info(f"Creating sparse matrix with scipy...")
+    logger.debug(f"Creating sparse matrix with scipy...")
     A_sp_scipy = scipy.sparse.csr_array(
         (onp.array(problem.V), (problem.I, problem.J)),
         shape=(problem.num_total_dofs, problem.num_total_dofs))
-    # logging.info(f"Creating sparse matrix from scipy using JAX BCOO...")
+    # logger.debug(f"Creating sparse matrix from scipy using JAX BCOO...")
     A_sp = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
-    # logging.info(f"Global sparse matrix takes about {A_sp.data.shape[0]*8*3/2**30} G memory to store.")
+    # logger.info(f"Global sparse matrix takes about {A_sp.data.shape[0]*8*3/2**30} G memory to store.")
     problem.A_sp_scipy = A_sp_scipy
 
     def compute_linearized_residual(dofs):
@@ -349,9 +347,9 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
 
     The function newton_update computes r(u) and dr/du
     """
-    logging.info(
+    logger.debug(
         f"Calling the row elimination solver for imposing Dirichlet B.C.")
-    logging.info("Start timing")
+    logger.debug("Start timing")
     start = time.time()
     sol_shape = (problem.num_total_nodes, problem.vec)
     dofs = np.zeros(sol_shape).reshape(-1)
@@ -371,7 +369,7 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
 
         res_vec, A_fn = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
-        logging.info(f"Linear solve, res l_2 = {res_val}")
+        logger.debug(f"Linear solve, res l_2 = {res_val}")
 
     else:
         if initial_guess is None:
@@ -382,7 +380,7 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
 
         res_vec, A_fn = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
-        logging.info(f"Before, res l_2 = {res_val}")
+        logger.debug(f"Before, res l_2 = {res_val}")
         tol = 1e-6
         while res_val > tol:
             dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs,
@@ -390,7 +388,7 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
             res_vec, A_fn = newton_update_helper(dofs)
             # test_jacobi_precond(problem, jacobi_preconditioner(problem, dofs), A_fn)
             res_val = np.linalg.norm(res_vec)
-            logging.info(f"res l_2 = {res_val}")
+            logger.debug(f"res l_2 = {res_val}")
 
     assert np.all(
         np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
@@ -400,9 +398,9 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
     sol = dofs.reshape(sol_shape)
     end = time.time()
     solve_time = end - start
-    logging.info(f"Solve took {solve_time} [s]")
-    logging.info(f"max of sol = {np.max(sol)}")
-    logging.info(f"min of sol = {np.min(sol)}")
+    logger.info(f"Solve took {solve_time} [s]")
+    logger.debug(f"max of sol = {np.max(sol)}")
+    logger.debug(f"min of sol = {np.min(sol)}")
 
     return sol
 
@@ -549,13 +547,13 @@ def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
     J = onp.hstack((problem.J, J_d_sym, J_p_sym))
     V = onp.hstack((problem.V, V_d_sym, V_p_sym))
 
-    logging.info(f"Aug - Creating sparse matrix with scipy...")
+    logger.debug(f"Aug - Creating sparse matrix with scipy...")
     A_sp_scipy_aug = scipy.sparse.csc_array((V, (I, J)),
                                             shape=(group_index, group_index))
-    # logging.info(f"Aug - Creating sparse matrix from scipy using JAX BCOO...")
+    # logger.info(f"Aug - Creating sparse matrix from scipy using JAX BCOO...")
     A_sp_aug = BCOO.from_scipy_sparse(A_sp_scipy_aug).sort_indices()
 
-    # logging.info(f"Aug - Global sparse matrix takes about {A_sp_aug.data.shape[0]*8*3/2**30} G memory to store.")
+    # logger.info(f"Aug - Global sparse matrix takes about {A_sp_aug.data.shape[0]*8*3/2**30} G memory to store.")
 
     # TODO: Potential bug
     # Used only in jacobi_preconditioner
@@ -596,10 +594,10 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
     Reference:
     https://ethz.ch/content/dam/ethz/special-interest/baug/ibk/structural-mechanics-dam/education/femI/Presentation.pdf
     """
-    logging.info(
+    logger.info(
         f"Calling the lagrange multiplier solver for imposing Dirichlet B.C. and periodic B.C."
     )
-    logging.info("Start timing")
+    logger.info("Start timing")
     start = time.time()
     sol_shape = (problem.num_total_nodes, problem.vec)
     dofs = np.zeros(sol_shape).reshape(-1)
@@ -611,7 +609,7 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
         p_num_eps = 1.
 
     if not use_petsc:
-        logging.info(
+        logger.info(
             f"Setting p_num_eps = {p_num_eps}. If periodic B.C. fails to be applied, consider modifying this parameter."
         )
 
@@ -636,7 +634,7 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
 
         res_vec_aug, A_aug = newton_update_helper(dofs_aug)
         res_val = np.linalg.norm(res_vec_aug)
-        logging.info(f"Before, res l_2 = {res_val}")
+        logger.debug(f"Before, res l_2 = {res_val}")
         tol = 1e-6
         while res_val > tol:
             dofs_aug = linear_incremental_solver_lm(problem, res_vec_aug,
@@ -644,14 +642,14 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
                                                     use_petsc)
             res_vec_aug, A_aug = newton_update_helper(dofs_aug)
             res_val = np.linalg.norm(res_vec_aug)
-            logging.info(f"res l_2 dofs_aug = {res_val}")
+            logger.debug(f"res l_2 dofs_aug = {res_val}")
 
     sol = dofs_aug[:problem.num_total_dofs].reshape(sol_shape)
     end = time.time()
     solve_time = end - start
-    logging.info(f"Solve took {solve_time} [s]")
-    logging.info(f"max of sol = {np.max(sol)}")
-    logging.info(f"min of sol = {np.min(sol)}")
+    logger.info(f"Solve took {solve_time} [s]")
+    logger.debug(f"max of sol = {np.max(sol)}")
+    logger.debug(f"min of sol = {np.min(sol)}")
 
     return sol
 
@@ -700,7 +698,7 @@ def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info_force,
 
     ## printing control
     if nIters % nPrint == 1:
-        #logging.info('\t------------------------------------')
+        #logger.info('\t------------------------------------')
         if info_force == True:
             print(('\nDR Iteration %d: Max force (residual error) = %g (tol = %g)' +
                    'Max velocity = %g') % (nIters, error, tol,
@@ -941,7 +939,7 @@ def ad_wrapper(problem, linear=False, use_petsc=False):
         return sol, (params, sol)
 
     def f_bwd(res, v):
-        print("\nRunning backward and solving the adjoint problem...")
+        logger.info("Running backward and solving the adjoint problem...")
         params, sol = res
         vjp_result = implicit_vjp(problem, sol, params, v, use_petsc)
         return (vjp_result, )

@@ -166,8 +166,6 @@ class CrystalPlasticity(Mechanics):
                 return Fp_inv_new, slip_resistance_new, slip_new, Fe, F
 
             def implicit_residual(x, y):
-                # TODO: unflatten_fn_params may only need to perform on u_grad
-                # Modification may increase computational speed
                 u_grad, Fp_inv_old, slip_resistance_old, slip_old, rot_mat = unflatten_fn_params(x)
                 S = unflatten_fn(y)
                 _, _, _, Fe, _ = helper(u_grad, Fp_inv_old, slip_resistance_old, slip_old, rot_mat, S)
@@ -177,7 +175,10 @@ class CrystalPlasticity(Mechanics):
 
             @jax.custom_jvp
             def newton_solver(x):
-                y0 = np.zeros_like(Fp_inv_old.reshape(-1))
+                # Critical change: The following line causes JAX (version 0.4.13) tracer error
+                # y0 = np.zeros_like(Fp_inv_old.reshape(-1))
+                y0 = np.zeros(self.dim*self.dim)
+
                 step = 0
                 res_vec = implicit_residual(x, y0)
                 tol = 1e-8

@@ -9,13 +9,17 @@ data_dir = os.path.join(crt_file_path, 'data')
 numpy_dir = os.path.join(data_dir, 'numpy')
 file_path = os.path.join(numpy_dir, 'tmp.npy')
 
+
+def raw_f(x, y):
+    return np.sin(x) * y
+
 @jax.custom_vjp
 def f(x, y):
     return np.sin(x) * y
 
 def f_fwd(x, y):
     np.save(file_path, np.cos(x))
-    return f(x, y) + 1e3, (np.sin(x), y)
+    return f(x, y), (np.sin(x), y)
 
 def f_bwd(res, g):
     cos_x = np.load(file_path)
@@ -24,10 +28,11 @@ def f_bwd(res, g):
 
 f.defvjp(f_fwd, f_bwd)
 
-print(jax.value_and_grad(f)(1., 2.))
-print(jax.grad(f)(1., 2.))
 print(f(1., 2.))
+print(raw_f(1., 2.))
 
+print(jax.grad(f)(1., 2.))
+print(jax.grad(raw_f)(1., 2.))
 
 
 

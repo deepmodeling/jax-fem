@@ -66,7 +66,7 @@ def simulation():
                     F_old_inv = np.linalg.inv(F_old)
                     f = F @ F_old_inv
                     f_bar =  np.linalg.det(f)**(-1./3.)*f
-                    be_bar_trial = f @ be_bar_old @ f.T
+                    be_bar_trial = f @ be_bar_old @ f.T # Seems that there is a bug here, discovered by Jiachen; should be f_bar @ be_bar_old @ f_bar.T 
                     s_trial = G*deviatoric(be_bar_trial)
                     yield_f_trial = np.linalg.norm(s_trial) - np.sqrt(2./3.)*(sig0 + H1*alpha_old)
 

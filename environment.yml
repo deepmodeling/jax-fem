@@ -1,0 +1,48 @@
+name: jax-fem
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # - python==3.10
+  # - ipykernel
+  - numpy==1.24.4
+  - scipy==1.11.1
+  - pandas==2.0.3
+  - matplotlib==3.7.2
+  - fenics-basix==0.6.0
+  - petsc4py==3.19.4
+  - pip==23.2.1
+  - git==2.41.0
+  - pip:
+    # Utilities
+    - pytest
+    - setuptools
+    - wheel
+    - hypothesis
+    # Key dependency
+    - numba==0.57.1
+    # Minimal jax installation for GPU
+    - jax==0.4.14
+    - jaxlib==0.4.14
+    # Finite Element Engine
+    - jax-am
+    - git+https://github.com/tianjuxue/jax-am.git
+    # Neural Network libraries
+    - dm-haiku==0.0.10
+    - jaxopt==0.7
+    - optax==0.1.7
+    # Handling configurations
+    - hydra-core
+
+
+            "jax",
+            "jaxlib",
+            "matplotlib",
+            "numpy",
+            "scipy",
+            "orix",
+            "meshio",
+            "gmsh",
+            "pyfiglet",
+            "scikit-learn",
+            "fenics-basix"

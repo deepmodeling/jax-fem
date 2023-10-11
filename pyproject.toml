@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jax-fem"
+version = "0.1.0"
+authors = [
+  { name="Tianju Xue", email="cetxue@ust.hk" },
+]
+description = "Finite element analysis in JAX."
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GPL-3.0",
+    "Operating System :: OS Independent",
+    'Operating System :: MacOS',
+    'Operating System :: POSIX :: Linux',
+    'Topic :: Software Development',
+    'Topic :: Scientific/Engineering',
+    'Intended Audience :: Science/Research',
+]

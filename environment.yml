@@ -3,18 +3,18 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python==3.9
-  - numpy==1.24
-  - scipy==1.11
-  - pandas==2.1
-  - matplotlib==3.8
-  - orix==0.11
-  - meshio==5.3
-  - petsc4py==3.19
-  - pip==23.2
+  - python==3.9.18
+  - numpy==1.24.4
+  - scipy==1.11.3
+  - pandas==2.1.1
+  - matplotlib==3.8.0
+  - orix==0.11.1
+  - meshio==5.3.4
+  - petsc4py==3.19.5
+  - pip==23.2.1
   - pip:
     - setuptools==68.2
     - wheel==0.41
-    - gmsh==4.11
-    - fenics-basix==0.6
+    - gmsh==4.11.1
+    - fenics-basix==0.6.0
     - pyfiglet==1.0

@@ -59,25 +59,26 @@ FEM is a powerful tool for thermal-mechanical analysis, especially in Additive m
 
 ## Installation
 
+Clone the repository:
+
+```bash
+git clone git@github.com:tianjuxue/jax-fem.git
+cd jax-fem
+```
+
 Create a conda environment from the given `environment.yml` file:
 
 ```bash
 conda env create -f environment.yml
 ```
 
-Activate the environment:
+Activate the environment and install the package:
 
 ```bash
 conda activate jax-fem-env
-```
-
-Clone the repository and install the package:
-
-```bash
-git clone git@github.com:tianjuxue/jax-fem.git
-cd jax-fem
 pip install -e .
 ```
+
 ### Dependencies
 Install JAX
 - See jax installation [instructions](https://jax.readthedocs.io/en/latest/installation.html#)

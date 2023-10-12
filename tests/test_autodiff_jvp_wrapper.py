@@ -13,11 +13,11 @@ import pytest
 import jax
 import jax.numpy as np
 from jax.test_util import check_grads
-from tests_for_fem.elasticity2d_code import Elasticity
-from jax_am.fem.generate_mesh import get_meshio_cell_type, Mesh
-from jax_am.common import rectangle_mesh
-from jax_am.fem.solver import ad_wrapper
-from jax_am.fem.autodiff_utils import ad_wrapper_jvp
+from tests.elasticity2d_code import Elasticity
+from jax_fem.generate_mesh import get_meshio_cell_type, Mesh
+from jax_fem.common import rectangle_mesh
+from jax_fem.solver import ad_wrapper
+from jax_fem.autodiff_utils import ad_wrapper_jvp
 
 _A_TOL_GRADIENT = 1e-2
 

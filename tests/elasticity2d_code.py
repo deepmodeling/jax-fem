@@ -1,6 +1,6 @@
 "For testing purposes only"
 
-from jax_am.fem.core import FEM
+from jax_fem.core import FEM
 import jax.numpy as np
 import jax
 

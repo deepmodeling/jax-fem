@@ -1,5 +1,10 @@
 .vscode/launch.json
 *.pyc
-sol.vtu
-*.npy
-*.npz
+
+# Generates test results
+tests/hyperelasticity/jax_fem/sol.vtu
+tests/linear_elasticity_cube/jax_fem/sol.vtu
+tests/linear_elasticity_cylinder/jax_fem/sol.vtu
+tests/linear_poisson/jax_fem/sol.vtu
+tests/plasticity/jax_fem/avg_stresses.npy
+tests/plasticity/jax_fem/sol.vtu

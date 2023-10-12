@@ -8,7 +8,7 @@ import yaml
 import time
 from functools import wraps
 
-from jax_am import logger
+from jax_fem import logger
 
 
 def json_parse(json_filepath):

@@ -4,13 +4,12 @@ import jax
 import jax.numpy as np
 import meshio
 import unittest
-import os 
+import os
 
-from jax_am.fem.models import Plasticity
-from jax_am.fem.generate_mesh import Mesh
-from jax_am.fem.solver import solver
-from jax_am.fem.utils import modify_vtu_file, save_sol
-
+from jax_fem.models import Plasticity
+from jax_fem.generate_mesh import Mesh
+from jax_fem.solver import solver
+from jax_fem.utils import modify_vtu_file, save_sol
 
 
 class Test(unittest.TestCase):
@@ -38,16 +37,16 @@ class Test(unittest.TestCase):
 
         def dirichlet_val_bottom(point):
             return 0.
- 
+
         def get_dirichlet_top(disp):
             def val_fn(point):
                 return disp
             return val_fn
 
-        disps = np.load(os.path.join(crt_dir, "fenicsx/disps.npy")) 
+        disps = np.load(os.path.join(crt_dir, "fenicsx/disps.npy"))
 
         location_fns = [bottom, bottom, bottom, top, top, top]
-        value_fns = [dirichlet_val_bottom, dirichlet_val_bottom, dirichlet_val_bottom, 
+        value_fns = [dirichlet_val_bottom, dirichlet_val_bottom, dirichlet_val_bottom,
                      dirichlet_val_bottom, dirichlet_val_bottom, get_dirichlet_top(disps[0])]
         vecs = [0, 1, 2, 0, 1, 2]
         dirichlet_bc_info = [location_fns, vecs, value_fns]

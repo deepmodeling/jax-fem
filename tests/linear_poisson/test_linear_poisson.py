@@ -6,19 +6,19 @@ import meshio
 import os
 import unittest
 
-from jax_am.fem.generate_mesh import Mesh
-from jax_am.fem.models import LinearElasticity
-from jax_am.fem.solver import solver
-from jax_am.fem.utils import modify_vtu_file, save_sol
+from jax_fem.generate_mesh import Mesh
+from jax_fem.models import LinearPoisson
+from jax_fem.solver import solver
+from jax_fem.utils import modify_vtu_file, save_sol
 
 
 class Test(unittest.TestCase):
-    """Test linear elasticity with cubic mesh
+    """Test linear Poisson problem
     """
     def test_solve_problem(self):
         """Compare FEniCSx solution with JAX-FEM
         """
-        problem_name = "linear_elasticity_cube"
+        problem_name = "linear_poisson"
         crt_dir = os.path.dirname(__file__)
         fenicsx_vtu_path_raw = os.path.join(crt_dir, "fenicsx/sol_p0_000000.vtu")
         fenicsx_vtu_path = os.path.join(crt_dir, "fenicsx/sol.vtu")
@@ -35,24 +35,18 @@ class Test(unittest.TestCase):
         def right(point):
             return np.isclose(point[0], L, atol=1e-5)
 
-        def dirichlet_val(point):
+        def dirichlet_val_left(point):
+            return 0.
+
+        def dirichlet_val_right(point):
             return 1.
 
-        def neumann_val(point):
-            return np.array([10., 0., 0.])
-
-        def body_force(point):
-            return np.array([0., 10., 10.])
-
-        location_fns = [left, left, left]
-        value_fns = [dirichlet_val, dirichlet_val, dirichlet_val]
-        vecs = [0, 1, 2]
+        location_fns = [left, right]
+        value_fns = [dirichlet_val_left, dirichlet_val_right]
+        vecs = [0, 0]
         dirichlet_bc_info = [location_fns, vecs, value_fns]
 
-        neumann_bc_info = [[right], [neumann_val]]
-
-        problem = LinearElasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, 
-                                   neumann_bc_info=neumann_bc_info, source_info=body_force)
+        problem = LinearPoisson(mesh, vec=1, dim=3, dirichlet_bc_info=dirichlet_bc_info)
         sol = solver(problem)
 
         jax_vtu_path = os.path.join(crt_dir, "jax_fem/sol.vtu")

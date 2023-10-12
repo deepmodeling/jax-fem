@@ -1,2 +1,5 @@
 .vscode/launch.json
 *.pyc
+sol.vtu
+*.npy
+*.npz

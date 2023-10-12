@@ -6,10 +6,10 @@ import meshio
 import os
 import unittest
 
-from jax_am.fem.generate_mesh import Mesh
-from jax_am.fem.models import LinearElasticity
-from jax_am.fem.solver import solver
-from jax_am.fem.utils import modify_vtu_file, save_sol
+from jax_fem.generate_mesh import Mesh
+from jax_fem.models import LinearElasticity
+from jax_fem.solver import solver
+from jax_fem.utils import modify_vtu_file, save_sol
 
 
 class Test(unittest.TestCase):
@@ -53,7 +53,7 @@ class Test(unittest.TestCase):
 
         neumann_bc_info = [[top], [neumann_val]]
 
-        problem = LinearElasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, 
+        problem = LinearElasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info,
                                    neumann_bc_info=neumann_bc_info, source_info=body_force)
 
         sol = solver(problem)

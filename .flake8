@@ -4,7 +4,6 @@
 	#
 	# Version: March 28, 2023
 
-
 	# >>> UPDATE ACCORDING WITH YOUR PYTHON PROJECT
 
 	# Exclude (additional) glob patterns from checks:
@@ -13,22 +12,16 @@
 
 	# <<< UPDATE ACCORDING WITH YOUR PYTHON PROJECT
 
-
 	# Print the total number of errors
 	count = True
-
 	# Set the maximum length that any line may be
 	max-line-length = 79
-
 	# Set the maximum length that a comment or docstring line may be
 	max-doc-length = 79
-
 	# Set the number of spaces used for indentation
 	indent-size = 4
-
 	# Print the source code generating the error/warning in question
 	show-source = True
-
 	# Set the maximum allowed McCabe complexity for a block of code
 	max-complexity = 15
 

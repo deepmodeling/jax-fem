@@ -25,6 +25,7 @@ FEM is a powerful tool for thermal-mechanical analysis, especially in Additive m
 - Differentiable simulation for solving inverse/design problems __without__ human deriving sensitivities, e.g.,
   - Topology optimization
   - Optimal thermal control
+- Integration with PETSc for solver choices
 
 
 <p align="middle">
@@ -55,6 +56,32 @@ FEM is a powerful tool for thermal-mechanical analysis, especially in Additive m
 <p align="middle">
     <em >Topology optimization with differentiable simulation.</em>
 </p>
+
+## Installation
+
+Create a conda environment from the given `environment.yml` file:
+
+```bash
+conda env create -f environment.yml
+```
+
+Activate the environment:
+
+```bash
+conda activate jax-fem-env
+```
+
+Clone the repository and install the package:
+
+```bash
+git clone git@github.com:tianjuxue/jax-fem.git
+cd jax-fem
+pip install -e .
+```
+### Dependencies
+Install JAX
+- See jax installation [instructions](https://jax.readthedocs.io/en/latest/installation.html#)
+
 
 ## Documentation
 

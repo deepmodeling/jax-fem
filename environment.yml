@@ -4,19 +4,17 @@ channels:
   - defaults
 dependencies:
   - python==3.9
-  - numpy
-  - scipy
-  - pandas
-  - matplotlib
-  - fenics-basix
-  - orix
-  - meshio
-  - pyfiglet
-  - petsc4py
-  - pip
+  - numpy==1.24
+  - scipy==1.11
+  - pandas==2.1
+  - matplotlib==3.8
+  - orix==0.11
+  - meshio==5.3
+  - petsc4py==3.19
+  - pip==23.2
   - pip:
-    - setuptools
-    - wheel
-    - gmsh
-    - jax==0.4.14
-    - jaxlib==0.4.14
+    - setuptools==68.2
+    - wheel==0.41
+    - gmsh==4.11
+    - fenics-basix==0.6
+    - pyfiglet==1.0

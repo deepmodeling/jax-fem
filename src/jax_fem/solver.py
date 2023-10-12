@@ -8,7 +8,7 @@ import time
 # petsc4py.init()
 from petsc4py import PETSc
 
-from jax_am import logger
+from jax_fem import logger
 
 ################################################################################
 # PETSc linear solver or JAX linear solver

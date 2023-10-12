@@ -1,7 +1,7 @@
 import basix
 import numpy as onp
 
-from jax_am import logger
+from jax_fem import logger
 
 
 # def get_full_integration_poly_degree(ele_type, lag_order, dim):

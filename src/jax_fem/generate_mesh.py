@@ -3,8 +3,8 @@ import gmsh
 import numpy as onp
 import meshio
 
-from src.fem.basis import get_elements
-from src.fem.basis import get_face_shape_vals_and_grads
+from jax_fem.basis import get_elements
+from jax_fem.basis import get_face_shape_vals_and_grads
 
 import jax
 import jax.numpy as np

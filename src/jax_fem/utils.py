@@ -2,7 +2,7 @@ import meshio
 import os
 import numpy as onp
 
-from jax_am.fem.generate_mesh import get_meshio_cell_type
+from jax_fem.generate_mesh import get_meshio_cell_type
 
 
 def save_sol(problem, sol, sol_file, cell_infos=None, point_infos=None):

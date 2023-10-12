@@ -29,9 +29,9 @@ import jax
 from jax import Array
 import numpy as onp
 # Local
-from jax_am.fem.solver import (apply_bc, get_flatten_fn, solver,
-                               jax_solve,
-                               get_jacobi_precond, jacobi_preconditioner)
+from jax_fem.solver import (apply_bc, get_flatten_fn, solver,
+                            jax_solve,
+                            get_jacobi_precond, jacobi_preconditioner)
 # =============================================================================
 
 

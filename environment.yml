@@ -10,7 +10,7 @@ dependencies:
   - matplotlib==3.8.0
   - orix==0.11.1
   - meshio==5.3.4
-  - petsc4py==3.19.5
+  - petsc4py==3.20.0 # 3.20.0
   - pip==23.2.1
   - pip:
     - setuptools==68.2

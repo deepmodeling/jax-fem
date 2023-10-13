@@ -2,10 +2,10 @@ import jax
 import jax.numpy as np
 import os
 
-from jax_am.fem.core import FEM
-from jax_am.fem.solver import solver
-from jax_am.fem.utils import save_sol
-from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
+from jax_fem.core import FEM
+from jax_fem.solver import solver
+from jax_fem.utils import save_sol
+from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
 
 class HyperElasticity(FEM):
@@ -80,6 +80,7 @@ problem = HyperElasticity(mesh,
                           dim=3,
                           ele_type=ele_type,
                           dirichlet_bc_info=dirichlet_bc_info)
-sol = solver(problem, use_petsc=True)
+sol = solver(problem, linear=False, use_petsc=True, initial_increment_size=0.25)
+
 vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
 save_sol(problem, sol, vtk_path)

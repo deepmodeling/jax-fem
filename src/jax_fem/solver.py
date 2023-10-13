@@ -14,27 +14,40 @@ from jax_fem import logger
 # PETSc linear solver or JAX linear solver
 
 
-def petsc_solve(A, b, ksp_type, pc_type):
+def petsc_solve(A, b, ksp_type, pc_type, early_stopping=False):
+
+    if early_stopping:
+        ksp.setConvergenceTest(...)
+
+    # Preallocate and set the right hand side
     rhs = PETSc.Vec().createSeq(len(b))
     rhs.setValues(range(len(b)), onp.array(b))
+
+    # Create a linear solver
     ksp = PETSc.KSP().create()
     ksp.setOperators(A)
     ksp.setFromOptions()
     ksp.setType(ksp_type)
+
+    # Assign a preconditioner
     ksp.pc.setType(pc_type)
-    logger.debug(
-        f'PETSc - Solving with ksp_type = {ksp.getType()}, '
-        f'pc = {ksp.pc.getType()}'
-    )
+    logger.debug(f'PETSc - Solving with ksp_type = {ksp.getType()}, '
+                 f'pc = {ksp.pc.getType()}')
+
+    # Preallocate the solution vector
     x = PETSc.Vec().createSeq(len(b))
+
+    # Solve!
     ksp.solve(rhs, x)
 
     # Verify convergence
     y = PETSc.Vec().createSeq(len(b))
     A.mult(x, y)
+    res_L2 = np.linalg.norm(y.getArray() - rhs.getArray())
 
-    err = np.linalg.norm(y.getArray() - rhs.getArray())
-    logger.debug(f"PETSc linear solve res = {err}")
+    logger.debug(f"PETSc linear solve L2 residual = {res_L2:.5e}")
+
+    # TODO: Add checkify
     # assert err < 0.1, f"PETSc linear solver failed to converge, err = {err}"
 
     return x.getArray()
@@ -53,25 +66,26 @@ def jax_solve(problem, A_fn, b, x0, precond: bool, pc_matrix=None):
     """
     pc = get_jacobi_precond(
         jacobi_preconditioner(problem)) if precond else None
-    x, info = jax.scipy.sparse.linalg.bicgstab(A_fn,
-                                               b,
-                                               x0=x0,
-                                               M=pc,
-                                               tol=1e-10,
-                                               atol=1e-10,
-                                               maxiter=10000)
+    x, _ = jax.scipy.sparse.linalg.bicgstab(A_fn,
+                                            b,
+                                            x0=x0,
+                                            M=pc,
+                                            tol=1e-10,
+                                            atol=1e-10,
+                                            maxiter=10000)
 
     # Verify convergence
     err = np.linalg.norm(A_fn(x) - b)
     logger.debug(f"JAX scipy linear solve res = {err}")
 
-    # Remarks(Tianju): assert seems to unexpectedly change the behavior of bicgstab (on my Linux machine).
-    # Sometimes the solver simply fails without converging (it does converge without assert)
-    # Particularly happening in topology optimization examples.
-    # Don't know why yet.
+    # Remarks(Tianju): assert seems to unexpectedly change the behavior of
+    # bicgstab (on my Linux machine). Sometimes the solver simply fails without
+    # converging (it does converge without assert) Particularly happening in
+    # topology optimization examples. Don't know why yet.
 
     # assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
-    # x = np.where(err < 0.1, x, np.nan) # For assert purpose, some how this also affects bicgstab.
+    # x = np.where(err < 0.1, x, np.nan) # For assert purpose, some how this
+    # also affects bicgstab.
 
     return x
 
@@ -244,9 +258,13 @@ def linear_guess_solve(problem, A_fn, precond, use_petsc):
 
 def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond,
                               use_petsc):
-    """Lift solver
     """
+    Linear incremental solver. Reference:
+
+    """
+
     logger.debug(f"Solving linear system with lift solver...")
+
     b = -res_vec
 
     if use_petsc:
@@ -270,7 +288,7 @@ def line_search(problem, dofs, inc):
     res_fn = apply_bc(res_fn, problem)
 
     def res_norm_fn(alpha):
-        res_vec = res_fn(dofs + alpha*inc)
+        res_vec = res_fn(dofs + alpha * inc)
         return np.linalg.norm(res_vec)
 
     # grad_res_norm_fn = jax.grad(res_norm_fn)
@@ -291,14 +309,14 @@ def line_search(problem, dofs, inc):
     for i in range(3):
         alpha *= 0.5
         res_norm_half = res_norm_fn(alpha)
-        print(f"i = {i}, res_norm = {res_norm}, res_norm_half = {res_norm_half}")
+        print(
+            f"i = {i}, res_norm = {res_norm}, res_norm_half = {res_norm_half}")
         if res_norm_half > res_norm:
             alpha *= 2.
             break
         res_norm = res_norm_half
 
-
-    return dofs + alpha*inc
+    return dofs + alpha * inc
 
 
 def get_A_fn(problem, use_petsc):
@@ -316,8 +334,12 @@ def get_A_fn(problem, use_petsc):
 
     if use_petsc:
         # https://scicomp.stackexchange.com/questions/2355/32bit-64bit-issue-when-working-with-numpy-and-petsc4py/2356#2356
-        A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape, csr=(A_sp_scipy.indptr.astype(PETSc.IntType, copy=False),
-                                                       A_sp_scipy.indices.astype(PETSc.IntType, copy=False), A_sp_scipy.data))
+        A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape,
+                                  csr=(A_sp_scipy.indptr.astype(PETSc.IntType,
+                                                                copy=False),
+                                       A_sp_scipy.indices.astype(PETSc.IntType,
+                                                                 copy=False),
+                                       A_sp_scipy.data))
         for i in range(len(problem.node_inds_list)):
             row_inds = onp.array(problem.node_inds_list[i] * problem.vec +
                                  problem.vec_inds_list[i],
@@ -329,7 +351,12 @@ def get_A_fn(problem, use_petsc):
     return A
 
 
-def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
+def solver_row_elimination(problem,
+                           linear,
+                           precond,
+                           initial_guess,
+                           use_petsc,
+                           initial_increment_size=1.0):
     """The solver imposes Dirichlet B.C. with "row elimination" method.
 
     Some memo:
@@ -348,7 +375,7 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
     The function newton_update computes r(u) and dr/du
     """
     logger.debug(
-        f"Calling the row elimination solver for imposing Dirichlet B.C.")
+        "Calling the row elimination solver for imposing Dirichlet BC")
     logger.debug("Start timing")
     start = time.time()
     sol_shape = (problem.num_total_nodes, problem.vec)
@@ -360,18 +387,21 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
         A_fn = get_A_fn(problem, use_petsc)
         return res_vec, A_fn
 
-    if linear:
+    if linear:  # Single increment solve
+
         dofs = assign_bc(dofs, problem)
         res_vec, A_fn = newton_update_helper(dofs)
-
         dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond,
                                          use_petsc)
 
         res_vec, A_fn = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
-        logger.debug(f"Linear solve, res l_2 = {res_val}")
+
+        logger.debug(f"Linear solve, residual L2 norm = {res_val:.5e}")
 
     else:
+        problem.set_step_time(initial_increment_size)
+
         if initial_guess is None:
             res_vec, A_fn = newton_update_helper(dofs)
             dofs = linear_guess_solve(problem, A_fn, precond, use_petsc)
@@ -380,20 +410,75 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
 
         res_vec, A_fn = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
-        logger.debug(f"Before, res l_2 = {res_val}")
+
+        logger.debug(f"Residual norm for initial guess = {res_val:.5e}")
+
         tol = 1e-6
-        while res_val > tol:
-            dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs,
-                                             precond, use_petsc)
-            res_vec, A_fn = newton_update_helper(dofs)
-            # test_jacobi_precond(problem, jacobi_preconditioner(problem, dofs), A_fn)
-            res_val = np.linalg.norm(res_vec)
-            logger.debug(f"res l_2 = {res_val}")
+
+        current_increment_size = initial_increment_size
+        total_step_time = 0.0
+        num_increments = 0
+
+        max_num_increments = 100
+        max_num_cutbacks = 5
+
+
+        while total_step_time < 1.0 and num_increments < max_num_increments:
+            num_increment_cutbacks = 0
+            increment_converged = False
+
+            while not increment_converged:
+                new_step_time = min(total_step_time + current_increment_size, 1.0)
+                problem.set_step_time(new_step_time)
+
+                dofs = linear_incremental_solver(problem,
+                                                 res_vec,
+                                                 A_fn,
+                                                 dofs,
+                                                 precond,
+                                                 use_petsc)
+
+                res_vec, A_fn = newton_update_helper(dofs)
+                res_val = np.linalg.norm(res_vec)
+
+                increment_converged = (res_val < tol)
+
+                if increment_converged:
+                    num_increments += 1
+                    total_step_time = new_step_time
+
+                    logger.debug(f"Increment {num_increments} size: {current_increment_size}")
+                    logger.debug(f"Residual value: {res_val}")
+                    logger.debug(f"Total step time: {total_step_time}")
+
+                else:
+
+                    logger.debug(f"Increment diverged with res_val: {res_val}, trying new increment size")
+                    current_increment_size *= 0.25
+                    num_increment_cutbacks += 1
+
+                if num_increment_cutbacks > max_num_cutbacks:
+                    raise RuntimeError("Exceeded the allowed number of increment cutbacks")
+
+            # if
+            # logger.debug(f"Nonlinear solve, residual L2 norm: {res_val}")
+
+        # while res_val > tol:  # In current shape, this is an inifite loop!
+        #     dofs = linear_incremental_solver(problem,
+        #                                      res_vec,
+        #                                      A_fn,
+        #                                      dofs,
+        #                                      precond,
+        #                                      use_petsc)
+
+        #     res_vec, A_fn = newton_update_helper(dofs)
+        #     res_val = np.linalg.norm(res_vec)
+        #     logger.debug(f"Nonlinear solve, residual L2 norm: {res_val}")
 
     assert np.all(
-        np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
+        np.isfinite(res_val)), "res_val contains NaN, stop the program!"
 
-    assert np.all(np.isfinite(dofs)), f"dofs contains NaN, stop the program!"
+    assert np.all(np.isfinite(dofs)), "dofs contains NaN, stop the program!"
 
     sol = dofs.reshape(sol_shape)
     end = time.time()
@@ -564,10 +649,11 @@ def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
 
     if use_petsc:
 
-        A = PETSc.Mat().createAIJ(size=A_sp_scipy_aug.shape,
-                                  csr=(A_sp_scipy_aug.indptr.astype(PETSc.IntType, copy=False),
-                                       A_sp_scipy_aug.indices.astype(PETSc.IntType, copy=False),
-                                       A_sp_scipy_aug.data))
+        A = PETSc.Mat().createAIJ(
+            size=A_sp_scipy_aug.shape,
+            csr=(A_sp_scipy_aug.indptr.astype(PETSc.IntType, copy=False),
+                 A_sp_scipy_aug.indices.astype(PETSc.IntType, copy=False),
+                 A_sp_scipy_aug.data))
 
         # A_aug = PETSc.Mat().createAIJ(size=A_sp_scipy_aug.shape,
         #                               csr=(A_sp_scipy_aug.indptr,
@@ -700,17 +786,26 @@ def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info_force,
     if nIters % nPrint == 1:
         #logger.info('\t------------------------------------')
         if info_force == True:
-            print(('\nDR Iteration %d: Max force (residual error) = %g (tol = %g)' +
-                   'Max velocity = %g') % (nIters, error, tol,
-                                            np.max(np.absolute(qdot))))
+            print((
+                '\nDR Iteration %d: Max force (residual error) = %g (tol = %g)'
+                + 'Max velocity = %g') %
+                  (nIters, error, tol, np.max(np.absolute(qdot))))
         if info == True:
-            print('\nDamping t: ',t, );
+            print(
+                '\nDamping t: ',
+                t,
+            )
             print('Damping coefficient: ', c)
-            print('Max epsilon: ',np.max(eps))
-            print('Max acceleration: ',np.max(np.absolute(qdotdot)))
+            print('Max epsilon: ', np.max(eps))
+            print('Max acceleration: ', np.max(np.absolute(qdotdot)))
 
 
-def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, info_force=True):
+def dynamic_relax_solve(problem,
+                        tol=1e-6,
+                        nKMat=1000,
+                        nPrint=500,
+                        info=True,
+                        info_force=True):
     """
     Implementation of
 
@@ -722,6 +817,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
     There is a FEniCS version of this dynamic relaxation algorithm.
     The code below is a direct translation from the FEniCS version.
     """
+
     def newton_update_helper(dofs):
         res_vec = problem.newton_update(dofs.reshape(sol_shape)).reshape(-1)
         res_vec = apply_bc_vec(res_vec, dofs, problem)
@@ -763,7 +859,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
     # set the counters for iterations and
     nIters, iKMat = 0, 0
     error = 1.0
-    timeZ = time.time() #Measurement of loop time.
+    timeZ = time.time()  #Measurement of loop time.
 
     assert onp.all(onp.isfinite(M)), f"M not finite"
     assert onp.all(onp.isfinite(q)), f"q not finite"
@@ -775,8 +871,10 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
 
         # print(f"error = {error}")
         # marching forward
-        q_old[:] = q[:]; R_old[:] = R[:]
-        q[:] += h*qdot; dofs = np.array(q)
+        q_old[:] = q[:]
+        R_old[:] = R[:]
+        q[:] += h * qdot
+        dofs = np.array(q)
 
         R = onp.array(assembleVec(dofs))
 
@@ -797,7 +895,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
 
         # calculating the jacobian matrix
 
-        if ((onp.max(eps) > 1) and (iKMat > nKMat)): #SPR JAN max --> min
+        if ((onp.max(eps) > 1) and (iKMat > nKMat)):  #SPR JAN max --> min
             if info == True:
                 print('\nRecalculating the tangent matrix: ', nIters)
 
@@ -837,7 +935,8 @@ def solver(problem,
            linear=False,
            precond=True,
            initial_guess=None,
-           use_petsc=False):
+           use_petsc=False,
+           initial_increment_size=1.0):
     """periodic B.C. is a special form of adding a linear constraint.
     Lagrange multiplier seems to be convenient to impose this constraint.
     """
@@ -845,7 +944,7 @@ def solver(problem,
     # and suggest PETSc or jax solver
     if problem.periodic_bc_info is None:
         return solver_row_elimination(problem, linear, precond, initial_guess,
-                                      use_petsc)
+                                      use_petsc, initial_increment_size)
     else:
         return solver_lagrange_multiplier(problem, linear, use_petsc)
 

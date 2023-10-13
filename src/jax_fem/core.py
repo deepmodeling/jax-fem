@@ -9,11 +9,12 @@ from typing import Any, Callable, Optional, List, Union
 
 from jax_fem.common import timeit
 from jax_fem.generate_mesh import Mesh
-from jax_fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grads
+from jax_fem.basis import (get_face_shape_vals_and_grads,
+                           get_shape_vals_and_grads)
+
 from jax_fem.autodiff_utils import jax_array_list_to_numpy_diff
 from jax.config import config
 from jax_fem import logger
-
 
 config.update("jax_enable_x64", True)
 
@@ -28,7 +29,9 @@ class FEM:
     """
     Solving second-order elliptic PDE problems whose FEM weak form is
     (f(u_grad), v_grad) * dx - (traction, v) * ds - (body_force, v) * dx = 0,
-    where u and v are trial and test functions, respectively, and f is a general function.
+    where u and v are trial and test functions, respectively, and f is a
+    general function.
+
     This covers
         - Poisson's problem
         - Heat equation
@@ -42,20 +45,22 @@ class FEM:
     mesh : Mesh object
         The mesh object stores points (coordinates) and cells (connectivity).
     vec : int
-        The number of vector variable components of the solution.
-        E.g., a 3D displacement field has u_x, u_y and u_z components, so vec=3
+        The number of vector variable components of the solution. E.g., a 3D
+        displacement field has u_x, u_y and u_z components, so vec=3
     dim : int
         The dimension of the problem.
     ele_type : str
         Element type
     dirichlet_bc_info : [location_fns, vecs, value_fns]
         location_fns : List[Callable]
-            Callable : a function that inputs a point and returns if the point satisfies the location condition
+            Callable : a function that inputs a point and returns if the point
+            satisfies the location condition
         vecs: List[int]
-            integer value must be in the range of 0 to vec - 1,
-            specifying which component of the (vector) variable to apply Dirichlet condition to
+            integer value must be in the range of 0 to vec - 1, specifying which
+            component of the (vector) variable to apply Dirichlet condition to
         value_fns : List[Callable]
-            Callable : a function that inputs a point and returns the Dirichlet value
+            Callable : a function that inputs a point and returns the Dirichlet
+            value
     periodic_bc_info : [location_fns_A, location_fns_B, mappings, vecs]
         location_fns_A : List[Callable]
             Callable : location function for boundary A
@@ -64,17 +69,20 @@ class FEM:
         mappings : List[Callable]
             Callable: function mapping a point from boundary A to boundary B
         vecs: List[int]
-            which component of the (vector) variable to apply periodic condition to
+            which component of the (vector) variable to apply periodic condition
+            to
     neumann_bc_info : [location_fns, value_fns]
         location_fns : List[Callable]
             Callable : location function for Neumann boundary
         value_fns : List[Callable]
-            Callable : a function that inputs a point and returns the Neumann value
+            Callable : a function that inputs a point and returns the Neumann
+            value
     cauchy_bc_info : [location_fns, value_fns]
         location_fns : List[Callable]
             Callable : location function for Cauchy boundary
         value_fns : List[Callable]
-            Callable : a function that inputs the solution and returns the Cauchy boundary value
+            Callable : a function that inputs the solution and returns the
+            Cauchy boundary value
     source_info: Callable
         A function that inputs a point and returns the body force at this point
     additional_info : Any
@@ -84,10 +92,14 @@ class FEM:
     vec: int
     dim: int
     ele_type: str = 'HEX8'
-    dirichlet_bc_info: Optional[List[Union[List[Callable], List[int], List[Callable]]]] = None
-    periodic_bc_info: Optional[List[Union[List[Callable], List[Callable], List[Callable], List[int]]]] = None
-    neumann_bc_info: Optional[List[Union[List[Callable], List[Callable]]]] = None
-    cauchy_bc_info: Optional[List[Union[List[Callable], List[Callable]]]] = None
+    dirichlet_bc_info: Optional[List[Union[List[Callable], List[int],
+                                           List[Callable]]]] = None
+    periodic_bc_info: Optional[List[Union[List[Callable], List[Callable],
+                                          List[Callable], List[int]]]] = None
+    neumann_bc_info: Optional[List[Union[List[Callable],
+                                         List[Callable]]]] = None
+    cauchy_bc_info: Optional[List[Union[List[Callable],
+                                        List[Callable]]]] = None
     source_info: Callable = None
     additional_info: Any = ()
 
@@ -97,6 +109,7 @@ class FEM:
         self.num_cells = len(self.cells)
         self.num_total_nodes = len(self.mesh.points)
         self.num_total_dofs = self.num_total_nodes * self.vec
+        self.step_time = 1.0  # For default behaviour
 
         start = time.time()
         logger.debug(f"Computing shape function values, gradients, etc.")
@@ -386,7 +399,8 @@ class FEM:
         return boundary_inds_list
 
     def compute_Neumann_integral_vars(self, **internal_vars):
-        """In the weak form, we have the Neumann integral: (traction, v) * ds, and this function computes this.
+        """In the weak form, we have the Neumann integral: (traction, v) * ds,
+           and this function computes this.
 
         Returns
         -------
@@ -404,9 +418,10 @@ class FEM:
                 subset_quad_points = self.get_physical_surface_quad_points(
                     boundary_inds)
                 # int_vars = [x[i] for x in internal_vars]
-                traction = jax.vmap(jax.vmap(self.neumann_value_fns[i]))(
-                    subset_quad_points,
-                    *int_vars)  # (num_selected_faces, num_face_quads, vec)
+
+                traction = jax.vmap(
+                    jax.vmap(lambda x: self.step_time * self.neumann_value_fns[i](x)))(
+                        subset_quad_points, *int_vars)  # (num_selected_faces, num_face_quads, vec)
                 assert len(traction.shape) == 3
                 _, nanson_scale = self.get_face_shape_grads(
                     boundary_inds)  # (num_selected_faces, num_face_quads)
@@ -522,6 +537,7 @@ class FEM:
                          cell_JxW[:, None, None],
                          axis=0)
             return val
+
         return mass_kernel
 
     def get_cauchy_kernel(self, cauchy_map):
@@ -663,6 +679,9 @@ class FEM:
                 values.append(val)
             values = np_version.vstack(values)
             return values
+
+    def set_step_time(self, step_time):
+        self.step_time = step_time
 
     def compute_face(self, cells_sol, np_version, jac_flag):
 
@@ -902,5 +921,3 @@ class FEM:
                 )
         else:
             print(f"\n\n### No Dirichlet B.C. found.")
-
-

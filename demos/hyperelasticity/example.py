@@ -7,13 +7,17 @@ from jax_fem.solver import solver
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
+from jax_fem import logger
+import logging
+logger.setLevel(logging.INFO)
+
 
 class HyperElasticity(FEM):
 
     def get_tensor_map(self):
 
         def psi(F):
-            E = 10.
+            E = 1e3
             nu = 0.3
             mu = E / (2. * (1. + nu))
             kappa = E / (3. * (1. - 2. * nu))
@@ -38,9 +42,9 @@ ele_type = 'HEX8'
 cell_type = get_meshio_cell_type(ele_type)
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 Lx, Ly, Lz = 1., 1., 1.
-meshio_mesh = box_mesh(Nx=20,
-                       Ny=20,
-                       Nz=20,
+meshio_mesh = box_mesh(Nx=15,
+                       Ny=15,
+                       Nz=15,
                        Lx=Lx,
                        Ly=Ly,
                        Lz=Lz,
@@ -61,26 +65,22 @@ def zero_dirichlet_val(point):
     return 0.
 
 
-def dirichlet_val_x2(point):
-    return (0.5 + (point[1] - 0.5) * np.cos(np.pi / 3.) -
-            (point[2] - 0.5) * np.sin(np.pi / 3.) - point[1]) / 2.
+dirichlet_bc_info = [[left] * 3, [0, 1, 2], [zero_dirichlet_val] * 3]
 
 
-def dirichlet_val_x3(point):
-    return (0.5 + (point[1] - 0.5) * np.sin(np.pi / 3.) +
-            (point[2] - 0.5) * np.cos(np.pi / 3.) - point[2]) / 2.
+def neumann_val(point):
+    return np.array([0., 0., -100.])
 
 
-dirichlet_bc_info = [[left] * 3 + [right] * 3, [0, 1, 2] * 2,
-                     [zero_dirichlet_val, dirichlet_val_x2, dirichlet_val_x3] +
-                     [zero_dirichlet_val] * 3]
+neumann_bc_info = [[right], [neumann_val]]
 
 problem = HyperElasticity(mesh,
                           vec=3,
                           dim=3,
                           ele_type=ele_type,
-                          dirichlet_bc_info=dirichlet_bc_info)
-sol = solver(problem, linear=False, use_petsc=True, initial_increment_size=0.25)
+                          dirichlet_bc_info=dirichlet_bc_info,
+                          neumann_bc_info=neumann_bc_info)
 
-vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
+sol = solver(problem, use_petsc=True, initial_increment_size=0.2)
+vtk_path = os.path.join(data_dir, 'vtk/u.vtu')
 save_sol(problem, sol, vtk_path)

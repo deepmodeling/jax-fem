@@ -14,10 +14,7 @@ from jax_fem import logger
 # PETSc linear solver or JAX linear solver
 
 
-def petsc_solve(A, b, ksp_type, pc_type, early_stopping=False):
-
-    if early_stopping:
-        ksp.setConvergenceTest(...)
+def petsc_solve(A, b, ksp_type, pc_type):
 
     # Preallocate and set the right hand side
     rhs = PETSc.Vec().createSeq(len(b))
@@ -45,12 +42,16 @@ def petsc_solve(A, b, ksp_type, pc_type, early_stopping=False):
     A.mult(x, y)
     res_L2 = np.linalg.norm(y.getArray() - rhs.getArray())
 
-    logger.debug(f"PETSc linear solve L2 residual = {res_L2:.5e}")
+    # logger.debug(f"PETSc linear solve L2 residual = {res_L2:.5e}")
 
-    # TODO: Add checkify
-    # assert err < 0.1, f"PETSc linear solver failed to converge, err = {err}"
+    # Create a dictionary to store convergence information
+    info = {
+        'iterations': ksp.getIterationNumber(),
+        'converged': ksp.getConvergedReason(),
+    }
 
-    return x.getArray()
+
+    return x.getArray(), info
 
 
 def jax_solve(problem, A_fn, b, x0, precond: bool, pc_matrix=None):
@@ -241,26 +242,29 @@ def test_jacobi_precond(problem, jacobi, A_fn):
     logger.debug(
         f"np.min(jacobi) = {np.min(jacobi)}, np.max(jacobi) = {np.max(jacobi)}"
     )
-    logger.debug(f"finish jacobi preconditioner")
+    logger.debug(f"Finish jacobi preconditioner")
 
 
 def linear_guess_solve(problem, A_fn, precond, use_petsc):
     logger.debug(f"Linear guess solve...")
-    # b = np.zeros((problem.num_total_nodes, problem.vec))
     b = problem.body_force + problem.neumann
     b = assign_bc(b, problem)
     if use_petsc:
-        dofs = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
+        dofs, info = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
     else:
         dofs = jax_solve(problem, A_fn, b, b, precond)
-    return dofs
+    return dofs, info
 
 
-def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond,
+def linear_incremental_solver(problem,
+                              res_vec,
+                              A_fn,
+                              dofs,
+                              precond,
                               use_petsc):
     """
-    Linear incremental solver. Reference:
-
+    Linear incremental solver. Note, that we mean displacement increments, as
+    opposed to force increments.
     """
 
     logger.debug(f"Solving linear system with lift solver...")
@@ -268,18 +272,17 @@ def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond,
     b = -res_vec
 
     if use_petsc:
-        inc = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
+        du, info = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
     else:
+        # JAX solve requires an initial guess
         x0_1 = assign_bc(np.zeros_like(b), problem)
         x0_2 = copy_bc(dofs, problem)
         x0 = x0_1 - x0_2
-        inc = jax_solve(problem, A_fn, b, x0, precond)
+        du = jax_solve(problem, A_fn, b, x0, precond)
 
-    dofs = dofs + inc
+    dofs += du
 
-    # dofs = line_search(problem, dofs, inc)
-
-    return dofs
+    return dofs, info
 
 
 def line_search(problem, dofs, inc):
@@ -399,12 +402,14 @@ def solver_row_elimination(problem,
 
         logger.debug(f"Linear solve, residual L2 norm = {res_val:.5e}")
 
-    else:
+    elif linear == False:
+
         problem.set_step_time(initial_increment_size)
 
+        # This could be improved potentially
         if initial_guess is None:
             res_vec, A_fn = newton_update_helper(dofs)
-            dofs = linear_guess_solve(problem, A_fn, precond, use_petsc)
+            dofs, _ = linear_guess_solve(problem, A_fn, precond, use_petsc)
         else:
             dofs = initial_guess.reshape(-1)
 
@@ -413,67 +418,91 @@ def solver_row_elimination(problem,
 
         logger.debug(f"Residual norm for initial guess = {res_val:.5e}")
 
-        tol = 1e-6
+        atol = 1e-6
+
+        # Increment setup
+        max_num_increments = 100
+        max_iters_per_increment = 100
+        max_num_cutbacks = 5
 
         current_increment_size = initial_increment_size
+
         total_step_time = 0.0
         num_increments = 0
 
-        max_num_increments = 100
-        max_num_cutbacks = 5
+        # Initialize to large values
+        prev_res_val = 1e6
+        prev_prev_res_val = 1e6
+        iter_prev_increment = max_iters_per_increment
 
+        while total_step_time < 1.0:
 
-        while total_step_time < 1.0 and num_increments < max_num_increments:
             num_increment_cutbacks = 0
             increment_converged = False
 
+
+
+            # Single increment loop
             while not increment_converged:
                 new_step_time = min(total_step_time + current_increment_size, 1.0)
                 problem.set_step_time(new_step_time)
 
-                dofs = linear_incremental_solver(problem,
-                                                 res_vec,
-                                                 A_fn,
-                                                 dofs,
-                                                 precond,
-                                                 use_petsc)
+                # Solve the increment iteratively
+                for i in range(1, max_iters_per_increment + 1):
 
-                res_vec, A_fn = newton_update_helper(dofs)
-                res_val = np.linalg.norm(res_vec)
+                    logger.info(f"Increment: {num_increments + 1} \t Increment size: {current_increment_size:.5f} \t Attempt: {num_increment_cutbacks + 1} \t Iteration: {i}")
+                    dofs, info = linear_incremental_solver(problem,
+                                                           res_vec,
+                                                           A_fn,
+                                                           dofs,
+                                                           precond,
+                                                           use_petsc)
 
-                increment_converged = (res_val < tol)
+                    res_vec, A_fn = newton_update_helper(dofs)
+                    res_val = np.linalg.norm(res_vec)
+
+                    # Break prematurely if displacement increment diverges
+                    if info['converged'] < 0:
+                        break
+
+                    # Or if residual is increasing
+                    if (i > 3) and (min(res_val, prev_res_val) > prev_prev_res_val):
+                        break
+
+                    prev_prev_res_val = prev_res_val
+                    prev_res_val = res_val
+
+                    if res_val < atol:
+                        break
+
+                iter_current_increment = i
+                increment_converged = (res_val < atol) #  Check if the increment actually converged or if need to try again with a smaller force increment
 
                 if increment_converged:
                     num_increments += 1
                     total_step_time = new_step_time
 
-                    logger.debug(f"Increment {num_increments} size: {current_increment_size}")
-                    logger.debug(f"Residual value: {res_val}")
-                    logger.debug(f"Total step time: {total_step_time}")
+                    logger.info(f"Increment {num_increments} size: {current_increment_size:.5f}")
+                    logger.info(f"Converged in {i} iterations")
+                    logger.info(f"Residual value: {res_val:.5e}")
+                    logger.info(f"Total step time: {total_step_time}")
+
+
+                    if max(iter_prev_increment, i) <= 5:
+                        current_increment_size = min(current_increment_size * 1.5, 1-total_step_time)
+
+                    iter_prev_increment = iter_current_increment
+
+
 
                 else:
-
-                    logger.debug(f"Increment diverged with res_val: {res_val}, trying new increment size")
-                    current_increment_size *= 0.25
+                    logger.debug(f"Increment diverged with res_val: {res_val:.3e}, trying new increment size")
+                    current_increment_size = max(current_increment_size * 0.25, 1e-5)
                     num_increment_cutbacks += 1
 
-                if num_increment_cutbacks > max_num_cutbacks:
+                if num_increment_cutbacks >= max_num_cutbacks:
                     raise RuntimeError("Exceeded the allowed number of increment cutbacks")
 
-            # if
-            # logger.debug(f"Nonlinear solve, residual L2 norm: {res_val}")
-
-        # while res_val > tol:  # In current shape, this is an inifite loop!
-        #     dofs = linear_incremental_solver(problem,
-        #                                      res_vec,
-        #                                      A_fn,
-        #                                      dofs,
-        #                                      precond,
-        #                                      use_petsc)
-
-        #     res_vec, A_fn = newton_update_helper(dofs)
-        #     res_val = np.linalg.norm(res_vec)
-        #     logger.debug(f"Nonlinear solve, residual L2 norm: {res_val}")
 
     assert np.all(
         np.isfinite(res_val)), "res_val contains NaN, stop the program!"

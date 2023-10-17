@@ -1,63 +1,42 @@
+
 import jax
 import jax.numpy as np
 import numpy as onp
 from jax.experimental.sparse import BCOO
 import scipy
 import time
-
 # petsc4py.init()
 from petsc4py import PETSc
-
 from jax_fem import logger
-
 ################################################################################
 # PETSc linear solver or JAX linear solver
 
-
 def petsc_solve(A, b, ksp_type, pc_type):
-
     # Preallocate and set the right hand side
     rhs = PETSc.Vec().createSeq(len(b))
     rhs.setValues(range(len(b)), onp.array(b))
-
     # Create a linear solver
     ksp = PETSc.KSP().create()
     ksp.setOperators(A)
     ksp.setFromOptions()
     ksp.setType(ksp_type)
-
     # Assign a preconditioner
     ksp.pc.setType(pc_type)
     logger.debug(f'PETSc - Solving with ksp_type = {ksp.getType()}, '
                  f'pc = {ksp.pc.getType()}')
-
     # Preallocate the solution vector
     x = PETSc.Vec().createSeq(len(b))
-
     # Solve!
     ksp.solve(rhs, x)
-
     # Verify convergence
     y = PETSc.Vec().createSeq(len(b))
     A.mult(x, y)
     res_L2 = np.linalg.norm(y.getArray() - rhs.getArray())
-
-    # logger.debug(f"PETSc linear solve L2 residual = {res_L2:.5e}")
-
-    # Create a dictionary to store convergence information
-    info = {
-        'iterations': ksp.getIterationNumber(),
-        'converged': ksp.getConvergedReason(),
-    }
-
-
-    return x.getArray(), info
-
+    return x.getArray()
 
 def jax_solve(problem, A_fn, b, x0, precond: bool, pc_matrix=None):
     """Solves the equilibrium equation using a JAX solver.
     Is fully traceable and runs on GPU.
-
     Parameters
     ----------
     precond
@@ -74,26 +53,20 @@ def jax_solve(problem, A_fn, b, x0, precond: bool, pc_matrix=None):
                                             tol=1e-10,
                                             atol=1e-10,
                                             maxiter=10000)
-
     # Verify convergence
     err = np.linalg.norm(A_fn(x) - b)
     logger.debug(f"JAX scipy linear solve res = {err}")
-
     # Remarks(Tianju): assert seems to unexpectedly change the behavior of
     # bicgstab (on my Linux machine). Sometimes the solver simply fails without
     # converging (it does converge without assert) Particularly happening in
     # topology optimization examples. Don't know why yet.
-
     # assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
     # x = np.where(err < 0.1, x, np.nan) # For assert purpose, some how this
     # also affects bicgstab.
-
     return x
-
 
 ################################################################################
 # "row elimination" solver
-
 
 def apply_bc_vec(res_vec, dofs, problem):
     sol = dofs.reshape((problem.num_total_nodes, problem.vec))
@@ -106,20 +79,15 @@ def apply_bc_vec(res_vec, dofs, problem):
                      problem.vec_inds_list[i]].add(-problem.vals_list[i])
     return res.reshape(-1)
 
-
 def apply_bc(res_fn, problem):
-
     def A_fn(dofs):
         """Apply Dirichlet boundary conditions
         """
         res_vec = res_fn(dofs)
         return apply_bc_vec(res_vec, dofs, problem)
-
     return A_fn
 
-
 def row_elimination(fn, problem):
-
     def fn_dofs_row(dofs):
         sol = dofs.reshape((problem.num_total_nodes, problem.vec))
         res = fn(dofs).reshape(sol.shape)
@@ -130,9 +98,7 @@ def row_elimination(fn, problem):
                                   problem.vec_inds_list[i]],
                               unique_indices=True))
         return res.reshape(-1)
-
     return fn_dofs_row
-
 
 def assign_bc(dofs, problem):
     sol = dofs.reshape((problem.num_total_nodes, problem.vec))
@@ -141,7 +107,6 @@ def assign_bc(dofs, problem):
                      problem.vec_inds_list[i]].set(problem.vals_list[i])
     return sol.reshape(-1)
 
-
 def assign_ones_bc(dofs, problem):
     sol = dofs.reshape((problem.num_total_nodes, problem.vec))
     for i in range(len(problem.node_inds_list)):
@@ -149,14 +114,12 @@ def assign_ones_bc(dofs, problem):
                      problem.vec_inds_list[i]].set(1.)
     return sol.reshape(-1)
 
-
 def assign_zeros_bc(dofs, problem):
     sol = dofs.reshape((problem.num_total_nodes, problem.vec))
     for i in range(len(problem.node_inds_list)):
         sol = sol.at[problem.node_inds_list[i],
                      problem.vec_inds_list[i]].set(0.)
     return sol.reshape(-1)
-
 
 def copy_bc(dofs, problem):
     sol = dofs.reshape((problem.num_total_nodes, problem.vec))
@@ -168,27 +131,20 @@ def copy_bc(dofs, problem):
                                       problem.vec_inds_list[i]]))
     return new_sol.reshape(-1)
 
-
 def get_flatten_fn(fn_sol, problem):
-
     def fn_dofs(dofs):
         sol = dofs.reshape((problem.num_total_nodes, problem.vec))
         val_sol = fn_sol(sol)
         return val_sol.reshape(-1)
-
     return fn_dofs
-
 
 def get_A_fn_linear_fn(dofs, fn):
     """Not quite used.
     """
-
     def A_fn_linear_fn(inc):
         primals, tangents = jax.jvp(fn, (dofs, ), (inc, ))
         return tangents
-
     return A_fn_linear_fn
-
 
 def get_A_fn_linear_fn_JFNK(dofs, fn):
     """Jacobian-free Newton–Krylov (JFNK) method.
@@ -197,13 +153,10 @@ def get_A_fn_linear_fn_JFNK(dofs, fn):
     "Jacobian-free Newton–Krylov methods: a survey of approaches and applications."
     Journal of Computational Physics 193.2 (2004): 357-397.
     """
-
     def A_fn_linear_fn(inc):
         EPS = 1e-3
         return (fn(dofs + EPS * inc) - fn(dofs)) / EPS
-
     return A_fn_linear_fn
-
 
 def operator_to_matrix(operator_fn, problem):
     """Only used for when debugging.
@@ -213,21 +166,16 @@ def operator_to_matrix(operator_fn, problem):
                                          problem.vec))
     return J
 
-
 def jacobi_preconditioner(problem):
     logger.debug(f"Compute and use jacobi preconditioner")
     jacobi = np.array(problem.A_sp_scipy.diagonal())
     jacobi = assign_ones_bc(jacobi.reshape(-1), problem)
     return jacobi
 
-
 def get_jacobi_precond(jacobi):
-
     def jacobi_precond(x):
         return x * (1. / jacobi)
-
     return jacobi_precond
-
 
 def test_jacobi_precond(problem, jacobi, A_fn):
     num_total_dofs = problem.num_total_nodes * problem.vec
@@ -237,24 +185,21 @@ def test_jacobi_precond(problem, jacobi, A_fn):
         logger.debug(
             f"{A_fn(test_vec)[ind]}, {jacobi[ind]}, ratio = {A_fn(test_vec)[ind]/jacobi[ind]}"
         )
-
     logger.debug(f"test jacobi preconditioner")
     logger.debug(
         f"np.min(jacobi) = {np.min(jacobi)}, np.max(jacobi) = {np.max(jacobi)}"
     )
     logger.debug(f"Finish jacobi preconditioner")
 
-
 def linear_guess_solve(problem, A_fn, precond, use_petsc):
     logger.debug(f"Linear guess solve...")
     b = problem.body_force + problem.neumann
     b = assign_bc(b, problem)
     if use_petsc:
-        dofs, info = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
+        dofs = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
     else:
         dofs = jax_solve(problem, A_fn, b, b, precond)
-    return dofs, info
-
+    return dofs
 
 def linear_incremental_solver(problem,
                               res_vec,
@@ -266,37 +211,28 @@ def linear_incremental_solver(problem,
     Linear incremental solver. Note, that we mean displacement increments, as
     opposed to force increments.
     """
-
     logger.debug(f"Solving linear system with lift solver...")
-
     b = -res_vec
-
     if use_petsc:
-        du, info = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
+        inc = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
     else:
         # JAX solve requires an initial guess
         x0_1 = assign_bc(np.zeros_like(b), problem)
         x0_2 = copy_bc(dofs, problem)
         x0 = x0_1 - x0_2
-        du = jax_solve(problem, A_fn, b, x0, precond)
-
-    dofs += du
-
-    return dofs, info
-
+        inc = jax_solve(problem, A_fn, b, x0, precond)
+    dofs += inc
+    return dofs
 
 def line_search(problem, dofs, inc):
     res_fn = problem.compute_residual
     res_fn = get_flatten_fn(res_fn, problem)
     res_fn = apply_bc(res_fn, problem)
-
     def res_norm_fn(alpha):
         res_vec = res_fn(dofs + alpha * inc)
         return np.linalg.norm(res_vec)
-
     # grad_res_norm_fn = jax.grad(res_norm_fn)
     # hess_res_norm_fn = jax.hessian(res_norm_fn)
-
     # tol = 1e-3
     # alpha = 1.
     # lr = 1.
@@ -306,7 +242,6 @@ def line_search(problem, dofs, inc):
     #     hess_alpha = hess_res_norm_fn(alpha)
     #     alpha = alpha - 1./hess_alpha*grad_alpha
     #     print(f"alpha = {alpha}, grad_alpha = {grad_alpha}, hess_alpha = {hess_alpha}")
-
     alpha = 1.
     res_norm = res_norm_fn(alpha)
     for i in range(3):
@@ -318,9 +253,7 @@ def line_search(problem, dofs, inc):
             alpha *= 2.
             break
         res_norm = res_norm_half
-
     return dofs + alpha * inc
-
 
 def get_A_fn(problem, use_petsc):
     logger.debug(f"Creating sparse matrix with scipy...")
@@ -331,10 +264,8 @@ def get_A_fn(problem, use_petsc):
     A_sp = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
     # logger.info(f"Global sparse matrix takes about {A_sp.data.shape[0]*8*3/2**30} G memory to store.")
     problem.A_sp_scipy = A_sp_scipy
-
     def compute_linearized_residual(dofs):
         return A_sp @ dofs
-
     if use_petsc:
         # https://scicomp.stackexchange.com/questions/2355/32bit-64bit-issue-when-working-with-numpy-and-petsc4py/2356#2356
         A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape,
@@ -350,9 +281,7 @@ def get_A_fn(problem, use_petsc):
             A.zeroRows(row_inds)
     else:
         A = row_elimination(compute_linearized_residual, problem)
-
     return A
-
 
 def solver_row_elimination(problem,
                            linear,
@@ -361,9 +290,7 @@ def solver_row_elimination(problem,
                            use_petsc,
                            initial_increment_size=1.0):
     """The solver imposes Dirichlet B.C. with "row elimination" method.
-
     Some memo:
-
     res(u) = D*r(u) + (I - D)u - u_b
     D = [[1 0 0 0]
          [0 1 0 0]
@@ -374,154 +301,108 @@ def solver_row_elimination(problem,
          [0 0 1 0]
          [0 0 0 1]
     A_fn = d(res)/d(u) = D*dr/du + (I - D)
-
     The function newton_update computes r(u) and dr/du
     """
-    logger.debug(
-        "Calling the row elimination solver for imposing Dirichlet BC")
+    logger.debug("Calling the row elimination solver for imposing Dirichlet BC")
     logger.debug("Start timing")
     start = time.time()
     sol_shape = (problem.num_total_nodes, problem.vec)
     dofs = np.zeros(sol_shape).reshape(-1)
-
     def newton_update_helper(dofs):
         res_vec = problem.newton_update(dofs.reshape(sol_shape)).reshape(-1)
         res_vec = apply_bc_vec(res_vec, dofs, problem)
         A_fn = get_A_fn(problem, use_petsc)
         return res_vec, A_fn
-
-    if linear:  # Single increment solve
-
+    if linear:
         dofs = assign_bc(dofs, problem)
         res_vec, A_fn = newton_update_helper(dofs)
         dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond,
                                          use_petsc)
-
         res_vec, A_fn = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
-
         logger.debug(f"Linear solve, residual L2 norm = {res_val:.5e}")
-
-    elif linear == False:
-
+    else:
         problem.set_step_time(initial_increment_size)
-
-        # This could be improved potentially
         if initial_guess is None:
             res_vec, A_fn = newton_update_helper(dofs)
-            dofs, _ = linear_guess_solve(problem, A_fn, precond, use_petsc)
+            dofs = linear_guess_solve(problem, A_fn, precond, use_petsc)
         else:
             dofs = initial_guess.reshape(-1)
-
         res_vec, A_fn = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
-
-        logger.debug(f"Residual norm for initial guess = {res_val:.5e}")
-
+        logger.debug(f"Residual L2 norm for initial guess = {res_val:.5e}")
         atol = 1e-6
-
         # Increment setup
         max_num_increments = 100
         max_iters_per_increment = 100
         max_num_cutbacks = 5
-
         current_increment_size = initial_increment_size
-
         total_step_time = 0.0
         num_increments = 0
-
         # Initialize to large values
         prev_res_val = 1e6
         prev_prev_res_val = 1e6
         iter_prev_increment = max_iters_per_increment
-
         while total_step_time < 1.0:
-
             num_increment_cutbacks = 0
             increment_converged = False
-
-
-
             # Single increment loop
             while not increment_converged:
                 new_step_time = min(total_step_time + current_increment_size, 1.0)
                 problem.set_step_time(new_step_time)
-
                 # Solve the increment iteratively
                 for i in range(1, max_iters_per_increment + 1):
-
                     logger.info(f"Increment: {num_increments + 1} \t Increment size: {current_increment_size:.5f} \t Attempt: {num_increment_cutbacks + 1} \t Iteration: {i}")
-                    dofs, info = linear_incremental_solver(problem,
+                    dofs = linear_incremental_solver(problem,
                                                            res_vec,
                                                            A_fn,
                                                            dofs,
                                                            precond,
                                                            use_petsc)
-
                     res_vec, A_fn = newton_update_helper(dofs)
                     res_val = np.linalg.norm(res_vec)
-
-                    # Break prematurely if displacement increment diverges
-                    if info['converged'] < 0:
-                        break
-
                     # Or if residual is increasing
                     if (i > 3) and (min(res_val, prev_res_val) > prev_prev_res_val):
                         break
-
                     prev_prev_res_val = prev_res_val
                     prev_res_val = res_val
-
                     if res_val < atol:
                         break
-
                 iter_current_increment = i
                 increment_converged = (res_val < atol) #  Check if the increment actually converged or if need to try again with a smaller force increment
-
                 if increment_converged:
                     num_increments += 1
                     total_step_time = new_step_time
-
                     logger.info(f"Increment {num_increments} size: {current_increment_size:.5f}")
                     logger.info(f"Converged in {i} iterations")
                     logger.info(f"Residual value: {res_val:.5e}")
                     logger.info(f"Total step time: {total_step_time}")
 
-
                     if max(iter_prev_increment, i) <= 5:
                         current_increment_size = min(current_increment_size * 1.5, 1-total_step_time)
-
                     iter_prev_increment = iter_current_increment
-
 
 
                 else:
                     logger.debug(f"Increment diverged with res_val: {res_val:.3e}, trying new increment size")
                     current_increment_size = max(current_increment_size * 0.25, 1e-5)
                     num_increment_cutbacks += 1
-
                 if num_increment_cutbacks >= max_num_cutbacks:
                     raise RuntimeError("Exceeded the allowed number of increment cutbacks")
 
-
     assert np.all(
         np.isfinite(res_val)), "res_val contains NaN, stop the program!"
-
     assert np.all(np.isfinite(dofs)), "dofs contains NaN, stop the program!"
-
     sol = dofs.reshape(sol_shape)
     end = time.time()
     solve_time = end - start
     logger.info(f"Solve took {solve_time} [s]")
     logger.debug(f"max of sol = {np.max(sol)}")
     logger.debug(f"min of sol = {np.min(sol)}")
-
     return sol
-
 
 ################################################################################
 # Lagrangian multiplier solver
-
 
 def aug_dof_w_zero_bc(problem, dofs):
     aug_size = 0
@@ -531,7 +412,6 @@ def aug_dof_w_zero_bc(problem, dofs):
         aug_size += len(problem.p_node_inds_list_A[i])
     return np.hstack((dofs, np.zeros(aug_size)))
 
-
 def aug_dof_w_bc(problem, dofs, p_num_eps):
     aug_d = np.array([])
     for i in range(len(problem.node_inds_list)):
@@ -540,7 +420,6 @@ def aug_dof_w_bc(problem, dofs, p_num_eps):
         aug_d = np.hstack(
             (aug_d, np.zeros(len(problem.p_node_inds_list_A[i]))))
     return np.hstack((dofs, aug_d))
-
 
 def linear_guess_solve_lm(problem, A_aug, p_num_eps, use_petsc):
     b = (problem.body_force + problem.neumann).reshape(-1)
@@ -554,7 +433,6 @@ def linear_guess_solve_lm(problem, A_aug, p_num_eps, use_petsc):
         dofs_aug = jax_solve(problem, A_aug, b_aug, x0, None)
     return dofs_aug
 
-
 def linear_incremental_solver_lm(problem, res_vec_aug, A_aug, dofs_aug,
                                  p_num_eps, use_petsc):
     b_aug = -res_vec_aug
@@ -565,7 +443,6 @@ def linear_incremental_solver_lm(problem, res_vec_aug, A_aug, dofs_aug,
     dofs_aug = dofs_aug + inc_aug
     return dofs_aug
 
-
 def compute_residual_lm(problem, res_vec, dofs_aug, p_num_eps):
     """Some memo here
     Saddle point problem energy function: L(u, lmbda) = E(u) + lmbda*(u - u0)
@@ -575,19 +452,15 @@ def compute_residual_lm(problem, res_vec, dofs_aug, p_num_eps):
                                    for x in problem.node_inds_list])).tolist()
     p_splits = np.cumsum(np.array([len(x) for x in problem.p_node_inds_list_A
                                    ])).tolist()
-
     d_lmbda_len = d_splits[-1] if len(d_splits) > 0 else 0
     p_lmbda_len = p_splits[-1] if len(p_splits) > 0 else 0
-
     def get_Lagrangian():
-
         def split_lamda(lmbda):
             d_lmbda = lmbda[:d_lmbda_len]
             p_lmbda = lmbda[d_lmbda_len:]
             d_lmbda_split = np.split(d_lmbda, d_splits)
             p_lmbda_split = np.split(p_lmbda, p_splits)
             return d_lmbda_split, p_lmbda_split
-
         # @jax.jit
         def Lagrangian_fn(dofs_aug):
             dofs, lmbda = dofs_aug[:problem.num_total_dofs], dofs_aug[
@@ -600,7 +473,6 @@ def compute_residual_lm(problem, res_vec, dofs_aug, p_num_eps):
                     d_lmbda_split[i] *
                     (sol[problem.node_inds_list[i], problem.vec_inds_list[i]] -
                      problem.vals_list[i]))
-
             for i in range(len(problem.p_node_inds_list_A)):
                 lag += np.sum(p_lmbda_split[i] *
                               (sol[problem.p_node_inds_list_A[i],
@@ -608,26 +480,20 @@ def compute_residual_lm(problem, res_vec, dofs_aug, p_num_eps):
                                sol[problem.p_node_inds_list_B[i],
                                    problem.p_vec_inds_list[i]]))
             return p_num_eps * lag
-
         return Lagrangian_fn
-
     Lagrangian_fn = get_Lagrangian()
     A_fn = jax.grad(Lagrangian_fn)
     res_vec_1 = A_fn(dofs_aug)
     res_vec_2 = aug_dof_w_zero_bc(problem, res_vec)
     res_vec_aug = res_vec_1 + res_vec_2
-
     return res_vec_aug
 
-
 def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
-
     def symmetry(I, J, V):
         I_sym = onp.hstack((I, J))
         J_sym = onp.hstack((J, I))
         V_sym = onp.hstack((V, V))
         return I_sym, J_sym, V_sym
-
     I_d = onp.array([])
     J_d = onp.array([])
     V_d = onp.array([])
@@ -640,7 +506,6 @@ def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
         V_d = onp.hstack((V_d, p_num_eps * onp.ones(group_size)))
         group_index += group_size
     I_d_sym, J_d_sym, V_d_sym = symmetry(I_d, J_d, V_d)
-
     I_p = onp.array([])
     J_p = onp.array([])
     V_p = onp.array([])
@@ -656,56 +521,43 @@ def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
         V_p = onp.hstack((V_p, -p_num_eps * onp.ones(group_size)))
         group_index += group_size
     I_p_sym, J_p_sym, V_p_sym = symmetry(I_p, J_p, V_p)
-
     I = onp.hstack((problem.I, I_d_sym, I_p_sym))
     J = onp.hstack((problem.J, J_d_sym, J_p_sym))
     V = onp.hstack((problem.V, V_d_sym, V_p_sym))
-
     logger.debug(f"Aug - Creating sparse matrix with scipy...")
     A_sp_scipy_aug = scipy.sparse.csc_array((V, (I, J)),
                                             shape=(group_index, group_index))
     # logger.info(f"Aug - Creating sparse matrix from scipy using JAX BCOO...")
     A_sp_aug = BCOO.from_scipy_sparse(A_sp_scipy_aug).sort_indices()
-
     # logger.info(f"Aug - Global sparse matrix takes about {A_sp_aug.data.shape[0]*8*3/2**30} G memory to store.")
-
     # TODO: Potential bug
     # Used only in jacobi_preconditioner
     # problem.A_sp_scipy = A_sp_scipy_aug
-
     def compute_linearized_residual(dofs_aug):
         return A_sp_aug @ dofs_aug
-
     if use_petsc:
-
         A = PETSc.Mat().createAIJ(
             size=A_sp_scipy_aug.shape,
             csr=(A_sp_scipy_aug.indptr.astype(PETSc.IntType, copy=False),
                  A_sp_scipy_aug.indices.astype(PETSc.IntType, copy=False),
                  A_sp_scipy_aug.data))
-
         # A_aug = PETSc.Mat().createAIJ(size=A_sp_scipy_aug.shape,
         #                               csr=(A_sp_scipy_aug.indptr,
         #                                    A_sp_scipy_aug.indices,
         #                                    A_sp_scipy_aug.data))
     else:
         A_aug = compute_linearized_residual
-
     res_vec_aug = compute_residual_lm(problem, res_vec, dofs_aug, p_num_eps)
-
     return A_aug, res_vec_aug
-
 
 def solver_lagrange_multiplier(problem, linear, use_petsc=True):
     """The solver imposes Dirichlet B.C. and periodic B.C. with lagrangian multiplier method.
-
     The global matrix is of the form
     [A   B
      B^T 0]
     JAX built solver gmres and bicgstab sometimes fail to solve such a system.
     PESTc solver minres seems to work.
     TODO: explore which solver in PESTc is the best, and which preconditioner should be used.
-
     Reference:
     https://ethz.ch/content/dam/ethz/special-interest/baug/ibk/structural-mechanics-dam/education/femI/Presentation.pdf
     """
@@ -716,25 +568,21 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
     start = time.time()
     sol_shape = (problem.num_total_nodes, problem.vec)
     dofs = np.zeros(sol_shape).reshape(-1)
-
     # Ad-hoc parameter to get a better conditioned global matrix. Not useful for PETSc solver.
     if hasattr(problem, 'p_num_eps'):
         p_num_eps = problem.p_num_eps
     else:
         p_num_eps = 1.
-
     if not use_petsc:
         logger.info(
             f"Setting p_num_eps = {p_num_eps}. If periodic B.C. fails to be applied, consider modifying this parameter."
         )
-
     def newton_update_helper(dofs_aug):
         res_vec = problem.newton_update(
             dofs_aug[:problem.num_total_dofs].reshape(sol_shape)).reshape(-1)
         A_aug, res_vec_aug = get_A_fn_and_res_aug(problem, dofs_aug, res_vec,
                                                   p_num_eps, use_petsc)
         return res_vec_aug, A_aug
-
     if linear:
         # If we know the problem is linear, this way of solving seems faster.
         dofs = assign_bc(dofs, problem)
@@ -746,7 +594,6 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
         dofs_aug = aug_dof_w_zero_bc(problem, dofs)
         res_vec_aug, A_aug = newton_update_helper(dofs_aug)
         dofs_aug = linear_guess_solve_lm(problem, A_aug, p_num_eps, use_petsc)
-
         res_vec_aug, A_aug = newton_update_helper(dofs_aug)
         res_val = np.linalg.norm(res_vec_aug)
         logger.debug(f"Before, res l_2 = {res_val}")
@@ -758,20 +605,16 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
             res_vec_aug, A_aug = newton_update_helper(dofs_aug)
             res_val = np.linalg.norm(res_vec_aug)
             logger.debug(f"res l_2 dofs_aug = {res_val}")
-
     sol = dofs_aug[:problem.num_total_dofs].reshape(sol_shape)
     end = time.time()
     solve_time = end - start
     logger.info(f"Solve took {solve_time} [s]")
     logger.debug(f"max of sol = {np.max(sol)}")
     logger.debug(f"min of sol = {np.min(sol)}")
-
     return sol
-
 
 ################################################################################
 # Dynamic relaxation solver
-
 
 def assembleCSR(problem, dofs):
     problem.newton_update(dofs.reshape(
@@ -779,7 +622,6 @@ def assembleCSR(problem, dofs):
     A_sp_scipy = scipy.sparse.csr_array(
         (problem.V, (problem.I, problem.J)),
         shape=(problem.num_total_dofs, problem.num_total_dofs))
-
     A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape,
                               csr=(A_sp_scipy.indptr, A_sp_scipy.indices,
                                    A_sp_scipy.data))
@@ -788,29 +630,21 @@ def assembleCSR(problem, dofs):
                              problem.vec_inds_list[i],
                              dtype=onp.int32)
         A.zeroRows(row_inds)
-
     row, col, val = A.getValuesCSR()
     A_sp_scipy.data = val
     A_sp_scipy.indices = col
     A_sp_scipy.indptr = row
-
     return A_sp_scipy
 
-
 def calC(t, cmin, cmax):
-
     if t < 0.: t = 0.
-
     c = 2. * onp.sqrt(t)
     if (c < cmin): c = cmin
     if (c > cmax): c = cmax
-
     return c
-
 
 def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info_force,
               info):
-
     ## printing control
     if nIters % nPrint == 1:
         #logger.info('\t------------------------------------')
@@ -828,7 +662,6 @@ def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info_force,
             print('Max epsilon: ', np.max(eps))
             print('Max acceleration: ', np.max(np.absolute(qdotdot)))
 
-
 def dynamic_relax_solve(problem,
                         tol=1e-6,
                         nKMat=1000,
@@ -837,31 +670,25 @@ def dynamic_relax_solve(problem,
                         info_force=True):
     """
     Implementation of
-
     Luet, David Joseph. Bounding volume hierarchy and non-uniform rational B-splines for contact enforcement
     in large deformation finite element analysis of sheet metal forming. Diss. Princeton University, 2016.
     Chapter 4.3 Nonlinear System Solution
-
     Particularly good for handling buckling behavior.
     There is a FEniCS version of this dynamic relaxation algorithm.
     The code below is a direct translation from the FEniCS version.
     """
-
     def newton_update_helper(dofs):
         res_vec = problem.newton_update(dofs.reshape(sol_shape)).reshape(-1)
         res_vec = apply_bc_vec(res_vec, dofs, problem)
         A_fn = get_A_fn(problem, use_petsc=False)
         return res_vec, A_fn
-
     res_vec, A_fn = newton_update_helper(dofs)
     dofs = linear_guess_solve(problem, A_fn, precond=True, use_petsc=False)
-
     # parameters not to change
     cmin = 1e-3
     cmax = 3.9
     h_tilde = 1.1
     h = 1.
-
     # initialize all arrays
     N = len(dofs)  #print("--------num of DOF's: %d-----------" % N)
     #initialize displacements, velocities and accelerations
@@ -870,17 +697,14 @@ def dynamic_relax_solve(problem,
     q_old, qdot_old, qdotdot_old = onp.zeros(N), onp.zeros(N), onp.zeros(N)
     #initialize the M, eps, R_old arrays
     eps, M, R, R_old = onp.zeros(N), onp.zeros(N), onp.zeros(N), onp.zeros(N)
-
     @jax.jit
     def assembleVec(dofs):
         res_fn = get_flatten_fn(problem.compute_residual, problem)
         res_vec = res_fn(dofs)
         res_vec = assign_zeros_bc(res_vec, problem)
         return res_vec
-
     R = onp.array(assembleVec(dofs))
     KCSR = assembleCSR(problem, dofs)
-
     M[:] = h_tilde * h_tilde / 4. * onp.array(
         onp.absolute(KCSR).sum(axis=1)).squeeze()
     q[:] = dofs
@@ -889,74 +713,57 @@ def dynamic_relax_solve(problem,
     nIters, iKMat = 0, 0
     error = 1.0
     timeZ = time.time()  #Measurement of loop time.
-
     assert onp.all(onp.isfinite(M)), f"M not finite"
     assert onp.all(onp.isfinite(q)), f"q not finite"
     assert onp.all(onp.isfinite(qdot)), f"qdot not finite"
-
     error = onp.max(onp.absolute(R))
-
     while error > tol:
-
         # print(f"error = {error}")
         # marching forward
         q_old[:] = q[:]
         R_old[:] = R[:]
         q[:] += h * qdot
         dofs = np.array(q)
-
         R = onp.array(assembleVec(dofs))
-
         nIters += 1
         iKMat += 1
         error = onp.max(onp.absolute(R))
-
         # damping calculation
         S0 = onp.dot((R - R_old) / h, qdot)
         t = S0 / onp.einsum('i,i,i', qdot, M, qdot)
         c = calC(t, cmin, cmax)
-
         # determine whether to recal KMat
         eps = h_tilde * h_tilde / 4. * onp.absolute(
             onp.divide((qdotdot - qdotdot_old), (q - q_old),
                        out=onp.zeros_like((qdotdot - qdotdot_old)),
                        where=(q - q_old) != 0))
-
         # calculating the jacobian matrix
-
         if ((onp.max(eps) > 1) and (iKMat > nKMat)):  #SPR JAN max --> min
             if info == True:
                 print('\nRecalculating the tangent matrix: ', nIters)
-
             iKMat = 0
             KCSR = assembleCSR(problem, dofs)
             M[:] = h_tilde * h_tilde / 4. * onp.array(
                 onp.absolute(KCSR).sum(axis=1)).squeeze()
-
         #compute new velocities and accelerations
         # qdot_old[:] = qdot[:]; qdotdot_old[:] = qdotdot[:];
         # qdot = (2.- c*h)/(2 + c*h) * qdot_old - 2.*h/(2.+c*h)* R / M
         qdot_old[:] = qdot[:]
         qdotdot = qdot - qdot_old
-
         # output on screen
         printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint)
-
     # check if converged
     convergence = True
     if onp.isnan(onp.max(onp.absolute(R))):
         convergence = False
-
     # print final info
     if convergence:
         print("DRSolve finished in %d iterations and %fs" % \
               (nIters, time.time() - timeZ))
     else:
         print("FAILED to converged")
-
     sol = dofs.reshape((problem.num_total_nodes, problem.vec))
     return sol
-
 
 ################################################################################
 # General
@@ -977,13 +784,10 @@ def solver(problem,
     else:
         return solver_lagrange_multiplier(problem, linear, use_petsc)
 
-
 ################################################################################
 # Implicit differentiation with the adjoint method
 
-
 def implicit_vjp(problem, sol, params, v, use_petsc):
-
     def constraint_fn(dofs, params):
         """c(u, p)
         """
@@ -992,85 +796,64 @@ def implicit_vjp(problem, sol, params, v, use_petsc):
         res_fn = get_flatten_fn(res_fn, problem)
         res_fn = apply_bc(res_fn, problem)
         return res_fn(dofs)
-
     def constraint_fn_sol_to_sol(sol, params):
         return constraint_fn(sol.reshape(-1), params).reshape(sol.shape)
-
     def get_vjp_contraint_fn_dofs(dofs):
         # Just a transpose of A_fn
         def adjoint_linear_fn(adjoint):
             primals, f_vjp = jax.vjp(A_fn, dofs)
             val, = f_vjp(adjoint)
             return val
-
         return adjoint_linear_fn
-
     def get_partial_params_c_fn(sol):
         """c(u=u, p)
         """
-
         def partial_params_c_fn(params):
             return constraint_fn_sol_to_sol(sol, params)
-
         return partial_params_c_fn
-
     def get_vjp_contraint_fn_params(params, sol):
         """v*(partial dc/dp)
         """
         partial_c_fn = get_partial_params_c_fn(sol)
-
         def vjp_linear_fn(v):
             primals, f_vjp = jax.vjp(partial_c_fn, params)
             val, = f_vjp(v)
             return val
-
         return vjp_linear_fn
-
     problem.set_params(params)
     problem.newton_update(sol)
     A_fn = get_A_fn(problem, use_petsc)
-
     if use_petsc:
         A_transpose = A_fn.transpose()
-
         # Remark: Eliminating rows seems to make A better conditioned.
         # If Dirichlet B.C. is part of the design variable, the following should NOT be implemented.
         # for i in range(len(problem.node_inds_list)):
         #     row_inds = onp.array(problem.node_inds_list[i]*problem.vec + problem.vec_inds_list[i], dtype=onp.int32)
         #     A_transpose.zeroRows(row_inds)
         # v = assign_zeros_bc(v, problem)
-
         adjoint = petsc_solve(A_transpose, v.reshape(-1), 'minres', 'ilu')
-
     else:
         adjoint_linear_fn = get_vjp_contraint_fn_dofs(sol.reshape(-1))
         adjoint = jax_solve(problem, adjoint_linear_fn, v.reshape(-1), None,
                             True)
-
     vjp_linear_fn = get_vjp_contraint_fn_params(params, sol)
     vjp_result = vjp_linear_fn(adjoint.reshape(sol.shape))
     vjp_result = jax.tree_map(lambda x: -x, vjp_result)
-
     return vjp_result
 
-
 def ad_wrapper(problem, linear=False, use_petsc=False):
-
     @jax.custom_vjp
     def fwd_pred(params):
         problem.set_params(params)
         sol = solver(problem, linear=linear, use_petsc=use_petsc)
         return sol
-
     def f_fwd(params):
         sol = fwd_pred(params)
         return sol, (params, sol)
-
     def f_bwd(res, v):
         logger.info("Running backward and solving the adjoint problem...")
         params, sol = res
         vjp_result = implicit_vjp(problem, sol, params, v, use_petsc)
         return (vjp_result, )
-
     fwd_pred.defvjp(f_fwd, f_bwd)
     return fwd_pred

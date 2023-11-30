@@ -203,9 +203,9 @@ plt.show()
 ## Execution
 Run
 ```bash
-python -m demos.fem.plasticity.example
+python -m demos.plasticity.example
 ```
-from the `jax-am/` directory.
+from the `jax-fem/` directory.
 
 
 ## Results

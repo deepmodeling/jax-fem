@@ -125,9 +125,9 @@ save_sol(problem, sol, vtk_path)
 ## Execution
 Run
 ```bash
-python -m demos.fem.poisson.example
+python -m demos.poisson.example
 ```
-from the `jax-am/` directory.
+from the `jax-fem/` directory.
 
 
 ## Results

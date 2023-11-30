@@ -76,7 +76,7 @@ The stress $\boldsymbol{\sigma}^n$ is defined through the following relationship
 \end{align*}
 ```
 
-where $`\boldsymbol{\varepsilon}_{\textrm{th}}`$ is the thermal strain, and the other parameters are explained in our [plasticity example](https://github.com/tianjuxue/jax-am/tree/main/demos/fem/plasticity). Note that we define material phase to be either in POWDER, LIQUID or SOLID state. A material point is initially in POWDER state, and transforms into LIQUID state if the temperature goes beyond the melting point, and transforms from LIQUID to SOLID state if the temperature drops below the melting point thereafter. The Young's modulus $E$  is set to be a normal value for the SOLID state, while 1% of that for the LIQUID and POWDER state. The thermal expansion coefficient $\alpha_V$ is set to be a normal value for the SOLID state, while 0 for the LIQUID and POWDER state. 
+where $`\boldsymbol{\varepsilon}_{\textrm{th}}`$ is the thermal strain, and the other parameters are explained in our [plasticity example](https://github.com/tianjuxue/jax-fem/tree/main/demos/plasticity). Note that we define material phase to be either in POWDER, LIQUID or SOLID state. A material point is initially in POWDER state, and transforms into LIQUID state if the temperature goes beyond the melting point, and transforms from LIQUID to SOLID state if the temperature drops below the melting point thereafter. The Young's modulus $E$  is set to be a normal value for the SOLID state, while 1% of that for the LIQUID and POWDER state. The thermal expansion coefficient $\alpha_V$ is set to be a normal value for the SOLID state, while 0 for the LIQUID and POWDER state. 
 
 
 ### Weak Form
@@ -417,9 +417,9 @@ for i in range(len(ts[1:])):
 ## Execution
 Run
 ```bash
-python -m demos.fem.thermal_mechanical.example
+python -m demos.thermal_mechanical.example
 ```
-from the `jax-am/` directory.
+from the `jax-fem/` directory.
 
 
 ## Results

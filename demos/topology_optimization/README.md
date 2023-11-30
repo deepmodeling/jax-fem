@@ -253,9 +253,9 @@ plt.show()
 ## Execution
 Run
 ```bash
-python -m demos.fem.topology_optimization.example
+python -m demos.topology_optimization.example
 ```
-from the `jax-am/` directory.
+from the `jax-fem/` directory.
 
 
 ## Results

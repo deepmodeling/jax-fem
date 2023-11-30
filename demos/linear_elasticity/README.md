@@ -109,9 +109,9 @@ save_sol(problem, sol, vtk_path)
 ## Execution
 Run
 ```bash
-python -m demos.fem.linear_elasticity.example
+python -m demos.linear_elasticity.example
 ```
-from the `jax-am/` directory.
+from the `jax-fem/` directory.
 
 
 ## Results

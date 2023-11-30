@@ -149,7 +149,7 @@ class Elasticity(FEM):
         return vm_stress_fn
 
     def compute_von_mises_stress(self, sol):
-        """TODO: Move this to jax-am library?
+        """TODO: Move this to jax-fem library?
         """
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
         u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 

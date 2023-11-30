@@ -128,9 +128,9 @@ save_sol(problem, sol, vtk_path)
 ## Execution
 Run
 ```bash
-python -m demos.fem.hyperelasticity.example
+python -m demos.hyperelasticity.example
 ```
-from the `jax-am/` directory.
+from the `jax-fem/` directory.
 
 
 ## Results

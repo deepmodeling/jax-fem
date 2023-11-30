@@ -133,6 +133,8 @@ class FEM:
 
         self.custom_init(*self.additional_info)
 
+        self.pre_define_fns()
+
     def custom_init(self):
         """Child class should override if more things need to be done in initialization
         """
@@ -552,9 +554,7 @@ class FEM:
 
         return [mass_internal_vars, laplace_internal_vars]
 
-    @timeit
-    def split_and_compute_cell(self, cells_sol, np_version, jac_flag,
-                               **internal_vars):
+    def pre_define_fns(self):
 
         def value_and_jacrev(f, x):
             y, pullback = jax.vjp(f, x)
@@ -603,8 +603,16 @@ class FEM:
             return kernel, kernel_jac
 
         kernel, kernel_jac = get_kernel_fn_cell()
-        fn = kernel_jac if jac_flag else kernel
-        vmap_fn = jax.jit(jax.vmap(fn))
+        kernel = jax.jit(jax.vmap(kernel))
+        kernel_jac = jax.jit(jax.vmap(kernel_jac))
+
+        self.kernel = kernel
+        self.kernel_jac = kernel_jac
+
+    @timeit
+    def split_and_compute_cell(self, cells_sol, np_version, jac_flag,
+                               **internal_vars):
+        vmap_fn = self.kernel_jac if jac_flag else self.kernel
         kernal_vars = self.unpack_kernels_vars(**internal_vars)
         num_cuts = 20
         if num_cuts > len(self.cells):

@@ -6,7 +6,7 @@ import os
 import sys
 from functools import partial
 
-from jax_am.fem.models import Mechanics
+from jax_fem.models import Mechanics
 
 
 from jax.config import config

@@ -6,12 +6,12 @@ import glob
 import meshio
 import matplotlib.pyplot as plt
 
-from jax_am.fem.solver import solver
-from jax_am.fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
-from jax_am.fem.utils import save_sol
-from jax_am.phase_field.neper import pre_processing
+from jax_fem.solver import solver
+from jax_fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
+from jax_fem.utils import save_sol
 
-from applications.fem.crystal_plasticity.models import CrystalPlasticity
+
+from applications.crystal_plasticity.models import CrystalPlasticity
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
@@ -22,6 +22,27 @@ numpy_dir = os.path.join(data_dir, f'numpy/{case_name}')
 vtk_dir = os.path.join(data_dir, f'vtk/{case_name}')
 csv_dir = os.path.join(data_dir, f'csv/{case_name}')
 neper_folder = os.path.join(data_dir, f'neper/{case_name}')
+
+
+
+def pre_processing(pf_args, neper_path='neper'):
+    """We use Neper to generate polycrystal structure.
+    Neper has two major functions: generate a polycrystal structure, and mesh it.
+    See https://neper.info/ for more information.
+    """
+    neper_path = os.path.join(pf_args['data_dir'], neper_path)
+    os.makedirs(neper_path, exist_ok=True)
+
+    if not os.path.exists(os.path.join(neper_path, 'domain.msh')):
+        print(f"You don't have neper mesh file ready, try generating them...")
+        os.system(f'''neper -T -n {pf_args['num_grains']} -id {pf_args['id']} -regularization 0 -domain "cube({pf_args['domain_x']},\
+                   {pf_args['domain_y']},{pf_args['domain_z']})" \
+                    -o {neper_path}/domain -format tess,obj,ori''')
+        os.system(f"neper -T -loadtess {neper_path}/domain.tess -statcell x,y,z,vol,facelist -statface x,y,z,area")
+        os.system(f"neper -M -rcl 1 -elttype hex -faset faces {neper_path}/domain.tess")
+    else:
+        print(f"You already have neper mesh file.")
+
 
 
 def problem():

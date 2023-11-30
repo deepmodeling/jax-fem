@@ -73,6 +73,11 @@ conda activate jax-fem-env
 pip install -e .
 ```
 
+### Dependencies
+Install JAX
+- See jax installation [instructions](https://jax.readthedocs.io/en/latest/installation.html#)
+
+
 ## Quick start
 
 Check `demos/` for a variety of FEM cases. For example, run
@@ -90,15 +95,6 @@ python -m tests.benchmarks
 ```
 
 will execute a set of test cases.
-
-## Dependencies
-Install JAX
-- See jax installation [instructions](https://jax.readthedocs.io/en/latest/installation.html#)
-
-
-## Documentation
-
-Please see the [web documentation](https://jax-am.readthedocs.io/en/latest/) for the installation and use of this project.
 
 
 ## License

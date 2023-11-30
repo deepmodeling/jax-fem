@@ -1,38 +1,49 @@
-import numpy as np
-import jax.numpy as jnp
+import jax.numpy as np
 import jax
 import time
+
+x = np.ones((1000, 1000), dtype=np.float32)  
+
+
+@jax.jit
+def f(x):
+    return x.T @ (x - x.mean(axis=0))
+
+def f1(x):
+    return f(x)
+
+
+def f2(x):
+    def f(x): 
+        return x.T @ (x - x.mean(axis=0))
+    f = jax.jit(f)
+    return f(x)
 
 
 @jax.jit
 def g(x):
-    def f():  # function we're benchmarking (works in both NumPy & JAX)
-        return x.T @ (x - x.mean(axis=0))
-    return f()
-
-x = jnp.ones((1000, 1000), dtype=jnp.float32)  # same as JAX default dtype
-
-
-@jax.jit
-def h(x):  
     return x.T @ (x - x.mean(axis=0))
-    
+
+def f3(x, h):
+    return h(x)
 
 
-
-def s(x):
-    def f():  # function we're benchmarking (works in both NumPy & JAX)
-        return np.sum(x**2)
-    return jax.jit(f)()
- 
-# for i in range(10):
-#     start = time.time()
-#     a = g(x).block_until_ready()
-#     # a = h(x).block_until_ready()
-#     print(time.time() - start)
+print(f"\nTest f1...")
+for i in range(10):
+    start = time.time()
+    a = f1(x).block_until_ready()
+    print(time.time() - start)
 
 
-print(jax.grad(s)(1.))
-print(jax.grad(s)(2.))
+print(f"\nTest f2...")
+for i in range(10):
+    start = time.time()
+    a = f2(x).block_until_ready()
+    print(time.time() - start)
 
- 
+
+print(f"\nTest f3...")
+for i in range(10):
+    start = time.time()
+    a = f3(x, g).block_until_ready()
+    print(time.time() - start)

@@ -693,8 +693,7 @@ def calC(t, cmin, cmax):
     return c
 
 
-def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info_force,
-              info):
+def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info, info_force):
 
     ## printing control
     if nIters % nPrint == 1:
@@ -710,7 +709,7 @@ def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info_force,
             print('Max acceleration: ',np.max(np.absolute(qdotdot)))
 
 
-def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, info_force=True):
+def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info_force=True):
     """
     Implementation of
 
@@ -727,6 +726,9 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
         res_vec = apply_bc_vec(res_vec, dofs, problem)
         A_fn = get_A_fn(problem, use_petsc=False)
         return res_vec, A_fn
+
+    sol_shape = (problem.num_total_nodes, problem.vec)
+    dofs = np.zeros(sol_shape).reshape(-1)
 
     res_vec, A_fn = newton_update_helper(dofs)
     dofs = linear_guess_solve(problem, A_fn, precond=True, use_petsc=False)
@@ -773,7 +775,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
 
     while error > tol:
 
-        # print(f"error = {error}")
+        print(f"error = {error}")
         # marching forward
         q_old[:] = q[:]; R_old[:] = R[:]
         q[:] += h*qdot; dofs = np.array(q)
@@ -806,14 +808,14 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
             M[:] = h_tilde * h_tilde / 4. * onp.array(
                 onp.absolute(KCSR).sum(axis=1)).squeeze()
 
-        #compute new velocities and accelerations
-        # qdot_old[:] = qdot[:]; qdotdot_old[:] = qdotdot[:];
-        # qdot = (2.- c*h)/(2 + c*h) * qdot_old - 2.*h/(2.+c*h)* R / M
+        # compute new velocities and accelerations
+        qdot_old[:] = qdot[:]; qdotdot_old[:] = qdotdot[:];
+        qdot = (2.- c*h)/(2 + c*h) * qdot_old - 2.*h/(2.+c*h)* R / M
         qdot_old[:] = qdot[:]
         qdotdot = qdot - qdot_old
 
         # output on screen
-        printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint)
+        printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info, info_force)
 
     # check if converged
     convergence = True

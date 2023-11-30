@@ -67,12 +67,11 @@ import os
 import glob
 import matplotlib.pyplot as plt
 
-from jax_am.fem.core import FEM
-from jax_am.fem.solver import solver, ad_wrapper
-from jax_am.fem.utils import save_sol
-from jax_am.fem.generate_mesh import get_meshio_cell_type, Mesh
-from jax_am.fem.mma import optimize
-from jax_am.common import rectangle_mesh
+from jax_fem.core import FEM
+from jax_fem.solver import solver, ad_wrapper
+from jax_fem.utils import save_sol
+from jax_fem.generate_mesh import get_meshio_cell_type, Mesh, rectangle_mesh
+from jax_fem.mma import optimize
 ```
 
 Define the problem and constitutive relationship. Generally, *JAX-FEM* solves $`-\nabla \cdot \boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N) = \boldsymbol{b}`$. Here, we have $`\boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N)=\boldsymbol{\sigma} (\nabla \boldsymbol{u}, \theta)`$, reflected by the function `stress`. The first three functions `custom_init`, `get_tensor_map` and `set_params` override base class methods. In particular, `set_params` sets the design variable $\boldsymbol{\Theta}$. 

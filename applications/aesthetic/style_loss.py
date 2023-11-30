@@ -11,9 +11,7 @@ import jax
 from jax import tree_util
 import jax.numpy as jnp
 from scipy.interpolate import RegularGridInterpolator
-
-
-from jax_am.common import rectangle_mesh
+from jax_fem.generate_mesh import rectangle_mesh
 
 from jax.config import config
 

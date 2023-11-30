@@ -3,9 +3,9 @@ import jax
 import jax.numpy as np
 import os
 
-from jax_am.fem.generate_mesh import Mesh
-from jax_am.fem.core import FEM
-from jax_am.fem.basis import get_face_shape_vals_and_grads
+from jax_fem.generate_mesh import Mesh
+from jax_fem.core import FEM
+from jax_fem.basis import get_face_shape_vals_and_grads
 
 
 class Thermal(FEM):

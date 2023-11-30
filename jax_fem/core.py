@@ -133,7 +133,7 @@ class FEM:
 
         self.custom_init(*self.additional_info)
 
-        self.pre_define_fns()
+        self.pre_jit_fns()
 
     def custom_init(self):
         """Child class should override if more things need to be done in initialization
@@ -554,7 +554,7 @@ class FEM:
 
         return [mass_internal_vars, laplace_internal_vars]
 
-    def pre_define_fns(self):
+    def pre_jit_fns(self):
 
         def value_and_jacrev(f, x):
             y, pullback = jax.vjp(f, x)
@@ -702,6 +702,8 @@ class FEM:
                 boundary_inds)  # (num_selected_faces, num_face_quads)
             kernel, kernel_jac = get_kernel_fn_face(value_fns[i])
             fn = kernel_jac if jac_flag else kernel
+
+            # TODO(Tianju): Re-jitting is bad!
             vmap_fn = jax.jit(jax.vmap(fn))
             val = vmap_fn(selected_cell_sols, selected_face_shape_vals,
                           nanson_scale)
@@ -910,5 +912,3 @@ class FEM:
                 )
         else:
             print(f"\n\n### No Dirichlet B.C. found.")
-
-

@@ -6,12 +6,11 @@ import glob
 import meshio
 import matplotlib.pyplot as plt
 
-from jax_am.fem.core import FEM
-from jax_am.fem.solver import solver, ad_wrapper
-from jax_am.fem.utils import save_sol
-from jax_am.fem.generate_mesh import get_meshio_cell_type, Mesh
-from jax_am.common import rectangle_mesh
-from jax_am.fem.mma import optimize
+from jax_fem.core import FEM
+from jax_fem.solver import solver, ad_wrapper
+from jax_fem.utils import save_sol
+from jax_fem.generate_mesh import get_meshio_cell_type, Mesh, rectangle_mesh
+from jax_fem.mma import optimize
 
 
 class Elasticity(FEM):

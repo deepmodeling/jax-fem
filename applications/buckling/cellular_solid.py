@@ -4,11 +4,10 @@ import os
 import glob
 import meshio
 
-from jax_am.fem.core import FEM
-from jax_am.fem.solver import solver, dynamic_relax_solve
-from jax_am.fem.utils import save_sol
-from jax_am.fem.generate_mesh import get_meshio_cell_type, Mesh
-from jax_am.common import rectangle_mesh
+from jax_fem.core import FEM
+from jax_fem.solver import solver, dynamic_relax_solve
+from jax_fem.utils import save_sol
+from jax_fem.generate_mesh import get_meshio_cell_type, Mesh, rectangle_mesh
 
 
 class Elasticity(FEM):

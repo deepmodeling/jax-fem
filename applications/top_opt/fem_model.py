@@ -2,7 +2,7 @@ import numpy as onp
 import jax
 import jax.numpy as np
 
-from jax_am.fem.core import FEM
+from jax_fem.core import FEM
 
 
 class Elasticity(FEM):

@@ -7,9 +7,9 @@ import os
 import meshio
 import time
 
-from jax_am.fem.generate_mesh import Mesh, box_mesh
-from jax_am.fem.solver import ad_wrapper
-from jax_am.fem.utils import save_sol
+from jax_fem.generate_mesh import Mesh, box_mesh
+from jax_fem.solver import ad_wrapper
+from jax_fem.utils import save_sol
 
 from applications.fem.top_opt.fem_model import Elasticity
 from applications.fem.top_opt.mma import optimize

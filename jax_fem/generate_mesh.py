@@ -95,6 +95,24 @@ def get_meshio_cell_type(ele_type):
     return cell_type
 
 
+def rectangle_mesh(Nx, Ny, domain_x, domain_y):
+    dim = 2
+    x = onp.linspace(0, domain_x, Nx + 1)
+    y = onp.linspace(0, domain_y, Ny + 1)
+    xv, yv = onp.meshgrid(x, y, indexing='ij')
+    points_xy = onp.stack((xv, yv), axis=dim)
+    points = points_xy.reshape(-1, dim)
+    points_inds = onp.arange(len(points))
+    points_inds_xy = points_inds.reshape(Nx + 1, Ny + 1)
+    inds1 = points_inds_xy[:-1, :-1]
+    inds2 = points_inds_xy[1:, :-1]
+    inds3 = points_inds_xy[1:, 1:]
+    inds4 = points_inds_xy[:-1, 1:]
+    cells = onp.stack((inds1, inds2, inds3, inds4), axis=dim).reshape(-1, 4)
+    out_mesh = meshio.Mesh(points=points, cells={'quad': cells})
+    return out_mesh
+
+    
 def box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir, ele_type='HEX8'):
     """References:
     https://gitlab.onelab.info/gmsh/gmsh/-/blob/master/examples/api/hex.py

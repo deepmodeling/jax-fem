@@ -38,11 +38,10 @@ import os
 
 Import *JAX-FEM* specific modules:
 ```python
-from jax_am.fem.core import FEM
-from jax_am.fem.solver import solver
-from jax_am.fem.utils import save_sol
-from jax_am.fem.generate_mesh import get_meshio_cell_type, Mesh
-from jax_am.common import rectangle_mesh
+from jax_fem.core import FEM
+from jax_fem.solver import solver
+from jax_fem.utils import save_sol
+from jax_fem.generate_mesh import get_meshio_cell_type, Mesh, rectangle_mesh
 ```
 
 Define constitutive relationship. The `get_tensor_map` function overrides base class method. *JAX-FEM* generally solves $-\nabla \cdot f(\nabla u) = b$. Here, we define $f$ to be the identity function. We will see how $f$ is defined as more complicated to solve non-linear problems in later examples.

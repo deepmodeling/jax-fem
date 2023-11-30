@@ -4,11 +4,11 @@ import os
 import meshio
 import gmsh
 
-from jax_am.fem.models import LinearPoisson
-from jax_am.fem.solver import solver
-from jax_am.fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
-from jax_am.fem.utils import save_sol, modify_vtu_file
-from jax_am.fem.basis import get_elements
+from jax_fem.models import LinearPoisson
+from jax_fem.solver import solver
+from jax_fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
+from jax_fem.utils import save_sol, modify_vtu_file
+from jax_fem.basis import get_elements
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"

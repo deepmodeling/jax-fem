@@ -17,10 +17,10 @@ import meshio
 import matplotlib.pyplot as plt
 from functools import partial
 import gc
-from jax_am.fem.generate_mesh import box_mesh, cylinder_mesh
-from jax_am.fem.jax_fem import LinearElasticity, FEM, Mesh
-from jax_am.fem.solver import solver
-from jax_am.fem.utils import save_sol
+from jax_fem.generate_mesh import box_mesh, cylinder_mesh
+from jax_fem.jax_fem import LinearElasticity, FEM, Mesh
+from jax_fem.solver import solver
+from jax_fem.utils import save_sol
 
 from numba import jit, njit, prange
 

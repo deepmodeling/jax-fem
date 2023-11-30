@@ -1,22 +1,16 @@
-<p align="middle">
-  <img src="docs/logo.png" width="200" />
-</p>
-
-A GPU-accelerated differentiable finite element analysis package based on [JAX](https://github.com/google/jax). Part of the suite of open-source python packages for Additive Manufacturing (AM) research, [JAX-AM](https://github.com/tianjuxue/jax-am).
+A GPU-accelerated differentiable finite element analysis package based on [JAX](https://github.com/google/jax). Used to be part of the suite of open-source python packages for Additive Manufacturing (AM) research, [JAX-AM](https://github.com/tianjuxue/jax-am).
 
 ## Finite Element Method (FEM)
-[![Doc](https://img.shields.io/readthedocs/jax-am)](https://jax-am.readthedocs.io/en/latest/)
-![PyPI](https://img.shields.io/pypi/v/jax-am)
-![Github Star](https://img.shields.io/github/stars/tianjuxue/jax-am)
-![Github Fork](https://img.shields.io/github/forks/tianjuxue/jax-am)
-![License](https://img.shields.io/github/license/tianjuxue/jax-am)
+![Github Star](https://img.shields.io/github/stars/tianjuxue/jax-fem)
+![Github Fork](https://img.shields.io/github/forks/tianjuxue/jax-fem)
+![License](https://img.shields.io/github/license/tianjuxue/jax-fem)
 
-FEM is a powerful tool for thermal-mechanical analysis, especially in Additive manfacturing (AM). We support the following features
+FEM is a powerful tool, where the following features are supported
 
 - 2D quadrilateral/triangle elements
 - 3D hexahedron/tetrahedron elements
 - First and second order elements
-- Dirichlet/Neumann/Cauchy/periodic boundary conditions
+- Dirichlet/Neumann/periodic boundary conditions
 - Linear and nonlinear analysis including
   - Heat equation
   - Linear elasticity
@@ -79,7 +73,25 @@ conda activate jax-fem-env
 pip install -e .
 ```
 
-### Dependencies
+## Quick start
+
+Check `demos/` for a variety of FEM cases. For example, run
+
+```bash
+python -m demos.hyperelasticity.example
+```
+
+for hyperelasticity. 
+
+Also, 
+
+```bash
+python -m tests.benchmarks
+```
+
+will execute a set of test cases.
+
+## Dependencies
 Install JAX
 - See jax installation [instructions](https://jax.readthedocs.io/en/latest/installation.html#)
 
@@ -93,12 +105,6 @@ Please see the [web documentation](https://jax-am.readthedocs.io/en/latest/) for
 
 This project is licensed under the GNU General Public License v3 - see the [LICENSE](https://www.gnu.org/licenses/) for details.
 
-## JAX-AM
-
-JAX-AM is a collection of several numerical tools, currently including __Discrete Element Method (DEM)__, __Lattice Boltzmann Methods (LBM)__, __Computational Fluid Dynamics (CFD)__, __Phase Field Method (PFM)__ and __Finite Element Method (FEM)__, that cover the analysis of the __Process-Structure-Property__ relationship in AM.
-
-Our vision is to share with the AM community a __free, open-source__ (under the GPL-3.0 License) software that facilitates the relevant computational research. In the JAX ecosystem, we hope to emphasize the potential of JAX for scientific computing. At the same time, AI-enabled research in AM can be made easy with JAX-AM.
-
 ## Citations
 
 If you found this library useful in academic or industry work, we appreciate your support if you consider 1) starring the project on Github, and 2) citing relevant papers:
@@ -111,18 +117,5 @@ If you found this library useful in academic or industry work, we appreciate you
   pages={108802},
   year={2023},
   publisher={Elsevier}
-}
-```
-
-```bibtex
-@article{xue2022physics,
-  title={Physics-embedded graph network for accelerating phase-field simulation of microstructure evolution in additive manufacturing},
-  author={Xue, Tianju and Gan, Zhengtao and Liao, Shuheng and Cao, Jian},
-  journal={npj Computational Materials},
-  volume={8},
-  number={1},
-  pages={201},
-  year={2022},
-  publisher={Nature Publishing Group UK London}
 }
 ```

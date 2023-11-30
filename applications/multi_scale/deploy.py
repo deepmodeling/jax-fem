@@ -5,9 +5,9 @@ import os
 import matplotlib.pyplot as plt
 import time
 
-from jax_am.fem.generate_mesh import Mesh, box_mesh
-from jax_am.fem.solver import solver
-from jax_am.fem.utils import save_sol
+from jax_fem.generate_mesh import Mesh, box_mesh
+from jax_fem.solver import solver
+from jax_fem.utils import save_sol
 
 from applications.fem.multi_scale.arguments import args
 from applications.fem.multi_scale.utils import tensor_to_flat, tensor_to_flat

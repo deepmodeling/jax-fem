@@ -5,10 +5,10 @@ import meshio
 import time
 import os
 
-from jax_am.fem.models import LinearElasticity, HyperElasticity, Plasticity
-from jax_am.fem.solver import solver
-from jax_am.fem.utils import modify_vtu_file, save_sol
-from jax_am.fem.generate_mesh import Mesh, cylinder_mesh
+from jax_fem.models import LinearElasticity, HyperElasticity, Plasticity
+from jax_fem.solver import solver
+from jax_fem.utils import modify_vtu_file, save_sol
+from jax_fem.generate_mesh import Mesh, cylinder_mesh
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 

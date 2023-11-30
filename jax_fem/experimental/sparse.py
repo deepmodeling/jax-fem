@@ -3,7 +3,7 @@ import numpy as onp
 import jax
 import jax.numpy as np
 from jax.experimental.sparse import BCOO
-from jax_am.fem.experiments import sparsejac
+from jax_fem.experiments import sparsejac
 
 
 from jax.config import config

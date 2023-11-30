@@ -16,5 +16,5 @@ dev_code/
 *output/
 *defcon/
 *debug/
-tests/benchmarking_tests/*/jax_fem/*
+tests/benchmarks/*/jax_fem/*
 applications/aesthetic/input/models

@@ -1,14 +1,18 @@
+"""
+TODO: Wrong name! It should really be Robin BC, not Cauchy BC.
+"""
+
 import jax
 import jax.numpy as np
 import os
 import meshio
 import gmsh
 
-from jax_am.fem.models import LinearPoisson
-from jax_am.fem.solver import solver
-from jax_am.fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
-from jax_am.fem.utils import save_sol, modify_vtu_file
-from jax_am.fem.basis import get_elements
+from jax_fem.models import LinearPoisson
+from jax_fem.solver import solver
+from jax_fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
+from jax_fem.utils import save_sol, modify_vtu_file
+from jax_fem.basis import get_elements
     
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
@@ -57,7 +61,7 @@ def problem():
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
     vec = 1
     dim = 2
-    ele_type = 'TRI4'
+    ele_type = 'TRI3'
     _, _, _, _, degree, _ = get_elements(ele_type)
     msh_file_path = gmsh_mesh(data_dir, degree)
     cell_type = get_meshio_cell_type(ele_type)

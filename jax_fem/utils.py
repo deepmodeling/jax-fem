@@ -43,4 +43,3 @@ def read_abaqus_and_write_vtk(abaqus_file, vtk_file):
     """
     meshio_mesh = meshio.read(abaqus_file)
     meshio_mesh.write(vtk_file)
-

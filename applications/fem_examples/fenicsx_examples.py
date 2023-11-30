@@ -13,7 +13,7 @@ import meshio
 import sys
 import os
 
-from jax_am.fem.generate_mesh import cylinder_mesh 
+from jax_fem.generate_mesh import cylinder_mesh 
 
 comm = MPI.COMM_WORLD
 

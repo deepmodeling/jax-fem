@@ -146,7 +146,7 @@ def jax_array_list_to_numpy_diff(jax_array_list:
     """Convert a list of JAX arrays to a single numpy array.
     This function is JITable. However, reverse-mode differentiation
     is not supported. This is used in the split_and_compute_cell
-    function in the jax_am.fem.core module as well as in the JVP rule
+    function in the jax_fem.core module as well as in the JVP rule
     for the forward solve.
 
     Parameters

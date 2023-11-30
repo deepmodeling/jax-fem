@@ -2,7 +2,7 @@ import numpy as onp
 import jax
 import jax.numpy as np
 
-from jax_am.fem.models import Mechanics
+from jax_fem.models import Mechanics
 
 from applications.fem.multi_scale.arguments import args
 from applications.fem.multi_scale.trainer import get_nn_batch_forward

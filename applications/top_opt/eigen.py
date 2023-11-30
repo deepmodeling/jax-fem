@@ -10,11 +10,11 @@ import os
 import meshio
 import time
 
-from jax_am.fem.core import FEM
-from jax_am.fem.generate_mesh import Mesh
-from jax_am.fem.solver import ad_wrapper, get_A_fn, get_flatten_fn, apply_bc
-from jax_am.fem.utils import save_sol
-from jax_am.common import rectangle_mesh, box_mesh
+from jax_fem.core import FEM
+from jax_fem.generate_mesh import Mesh
+from jax_fem.solver import ad_wrapper, get_A_fn, get_flatten_fn, apply_bc
+from jax_fem.utils import save_sol
+from jax_fem.generate_mesh import rectangle_mesh, box_mesh
 
 from applications.fem.top_opt.fem_model import Elasticity
 from applications.fem.top_opt.mma import optimize

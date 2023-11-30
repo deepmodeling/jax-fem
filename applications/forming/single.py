@@ -9,10 +9,10 @@ import os
 import glob
 import matplotlib.pyplot as plt
 
-from jax_am.fem.core import FEM
-from jax_am.fem.solver import solver, DynamicRelaxSolve
-from jax_am.fem.utils import save_sol
-from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
+from jax_fem.core import FEM
+from jax_fem.solver import solver, DynamicRelaxSolve
+from jax_fem.utils import save_sol
+from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
 
 def simulation():

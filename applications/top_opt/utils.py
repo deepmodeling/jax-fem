@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as onp
 import os
 
-from jax_am.common import make_video
+from jax_fem.common import make_video
 
 # Latex style plot
 plt.rcParams.update({

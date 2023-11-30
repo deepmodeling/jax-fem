@@ -52,10 +52,10 @@ import jax.numpy as np
 import os
 import matplotlib.pyplot as plt
 
-from jax_am.fem.core import FEM
-from jax_am.fem.solver import solver
-from jax_am.fem.utils import save_sol
-from jax_am.fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
+from jax_fem.core import FEM
+from jax_fem.solver import solver
+from jax_fem.utils import save_sol
+from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 ```
 
 Define constitutive relationship. The `get_tensor_map` function overrides base class method. Generally, *JAX-FEM* solves $`-\nabla \cdot \boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N) = \boldsymbol{b}`$. Here, we have $`\boldsymbol{f}(\nabla \boldsymbol{u}, \boldsymbol{\alpha}_1,\boldsymbol{\alpha}_2,...,\boldsymbol{\alpha}_N)=\boldsymbol{\sigma}^n (\nabla \boldsymbol{u}^n, \boldsymbol{\varepsilon}^{n-1}, \boldsymbol{\sigma}^{n-1})`$, reflected by the function `stress_return_map`.

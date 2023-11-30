@@ -5,10 +5,10 @@ import os
 import glob
 import matplotlib.pyplot as plt
 
-from jax_am.fem.core import FEM
-from jax_am.fem.solver import solver, ad_wrapper
-from jax_am.fem.utils import save_sol
-from jax_am.fem.generate_mesh import get_meshio_cell_type, Mesh, box_mesh
+from jax_fem.core import FEM
+from jax_fem.solver import solver, ad_wrapper
+from jax_fem.utils import save_sol
+from jax_fem.generate_mesh import get_meshio_cell_type, Mesh, box_mesh
 
 
 class HyperElasticity(FEM):

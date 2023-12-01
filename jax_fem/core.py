@@ -645,15 +645,22 @@ class FEM:
                 values = np_version.vstack(values)
                 jacs = np_version.vstack(jacs)
             else:
+                values = np_version.vstack(values)
+                jacs = np_version.vstack(jacs)
+
+                # Tianju: Please rethink about the following
+                # Causing significant drop in performance for GPU
+                # I don't think we really need to make this process differentiable
+
                 # np_version set to ordinary numpy saves GPU memory
                 # values = jax_array_list_to_numpy_diff(values)
                 # jacs = jax_array_list_to_numpy_diff(jacs)
 
                 # Putting the large matrix on CPU - This allows
                 # differentiation as well
-                cpu = jax.devices("cpu")[0]
-                values = np.vstack(jax.device_put(values, cpu))
-                jacs = np.vstack(jax.device_put(jacs, cpu))
+                # cpu = jax.devices("cpu")[0]
+                # values = np.vstack(jax.device_put(values, cpu))
+                # jacs = np.vstack(jax.device_put(jacs, cpu))
 
             return values, jacs
         else:

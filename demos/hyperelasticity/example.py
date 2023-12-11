@@ -2,13 +2,13 @@ import jax
 import jax.numpy as np
 import os
 
-from jax_fem.core import FEM
+from jax_fem.problem import Problem
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
 
-class HyperElasticity(FEM):
+class HyperElasticity(Problem):
 
     def get_tensor_map(self):
 
@@ -82,4 +82,4 @@ problem = HyperElasticity(mesh,
                           dirichlet_bc_info=dirichlet_bc_info)
 sol = solver(problem, use_petsc=True)
 vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
-save_sol(problem, sol, vtk_path)
+save_sol(problem.fes[0], sol[0], vtk_path)

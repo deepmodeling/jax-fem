@@ -7,9 +7,33 @@ import os
 import unittest
 
 from jax_fem.generate_mesh import Mesh
-from jax_fem.models import LinearElasticity
+from jax_fem.problem import Problem
 from jax_fem.solver import solver
 from jax_fem.utils import modify_vtu_file, save_sol
+
+
+class LinearElasticity(Problem):
+    def get_tensor_map(self):
+        def stress(u_grad):
+            E = 70e3
+            nu = 0.3
+            mu = E/(2.*(1. + nu))
+            lmbda = E*nu/((1+nu)*(1-2*nu))
+            epsilon = 0.5*(u_grad + u_grad.T)
+            sigma = lmbda*np.trace(epsilon)*np.eye(self.dim) + 2*mu*epsilon
+            return sigma
+        return stress
+
+    def get_mass_map(self):
+        def mass_map(u, x):
+            val = -np.array([0., 10., 10.])
+            return val
+        return mass_map
+
+    def get_surface_maps(self):
+        def surface_map(u, x):
+            return -np.array([10., 0., 0.])
+        return [surface_map]
 
 
 class Test(unittest.TestCase):
@@ -38,25 +62,18 @@ class Test(unittest.TestCase):
         def dirichlet_val(point):
             return 1.
 
-        def neumann_val(point):
-            return np.array([10., 0., 0.])
-
-        def body_force(point):
-            return np.array([0., 10., 10.])
-
         location_fns = [left, left, left]
         value_fns = [dirichlet_val, dirichlet_val, dirichlet_val]
         vecs = [0, 1, 2]
         dirichlet_bc_info = [location_fns, vecs, value_fns]
 
-        neumann_bc_info = [[right], [neumann_val]]
 
-        problem = LinearElasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info,
-                                   neumann_bc_info=neumann_bc_info, source_info=body_force)
-        sol = solver(problem)
+        location_fns = [right]
+        problem = LinearElasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info, location_fns=location_fns)
+        sol_list = solver(problem)
 
         jax_vtu_path = os.path.join(crt_dir, "jax_fem/sol.vtu")
-        save_sol(problem, sol, jax_vtu_path)
+        save_sol(problem.fes[0], sol_list[0], jax_vtu_path)
         jax_fem_vtu = meshio.read(jax_vtu_path)
 
         jax_fem_sol = jax_fem_vtu.point_data['sol']

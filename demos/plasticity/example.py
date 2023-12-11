@@ -3,21 +3,21 @@ import jax.numpy as np
 import os
 import matplotlib.pyplot as plt
 
-from jax_fem.core import FEM
+from jax_fem.problem import Problem
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
 
-class Plasticity(FEM):
+class Plasticity(Problem):
     def custom_init(self):
         """Override base class method.
         Initializing total strain and stress.
-        Note that 'laplace' is a reserved keywork that speficically refers to the internal variables.
         """
-        self.epsilons_old = np.zeros((len(self.cells), self.num_quads, self.vec, self.dim))
+        self.fe = self.fes[0]
+        self.epsilons_old = np.zeros((len(self.fe.cells), self.fe.num_quads, self.fe.vec, self.dim))
         self.sigmas_old = np.zeros_like(self.epsilons_old)
-        self.internal_vars['laplace'] = [self.sigmas_old, self.epsilons_old]
+        self.internal_vars = [self.sigmas_old, self.epsilons_old]
 
     def get_tensor_map(self):
         """Override base class method.
@@ -67,18 +67,18 @@ class Plasticity(FEM):
         return vmap_strain, vmap_stress_return_map
 
     def update_stress_strain(self, sol):
-        u_grads = self.sol_to_grad(sol)
+        u_grads = self.fe.sol_to_grad(sol)
         vmap_strain, vmap_stress_rm = self.stress_strain_fns()
         self.sigmas_old = vmap_stress_rm(u_grads, self.sigmas_old, self.epsilons_old)
         self.epsilons_old = vmap_strain(u_grads)
-        self.internal_vars['laplace'] = [self.sigmas_old, self.epsilons_old]
+        self.internal_vars = [self.sigmas_old, self.epsilons_old]
 
     def compute_avg_stress(self):
         """For post-processing only: Compute volume averaged stress.
         """
         # (num_cells*num_quads, vec, dim) * (num_cells*num_quads, 1, 1) -> (vec, dim)
-        sigma = np.sum(self.sigmas_old.reshape(-1, self.vec, self.dim) * self.JxW.reshape(-1)[:, None, None], 0)
-        vol = np.sum(self.JxW)
+        sigma = np.sum(self.sigmas_old.reshape(-1, self.fe.vec, self.dim) * self.fe.JxW.reshape(-1)[:, None, None], 0)
+        vol = np.sum(self.fe.JxW)
         avg_sigma = sigma/vol
         return avg_sigma
 
@@ -119,14 +119,14 @@ avg_stresses = []
 for i, disp in enumerate(disps):
     print(f"\nStep {i} in {len(disps)}, disp = {disp}")
     dirichlet_bc_info[-1][-1] = get_dirichlet_top(disp)
-    problem.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
-    sol = solver(problem, use_petsc=True)
-    problem.update_stress_strain(sol)
+    problem.fe.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
+    sol_list = solver(problem, use_petsc=True)
+    problem.update_stress_strain(sol_list[0])
     avg_stress = problem.compute_avg_stress()
     print(avg_stress)
     avg_stresses.append(avg_stress)
     vtk_path = os.path.join(data_dir, f'vtk/u_{i:03d}.vtu')
-    save_sol(problem, sol, vtk_path)
+    save_sol(problem.fe, sol_list[0], vtk_path)
 
 avg_stresses = np.array(avg_stresses)
 

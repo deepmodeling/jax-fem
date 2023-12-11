@@ -6,19 +6,19 @@ import glob
 import meshio
 import matplotlib.pyplot as plt
 
-from jax_fem.core import FEM
+from jax_fem.problem import Problem
 from jax_fem.solver import solver, ad_wrapper
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import get_meshio_cell_type, Mesh, rectangle_mesh
 from jax_fem.mma import optimize
 
 
-class Elasticity(FEM):
+class Elasticity(Problem):
     def custom_init(self):
         """Override base class method.
         Modify self.flex_inds so that location-specific TO can be realized.
         """
-        self.flex_inds = np.arange(len(self.cells))
+        self.fes[0].flex_inds = np.arange(len(self.fes[0].cells))
 
     def get_tensor_map(self):
         """Override base class method.
@@ -45,23 +45,25 @@ class Elasticity(FEM):
     def set_params(self, params):
         """Override base class method.
         """
-        full_params = np.ones((self.num_cells, params.shape[1]))
-        full_params = full_params.at[self.flex_inds].set(params)
-        thetas = np.repeat(full_params[:, None, :], self.num_quads, axis=1)
+        full_params = np.ones((self.fes[0].num_cells, params.shape[1]))
+        full_params = full_params.at[self.fes[0].flex_inds].set(params)
+        thetas = np.repeat(full_params[:, None, :], self.fes[0].num_quads, axis=1)
         self.full_params = full_params
-        self.internal_vars['laplace'] = [thetas]
+        self.internal_vars = [thetas]
 
 
 def simulation():
-    data_dir = os.path.join(os.path.dirname(__file__), 'data')
-    files = glob.glob(os.path.join(data_dir, f'vtk/*'))
+    output_dir = os.path.join(os.path.dirname(__file__), 'output')
+    input_dir = os.path.join(os.path.dirname(__file__), 'input')
+
+    files = glob.glob(os.path.join(output_dir, f'vtk/*'))
     for f in files:
         os.remove(f)
 
     ele_type = 'QUAD8'
     cell_type = get_meshio_cell_type(ele_type)
 
-    mesh_file = os.path.join(data_dir, f"abaqus/beam.inp")
+    mesh_file = os.path.join(input_dir, f"abaqus/beam.inp")
     meshio_mesh = meshio.read(mesh_file)
     Lx, Ly = np.max(meshio_mesh.points[:, 0]), np.max(meshio_mesh.points[:, 1])
     meshio_mesh.points[:, 1] -= 0.4*Ly
@@ -110,16 +112,17 @@ def simulation():
     fwd_pred = ad_wrapper(problem, linear=True, use_petsc=True)
 
     theta = 0.5*onp.ones((problem.num_cells, 1))
-    cell_centroids = np.mean(np.take(problem.points, problem.cells, axis=0), axis=1)
+    cell_centroids = np.mean(np.take(problem.fes[0].points, problem.fes[0].cells, axis=0), axis=1)
 
     theta[(cell_centroids[:, 0] > 0.5*Lx) & (cell_centroids[:, 1] > 0)] = 0.
     theta[(cell_centroids[:, 0] < 0.5*Lx) & (cell_centroids[:, 1] < 0)] = 0.
     theta[(cell_centroids[:, 0] > 0.5*Lx) & (cell_centroids[:, 1] < 0)] = 1.
     theta[(cell_centroids[:, 0] < 0.5*Lx) & (cell_centroids[:, 1] > 0)] = 1.
 
-    sol = fwd_pred(theta)
-    vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
-    save_sol(problem, np.hstack((sol, np.zeros((len(sol), 1)))), vtk_path, cell_infos=[('theta', problem.full_params[:, 0])])
+    sol_list = fwd_pred(theta)
+    vtk_path = os.path.join(output_dir, f'vtk/u.vtu')
+    save_sol(problem.fes[0], np.hstack((sol_list[0], np.zeros((len(sol_list[0]), 1)))), 
+        vtk_path, cell_infos=[('theta', problem.full_params[:, 0])])
 
     inds = onp.where(onp.isclose(mesh.points[:, 1], 0, atol=1e-5))
     target_y_vals = 0.15*np.sin(2*np.pi/Lx*mesh.points[inds, 0])
@@ -128,16 +131,17 @@ def simulation():
     def J_total(params):
         """J(u(theta), theta)
         """     
-        sol = fwd_pred(params)
-        error = np.sum((sol[inds, 1] - target_y_vals)**2)
+        sol_list = fwd_pred(params)
+        error = np.sum((sol_list[0][inds, 1] - target_y_vals)**2)
         return error
 
     outputs = []
     def output_sol(params, obj_val):
         print(f"\nOutput solution - need to solve the forward problem again...")
-        sol = fwd_pred(params)
-        vtu_path = os.path.join(data_dir, f'vtk/sol_{output_sol.counter:03d}.vtu')
-        save_sol(problem, np.hstack((sol, np.zeros((len(sol), 1)))), vtu_path, cell_infos=[('theta', problem.full_params[:, 0])])
+        sol_list = fwd_pred(params)
+        vtu_path = os.path.join(output_dir, f'vtk/sol_{output_sol.counter:03d}.vtu')
+        save_sol(problem.fes[0], np.hstack((sol_list[0], np.zeros((len(sol_list[0]), 1)))), 
+            vtu_path, cell_infos=[('theta', problem.full_params[:, 0])])
         print(f"Objective = {obj_val} at step {output_sol.counter:03d}")
         outputs.append(obj_val)
         output_sol.counter += 1
@@ -166,9 +170,9 @@ def simulation():
 
     vf = 1.
     optimizationParams = {'maxIters':21, 'movelimit':0.01}
-    rho_ini = 0.5*np.ones((len(problem.flex_inds), 1))
+    rho_ini = 0.5*np.ones((len(problem.fes[0].flex_inds), 1))
     numConstraints = 1
-    optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, numConstraints)
+    optimize(problem.fes[0], rho_ini, optimizationParams, objectiveHandle, consHandle, numConstraints)
     print(f"Objevtive values: {onp.array(outputs)}")
 
 

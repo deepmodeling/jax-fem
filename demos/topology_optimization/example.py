@@ -5,19 +5,20 @@ import os
 import glob
 import matplotlib.pyplot as plt
 
-from jax_fem.core import FEM
+from jax_fem.problem import Problem
 from jax_fem.solver import solver, ad_wrapper
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import get_meshio_cell_type, Mesh, rectangle_mesh
 from jax_fem.mma import optimize
 
 
-class Elasticity(FEM):
+class Elasticity(Problem):
     def custom_init(self):
         """Override base class method.
         Modify self.flex_inds so that location-specific TO can be realized.
         """
-        self.flex_inds = np.arange(len(self.cells))
+        self.fe = self.fes[0]
+        self.fe.flex_inds = np.arange(len(self.fe.cells))
 
     def get_tensor_map(self):
         """Override base class method.
@@ -41,26 +42,36 @@ class Elasticity(FEM):
             return sigma
         return stress
 
+    def get_surface_maps(self):
+        def surface_map(u, x):
+            return np.array([0., 100.])
+        return [surface_map]
+
     def set_params(self, params):
         """Override base class method.
         """
-        full_params = np.ones((self.num_cells, params.shape[1]))
-        full_params = full_params.at[self.flex_inds].set(params)
-        thetas = np.repeat(full_params[:, None, :], self.num_quads, axis=1)
+        full_params = np.ones((self.fe.num_cells, params.shape[1]))
+        full_params = full_params.at[self.fe.flex_inds].set(params)
+        thetas = np.repeat(full_params[:, None, :], self.fe.num_quads, axis=1)
         self.full_params = full_params
-        self.internal_vars['laplace'] = [thetas]
+        self.internal_vars = [thetas]
 
-    def compute_compliance(self, neumann_fn, sol):
+    def compute_compliance(self, sol):
         """Surface integral
         """
-        boundary_inds = self.neumann_boundary_inds_list[0]
-        _, nanson_scale = self.get_face_shape_grads(boundary_inds)
+        boundary_inds = self.boundary_inds_list[0]
+        _, nanson_scale = self.fe.get_face_shape_grads(boundary_inds)
         # (num_selected_faces, 1, num_nodes, vec) * # (num_selected_faces, num_face_quads, num_nodes, 1)    
-        u_face = sol[self.cells][boundary_inds[:, 0]][:, None, :, :] * self.face_shape_vals[boundary_inds[:, 1]][:, :, :, None]
+        u_face = sol[self.fe.cells][boundary_inds[:, 0]][:, None, :, :] * self.fe.face_shape_vals[boundary_inds[:, 1]][:, :, :, None]
         u_face = np.sum(u_face, axis=2) # (num_selected_faces, num_face_quads, vec)
         # (num_cells, num_faces, num_face_quads, dim) -> (num_selected_faces, num_face_quads, dim)
-        subset_quad_points = self.get_physical_surface_quad_points(boundary_inds)
-        traction = jax.vmap(jax.vmap(neumann_fn))(subset_quad_points) # (num_selected_faces, num_face_quads, vec)
+        
+        # subset_quad_points = self.get_physical_surface_quad_points(boundary_inds)
+
+        subset_quad_points = self.physical_surface_quad_points[0]
+
+        neumann_fn = self.get_surface_maps()[0]
+        traction = -jax.vmap(jax.vmap(neumann_fn))(u_face, subset_quad_points) # (num_selected_faces, num_face_quads, vec)
         val = np.sum(traction * u_face * nanson_scale[:, :, None])
         return val
 
@@ -84,28 +95,27 @@ def load_location(point):
 def dirichlet_val(point):
     return 0.
 
-def neumann_val(point):
-    return np.array([0., -100.])
-
 dirichlet_bc_info = [[fixed_location]*2, [0, 1], [dirichlet_val]*2]
-neumann_bc_info = [[load_location], [neumann_val]]
-problem = Elasticity(mesh, vec=2, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, neumann_bc_info=neumann_bc_info)
 
-fwd_pred = ad_wrapper(problem, linear=True, use_petsc=False)
+location_fns = [load_location]
+problem = Elasticity(mesh, vec=2, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, location_fns=location_fns)
+
+fwd_pred = ad_wrapper(problem, linear=True, use_petsc=True)
 
 def J_total(params):
     """J(u(theta), theta)
     """     
-    sol = fwd_pred(params)
-    compliance = problem.compute_compliance(neumann_val, sol)
+    sol_list = fwd_pred(params)
+    compliance = problem.compute_compliance(sol_list[0])
     return compliance
 
 outputs = []
 def output_sol(params, obj_val):
     print(f"\nOutput solution - need to solve the forward problem again...")
-    sol = fwd_pred(params)
+    sol_list = fwd_pred(params)
+    sol = sol_list[0]
     vtu_path = os.path.join(data_path, f'vtk/sol_{output_sol.counter:03d}.vtu')
-    save_sol(problem, np.hstack((sol, np.zeros((len(sol), 1)))), vtu_path, cell_infos=[('theta', problem.full_params[:, 0])])
+    save_sol(problem.fe, np.hstack((sol, np.zeros((len(sol), 1)))), vtu_path, cell_infos=[('theta', problem.full_params[:, 0])])
     print(f"compliance = {obj_val}")
     outputs.append(obj_val)
     output_sol.counter += 1
@@ -134,10 +144,10 @@ def consHandle(rho, epoch):
 
 vf = 0.5
 optimizationParams = {'maxIters':51, 'movelimit':0.1}
-rho_ini = vf*np.ones((len(problem.flex_inds), 1))
+rho_ini = vf*np.ones((len(problem.fe.flex_inds), 1))
 numConstraints = 1
-optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, numConstraints)
-print(f"As a reminder, compliance = {J_total(np.ones((len(problem.flex_inds), 1)))} for full material")
+optimize(problem.fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numConstraints)
+print(f"As a reminder, compliance = {J_total(np.ones((len(problem.fe.flex_inds), 1)))} for full material")
 
 obj = onp.array(outputs)
 plt.figure(figsize=(10, 8))

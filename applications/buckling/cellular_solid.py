@@ -4,13 +4,13 @@ import os
 import glob
 import meshio
 
-from jax_fem.core import FEM
+from jax_fem.problem import Problem
 from jax_fem.solver import solver, dynamic_relax_solve
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import get_meshio_cell_type, Mesh, rectangle_mesh
 
 
-class Elasticity(FEM):
+class Elasticity(Problem):
     def get_tensor_map(self):
         def psi(F_2d):
             F = np.array([[F_2d[0, 0], F_2d[0, 1], 0.], 
@@ -37,18 +37,20 @@ class Elasticity(FEM):
  
 
 def simulation():
-    data_dir = os.path.join(os.path.dirname(__file__), 'data')
-    files = glob.glob(os.path.join(data_dir, f'vtk/*'))
+    input_dir = os.path.join(os.path.dirname(__file__), 'input')
+    output_dir = os.path.join(os.path.dirname(__file__), 'output')
+
+    files = glob.glob(os.path.join(output_dir, f'vtk/*'))
     for f in files:
         os.remove(f)
 
     ele_type = 'TRI6'
     cell_type = get_meshio_cell_type(ele_type)
 
-    meshio_mesh = meshio.read(os.path.join(data_dir, f"abaqus/cellular_solid.inp"))
+    meshio_mesh = meshio.read(os.path.join(input_dir, f"abaqus/cellular_solid.inp"))
     meshio_mesh.points[:, 0] -= np.min(meshio_mesh.points[:, 0])
     meshio_mesh.points[:, 1] -= np.min(meshio_mesh.points[:, 1])
-    meshio_mesh.write(os.path.join(data_dir, 'vtk/mesh.vtu'))
+    meshio_mesh.write(os.path.join(output_dir, 'vtk/mesh.vtu'))
 
     Lx, Ly = np.max(meshio_mesh.points[:, 0]), np.max(meshio_mesh.points[:, 1])
     print(f"Lx={Lx}, Ly={Ly}")
@@ -81,10 +83,10 @@ def simulation():
     for i, disp in enumerate(disps):
         print(f"\nStep {i + 1} in {len(disps)}, disp = {disp}")
         dirichlet_bc_info[-1][-1] = get_dirichlet_top(disp)
-        problem.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
+        problem.fes[0].update_Dirichlet_boundary_conditions(dirichlet_bc_info)
         sol = dynamic_relax_solve(problem, tol=1e-6)
-        vtk_path = os.path.join(data_dir, f'vtk/u_{i + 1:03d}.vtu')
-        save_sol(problem, np.hstack((sol, np.zeros((len(sol), 1)))), vtk_path)
+        vtk_path = os.path.join(output_dir, f'vtk/u_{i + 1:03d}.vtu')
+        save_sol(problem.fes[0], np.hstack((sol, np.zeros((len(sol), 1)))), vtk_path)
 
 
 if __name__=="__main__":

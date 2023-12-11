@@ -6,7 +6,7 @@ import glob
 
 from jax_fem.generate_mesh import box_mesh, Mesh, get_meshio_cell_type
 from jax_fem.solver import solver
-from jax_fem.core import FEM
+from jax_fem.problem import Problem
 from jax_fem.utils import save_sol
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
@@ -16,7 +16,7 @@ data_dir = os.path.join(crt_file_path, 'data')
 vtk_dir = os.path.join(data_dir, 'vtk')
 
 
-class Thermal(FEM):
+class Thermal(Problem):
     """We solve the following equation (weak form of FEM):
     (rho*Cp/dt*(T_crt-T_old), Q) * dx + (k*T_crt_grad, Q_grad) * dx - (heat_flux, Q) * ds = 0
     where T_crt is the trial function, and Q is the test function.
@@ -24,43 +24,68 @@ class Thermal(FEM):
     def get_tensor_map(self):
         """Override base class method.
         """
-        def fn(u_grad):
+        def fn(u_grad, T_old):
             return k*u_grad
         return fn
  
     def get_mass_map(self):
         """Override base class method.
         """
-        def T_map(T, T_old):
-
+        def T_map(T, x, T_old):
             return rho*Cp*(T - T_old)/dt
         return T_map
+
+    def get_surface_maps(self):
+        # Neumann BC values for thermal problem
+        def thermal_neumann_top(u, point, old_T, laser_center, switch):
+            # q is the heat flux into the domain
+            d2 = (point[0] - laser_center[0])**2 + (point[1] - laser_center[1])**2
+            q_laser = 2*eta*P/(np.pi*rb**2) * np.exp(-2*d2/rb**2) * switch
+            q_conv = h*(T0 - old_T[0])
+            q_rad = SB_constant*emissivity*(T0**4 - old_T[0]**4)
+            q = q_conv + q_rad + q_laser
+            return -np.array([q])
+ 
+        def thermal_neumann_walls(u, point, old_T):
+            # q is the heat flux into the domain
+            q_conv = h*(T0 - old_T[0])
+            q_rad = SB_constant*emissivity*(T0**4 - old_T[0]**4)
+            q = q_conv + q_rad
+            return -np.array([q])
+
+        return [thermal_neumann_top, thermal_neumann_walls]
 
     def set_params(self, params):
         """Override base class method.
         Note that 'neumann' and 'mass' are reserved keywords.
         """
         sol_T_old, laser_center, switch = params
-        self.internal_vars['neumann'] = [[self.convert_neumann_from_dof(sol_T_old, 0)], 
-                                         [self.convert_neumann_from_dof(sol_T_old, 1)]]
-        self.internal_vars['mass'] = [self.convert_from_dof_to_quad(sol_T_old)]
-        self.neumann_value_fns[0] = get_thermal_neumann_top(laser_center, switch)
+
+        sol_T_old_top = self.fes[0].convert_from_dof_to_face_quad(sol_T_old, self.boundary_inds_list[0])
+        sol_T_old_walls = self.fes[0].convert_from_dof_to_face_quad(sol_T_old, self.boundary_inds_list[1])
+
+        # (num_selected_faces, num_face_quads, dim)
+        laser_center_quad = laser_center[None, None, :] * np.ones((len(self.boundary_inds_list[0]), self.fes[0].num_face_quads))[:, :, None]
+        # (num_selected_faces, num_face_quads)
+        switch_quad = switch * np.ones((len(self.boundary_inds_list[0]), self.fes[0].num_face_quads))
+
+        self.internal_vars_surfaces = [[sol_T_old_top, laser_center_quad, switch_quad], [sol_T_old_walls]]
+        self.internal_vars = [self.fes[0].convert_from_dof_to_quad(sol_T_old)]
 
 
-class Plasticity(FEM):
+class Plasticity(Problem):
     """We solve the following equation (weak form of FEM):
     (sigma(u_grad), v_grad) * dx = 0
     where u is the trial function, and v is the test function.
     """
     def custom_init(self):
         """Initializing total strain, stress, temperature increment, and material phase.
-        Note that 'laplace' is a reserved keywork that speficically refers to the internal variables.
         """
-        sigmas_old = np.zeros((len(self.cells), self.num_quads, self.vec, self.dim))
+        sigmas_old = np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, self.fes[0].vec, self.dim))
         epsilons_old = np.zeros_like(sigmas_old)
-        dT = np.zeros((len(self.cells), self.num_quads, 1))
+        dT = np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1))
         phase = np.ones_like(dT, dtype=np.int32)*POWDER
-        self.internal_vars['laplace'] = [sigmas_old, epsilons_old, dT, phase]
+        self.internal_vars = [sigmas_old, epsilons_old, dT, phase]
     
     def get_tensor_map(self):
         """Override base class method.
@@ -122,7 +147,7 @@ class Plasticity(FEM):
         Output plastic_info for debugging purpose: we want to know if plastic deformation occurs, and the x-x direction stress
         """
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
-        u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
+        u_grads = np.take(sol, self.fes[0].cells, axis=0)[:, None, :, :, None] * self.fes[0].shape_grads[:, :, :, None, :] 
         u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim)
         vmap_strain, vmap_stress_rm, vmap_yield_val_fn = self.vmap_stress_strain_fns()
         sigmas_old, epsilons_old, dT, phase = params
@@ -136,8 +161,8 @@ class Plasticity(FEM):
         Keep sigmas and epsilons unchanged
         """
         sigmas, epsilons, _, phase = params
-        dT_quad = self.convert_from_dof_to_quad(dT)
-        T_quad = self.convert_from_dof_to_quad(T)
+        dT_quad = self.fes[0].convert_from_dof_to_quad(dT)
+        T_quad = self.fes[0].convert_from_dof_to_quad(T)
         powder_to_liquid = (phase == POWDER) & (T_quad > Tl)
         liquid_to_solid = (phase == LIQUID) & (T_quad < Tl)
         phase = phase.at[powder_to_liquid].set(LIQUID)
@@ -147,7 +172,7 @@ class Plasticity(FEM):
     def set_params(self, params):
         """Override base class method.
         """
-        self.internal_vars['laplace'] = params
+        self.internal_vars = params
 
 
 Cp = 588. # heat capacity
@@ -187,25 +212,6 @@ def walls(point):
     back = np.isclose(point[1], Ly, atol=1e-5)
     return left | right | front | back
 
-def get_thermal_neumann_top(laser_center, switch):
-    # Neumann BC values for thermal problem
-    def thermal_neumann_top(point, old_T):
-        # q is the heat flux into the domain
-        d2 = (point[0] - laser_center[0])**2 + (point[1] - laser_center[1])**2
-        q_laser = 2*eta*P/(np.pi*rb**2) * np.exp(-2*d2/rb**2) * switch
-        q_conv = h*(T0 - old_T[0])
-        q_rad = SB_constant*emissivity*(T0**4 - old_T[0]**4)
-        q = q_conv + q_rad + q_laser
-        return np.array([q])
-    return thermal_neumann_top
-
-def thermal_neumann_walls(point, old_T):
-    # q is the heat flux into the domain
-    q_conv = h*(T0 - old_T[0])
-    q_rad = SB_constant*emissivity*(T0**4 - old_T[0]**4)
-    q = q_conv + q_rad
-    return np.array([q])
-
 # Dirichlet BC values for thermal problem
 def thermal_dirichlet_bottom(point):
     return T0
@@ -216,26 +222,27 @@ def displacement_dirichlet_bottom(point):
 
 # Define thermal problem
 dirichlet_bc_info_T = [[bottom], [0], [thermal_dirichlet_bottom]]
-neumann_bc_info_T = [[top, walls], [None, thermal_neumann_walls]]
+location_fns = [top, walls]
+
 sol_T_old = T0*np.ones((len(mesh.points), 1))
 sol_T_old_for_u = np.array(sol_T_old)
-problem_T = Thermal(mesh, vec=1, dim=3, dirichlet_bc_info=dirichlet_bc_info_T, neumann_bc_info=neumann_bc_info_T)
+problem_T = Thermal(mesh, vec=1, dim=3, dirichlet_bc_info=dirichlet_bc_info_T, location_fns=location_fns)
 
 # Define mechanical problem
 dirichlet_bc_info_u = [[bottom]*3, [0, 1, 2], [displacement_dirichlet_bottom]*3]
 problem_u = Plasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info_u)
-params_u = problem_u.internal_vars['laplace']
-sol_u = np.zeros((problem_u.num_total_nodes, problem_u.vec))
+params_u = problem_u.internal_vars
+sol_u_list = [np.zeros((problem_u.fes[0].num_total_nodes, problem_u.fes[0].vec))]
 
 files = glob.glob(os.path.join(vtk_dir, f'*'))
 for f in files:
     os.remove(f)
 
 vtk_path = os.path.join(vtk_dir, f"u_{0:05d}.vtu")
-save_sol(problem_T, sol_T_old, vtk_path, point_infos=[('u', np.zeros((len(sol_T_old), 3)))], 
-                                         cell_infos=[('f_plus', np.zeros(len(mesh.cells))),
-                                                     ('stress_xx', np.zeros(len(mesh.cells))),
-                                                     ('phase', np.mean(params_u[-1][:, :, 0], axis=1))])
+save_sol(problem_T.fes[0], sol_T_old, vtk_path, point_infos=[('u', np.zeros((len(sol_T_old), 3)))], 
+                                                cell_infos=[('f_plus', np.zeros(len(mesh.cells))),
+                                                            ('stress_xx', np.zeros(len(mesh.cells))),
+                                                            ('phase', np.mean(params_u[-1][:, :, 0], axis=1))])
 
 dt = 2*1e-6
 laser_on_t = 0.5*Lx/vel
@@ -248,7 +255,8 @@ for i in range(len(ts[1:])):
 
     # Set parameter and solve for T
     problem_T.set_params([sol_T_old, laser_center, switch])
-    sol_T_new = solver(problem_T, use_petsc=False) # The flag use_petsc=False will use JAX solver - Good for GPU 
+    sol_T_new_list = solver(problem_T, use_petsc=False) # The flag use_petsc=False will use JAX solver - Good for GPU 
+    sol_T_new = sol_T_new_list[0]
 
     # Since mechanics problem is more expensive to solve, we may skip some steps of the thermal problem.
     if (i + 1) % 10 == 0:
@@ -256,9 +264,9 @@ for i in range(len(ts[1:])):
 
         # Set parameter and solve for u
         problem_u.set_params(params_u)
-        sol_u = solver(problem_u, initial_guess=sol_u, use_petsc=False) 
+        sol_u_list = solver(problem_u, initial_guess=sol_u_list, use_petsc=False) 
 
-        params_u, plastic_info = problem_u.update_stress_strain(sol_u, params_u) 
+        params_u, plastic_info = problem_u.update_stress_strain(sol_u_list[0], params_u) 
 
         # Check if plastic deformation occurs (with f_yield_vals > 0.)
         print(f"max f_plus = {np.max(plastic_info[0])}, max stress_xx = {np.max(plastic_info[1])}")
@@ -266,9 +274,9 @@ for i in range(len(ts[1:])):
         # Update T solution for u
         sol_T_old_for_u = sol_T_new
         vtk_path = os.path.join(vtk_dir, f"u_{i + 1:05d}.vtu")
-        save_sol(problem_T, sol_T_old, vtk_path, point_infos=[('u', sol_u)], 
-                                                 cell_infos=[('f_plus', np.mean(plastic_info[0], axis=1)),
-                                                             ('stress_xx', np.mean(plastic_info[1], axis=1)),
-                                                             ('phase', np.max(params_u[-1][:, :, 0], axis=1))])
+        save_sol(problem_T.fes[0], sol_T_old, vtk_path, point_infos=[('u', sol_u_list[0])], 
+                                                        cell_infos=[('f_plus', np.mean(plastic_info[0], axis=1)),
+                                                                    ('stress_xx', np.mean(plastic_info[1], axis=1)),
+                                                                    ('phase', np.max(params_u[-1][:, :, 0], axis=1))])
     # Update T solution
     sol_T_old = sol_T_new

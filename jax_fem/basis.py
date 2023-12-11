@@ -101,7 +101,7 @@ def reorder_inds(inds, re_order):
     return new_inds
 
 
-def get_shape_vals_and_grads(ele_type):
+def get_shape_vals_and_grads(ele_type, gauss_order):
     """TODO: Add comments
 
     Returns
@@ -113,7 +113,11 @@ def get_shape_vals_and_grads(ele_type):
     weights: ndarray
         (8,) = (num_quads,)
     """
-    element_family, basix_ele, basix_face_ele, gauss_order, degree, re_order = get_elements(ele_type)
+    element_family, basix_ele, basix_face_ele, gauss_order_default, degree, re_order = get_elements(ele_type)
+
+    if gauss_order is None:
+        gauss_order = gauss_order_default
+
     quad_points, weights = basix.make_quadrature(basix_ele, gauss_order)
     element = basix.create_element(element_family, basix_ele, degree)
     vals_and_grads = element.tabulate(1, quad_points)[:, :, re_order, :]
@@ -123,7 +127,7 @@ def get_shape_vals_and_grads(ele_type):
     return shape_values, shape_grads_ref, weights
 
 
-def get_face_shape_vals_and_grads(ele_type):
+def get_face_shape_vals_and_grads(ele_type, gauss_order):
     """TODO: Add comments
 
     Returns
@@ -139,9 +143,14 @@ def get_face_shape_vals_and_grads(ele_type):
     face_inds: ndarray
         (6, 4) = (num_faces, num_face_vertices)
     """
-    element_family, basix_ele, basix_face_ele, gauss_order, degree, re_order = get_elements(ele_type)
+    element_family, basix_ele, basix_face_ele, gauss_order_default, degree, re_order = get_elements(ele_type)
+
+    if gauss_order is None:
+        gauss_order = gauss_order_default
 
     # TODO: Check if this is correct.
+    # We should provide freedom for seperate gauss_order for volume integral and surface integral
+    # Currently, they're using the same gauss_order!
     points, weights = basix.make_quadrature(basix_face_ele, gauss_order)
 
     map_degree = 1

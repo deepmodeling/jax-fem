@@ -1,3 +1,5 @@
+"""Not working! This file is also outdated. We need some help of implementing periodci B.C.
+"""
 import jax
 import jax.numpy as np
 import os

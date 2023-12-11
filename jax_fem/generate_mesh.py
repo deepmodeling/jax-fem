@@ -16,8 +16,7 @@ class Mesh():
     meshio.
     """
     def __init__(self, points, cells, ele_type='TET4'):
-        # TODO: Assert that cells must have correct orders
-        # TODO: first cells, then points?
+        # TODO (Very important for debugging purpose!): Assert that cells must have correct orders
         self.points = points
         self.cells = cells
         self.ele_type = ele_type

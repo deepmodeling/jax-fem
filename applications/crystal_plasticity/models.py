@@ -6,7 +6,7 @@ import os
 import sys
 from functools import partial
 
-from jax_fem.models import Mechanics
+from jax_fem.problem import Problem
 
 
 from jax.config import config
@@ -47,7 +47,7 @@ def get_rot_mat(q):
 get_rot_mat_vmap = jax.vmap(get_rot_mat)
 
 
-class CrystalPlasticity(Mechanics):
+class CrystalPlasticity(Problem):
     def custom_init(self, quat, cell_ori_inds):
         r = 1.
         self.gss_initial = 60.8 
@@ -70,10 +70,10 @@ class CrystalPlasticity(Mechanics):
 
         rot_mats = onp.array(get_rot_mat_vmap(quat)[cell_ori_inds])
 
-        Fp_inv_gp = onp.repeat(onp.repeat(onp.eye(self.dim)[None, None, :, :], len(self.cells), axis=0), self.num_quads, axis=1)
-        slip_resistance_gp = self.gss_initial*onp.ones((len(self.cells), self.num_quads, num_slip_sys))
+        Fp_inv_gp = onp.repeat(onp.repeat(onp.eye(self.dim)[None, None, :, :], len(self.fes[0].cells), axis=0), self.fes[0].num_quads, axis=1)
+        slip_resistance_gp = self.gss_initial*onp.ones((len(self.fes[0].cells), self.fes[0].num_quads, num_slip_sys))
         slip_gp = onp.zeros_like(slip_resistance_gp)
-        rot_mats_gp = onp.repeat(rot_mats[:, None, :, :], self.num_quads, axis=1)
+        rot_mats_gp = onp.repeat(rot_mats[:, None, :, :], self.fes[0].num_quads, axis=1)
         self.C = onp.zeros((self.dim, self.dim, self.dim, self.dim))
 
         C11 = 1.684e5
@@ -114,7 +114,7 @@ class CrystalPlasticity(Mechanics):
         self.C[1, 0, 0, 1] = C44
         self.C[1, 0, 1, 0] = C44
 
-        self.internal_vars = {'laplace': [Fp_inv_gp, slip_resistance_gp, slip_gp, rot_mats_gp]}
+        self.internal_vars = [Fp_inv_gp, slip_resistance_gp, slip_gp, rot_mats_gp]
 
     def get_tensor_map(self):
         tensor_map, _ = self.get_maps()
@@ -246,7 +246,7 @@ class CrystalPlasticity(Mechanics):
         _, update_int_vars_map = self.get_maps()
         vmap_update_int_vars_map = jax.jit(jax.vmap(jax.vmap(update_int_vars_map)))
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
-        u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
+        u_grads = np.take(sol, self.fes[0].cells, axis=0)[:, None, :, :, None] * self.fes[0].shape_grads[:, :, :, None, :] 
         u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim)
         Fp_inv_gp, slip_resistance_gp, slip_gp, rot_mats_gp = \
             vmap_update_int_vars_map(u_grads, *params)
@@ -254,7 +254,7 @@ class CrystalPlasticity(Mechanics):
         return [Fp_inv_gp, slip_resistance_gp, slip_gp, rot_mats_gp]
 
     def set_params(self, params):
-        self.internal_vars['laplace'] = params
+        self.internal_vars = params
 
     def inspect_interval_vars(self, params):
         """For post-processing only
@@ -270,7 +270,7 @@ class CrystalPlasticity(Mechanics):
         """For post-processing only
         """
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
-        u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
+        u_grads = np.take(sol, self.fes[0].cells, axis=0)[:, None, :, :, None] * self.fes[0].shape_grads[:, :, :, None, :] 
         u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim)
 
         partial_tensor_map, _ = self.get_maps()
@@ -284,8 +284,8 @@ class CrystalPlasticity(Mechanics):
         F = u_grads + np.eye(self.dim)[None, None, :, :]
         sigma = vvmap_P_to_sigma(P, F)
 
-        sigma_cell_data = np.sum(sigma * self.JxW[:, :, None, None], 1) / np.sum(self.JxW, axis=1)[:, None, None]
+        sigma_cell_data = np.sum(sigma * self.fes[0].JxW[:, :, None, None], 1) / np.sum(self.fes[0].JxW, axis=1)[:, None, None]
 
         # num_cells*num_quads, vec, dim) * (num_cells*num_quads, 1, 1)
-        avg_P = np.sum(P.reshape(-1, self.vec, self.dim) * self.JxW.reshape(-1)[:, None, None], 0) / np.sum(self.JxW)
+        avg_P = np.sum(P.reshape(-1, self.fes[0].vec, self.dim) * self.fes[0].JxW.reshape(-1)[:, None, None], 0) / np.sum(self.fes[0].JxW)
         return sigma_cell_data

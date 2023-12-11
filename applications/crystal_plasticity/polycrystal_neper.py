@@ -140,30 +140,30 @@ def problem():
                                 dirichlet_bc_info=dirichlet_bc_info, additional_info=(quat, cell_ori_inds))
 
     results_to_save = []
-    sol = np.zeros((problem.num_total_nodes, problem.vec))
-    params = problem.internal_vars['laplace']
+    sol_list = [np.zeros((problem.fes[0].num_total_nodes, problem.fes[0].vec))]
+    params = problem.internal_vars
 
     for i in range(len(ts) - 1):
         problem.dt = ts[i + 1] - ts[i]
         print(f"\nStep {i + 1} in {len(ts) - 1}, disp = {disps[i + 1]}, dt = {problem.dt}")
 
         dirichlet_bc_info[-1][-1] = get_dirichlet_top(disps[i + 1])
-        problem.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
+        problem.fes[0].update_Dirichlet_boundary_conditions(dirichlet_bc_info)
         problem.set_params(params)
 
         # sol = solver(problem, use_petsc=True)
-        sol = solver(problem, initial_guess=sol, use_petsc=False)   
+        sol_list = solver(problem, initial_guess=sol_list, use_petsc=False)   
 
         print(f"Computing stress...")
-        sigma_cell_data = problem.compute_avg_stress(sol, params)[:, 0, 0]
+        sigma_cell_data = problem.compute_avg_stress(sol_list[0], params)[:, 0, 0]
 
         print(f"Updating int vars...")
-        params = problem.update_int_vars_gp(sol, params)
+        params = problem.update_int_vars_gp(sol_list[0], params)
 
         F_p_zz, slip_resistance_0, slip_0 = problem.inspect_interval_vars(params)
         print(f"stress = {sigma_cell_data[0]}, max stress = {np.max(sigma_cell_data)}")
         vtk_path = os.path.join(vtk_dir, f'u_{i:03d}.vtu')
-        save_sol(problem, sol, vtk_path, cell_infos=[('cell_ori_inds', cell_ori_inds), ('sigma', sigma_cell_data)])
+        save_sol(problem.fes[0], sol_list[0], vtk_path, cell_infos=[('cell_ori_inds', cell_ori_inds), ('sigma', sigma_cell_data)])
 
 
 if __name__ == "__main__":

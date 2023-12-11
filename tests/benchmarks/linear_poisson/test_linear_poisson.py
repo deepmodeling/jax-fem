@@ -7,9 +7,14 @@ import os
 import unittest
 
 from jax_fem.generate_mesh import Mesh
-from jax_fem.models import LinearPoisson
+from jax_fem.problem import Problem
 from jax_fem.solver import solver
 from jax_fem.utils import modify_vtu_file, save_sol
+
+
+class LinearPoisson(Problem):
+    def get_tensor_map(self):
+        return lambda x: x
 
 
 class Test(unittest.TestCase):
@@ -47,10 +52,10 @@ class Test(unittest.TestCase):
         dirichlet_bc_info = [location_fns, vecs, value_fns]
 
         problem = LinearPoisson(mesh, vec=1, dim=3, dirichlet_bc_info=dirichlet_bc_info)
-        sol = solver(problem)
+        sol_list = solver(problem)
 
         jax_vtu_path = os.path.join(crt_dir, "jax_fem/sol.vtu")
-        save_sol(problem, sol, jax_vtu_path)
+        save_sol(problem.fes[0], sol_list[0], jax_vtu_path)
         jax_fem_vtu = meshio.read(jax_vtu_path)
 
         jax_fem_sol = jax_fem_vtu.point_data['sol']

@@ -3,13 +3,13 @@ import jax.numpy as np
 import os
 import glob
 
-from jax_fem.core import FEM
+from jax_fem.problem import Problem
 from jax_fem.solver import solver, dynamic_relax_solve
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
 
-class HyperElasticity(FEM):
+class HyperElasticity(Problem):
     def get_tensor_map(self):
         def psi(F):
             E = 10.
@@ -31,7 +31,7 @@ class HyperElasticity(FEM):
         return first_PK_stress
 
 
-data_dir = os.path.join(os.path.dirname(__file__), 'data')
+data_dir = os.path.join(os.path.dirname(__file__), 'output')
 files = glob.glob(os.path.join(data_dir, f'vtk/*'))
 for f in files:
     os.remove(f)
@@ -77,4 +77,4 @@ problem = HyperElasticity(mesh, vec=3, dim=3, ele_type=ele_type, dirichlet_bc_in
 sol = dynamic_relax_solve(problem)
 
 vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
-save_sol(problem, sol, vtk_path)
+save_sol(problem.fes[0], sol, vtk_path)

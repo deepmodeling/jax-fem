@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as np
+import jax.flatten_util
 import numpy as onp
 from jax.experimental.sparse import BCOO
 import scipy
@@ -13,7 +14,6 @@ from jax_fem import logger
 ################################################################################
 # PETSc linear solver or JAX linear solver
 
-
 def petsc_solve(A, b, ksp_type, pc_type):
     rhs = PETSc.Vec().createSeq(len(b))
     rhs.setValues(range(len(b)), onp.array(b))
@@ -22,6 +22,7 @@ def petsc_solve(A, b, ksp_type, pc_type):
     ksp.setFromOptions()
     ksp.setType(ksp_type)
     ksp.pc.setType(pc_type)
+
     logger.debug(
         f'PETSc - Solving with ksp_type = {ksp.getType()}, '
         f'pc = {ksp.pc.getType()}'
@@ -79,17 +80,21 @@ def jax_solve(problem, A_fn, b, x0, precond: bool, pc_matrix=None):
 ################################################################################
 # "row elimination" solver
 
-
 def apply_bc_vec(res_vec, dofs, problem):
-    sol = dofs.reshape((problem.num_total_nodes, problem.vec))
-    res = res_vec.reshape(sol.shape)
-    for i in range(len(problem.node_inds_list)):
-        res = (res.at[problem.node_inds_list[i], problem.vec_inds_list[i]].set(
-            sol[problem.node_inds_list[i], problem.vec_inds_list[i]],
-            unique_indices=True))
-        res = res.at[problem.node_inds_list[i],
-                     problem.vec_inds_list[i]].add(-problem.vals_list[i])
-    return res.reshape(-1)
+    res_list = problem.unflatten_fn_sol_list(res_vec)
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+
+    for ind, fe in enumerate(problem.fes):
+        res = res_list[ind]
+        sol = sol_list[ind]
+        for i in range(len(fe.node_inds_list)):
+            res = (res.at[fe.node_inds_list[i], fe.vec_inds_list[i]].set(
+                sol[fe.node_inds_list[i], fe.vec_inds_list[i]], unique_indices=True))
+            res = res.at[fe.node_inds_list[i], fe.vec_inds_list[i]].add(-fe.vals_list[i])
+
+        res_list[ind] = res
+
+    return jax.flatten_util.ravel_pytree(res_list)[0]
 
 
 def apply_bc(res_fn, problem):
@@ -106,60 +111,78 @@ def apply_bc(res_fn, problem):
 def row_elimination(fn, problem):
 
     def fn_dofs_row(dofs):
-        sol = dofs.reshape((problem.num_total_nodes, problem.vec))
-        res = fn(dofs).reshape(sol.shape)
-        for i in range(len(problem.node_inds_list)):
-            res = (res.at[problem.node_inds_list[i],
-                          problem.vec_inds_list[i]].set(
-                              sol[problem.node_inds_list[i],
-                                  problem.vec_inds_list[i]],
-                              unique_indices=True))
-        return res.reshape(-1)
+        res_vec = fn(dofs)
+        res_list = problem.unflatten_fn_sol_list(res_vec)
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        for ind, fe in enumerate(problem.fes):
+            res = res_list[ind]
+            sol = sol_list[ind]
+            for i in range(len(fe.node_inds_list)):
+                res = (res.at[fe.node_inds_list[i], fe.vec_inds_list[i]].set(
+                       sol[fe.node_inds_list[i], fe.vec_inds_list[i]], unique_indices=True))
+            res_list[ind] = res
+
+        return jax.flatten_util.ravel_pytree(res_list)[0]
 
     return fn_dofs_row
 
 
 def assign_bc(dofs, problem):
-    sol = dofs.reshape((problem.num_total_nodes, problem.vec))
-    for i in range(len(problem.node_inds_list)):
-        sol = sol.at[problem.node_inds_list[i],
-                     problem.vec_inds_list[i]].set(problem.vals_list[i])
-    return sol.reshape(-1)
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    for ind, fe in enumerate(problem.fes):
+        sol = sol_list[ind]
+        for i in range(len(fe.node_inds_list)):
+            sol = sol.at[fe.node_inds_list[i],
+                         fe.vec_inds_list[i]].set(fe.vals_list[i])
+        sol_list[ind] = sol
+    return jax.flatten_util.ravel_pytree(sol_list)[0]
 
 
 def assign_ones_bc(dofs, problem):
-    sol = dofs.reshape((problem.num_total_nodes, problem.vec))
-    for i in range(len(problem.node_inds_list)):
-        sol = sol.at[problem.node_inds_list[i],
-                     problem.vec_inds_list[i]].set(1.)
-    return sol.reshape(-1)
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    for ind, fe in enumerate(problem.fes):
+        sol = sol_list[ind]
+        for i in range(len(fe.node_inds_list)):
+            sol = sol.at[fe.node_inds_list[i],
+                         fe.vec_inds_list[i]].set(1.)
+        sol_list[ind] = sol
+    return jax.flatten_util.ravel_pytree(sol_list)[0]
 
 
 def assign_zeros_bc(dofs, problem):
-    sol = dofs.reshape((problem.num_total_nodes, problem.vec))
-    for i in range(len(problem.node_inds_list)):
-        sol = sol.at[problem.node_inds_list[i],
-                     problem.vec_inds_list[i]].set(0.)
-    return sol.reshape(-1)
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    for ind, fe in enumerate(problem.fes):
+        sol = sol_list[ind]
+        for i in range(len(fe.node_inds_list)):
+            sol = sol.at[fe.node_inds_list[i],
+                         fe.vec_inds_list[i]].set(0.)
+        sol_list[ind] = sol
+    return jax.flatten_util.ravel_pytree(sol_list)[0]
 
 
 def copy_bc(dofs, problem):
-    sol = dofs.reshape((problem.num_total_nodes, problem.vec))
-    new_sol = np.zeros_like(sol)
-    for i in range(len(problem.node_inds_list)):
-        new_sol = (new_sol.at[problem.node_inds_list[i],
-                              problem.vec_inds_list[i]].set(
-                                  sol[problem.node_inds_list[i],
-                                      problem.vec_inds_list[i]]))
-    return new_sol.reshape(-1)
+    new_dofs = np.zeros_like(dofs)
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    new_sol_list = problem.unflatten_fn_sol_list(new_dofs)
+  
+    for ind, fe in enumerate(problem.fes):
+        sol = sol_list[ind]
+        new_sol = new_sol_list[ind]
+        for i in range(len(fe.node_inds_list)):
+            new_sol = (new_sol.at[fe.node_inds_list[i],
+                                  fe.vec_inds_list[i]].set(sol[fe.node_inds_list[i],
+                                          fe.vec_inds_list[i]]))
+        new_sol_list[ind] = new_sol
+
+    return jax.flatten_util.ravel_pytree(new_sol_list)[0]
 
 
-def get_flatten_fn(fn_sol, problem):
+def get_flatten_fn(fn_sol_list, problem):
 
     def fn_dofs(dofs):
-        sol = dofs.reshape((problem.num_total_nodes, problem.vec))
-        val_sol = fn_sol(sol)
-        return val_sol.reshape(-1)
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        val_list = fn_sol_list(sol_list)
+        return jax.flatten_util.ravel_pytree(val_list)[0]
 
     return fn_dofs
 
@@ -167,7 +190,6 @@ def get_flatten_fn(fn_sol, problem):
 def get_A_fn_linear_fn(dofs, fn):
     """Not quite used.
     """
-
     def A_fn_linear_fn(inc):
         primals, tangents = jax.jvp(fn, (dofs, ), (inc, ))
         return tangents
@@ -182,7 +204,6 @@ def get_A_fn_linear_fn_JFNK(dofs, fn):
     "Jacobian-free Newton–Krylov methods: a survey of approaches and applications."
     Journal of Computational Physics 193.2 (2004): 357-397.
     """
-
     def A_fn_linear_fn(inc):
         EPS = 1e-3
         return (fn(dofs + EPS * inc) - fn(dofs)) / EPS
@@ -194,8 +215,7 @@ def operator_to_matrix(operator_fn, problem):
     """Only used for when debugging.
     Can be used to print the matrix, check the conditional number, etc.
     """
-    J = jax.jacfwd(operator_fn)(np.zeros(problem.num_total_nodes *
-                                         problem.vec))
+    J = jax.jacfwd(operator_fn)(np.zeros(problem.num_total_dofs_all_vars))
     return J
 
 
@@ -215,6 +235,8 @@ def get_jacobi_precond(jacobi):
 
 
 def test_jacobi_precond(problem, jacobi, A_fn):
+    """Not working, needs refactoring
+    """
     num_total_dofs = problem.num_total_nodes * problem.vec
     for ind in range(500):
         test_vec = np.zeros(num_total_dofs)
@@ -230,28 +252,40 @@ def test_jacobi_precond(problem, jacobi, A_fn):
     logger.debug(f"finish jacobi preconditioner")
 
 
-def linear_guess_solve(problem, A_fn, precond, use_petsc):
-    logger.debug(f"Linear guess solve...")
-    # b = np.zeros((problem.num_total_nodes, problem.vec))
-    b = problem.body_force + problem.neumann
-    b = assign_bc(b, problem)
-    if use_petsc:
-        dofs = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
-    else:
-        dofs = jax_solve(problem, A_fn, b, b, precond)
-    return dofs
+# def linear_guess_solve(problem, A_fn, precond, use_petsc):
+#     """To be deprecated
+#     """
+#     logger.debug(f"Linear guess solve...")
+
+#     # TODO: b set to be pure zero may not be good...
+#     # b = np.zeros((problem.num_total_nodes, problem.vec))
+#     # b = problem.body_force + problem.neumann
+#     b = np.zeros(problem.num_total_dofs_all_vars)
+
+#     b = assign_bc(b, problem)
+#     if use_petsc:
+#         dofs = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
+#     else:
+#         dofs = jax_solve(problem, A_fn, b, b, precond)
+#     return dofs
 
 
-def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond,
-                              use_petsc):
+def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc, petsc_options):
     """Lift solver
     """
     logger.debug(f"Solving linear system with lift solver...")
     b = -res_vec
 
     if use_petsc:
-        inc = petsc_solve(A_fn, b, 'bcgsl', 'ilu')
+        if petsc_options is not None:
+            ksp_type = petsc_options['ksp_type']
+            pc_type = petsc_options['pc_type']
+        else:
+            ksp_type = 'bcgsl'
+            pc_type = 'ilu'
+        inc = petsc_solve(A_fn, b, ksp_type, pc_type)
     else:
+        # x0 will always be correct at boundary locations
         x0_1 = assign_bc(np.zeros_like(b), problem)
         x0_2 = copy_bc(dofs, problem)
         x0 = x0_1 - x0_2
@@ -305,7 +339,7 @@ def get_A_fn(problem, use_petsc):
     logger.debug(f"Creating sparse matrix with scipy...")
     A_sp_scipy = scipy.sparse.csr_array(
         (onp.array(problem.V), (problem.I, problem.J)),
-        shape=(problem.num_total_dofs, problem.num_total_dofs))
+        shape=(problem.num_total_dofs_all_vars, problem.num_total_dofs_all_vars))
     # logger.debug(f"Creating sparse matrix from scipy using JAX BCOO...")
     A_sp = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
     # logger.info(f"Global sparse matrix takes about {A_sp.data.shape[0]*8*3/2**30} G memory to store.")
@@ -318,18 +352,17 @@ def get_A_fn(problem, use_petsc):
         # https://scicomp.stackexchange.com/questions/2355/32bit-64bit-issue-when-working-with-numpy-and-petsc4py/2356#2356
         A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape, csr=(A_sp_scipy.indptr.astype(PETSc.IntType, copy=False),
                                                        A_sp_scipy.indices.astype(PETSc.IntType, copy=False), A_sp_scipy.data))
-        for i in range(len(problem.node_inds_list)):
-            row_inds = onp.array(problem.node_inds_list[i] * problem.vec +
-                                 problem.vec_inds_list[i],
-                                 dtype=onp.int32)
-            A.zeroRows(row_inds)
+        for ind, fe in enumerate(problem.fes):
+            for i in range(len(fe.node_inds_list)):
+                row_inds = onp.array(fe.node_inds_list[i] * fe.vec + fe.vec_inds_list[i] + problem.offset[ind], dtype=onp.int32)
+                A.zeroRows(row_inds)
     else:
         A = row_elimination(compute_linearized_residual, problem)
 
     return A
 
 
-def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
+def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc, petsc_options):
     """The solver imposes Dirichlet B.C. with "row elimination" method.
 
     Some memo:
@@ -351,11 +384,13 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
         f"Calling the row elimination solver for imposing Dirichlet B.C.")
     logger.debug("Start timing")
     start = time.time()
-    sol_shape = (problem.num_total_nodes, problem.vec)
-    dofs = np.zeros(sol_shape).reshape(-1)
+
+    dofs = np.zeros(problem.num_total_dofs_all_vars)
 
     def newton_update_helper(dofs):
-        res_vec = problem.newton_update(dofs.reshape(sol_shape)).reshape(-1)
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        res_list = problem.newton_update(sol_list)
+        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem)
         A_fn = get_A_fn(problem, use_petsc)
         return res_vec, A_fn
@@ -363,51 +398,52 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc):
     if linear:
         dofs = assign_bc(dofs, problem)
         res_vec, A_fn = newton_update_helper(dofs)
-
-        dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond,
-                                         use_petsc)
-
+        dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc, petsc_options)
         res_vec, A_fn = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
         logger.debug(f"Linear solve, res l_2 = {res_val}")
 
     else:
-        if initial_guess is None:
-            res_vec, A_fn = newton_update_helper(dofs)
-            dofs = linear_guess_solve(problem, A_fn, precond, use_petsc)
-        else:
-            dofs = initial_guess.reshape(-1)
+        # if initial_guess is None:
+        #     res_vec, A_fn = newton_update_helper(dofs)
+        #     # TODO: investigate the advantage of the guess solve, do we need it? For plasticity?
+        #     # Is this linear_guess_solve really being useful??
+        #     dofs = linear_guess_solve(problem, A_fn, precond, use_petsc)
+        # else:
+        #     dofs = initial_guess.reshape(-1)
+
+        if initial_guess is not None:
+            dofs = jax.flatten_util.ravel_pytree(initial_guess)[0]
 
         res_vec, A_fn = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
         logger.debug(f"Before, res l_2 = {res_val}")
         tol = 1e-6
         while res_val > tol:
-            dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs,
-                                             precond, use_petsc)
+            dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc, petsc_options)
             res_vec, A_fn = newton_update_helper(dofs)
             # test_jacobi_precond(problem, jacobi_preconditioner(problem, dofs), A_fn)
             res_val = np.linalg.norm(res_vec)
             logger.debug(f"res l_2 = {res_val}")
 
-    assert np.all(
-        np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
+    assert np.all(np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
 
     assert np.all(np.isfinite(dofs)), f"dofs contains NaN, stop the program!"
 
-    sol = dofs.reshape(sol_shape)
+    sol_list = problem.unflatten_fn_sol_list(dofs)
     end = time.time()
     solve_time = end - start
     logger.info(f"Solve took {solve_time} [s]")
-    logger.debug(f"max of sol = {np.max(sol)}")
-    logger.debug(f"min of sol = {np.min(sol)}")
+    logger.debug(f"max of dofs = {np.max(dofs)}")
+    logger.debug(f"min of dofs = {np.min(dofs)}")
 
-    return sol
+    return sol_list
 
 
 ################################################################################
 # Lagrangian multiplier solver
 
+# TODO: Old version, not working for multi-physics problems. Requires refactoring. 
 
 def aug_dof_w_zero_bc(problem, dofs):
     aug_size = 0
@@ -457,10 +493,8 @@ def compute_residual_lm(problem, res_vec, dofs_aug, p_num_eps):
     Saddle point problem energy function: L(u, lmbda) = E(u) + lmbda*(u - u0)
     with dL/d(u, lmbda) = res_vec_aug and dE/du = res_vec
     """
-    d_splits = np.cumsum(np.array([len(x)
-                                   for x in problem.node_inds_list])).tolist()
-    p_splits = np.cumsum(np.array([len(x) for x in problem.p_node_inds_list_A
-                                   ])).tolist()
+    d_splits = np.cumsum(np.array([len(x) for x in problem.node_inds_list])).tolist()
+    p_splits = np.cumsum(np.array([len(x) for x in problem.p_node_inds_list_A])).tolist()
 
     d_lmbda_len = d_splits[-1] if len(d_splits) > 0 else 0
     p_lmbda_len = p_splits[-1] if len(p_splits) > 0 else 0
@@ -476,23 +510,18 @@ def compute_residual_lm(problem, res_vec, dofs_aug, p_num_eps):
 
         # @jax.jit
         def Lagrangian_fn(dofs_aug):
-            dofs, lmbda = dofs_aug[:problem.num_total_dofs], dofs_aug[
-                problem.num_total_dofs:]
+            dofs, lmbda = dofs_aug[:problem.num_total_dofs], dofs_aug[problem.num_total_dofs:]
             sol = dofs.reshape((problem.num_total_nodes, problem.vec))
             d_lmbda_split, p_lmbda_split = split_lamda(lmbda)
             lag = 0.
             for i in range(len(problem.node_inds_list)):
-                lag += np.sum(
-                    d_lmbda_split[i] *
-                    (sol[problem.node_inds_list[i], problem.vec_inds_list[i]] -
-                     problem.vals_list[i]))
+                lag += np.sum(d_lmbda_split[i] *
+                    (sol[problem.node_inds_list[i], problem.vec_inds_list[i]] - problem.vals_list[i]))
 
             for i in range(len(problem.p_node_inds_list_A)):
                 lag += np.sum(p_lmbda_split[i] *
-                              (sol[problem.p_node_inds_list_A[i],
-                                   problem.p_vec_inds_list[i]] -
-                               sol[problem.p_node_inds_list_B[i],
-                                   problem.p_vec_inds_list[i]]))
+                              (sol[problem.p_node_inds_list_A[i], problem.p_vec_inds_list[i]] -
+                               sol[problem.p_node_inds_list_B[i], problem.p_vec_inds_list[i]]))
             return p_num_eps * lag
 
         return Lagrangian_fn
@@ -548,8 +577,7 @@ def get_A_fn_and_res_aug(problem, dofs_aug, res_vec, p_num_eps, use_petsc):
     V = onp.hstack((problem.V, V_d_sym, V_p_sym))
 
     logger.debug(f"Aug - Creating sparse matrix with scipy...")
-    A_sp_scipy_aug = scipy.sparse.csc_array((V, (I, J)),
-                                            shape=(group_index, group_index))
+    A_sp_scipy_aug = scipy.sparse.csc_array((V, (I, J)), shape=(group_index, group_index))
     # logger.info(f"Aug - Creating sparse matrix from scipy using JAX BCOO...")
     A_sp_aug = BCOO.from_scipy_sparse(A_sp_scipy_aug).sort_indices()
 
@@ -590,6 +618,7 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
     JAX built solver gmres and bicgstab sometimes fail to solve such a system.
     PESTc solver minres seems to work.
     TODO: explore which solver in PESTc is the best, and which preconditioner should be used.
+    Update: It seems that petsc_options={'ksp_type': 'tfqmr', 'pc_type': 'ilu'} works better.
 
     Reference:
     https://ethz.ch/content/dam/ethz/special-interest/baug/ibk/structural-mechanics-dam/education/femI/Presentation.pdf
@@ -657,20 +686,19 @@ def solver_lagrange_multiplier(problem, linear, use_petsc=True):
 ################################################################################
 # Dynamic relaxation solver
 
-
 def assembleCSR(problem, dofs):
-    problem.newton_update(dofs.reshape(
-        (problem.num_total_nodes, problem.vec))).reshape(-1)
-    A_sp_scipy = scipy.sparse.csr_array(
-        (problem.V, (problem.I, problem.J)),
-        shape=(problem.num_total_dofs, problem.num_total_dofs))
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    problem.newton_update(sol_list)
+   
+    A_sp_scipy = scipy.sparse.csr_array((problem.V, (problem.I, problem.J)),
+        shape=(problem.fes[0].num_total_dofs, problem.fes[0].num_total_dofs))
 
     A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape,
                               csr=(A_sp_scipy.indptr, A_sp_scipy.indices,
                                    A_sp_scipy.data))
-    for i in range(len(problem.node_inds_list)):
-        row_inds = onp.array(problem.node_inds_list[i] * problem.vec +
-                             problem.vec_inds_list[i],
+    for i in range(len(problem.fes[0].node_inds_list)):
+        row_inds = onp.array(problem.fes[0].node_inds_list[i] * problem.fes[0].vec +
+                             problem.fes[0].vec_inds_list[i],
                              dtype=onp.int32)
         A.zeroRows(row_inds)
 
@@ -722,16 +750,16 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
     The code below is a direct translation from the FEniCS version.
     """
     def newton_update_helper(dofs):
-        res_vec = problem.newton_update(dofs.reshape(sol_shape)).reshape(-1)
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        res_list = problem.newton_update(sol_list)
+        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem)
         A_fn = get_A_fn(problem, use_petsc=False)
         return res_vec, A_fn
-
-    sol_shape = (problem.num_total_nodes, problem.vec)
-    dofs = np.zeros(sol_shape).reshape(-1)
-
+ 
+    dofs = np.zeros(problem.num_total_dofs_all_vars)
     res_vec, A_fn = newton_update_helper(dofs)
-    dofs = linear_guess_solve(problem, A_fn, precond=True, use_petsc=False)
+    dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond=True, use_petsc=False, petsc_options=None)
 
     # parameters not to change
     cmin = 1e-3
@@ -829,34 +857,37 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
     else:
         print("FAILED to converged")
 
-    sol = dofs.reshape((problem.num_total_nodes, problem.vec))
-    return sol
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+
+    return sol_list[0]
 
 
 ################################################################################
 # General
+
 def solver(problem,
            linear=False,
            precond=True,
            initial_guess=None,
-           use_petsc=False):
+           use_petsc=False,
+           petsc_options=None,
+           lagrangian_solver=False):
     """periodic B.C. is a special form of adding a linear constraint.
     Lagrange multiplier seems to be convenient to impose this constraint.
     """
     # TODO: print platform jax.lib.xla_bridge.get_backend().platform
     # and suggest PETSc or jax solver
-    if problem.periodic_bc_info is None:
-        return solver_row_elimination(problem, linear, precond, initial_guess,
-                                      use_petsc)
-    else:
+    if lagrangian_solver:
+        assert False, f"Lagrangian multiplier solver needs refactoring: Not working for now."
         return solver_lagrange_multiplier(problem, linear, use_petsc)
+    else:
+        return solver_row_elimination(problem, linear, precond, initial_guess, use_petsc, petsc_options)
 
 
 ################################################################################
 # Implicit differentiation with the adjoint method
 
-
-def implicit_vjp(problem, sol, params, v, use_petsc):
+def implicit_vjp(problem, sol_list, params, v_list, use_petsc):
 
     def constraint_fn(dofs, params):
         """c(u, p)
@@ -867,8 +898,10 @@ def implicit_vjp(problem, sol, params, v, use_petsc):
         res_fn = apply_bc(res_fn, problem)
         return res_fn(dofs)
 
-    def constraint_fn_sol_to_sol(sol, params):
-        return constraint_fn(sol.reshape(-1), params).reshape(sol.shape)
+    def constraint_fn_sol_to_sol(sol_list, params):
+        dofs = jax.flatten_util.ravel_pytree(sol_list)[0]
+        con_vec = constraint_fn(dofs, params)
+        return problem.unflatten_fn_sol_list(con_vec)
 
     def get_vjp_contraint_fn_dofs(dofs):
         # Just a transpose of A_fn
@@ -879,30 +912,31 @@ def implicit_vjp(problem, sol, params, v, use_petsc):
 
         return adjoint_linear_fn
 
-    def get_partial_params_c_fn(sol):
+    def get_partial_params_c_fn(sol_list):
         """c(u=u, p)
         """
-
         def partial_params_c_fn(params):
-            return constraint_fn_sol_to_sol(sol, params)
+            return constraint_fn_sol_to_sol(sol_list, params)
 
         return partial_params_c_fn
 
-    def get_vjp_contraint_fn_params(params, sol):
+    def get_vjp_contraint_fn_params(params, sol_list):
         """v*(partial dc/dp)
         """
-        partial_c_fn = get_partial_params_c_fn(sol)
+        partial_c_fn = get_partial_params_c_fn(sol_list)
 
-        def vjp_linear_fn(v):
+        def vjp_linear_fn(v_list):
             primals, f_vjp = jax.vjp(partial_c_fn, params)
-            val, = f_vjp(v)
+            val, = f_vjp(v_list)
             return val
 
         return vjp_linear_fn
 
     problem.set_params(params)
-    problem.newton_update(sol)
+    problem.newton_update(sol_list)
     A_fn = get_A_fn(problem, use_petsc)
+
+    v_vec = jax.flatten_util.ravel_pytree(v_list)[0]
 
     if use_petsc:
         A_transpose = A_fn.transpose()
@@ -914,15 +948,14 @@ def implicit_vjp(problem, sol, params, v, use_petsc):
         #     A_transpose.zeroRows(row_inds)
         # v = assign_zeros_bc(v, problem)
 
-        adjoint = petsc_solve(A_transpose, v.reshape(-1), 'minres', 'ilu')
-
+        adjoint_vec = petsc_solve(A_transpose, v_vec, 'minres', 'ilu')
     else:
-        adjoint_linear_fn = get_vjp_contraint_fn_dofs(sol.reshape(-1))
-        adjoint = jax_solve(problem, adjoint_linear_fn, v.reshape(-1), None,
-                            True)
+        dofs = jax.flatten_util.ravel_pytree(sol_list)[0]
+        adjoint_linear_fn = get_vjp_contraint_fn_dofs(dofs)
+        adjoint_vec = jax_solve(problem, adjoint_linear_fn, v_vec, None, True)
 
-    vjp_linear_fn = get_vjp_contraint_fn_params(params, sol)
-    vjp_result = vjp_linear_fn(adjoint.reshape(sol.shape))
+    vjp_linear_fn = get_vjp_contraint_fn_params(params, sol_list)
+    vjp_result = vjp_linear_fn(problem.unflatten_fn_sol_list(adjoint_vec))
     vjp_result = jax.tree_map(lambda x: -x, vjp_result)
 
     return vjp_result
@@ -933,17 +966,17 @@ def ad_wrapper(problem, linear=False, use_petsc=False):
     @jax.custom_vjp
     def fwd_pred(params):
         problem.set_params(params)
-        sol = solver(problem, linear=linear, use_petsc=use_petsc)
-        return sol
+        sol_list = solver(problem, linear=linear, use_petsc=use_petsc)
+        return sol_list
 
     def f_fwd(params):
-        sol = fwd_pred(params)
-        return sol, (params, sol)
+        sol_list = fwd_pred(params)
+        return sol_list, (params, sol_list)
 
     def f_bwd(res, v):
         logger.info("Running backward and solving the adjoint problem...")
-        params, sol = res
-        vjp_result = implicit_vjp(problem, sol, params, v, use_petsc)
+        params, sol_list = res
+        vjp_result = implicit_vjp(problem, sol_list, params, v, use_petsc)
         return (vjp_result, )
 
     fwd_pred.defvjp(f_fwd, f_bwd)

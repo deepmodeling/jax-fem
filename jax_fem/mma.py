@@ -20,18 +20,18 @@ from jax.config import config
 config.update("jax_enable_x64", True)
 
 
-def compute_filter_kd_tree(problem):
+def compute_filter_kd_tree(fe):
     """This function is created by Tianju. Not from the original code.
     We use k-d tree algorithm to compute the filter.
     """
-    cell_centroids = np.mean(np.take(problem.points, problem.cells, axis=0), axis=1)
-    flex_num_cells = len(problem.flex_inds)
-    flex_cell_centroids = np.take(cell_centroids, problem.flex_inds, axis=0)
+    cell_centroids = np.mean(np.take(fe.points, fe.cells, axis=0), axis=1)
+    flex_num_cells = len(fe.flex_inds)
+    flex_cell_centroids = np.take(cell_centroids, fe.flex_inds, axis=0)
 
-    V = np.sum(problem.JxW)
-    avg_elem_V = V/problem.num_cells
+    V = np.sum(fe.JxW)
+    avg_elem_V = V/fe.num_cells
 
-    avg_elem_size = avg_elem_V**(1./problem.dim)
+    avg_elem_size = avg_elem_V**(1./fe.dim)
     rmin = 1.5*avg_elem_size
 
     kd_tree = scipy.spatial.KDTree(flex_cell_centroids)
@@ -411,10 +411,10 @@ def subsolv(m,n,epsimin,low,upp,alfa,beta,p0,q0,P,Q,a0,a,b,c,d):
     return xmma,ymma,zmma,lamma,xsimma,etamma,mumma,zetmma,smma
 
 
-def optimize(problem, rho_ini, optimizationParams, objectiveHandle, consHandle, numConstraints):
+def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numConstraints):
     # TODO: Scale objective function value to be always within 1-100
     # See comments in https://doi.org/10.1016/j.compstruc.2018.01.008
-    H, Hs = compute_filter_kd_tree(problem)
+    H, Hs = compute_filter_kd_tree(fe)
     ft = {'H':H, 'Hs':Hs}
 
     rho = rho_ini

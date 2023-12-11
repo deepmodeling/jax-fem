@@ -9,7 +9,7 @@ import time
 
 from jax_fem.generate_mesh import box_mesh, Mesh
 from jax_fem.solver import solver
-from jax_fem.core import FEM
+from jax_fem.problem import Problem
 from jax_fem.utils import save_sol
 
 from demos.phase_field_fracture.eigen import get_eigen_f_custom
@@ -25,18 +25,18 @@ os.makedirs(numpy_dir, exist_ok=True)
 safe_plus = lambda x: 0.5*(x + np.abs(x))
 safe_minus = lambda x: 0.5*(x - np.abs(x))
 
-class PhaseField(FEM):
+class PhaseField(Problem):
     def get_tensor_map(self):
         """Override base class method.
         """
-        def fn(d_grad):
+        def fn(d_grad, history):
             return G_c*l*d_grad
         return fn
 
     def get_mass_map(self):
         """Override base class method.
         """
-        def fn(d, history):
+        def fn(d, x, history):
             return G_c/l*d - 2.*(1 - d)*history
         return fn
     
@@ -44,10 +44,10 @@ class PhaseField(FEM):
         """Override base class method.
         Note that 'mass' is a reserved keyword.
         """
-        self.internal_vars['mass'] = [history]
+        self.internal_vars = [history]
 
 
-class Elasticity(FEM):
+class Elasticity(Problem):
     def get_tensor_map(self):
         """Override base class method.
         """
@@ -109,7 +109,7 @@ class Elasticity(FEM):
     
     def compute_history(self, sol_u, history_old):
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
-        u_grads = np.take(sol_u, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :] 
+        u_grads = np.take(sol_u, self.fes[0].cells, axis=0)[:, None, :, :, None] * self.fes[0].shape_grads[:, :, :, None, :] 
         u_grads = np.sum(u_grads, axis=2) # (num_cells, num_quads, vec, dim)
         psi_plus_fn, _ = self.get_maps()
         vmap_psi_plus_fn = jax.vmap(jax.vmap(psi_plus_fn))
@@ -121,10 +121,10 @@ class Elasticity(FEM):
         """Override base class method.
         """
         sol_d, disp = params
-        d = self.convert_from_dof_to_quad(sol_d)
-        self.internal_vars['laplace'] = [d]
+        d = self.fes[0].convert_from_dof_to_quad(sol_d)
+        self.internal_vars = [d]
         dirichlet_bc_info[-1][-2] = get_dirichlet_load(disp)
-        self.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
+        self.fes[0].update_Dirichlet_boundary_conditions(dirichlet_bc_info)
     
     def compute_traction(self, location_fn, sol_u, sol_d):
         """For post-processing only
@@ -133,7 +133,7 @@ class Elasticity(FEM):
         vmap_stress = jax.vmap(stress)
         def traction_fn(u_grads, d_face):
             # (num_selected_faces, num_face_quads, vec, dim) -> (num_selected_faces*num_face_quads, vec, dim)
-            u_grads_reshape = u_grads.reshape(-1, self.vec, self.dim)
+            u_grads_reshape = u_grads.reshape(-1, self.fes[0].vec, self.dim)
             # (num_selected_faces, num_face_quads, vec) -> (num_selected_faces*num_face_quads, vec)
             d_face_reshape = d_face.reshape(-1, d_face.shape[-1])
             sigmas = vmap_stress(u_grads_reshape, d_face_reshape).reshape(u_grads.shape)
@@ -144,12 +144,12 @@ class Elasticity(FEM):
             return traction
     
         boundary_inds = self.get_boundary_conditions_inds([location_fn])[0]
-        face_shape_grads_physical, nanson_scale = self.get_face_shape_grads(boundary_inds)
+        face_shape_grads_physical, nanson_scale = self.fes[0].get_face_shape_grads(boundary_inds)
         # (num_selected_faces, 1, num_nodes, vec, 1) * (num_selected_faces, num_face_quads, num_nodes, 1, dim)
-        u_grads_face = sol_u[self.cells][boundary_inds[:, 0]][:, None, :, :, None] * face_shape_grads_physical[:, :, :, None, :]
+        u_grads_face = sol_u[self.fes[0].cells][boundary_inds[:, 0]][:, None, :, :, None] * face_shape_grads_physical[:, :, :, None, :]
         u_grads_face = np.sum(u_grads_face, axis=2) # (num_selected_faces, num_face_quads, vec, dim)
-        selected_cell_sols_d = sol_d[self.cells][boundary_inds[:, 0]] # (num_selected_faces, num_nodes, vec))
-        selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)
+        selected_cell_sols_d = sol_d[self.fes[0].cells][boundary_inds[:, 0]] # (num_selected_faces, num_nodes, vec))
+        selected_face_shape_vals = self.fes[0].face_shape_vals[boundary_inds[:, 1]] # (num_selected_faces, num_face_quads, num_nodes)
         # (num_selected_faces, 1, num_nodes, vec) * (num_selected_faces, num_face_quads, num_nodes, 1) -> (num_selected_faces, num_face_quads, vec) 
         d_face = np.sum(selected_cell_sols_d[:, None, :, :] * selected_face_shape_vals[:, :, :, None], axis=2)
         traction = traction_fn(u_grads_face, d_face) # (num_selected_faces, num_face_quads, vec)
@@ -179,10 +179,10 @@ def y_min(point):
     return np.isclose(point[1], 0., atol=1e-5)
 
 problem_d = PhaseField(mesh, vec=1, dim=3)
-sol_d = onp.zeros((len(mesh.points), 1))
+sol_d_list = [onp.zeros((len(mesh.points), 1))]
 flag = (mesh.points[:, 1] > 0.5*Ly - 0.01*Ly) & (mesh.points[:, 1] < 0.5*Ly + 0.01*Ly) & (mesh.points[:, 0] > 0.5*Lx) 
-sol_d[flag] = 1. # Specify initial crack
-sol_d_old = onp.array(sol_d)
+sol_d_list[0][flag] = 1. # Specify initial crack
+sol_d_old = onp.array(sol_d_list[0])
 
 def dirichlet_val(point):
     return 0.
@@ -206,9 +206,9 @@ value_fns = [dirichlet_val, dirichlet_val, dirichlet_val,
 dirichlet_bc_info = [location_fns, vecs, value_fns]
 
 problem_u = Elasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info)
-sol_u = onp.zeros((len(mesh.points), 3))
-sol_u_old = onp.array(sol_u)
-history = onp.zeros((problem_u.num_cells, problem_u.num_quads))
+sol_u_list = [onp.zeros((len(mesh.points), 3))]
+sol_u_old = onp.array(sol_u_list[0])
+history = onp.zeros((problem_u.fes[0].num_cells, problem_u.fes[0].num_quads))
 history_old = onp.array(history)
 
 simulation_flag = True
@@ -218,7 +218,7 @@ if simulation_flag:
         os.remove(f)
     
     vtk_path = os.path.join(vtk_dir, f"u_{0:05d}.vtu")
-    save_sol(problem_d, sol_d, vtk_path, point_infos=[('u', sol_u)], cell_infos=[('history', np.mean(history, axis=1))])
+    save_sol(problem_d.fes[0], sol_d_list[0], vtk_path, point_infos=[('u', sol_u_list[0])], cell_infos=[('history', np.mean(history, axis=1))])
 
     tractions = [0.]
     for i, disp in enumerate(disps[1:]):
@@ -228,20 +228,20 @@ if simulation_flag:
         tol = 1e-5
         while err > tol:
             print(f"####### max history = {np.max(history)}")
-            problem_u.set_params([sol_d, disp])
-            sol_u = solver(problem_u, use_petsc=False)
+            problem_u.set_params([sol_d_list[0], disp])
+            sol_u_list = solver(problem_u, use_petsc=False)
     
             problem_d.set_params(history)
-            sol_d = solver(problem_d, use_petsc=False)
+            sol_d_list = solver(problem_d, use_petsc=False)
     
-            history = problem_u.compute_history(sol_u, history_old)
-            sol_d = onp.maximum(sol_d, sol_d_old)
+            history = problem_u.compute_history(sol_u_list[0], history_old)
+            sol_d_list = [onp.maximum(sol_d_list[0], sol_d_old)]
     
-            err_u = onp.linalg.norm(sol_u - sol_u_old)
-            err_d = onp.linalg.norm(sol_d - sol_d_old)
+            err_u = onp.linalg.norm(sol_u_list[0] - sol_u_old)
+            err_d = onp.linalg.norm(sol_d_list[0] - sol_d_old)
             err = onp.maximum(err_u, err_d)
-            sol_u_old = onp.array(sol_u)
-            sol_d_old = onp.array(sol_d)
+            sol_u_old = onp.array(sol_u_list[0])
+            sol_d_old = onp.array(sol_d_list[0])
             print(f"####### err = {err}, tol = {tol}")
             
             # Technically, we are not doing the real 'staggered' scheme. This is an early stop strategy.
@@ -251,11 +251,11 @@ if simulation_flag:
     
         history_old = onp.array(history)
      
-        traction = problem_u.compute_traction(y_max, sol_u, sol_d)/Lz
+        traction = problem_u.compute_traction(y_max, sol_u_list[0], sol_d_list[0])/Lz
         tractions.append(traction[-1])
         print(f"Traction force = {traction}")
         vtk_path = os.path.join(vtk_dir, f"u_{i + 1:05d}.vtu")
-        save_sol(problem_d, sol_d, vtk_path, point_infos=[('u', sol_u)], cell_infos=[('history', np.mean(history, axis=1))])
+        save_sol(problem_d.fes[0], sol_d_list[0], vtk_path, point_infos=[('u', sol_u_list[0])], cell_infos=[('history', np.mean(history, axis=1))])
     
     tractions = np.array(tractions)
     

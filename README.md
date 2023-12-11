@@ -21,6 +21,10 @@ FEM is a powerful tool, where the following features are supported
   - Optimal thermal control
 - Integration with PETSc for solver choices
 
+**Updates** (Dec 11, 2023):
+
+- We now support multi-physics problems in the sense that multiple variables can be solved monolithically. For example, consider running  `python -m applications.stokes.example`
+- Weak form is now defined through  volume integral and surface integral. We can now treat body force, "mass kernel" and "Laplace kernel" in a unified way through volume integral, and treat "Neumann B.C." and "Robin B.C." in a unified way through surface integral. 
 
 <p align="middle">
   <img src="docs/ded.gif" width="600" />
@@ -37,11 +41,19 @@ FEM is a powerful tool, where the following features are supported
 </p>
 
 <p align="middle">
-  <img src="docs/polycrystal_grain.gif" width="350" />
-  <img src="docs/polycrystal_stress.gif" width="350" />
+  <img src="docs/polycrystal_grain.gif" width="360" />
+  <img src="docs/polycrystal_stress.gif" width="360" />
 </p>
 <p align="middle">
     <em >Crystal plasticity: grain structure (left) and stress-xx (right).</em>
+</p>
+
+<p align="middle">
+  <img src="docs/stokes_u.png" width="360" />
+  <img src="docs/stokes_p.png" width="360" />
+</p>
+<p align="middle">
+    <em >Stokes flow: velocity (left) and pressure(right).</em>
 </p>
 
 <p align="middle">

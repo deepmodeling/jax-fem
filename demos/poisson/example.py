@@ -2,15 +2,27 @@ import jax
 import jax.numpy as np
 import os
 
-from jax_fem.core import FEM
+from jax_fem.problem import Problem
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import get_meshio_cell_type, Mesh, rectangle_mesh
 
 
-class Poisson(FEM):
+class Poisson(Problem):
     def get_tensor_map(self):
         return lambda x: x
+
+    def get_mass_map(self):
+        def mass_map(u, x):
+            val = -np.array([10*np.exp(-(np.power(x[0] - 0.5, 2) + np.power(x[1] - 0.5, 2)) / 0.02)])
+            return val
+        return mass_map
+
+    def get_surface_maps(self):
+        def surface_map(u, x):
+            return -np.array([np.sin(5.*x[0])])
+
+        return [surface_map, surface_map]
 
 
 ele_type = 'QUAD4'
@@ -50,10 +62,11 @@ neumann_bc_info = [[bottom, top], [neumann_val, neumann_val]]
 def body_force(point):
     return np.array([10*np.exp(-(np.power(point[0] - 0.5, 2) + np.power(point[1] - 0.5, 2)) / 0.02)])
 
-problem = Poisson(mesh=mesh, vec=1, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, 
-    neumann_bc_info=neumann_bc_info, source_info=body_force)
+location_fns = [bottom, top]
+
+problem = Poisson(mesh=mesh, vec=1, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, location_fns=location_fns)
 sol = solver(problem, linear=True, use_petsc=True)
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
-save_sol(problem, sol, vtk_path)
+save_sol(problem.fes[0], sol[0], vtk_path)

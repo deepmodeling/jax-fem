@@ -25,9 +25,9 @@ def problem():
     class CrystalPlasticityModified(CrystalPlasticity):
         def set_params(self, all_params):
             disp, params = all_params
-            self.internal_vars['laplace'] = params
-            self.dirichlet_bc_info[-1][-1] = get_dirichlet_top(disp)
-            self.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
+            self.internal_vars = params
+            self.fes[0].dirichlet_bc_info[-1][-1] = get_dirichlet_top(disp)
+            self.fes[0].update_Dirichlet_boundary_conditions(self.fes[0].dirichlet_bc_info)
 
         def targe_val(self, sol):
             tgt_volume = 1.01
@@ -35,9 +35,9 @@ def problem():
                 F = u_grad + np.eye(self.dim)
                 return np.linalg.det(F)
 
-            u_grads = self.sol_to_grad(sol)
+            u_grads = self.fes[0].sol_to_grad(sol)
             vmap_det_fn = jax.jit(jax.vmap(jax.vmap(det_fn)))
-            crt_volume = np.sum(vmap_det_fn(u_grads) * self.JxW)
+            crt_volume = np.sum(vmap_det_fn(u_grads) * self.fes[0].JxW)
 
             square_error = (crt_volume - tgt_volume)**2
 
@@ -74,9 +74,9 @@ def problem():
         return 0.
 
     def get_dirichlet_top(disp):
-            def val_fn(point):
-                return disp
-            return val_fn
+        def val_fn(point):
+            return disp
+        return val_fn
 
     dirichlet_bc_info = [[corner, corner, bottom, top], 
                          [0, 1, 2, 2], 
@@ -89,21 +89,21 @@ def problem():
     fwd_pred = ad_wrapper(problem)
 
     def simulation(scale_d):
-        params = problem.internal_vars['laplace']
+        params = problem.internal_vars
         results_to_save = []
         for i in range(2):
             print(f"\nStep {i + 1} in {len(ts) - 1}, disp = {disps[i + 1]}")
             problem.dt = ts[i + 1] - ts[i]
-            sol = fwd_pred([scale_d*disps[i + 1], params])  
-            params = problem.update_int_vars_gp(sol, params)
-            obj_val = problem.targe_val(sol)
+            sol_list = fwd_pred([scale_d*disps[i + 1], params])  
+            params = problem.update_int_vars_gp(sol_list[0], params)
+            obj_val = problem.targe_val(sol_list[0])
             print(f"obj_val = {obj_val}")
         return obj_val
 
     simulation(1.)
 
     grads = jax.grad(simulation)(1.)
-    print(grads)
+    print(f"grads = {grads}")
 
 
 if __name__ == "__main__":

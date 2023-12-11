@@ -9,7 +9,7 @@ from jax_fem.solver import solver, ad_wrapper
 from jax_fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
 from jax_fem.utils import save_sol
 
-from applications.fem.crystal_plasticity.models import CrystalPlasticity
+from applications.crystal_plasticity.models import CrystalPlasticity
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
@@ -67,13 +67,13 @@ def problem():
                                 additional_info=(quat, cell_ori_inds))
     
 
-    sol = np.zeros((problem.num_total_nodes, problem.vec))
+    # sol = np.zeros((problem.num_total_nodes, problem.vec))
 
     fwd_pred = ad_wrapper(problem)
 
     def simulation(alpha):
 
-        params = problem.internal_vars['laplace']
+        params = problem.internal_vars
         params[1] = alpha*params[1]
 
         results_to_save = []
@@ -81,9 +81,10 @@ def problem():
             problem.dt = ts[i + 1] - ts[i]
             print(f"\nStep {i + 1} in {len(ts) - 1}, disp = {disps[i + 1]}, dt = {problem.dt}")
             dirichlet_bc_info[-1][-1] = get_dirichlet_top(disps[i + 1])
-            problem.update_Dirichlet_boundary_conditions(dirichlet_bc_info)
+            problem.fes[0].update_Dirichlet_boundary_conditions(dirichlet_bc_info)
 
-            sol = fwd_pred(params)
+            sol_list = fwd_pred(params)
+            sol = sol_list[0]
 
             stress_zz = problem.compute_avg_stress(sol, params)[0, 2, 2]
 
@@ -104,7 +105,7 @@ def problem():
     # 1.01 - 169.65845175597966
     # 0.99 - 166.3895137772737
     # FDM grad - 163.44689893529818
-    # AD grad - 163.4479802160081
+    # AD grad - 163.44798021546643
 
     grads = jax.grad(simulation)(1.)
     print(grads)

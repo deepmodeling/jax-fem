@@ -5,12 +5,12 @@ A GPU-accelerated differentiable finite element analysis package based on [JAX](
 ![Github Fork](https://img.shields.io/github/forks/tianjuxue/jax-fem)
 ![License](https://img.shields.io/github/license/tianjuxue/jax-fem)
 
-FEM is a powerful tool, where the following features are supported
+FEM is a powerful tool, where we support the following features
 
 - 2D quadrilateral/triangle elements
 - 3D hexahedron/tetrahedron elements
 - First and second order elements
-- Dirichlet/Neumann/periodic boundary conditions
+- Dirichlet/Neumann/Robin boundary conditions
 - Linear and nonlinear analysis including
   - Heat equation
   - Linear elasticity

@@ -2,19 +2,12 @@ import numpy as onp
 import os
 from dolfin import *
 
-
 input_dir = os.path.join(os.path.dirname(__file__), 'input')
 output_dir = os.path.join(os.path.dirname(__file__), 'output')
-
-
 
 class LeftorRight(SubDomain):
     def inside(self,x,on_boundary):
         return on_boundary and (near(x[0], 0) or near(x[0], 1))
-
-
-
-
 
 # Define Dirichlet boundary (x = 0 or x = 1)
 def boundary(x):

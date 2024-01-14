@@ -1,15 +1,22 @@
+# Import some useful modules.
 import jax
 import jax.numpy as np
 import os
 
+
+# Import JAX-FEM specific modules.
 from jax_fem.problem import Problem
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
 
+# Define constitutive relationship.
 class HyperElasticity(Problem):
-
+    # The function 'get_tensor_map' overrides base class method. Generally, JAX-FEM 
+    # solves -div(f(u_grad)) = b. Here, we define f(u_grad) = P. Notice how we first 
+    # define 'psi' (representing W), and then use automatic differentiation (jax.grad) 
+    # to obtain the 'P_fn' function.
     def get_tensor_map(self):
 
         def psi(F):
@@ -34,6 +41,7 @@ class HyperElasticity(Problem):
         return first_PK_stress
 
 
+# Specify mesh-related information (first-order hexahedron element).
 ele_type = 'HEX8'
 cell_type = get_meshio_cell_type(ele_type)
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
@@ -49,6 +57,7 @@ meshio_mesh = box_mesh(Nx=20,
 mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
 
+# Define boundary locations.
 def left(point):
     return np.isclose(point[0], 0., atol=1e-5)
 
@@ -57,6 +66,7 @@ def right(point):
     return np.isclose(point[0], Lx, atol=1e-5)
 
 
+# Define Dirichlet boundary values.
 def zero_dirichlet_val(point):
     return 0.
 
@@ -75,11 +85,15 @@ dirichlet_bc_info = [[left] * 3 + [right] * 3, [0, 1, 2] * 2,
                      [zero_dirichlet_val, dirichlet_val_x2, dirichlet_val_x3] +
                      [zero_dirichlet_val] * 3]
 
+
+# Create an instance of the problem.
 problem = HyperElasticity(mesh,
                           vec=3,
                           dim=3,
                           ele_type=ele_type,
                           dirichlet_bc_info=dirichlet_bc_info)
+# Solve the defined problem.
 sol = solver(problem, use_petsc=True)
+# Store the solution to local file.
 vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
 save_sol(problem.fes[0], sol[0], vtk_path)

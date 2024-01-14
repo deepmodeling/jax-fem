@@ -1,3 +1,4 @@
+# Import some generally useful packages.
 import numpy as onp
 import jax
 import jax.numpy as np
@@ -7,6 +8,8 @@ import meshio
 import matplotlib.pyplot as plt
 import time
 
+
+# Import JAX-FEM specific modules.
 from jax_fem.generate_mesh import box_mesh, Mesh
 from jax_fem.solver import solver
 from jax_fem.problem import Problem
@@ -14,43 +17,55 @@ from jax_fem.utils import save_sol
 
 from demos.phase_field_fracture.eigen import get_eigen_f_custom
 
+
+# If you have multiple GPUs, set the one to use.
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
+
+# Define some useful directory paths.
 crt_file_path = os.path.dirname(__file__)
 data_dir = os.path.join(crt_file_path, 'data')
 vtk_dir = os.path.join(data_dir, 'vtk')
 numpy_dir = os.path.join(data_dir, 'numpy')
 os.makedirs(numpy_dir, exist_ok=True)
 
+
+# The bracket operator
+# One may define something like 'lambda x: np.maximum(x, 0.)' 
+# and 'lambda x: np.minimum(x, 0.)', but it turns out that they may lead to 
+# unexpected behaviors. See more discussions and tests in the file 'eigen.py'.
 safe_plus = lambda x: 0.5*(x + np.abs(x))
 safe_minus = lambda x: 0.5*(x - np.abs(x))
 
+
+# Define the phase field variable class. 
 class PhaseField(Problem):
+    # Note how 'get_tensor_map' and 'get_mass_map' specify the corresponding terms 
+    # in the weak form. Since the displacement variable u affects the phase field 
+    # variable d through the history variable H, we need to set this using 'set_params'.
     def get_tensor_map(self):
-        """Override base class method.
-        """
         def fn(d_grad, history):
             return G_c*l*d_grad
         return fn
 
     def get_mass_map(self):
-        """Override base class method.
-        """
         def fn(d, x, history):
             return G_c/l*d - 2.*(1 - d)*history
         return fn
     
     def set_params(self, history):
-        """Override base class method.
-        Note that 'mass' is a reserved keyword.
-        """
+        # Override base class method.
         self.internal_vars = [history]
 
 
+# Define the displacement variable class. 
 class Elasticity(Problem):
+    # As we previously discussed, native JAX AD may return NaN in the cases 
+    # with repeated eigenvalues. We provide two workarounds and users can choose 
+    # either one to use. The first option adds a small noise to the strain tensor, 
+    # while the second option defines custom derivative rules to properly handle 
+    # repeated eigenvalues.
     def get_tensor_map(self):
-        """Override base class method.
-        """
         _, stress_fn = self.get_maps()
         return stress_fn
 
@@ -118,8 +133,7 @@ class Elasticity(Problem):
         return history
     
     def set_params(self, params):
-        """Override base class method.
-        """
+        # Override base class method.
         sol_d, disp = params
         d = self.fes[0].convert_from_dof_to_quad(sol_d)
         self.internal_vars = [d]
@@ -127,8 +141,7 @@ class Elasticity(Problem):
         self.fes[0].update_Dirichlet_boundary_conditions(dirichlet_bc_info)
     
     def compute_traction(self, location_fn, sol_u, sol_d):
-        """For post-processing only
-        """
+        # For post-processing only
         stress = self.get_tensor_map()
         vmap_stress = jax.vmap(stress)
         def traction_fn(u_grads, d_face):
@@ -159,6 +172,7 @@ class Elasticity(Problem):
         return traction_integral_val
 
 
+# Define some material parameters.
 # Units are in [kN], [mm] and [s]
 G_c = 2.7e-3 # Critical energy release rate [kN/mm] 
 E = 210 # Young's modulus [kN/mm^2]
@@ -167,23 +181,31 @@ l = 0.02 # Length-scale parameter [mm]
 mu = E/(2.*(1. + nu)) # First Lamé parameter
 lmbda = E*nu/((1+nu)*(1-2*nu)) # Second Lamé parameter
 
+
+# Specify mesh-related information (first-order hexahedron element)
 Nx, Ny, Nz = 50, 50, 1 
 Lx, Ly, Lz = 1., 1., 0.02
 meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
 mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
+
+# Define boundary locations.
 def y_max(point):
     return np.isclose(point[1], Ly, atol=1e-5)
 
 def y_min(point):
     return np.isclose(point[1], 0., atol=1e-5)
 
+
+# Create an instance of the phase field problem.
 problem_d = PhaseField(mesh, vec=1, dim=3)
 sol_d_list = [onp.zeros((len(mesh.points), 1))]
 flag = (mesh.points[:, 1] > 0.5*Ly - 0.01*Ly) & (mesh.points[:, 1] < 0.5*Ly + 0.01*Ly) & (mesh.points[:, 0] > 0.5*Lx) 
 sol_d_list[0][flag] = 1. # Specify initial crack
 sol_d_old = onp.array(sol_d_list[0])
 
+
+# Create an instance of the displacement problem.
 def dirichlet_val(point):
     return 0.
 
@@ -191,6 +213,7 @@ def get_dirichlet_load(disp):
     def val_fn(point):
         return disp
     return val_fn
+
 
 # disps = 0.01*Ly*np.linspace(0., 1., 101)
 disps = 0.01*Ly*np.hstack((np.linspace(0, 0.6, 21),
@@ -211,6 +234,8 @@ sol_u_old = onp.array(sol_u_list[0])
 history = onp.zeros((problem_u.fes[0].num_cells, problem_u.fes[0].num_quads))
 history_old = onp.array(history)
 
+
+# Start the major loop for loading steps.
 simulation_flag = True
 if simulation_flag:
     files = glob.glob(os.path.join(vtk_dir, f'*'))

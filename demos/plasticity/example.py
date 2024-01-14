@@ -1,34 +1,39 @@
+# Import some useful modules.
 import jax
 import jax.numpy as np
 import os
 import matplotlib.pyplot as plt
 
+
+# Import JAX-FEM specific modules.
 from jax_fem.problem import Problem
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
 
 
+# Define constitutive relationship.
 class Plasticity(Problem):
+    # The function 'get_tensor_map' overrides base class method. Generally, JAX-FEM 
+    # solves -div(f(u_grad,alpha_1,alpha_2,...,alpha_N)) = b. Here, we have 
+    # f(u_grad,alpha_1,alpha_2,...,alpha_N) = sigma_crt(u_crt_grad, epsilon_old, sigma_old),
+    # reflected by the function 'stress_return_map'
     def custom_init(self):
-        """Override base class method.
-        Initializing total strain and stress.
-        """
+        # Override base class method.
+        # Initializing total strain and stress.
         self.fe = self.fes[0]
         self.epsilons_old = np.zeros((len(self.fe.cells), self.fe.num_quads, self.fe.vec, self.dim))
         self.sigmas_old = np.zeros_like(self.epsilons_old)
         self.internal_vars = [self.sigmas_old, self.epsilons_old]
 
     def get_tensor_map(self):
-        """Override base class method.
-        """
+        # Override base class method.
         _, stress_return_map = self.get_maps()
         return stress_return_map
 
     def get_maps(self):
         def safe_sqrt(x):  
-            """np.sqrt is not differentiable at 0.
-            """
+            # np.sqrt is not differentiable at 0
             safe_x = np.where(x > 0., np.sqrt(x), 0.)
             return safe_x
 
@@ -74,8 +79,7 @@ class Plasticity(Problem):
         self.internal_vars = [self.sigmas_old, self.epsilons_old]
 
     def compute_avg_stress(self):
-        """For post-processing only: Compute volume averaged stress.
-        """
+        # For post-processing only: Compute volume averaged stress.
         # (num_cells*num_quads, vec, dim) * (num_cells*num_quads, 1, 1) -> (vec, dim)
         sigma = np.sum(self.sigmas_old.reshape(-1, self.fe.vec, self.dim) * self.fe.JxW.reshape(-1)[:, None, None], 0)
         vol = np.sum(self.fe.JxW)
@@ -83,6 +87,7 @@ class Plasticity(Problem):
         return avg_sigma
 
 
+# Specify mesh-related information(first-order hexahedron element).
 ele_type = 'HEX8'
 cell_type = get_meshio_cell_type(ele_type)
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
@@ -91,12 +96,19 @@ Lx, Ly, Lz = 10., 10., 10.
 meshio_mesh = box_mesh(Nx=10, Ny=10, Nz=10, Lx=Lx, Ly=Ly, Lz=Lz, data_dir=data_dir, ele_type=ele_type)
 mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
+
+# Define boundary locations.
 def top(point):
     return np.isclose(point[2], Lz, atol=1e-5)
 
 def bottom(point):
     return np.isclose(point[2], 0., atol=1e-5)
 
+
+
+# Define Dirichlet boundary values.
+# We fix the z-component of the displacement field to be zero on the 'bottom' 
+# side, and control the z-component on the 'top' side.
 def dirichlet_val_bottom(point):
     return 0.
 
@@ -113,6 +125,8 @@ vecs = [2, 2]
 
 dirichlet_bc_info = [location_fns, vecs, value_fns]
 
+
+# Define problem, solve it and save solutions to local folder
 problem = Plasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info)
 avg_stresses = []
 
@@ -130,6 +144,8 @@ for i, disp in enumerate(disps):
 
 avg_stresses = np.array(avg_stresses)
 
+
+# Plot the volume-averaged stress versus the vertical displacement of the top surface.
 fig = plt.figure(figsize=(10, 8))
 plt.plot(disps, avg_stresses[:, 2, 2], color='red', marker='o', markersize=8, linestyle='-') 
 plt.xlabel(r'Displacement of top surface [mm]', fontsize=20)

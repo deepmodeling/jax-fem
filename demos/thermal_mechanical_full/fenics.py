@@ -81,12 +81,12 @@ for (i, dti) in enumerate(onp.diff(t)):
 (u, theta) = U.split(True)
 
 # Save solution in VTK format
-ufile_pvd = File(os.path.join(output_dir, "vtk/fenics_u.pvd"))
-u.rename("u", "u")
-ufile_pvd << u
-tfile_pvd = File(os.path.join(output_dir, "vtk/fenics_theta.pvd"))
-theta.rename("theta", "theta")
-tfile_pvd << theta
+# ufile_pvd = File(os.path.join(output_dir, "vtk/fenics_u.pvd"))
+# u.rename("u", "u")
+# ufile_pvd << u
+# tfile_pvd = File(os.path.join(output_dir, "vtk/fenics_theta.pvd"))
+# theta.rename("theta", "theta")
+# tfile_pvd << theta
 
 print(f"Max u = {onp.max(u.vector()[:])}, Min u = {onp.min(u.vector()[:])}")
 print(f"Max theta = {onp.max(theta.vector()[:])}, Min p = {onp.min(theta.vector()[:])}")
@@ -108,5 +108,7 @@ for cell in cells(mesh):
 cells = onp.stack(cells_v)
 print(f"cells.shape = {cells.shape}")
 
+numpy_dir = os.path.join(input_dir, f'numpy/')
+if not os.path.exists(numpy_dir): os.makedirs(numpy_dir)
 onp.save(os.path.join(input_dir, f'numpy/points.npy'), points)
 onp.save(os.path.join(input_dir, f'numpy/cells.npy'), cells)

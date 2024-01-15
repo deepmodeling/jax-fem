@@ -169,7 +169,7 @@ def main_fns():
     
     # Start the major loop of time iteration.
     for i in range(steps):
-        print(f'Time increment{i+1}\n')
+        print(f'Time increment {i+1}\n')
         problem.set_params([sol_2dt,sol_dt])
         sol = solver(problem, linear=True, use_petsc=False)[0]
         sol_2dt = sol_dt

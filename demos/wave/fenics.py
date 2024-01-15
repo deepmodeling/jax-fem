@@ -60,5 +60,7 @@ for cell in cells(mesh):
 cells = onp.stack(cells_v)
 print(f"cells.shape = {cells.shape}")
 
+numpy_dir = os.path.join(input_dir, f'numpy/')
+if not os.path.exists(numpy_dir): os.makedirs(numpy_dir)
 onp.save(os.path.join(input_dir, f'numpy/points.npy'), points)
 onp.save(os.path.join(input_dir, f'numpy/cells.npy'), cells)

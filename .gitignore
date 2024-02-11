@@ -1,14 +1,6 @@
 .vscode/launch.json
 *.pyc
 
-# Generates test results
-# tests/benchmarking_tests/hyperelasticity/jax_fem/sol.vtu
-# tests/linear_elasticity_cube/jax_fem/sol.vtu
-# tests/linear_elasticity_cylinder/jax_fem/sol.vtu
-# tests/linear_poisson/jax_fem/sol.vtu
-# tests/plasticity/jax_fem/avg_stresses.npy
-# tests/plasticity/jax_fem/sol.vtu
-
 dev_code/
 *reference/
 *.DS_Store
@@ -18,3 +10,29 @@ dev_code/
 *debug/
 tests/benchmarks/*/jax_fem/*
 applications/aesthetic/input/models
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST

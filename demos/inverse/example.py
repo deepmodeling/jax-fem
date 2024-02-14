@@ -133,7 +133,8 @@ dE, drho, dscale_d = jax.grad(composed_fn)(params)
 
 # Comparison
 print(f"\nDerivative comparison between automatic differentiation (AD) and finite difference (FD)")
-print(f"dE = {dE}, dE_fd = {dE_fd}, WRONG results! Please avoid gradients w.r.t self.E")
-print(f"drho[0, 0] = {drho[0, 0]}, drho_fd_00 = {drho_fd_00}")
-print(f"dscale_d = {dscale_d}, dscale_d_fd = {dscale_d_fd}")
+print(f"\ndE = {dE}, dE_fd = {dE_fd}, WRONG results! Please avoid gradients w.r.t self.E")
+print(f"This is due to the use of glob variable self.E, inside a jax jitted function.")
+print(f"\ndrho[0, 0] = {drho[0, 0]}, drho_fd_00 = {drho_fd_00}")
+print(f"\ndscale_d = {dscale_d}, dscale_d_fd = {dscale_d_fd}")
 

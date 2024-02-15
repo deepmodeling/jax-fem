@@ -1,9 +1,9 @@
 A GPU-accelerated differentiable finite element analysis package based on [JAX](https://github.com/google/jax). Used to be part of the suite of open-source python packages for Additive Manufacturing (AM) research, [JAX-AM](https://github.com/tianjuxue/jax-am).
 
 ## Finite Element Method (FEM)
-![Github Star](https://img.shields.io/github/stars/tianjuxue/jax-fem)
-![Github Fork](https://img.shields.io/github/forks/tianjuxue/jax-fem)
-![License](https://img.shields.io/github/license/tianjuxue/jax-fem)
+![Github Star](https://img.shields.io/github/stars/deepmodeling/jax-fem)
+![Github Fork](https://img.shields.io/github/forks/deepmodeling/jax-fem)
+![License](https://img.shields.io/github/license/deepmodeling/jax-fem)
 
 FEM is a powerful tool, where we support the following features
 
@@ -83,7 +83,7 @@ Then there are two options to continue:
 Clone the repository:
 
 ```bash
-git clone git@github.com:tianjuxue/jax-fem.git
+git clone https://github.com/deepmodeling/jax-fem.git
 cd jax-fem
 ```
 

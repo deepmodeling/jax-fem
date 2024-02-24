@@ -44,7 +44,7 @@ class Problem:
         self.cells_list = [fe.cells for fe in self.fes]
         # Assume all fes have the same number of cells, same dimension
         self.num_cells = self.fes[0].num_cells
-        self.boundary_inds_list = self.get_boundary_conditions_inds(self.location_fns)
+        self.boundary_inds_list = self.fes[0].get_boundary_conditions_inds(self.location_fns)
 
         self.offset = [0] 
         for i in range(len(self.fes) - 1):
@@ -136,41 +136,6 @@ class Problem:
         """Child class should override if more things need to be done in initialization
         """
         pass
-
-    def get_boundary_conditions_inds(self, location_fns):
-        """Given location functions, compute which faces satisfy the condition.
-
-        Parameters
-        ----------
-        location_fns : List[Callable]
-            Callable: a function that inputs a point (ndarray) and returns if the point satisfies the location condition
-                      e.g., lambda x: np.isclose(x[0], 0.)
-
-        Returns
-        -------
-        boundary_inds_list : List[onp.ndarray]
-            (num_selected_faces, 2)
-            boundary_inds_list[k][i, 0] returns the global cell index of the ith selected face of boundary subset k
-            boundary_inds_list[k][i, 1] returns the local face index of the ith selected face of boundary subset k
-        """
-        # TODO: assume this works for all variables, and return the same result
-        cell_points = onp.take(self.fes[0].points, self.fes[0].cells, axis=0)  # (num_cells, num_nodes, dim)
-        cell_face_points = onp.take(cell_points, self.fes[0].face_inds, axis=1)  # (num_cells, num_faces, num_face_nodes, dim)
-        boundary_inds_list = []
-        if location_fns is not None:
-            for i in range(len(location_fns)):
-                vmap_location_fn = jax.vmap(location_fns[i])
-
-                def on_boundary(cell_points):
-                    boundary_flag = vmap_location_fn(cell_points)
-                    return onp.all(boundary_flag)
-
-                vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
-                boundary_flags = vvmap_on_boundary(cell_face_points)
-                boundary_inds = onp.argwhere(
-                    boundary_flags)  # (num_selected_faces, 2)
-                boundary_inds_list.append(boundary_inds)
-        return boundary_inds_list
 
     def get_laplace_kernel(self, tensor_map):
 

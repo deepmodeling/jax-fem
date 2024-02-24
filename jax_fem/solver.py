@@ -396,6 +396,7 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc, p
         return res_vec, A_fn
 
     if linear:
+        # We might not need this linear solver as well
         dofs = assign_bc(dofs, problem)
         res_vec, A_fn = newton_update_helper(dofs)
         dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc, petsc_options)

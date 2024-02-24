@@ -269,6 +269,8 @@ class FiniteElement:
             dirichlet_bc_info)
 
     def periodic_boundary_conditions(self):
+        """Not working
+        """
         p_node_inds_list_A = []
         p_node_inds_list_B = []
         p_vec_inds_list = []
@@ -321,24 +323,23 @@ class FiniteElement:
             boundary_inds_list[k][i, 0] returns the global cell index of the ith selected face of boundary subset k
             boundary_inds_list[k][i, 1] returns the local face index of the ith selected face of boundary subset k
         """
-        cell_points = onp.take(self.points, self.cells,
-                               axis=0)  # (num_cells, num_nodes, dim)
-        cell_face_points = onp.take(
-            cell_points, self.face_inds,
-            axis=1)  # (num_cells, num_faces, num_face_nodes, dim)
+        # TODO: assume this works for all variables, and return the same result
+        cell_points = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
+        cell_face_points = onp.take(cell_points, self.face_inds, axis=1)  # (num_cells, num_faces, num_face_nodes, dim)
         boundary_inds_list = []
-        for i in range(len(location_fns)):
-            vmap_location_fn = jax.vmap(location_fns[i])
+        if location_fns is not None:
+            for i in range(len(location_fns)):
+                vmap_location_fn = jax.vmap(location_fns[i])
 
-            def on_boundary(cell_points):
-                boundary_flag = vmap_location_fn(cell_points)
-                return onp.all(boundary_flag)
+                def on_boundary(cell_points):
+                    boundary_flag = vmap_location_fn(cell_points)
+                    return onp.all(boundary_flag)
 
-            vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
-            boundary_flags = vvmap_on_boundary(cell_face_points)
-            boundary_inds = onp.argwhere(
-                boundary_flags)  # (num_selected_faces, 2)
-            boundary_inds_list.append(boundary_inds)
+                vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
+                boundary_flags = vvmap_on_boundary(cell_face_points)
+                boundary_inds = onp.argwhere(
+                    boundary_flags)  # (num_selected_faces, 2)
+                boundary_inds_list.append(boundary_inds)
         return boundary_inds_list
 
     def convert_from_dof_to_quad(self, sol):

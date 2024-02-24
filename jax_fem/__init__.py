@@ -8,4 +8,4 @@ from .logger_setup import setup_logger
 logger = setup_logger(__name__)
 
 
-__version__ = "0.0.3"
+__version__ = "0.0.1"

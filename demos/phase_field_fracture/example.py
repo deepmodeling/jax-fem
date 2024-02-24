@@ -156,7 +156,7 @@ class Elasticity(Problem):
             traction = (sigmas @ normals[None, None, :, None])[:, :, :, 0]
             return traction
     
-        boundary_inds = self.get_boundary_conditions_inds([location_fn])[0]
+        boundary_inds = self.fes[0].get_boundary_conditions_inds([location_fn])[0]
         face_shape_grads_physical, nanson_scale = self.fes[0].get_face_shape_grads(boundary_inds)
         # (num_selected_faces, 1, num_nodes, vec, 1) * (num_selected_faces, num_face_quads, num_nodes, 1, dim)
         u_grads_face = sol_u[self.fes[0].cells][boundary_inds[:, 0]][:, None, :, :, None] * face_shape_grads_physical[:, :, :, None, :]

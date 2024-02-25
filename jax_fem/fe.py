@@ -107,17 +107,12 @@ class FiniteElement:
         JxW : onp.ndarray
             (num_cells, num_quads)
         """
-        assert self.shape_grads_ref.shape == (self.num_quads, self.num_nodes,
-                                              self.dim)
-        physical_coos = onp.take(self.points, self.cells,
-                                 axis=0)  # (num_cells, num_nodes, dim)
+        assert self.shape_grads_ref.shape == (self.num_quads, self.num_nodes, self.dim)
+        physical_coos = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
         # (num_cells, num_quads, num_nodes, dim, dim) -> (num_cells, num_quads, 1, dim, dim)
         jacobian_dx_deta = onp.sum(physical_coos[:, None, :, :, None] *
-                                   self.shape_grads_ref[None, :, :, None, :],
-                                   axis=2,
-                                   keepdims=True)
-        jacobian_det = onp.linalg.det(
-            jacobian_dx_deta)[:, :, 0]  # (num_cells, num_quads)
+                                   self.shape_grads_ref[None, :, :, None, :], axis=2, keepdims=True)
+        jacobian_det = onp.linalg.det(jacobian_dx_deta)[:, :, 0]  # (num_cells, num_quads)
         jacobian_deta_dx = onp.linalg.inv(jacobian_dx_deta)
         # (1, num_quads, num_nodes, 1, dim) @ (num_cells, num_quads, 1, dim, dim)
         # (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, dim)
@@ -143,41 +138,25 @@ class FiniteElement:
         nanson_scale : onp.ndarray
             (num_selected_faces, num_face_quads)
         """
-        physical_coos = onp.take(self.points, self.cells,
-                                 axis=0)  # (num_cells, num_nodes, dim)
-        selected_coos = physical_coos[
-            boundary_inds[:, 0]]  # (num_selected_faces, num_nodes, dim)
-        selected_f_shape_grads_ref = self.face_shape_grads_ref[
-            boundary_inds[:,
-                          1]]  # (num_selected_faces, num_face_quads, num_nodes, dim)
-        selected_f_normals = self.face_normals[
-            boundary_inds[:, 1]]  # (num_selected_faces, dim)
+        physical_coos = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
+        selected_coos = physical_coos[boundary_inds[:, 0]]  # (num_selected_faces, num_nodes, dim)
+        selected_f_shape_grads_ref = self.face_shape_grads_ref[boundary_inds[:, 1]]  # (num_selected_faces, num_face_quads, num_nodes, dim)
+        selected_f_normals = self.face_normals[boundary_inds[:, 1]]  # (num_selected_faces, dim)
 
         # (num_selected_faces, 1, num_nodes, dim, 1) * (num_selected_faces, num_face_quads, num_nodes, 1, dim)
         # (num_selected_faces, num_face_quads, num_nodes, dim, dim) -> (num_selected_faces, num_face_quads, dim, dim)
-        jacobian_dx_deta = onp.sum(
-            selected_coos[:, None, :, :, None] *
-            selected_f_shape_grads_ref[:, :, :, None, :],
-            axis=2)
-        jacobian_det = onp.linalg.det(
-            jacobian_dx_deta)  # (num_selected_faces, num_face_quads)
-        jacobian_deta_dx = onp.linalg.inv(
-            jacobian_dx_deta)  # (num_selected_faces, num_face_quads, dim, dim)
+        jacobian_dx_deta = onp.sum(selected_coos[:, None, :, :, None] * selected_f_shape_grads_ref[:, :, :, None, :], axis=2)
+        jacobian_det = onp.linalg.det(jacobian_dx_deta)  # (num_selected_faces, num_face_quads)
+        jacobian_deta_dx = onp.linalg.inv(jacobian_dx_deta)  # (num_selected_faces, num_face_quads, dim, dim)
 
         # (1, num_face_quads, num_nodes, 1, dim) @ (num_selected_faces, num_face_quads, 1, dim, dim)
         # (num_selected_faces, num_face_quads, num_nodes, 1, dim) -> (num_selected_faces, num_face_quads, num_nodes, dim)
-        face_shape_grads_physical = (
-            selected_f_shape_grads_ref[:, :, :, None, :]
-            @ jacobian_deta_dx[:, :, None, :, :])[:, :, :, 0, :]
+        face_shape_grads_physical = (selected_f_shape_grads_ref[:, :, :, None, :] @ jacobian_deta_dx[:, :, None, :, :])[:, :, :, 0, :]
 
         # (num_selected_faces, 1, 1, dim) @ (num_selected_faces, num_face_quads, dim, dim)
         # (num_selected_faces, num_face_quads, 1, dim) -> (num_selected_faces, num_face_quads)
-        nanson_scale = onp.linalg.norm(
-            (selected_f_normals[:, None, None, :] @ jacobian_deta_dx)[:, :,
-                                                                      0, :],
-            axis=-1)
-        selected_weights = self.face_quad_weights[
-            boundary_inds[:, 1]]  # (num_selected_faces, num_face_quads)
+        nanson_scale = onp.linalg.norm((selected_f_normals[:, None, None, :] @ jacobian_deta_dx)[:, :, 0, :], axis=-1)
+        selected_weights = self.face_quad_weights[boundary_inds[:, 1]]  # (num_selected_faces, num_face_quads)
         nanson_scale = nanson_scale * jacobian_det * selected_weights
         return face_shape_grads_physical, nanson_scale
 
@@ -191,9 +170,7 @@ class FiniteElement:
         """
         physical_coos = onp.take(self.points, self.cells, axis=0)
         # (1, num_quads, num_nodes, 1) * (num_cells, 1, num_nodes, dim) -> (num_cells, num_quads, dim)
-        physical_quad_points = onp.sum(self.shape_vals[None, :, :, None] *
-                                       physical_coos[:, None, :, :],
-                                       axis=2)
+        physical_quad_points = onp.sum(self.shape_vals[None, :, :, None] * physical_coos[:, None, :, :], axis=2)
         return physical_quad_points
 
     def get_physical_surface_quad_points(self, boundary_inds):
@@ -210,16 +187,10 @@ class FiniteElement:
             (num_selected_faces, num_face_quads, dim)
         """
         physical_coos = onp.take(self.points, self.cells, axis=0)
-        selected_coos = physical_coos[
-            boundary_inds[:, 0]]  # (num_selected_faces, num_nodes, dim)
-        selected_face_shape_vals = self.face_shape_vals[
-            boundary_inds[:,
-                          1]]  # (num_selected_faces, num_face_quads, num_nodes)
+        selected_coos = physical_coos[boundary_inds[:, 0]]  # (num_selected_faces, num_nodes, dim)
+        selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]]  # (num_selected_faces, num_face_quads, num_nodes)
         # (num_selected_faces, num_face_quads, num_nodes, 1) * (num_selected_faces, 1, num_nodes, dim) -> (num_selected_faces, num_face_quads, dim)
-        physical_surface_quad_points = onp.sum(
-            selected_face_shape_vals[:, :, :, None] *
-            selected_coos[:, None, :, :],
-            axis=2)
+        physical_surface_quad_points = onp.sum(selected_face_shape_vals[:, :, :, None] * selected_coos[:, None, :, :], axis=2)
         return physical_surface_quad_points
 
     def Dirichlet_boundary_conditions(self, dirichlet_bc_info):
@@ -243,15 +214,11 @@ class FiniteElement:
         vals_list = []
         if dirichlet_bc_info is not None:
             location_fns, vecs, value_fns = dirichlet_bc_info
-            assert len(location_fns) == len(value_fns) and len(
-                value_fns) == len(vecs)
+            assert len(location_fns) == len(value_fns) and len(value_fns) == len(vecs)
             for i in range(len(location_fns)):
-                node_inds = onp.argwhere(
-                    jax.vmap(location_fns[i])(self.mesh.points)).reshape(-1)
+                node_inds = onp.argwhere(jax.vmap(location_fns[i])(self.mesh.points)).reshape(-1)
                 vec_inds = onp.ones_like(node_inds, dtype=onp.int32) * vecs[i]
-                values = jax.vmap(value_fns[i])(
-                    self.mesh.points[node_inds].reshape(-1,
-                                                        self.dim)).reshape(-1)
+                values = jax.vmap(value_fns[i])(self.mesh.points[node_inds].reshape(-1, self.dim)).reshape(-1)
                 node_inds_list.append(node_inds)
                 vec_inds_list.append(vec_inds)
                 vals_list.append(values)
@@ -265,8 +232,7 @@ class FiniteElement:
         ----------
         dirichlet_bc_info : [location_fns, vecs, value_fns]
         """
-        self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(
-            dirichlet_bc_info)
+        self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(dirichlet_bc_info)
 
     def periodic_boundary_conditions(self):
         """Not working
@@ -277,10 +243,8 @@ class FiniteElement:
         if self.periodic_bc_info is not None:
             location_fns_A, location_fns_B, mappings, vecs = self.periodic_bc_info
             for i in range(len(location_fns_A)):
-                node_inds_A = onp.argwhere(
-                    jax.vmap(location_fns_A[i])(self.mesh.points)).reshape(-1)
-                node_inds_B = onp.argwhere(
-                    jax.vmap(location_fns_B[i])(self.mesh.points)).reshape(-1)
+                node_inds_A = onp.argwhere(jax.vmap(location_fns_A[i])(self.mesh.points)).reshape(-1)
+                node_inds_B = onp.argwhere(jax.vmap(location_fns_B[i])(self.mesh.points)).reshape(-1)
                 points_set_A = self.mesh.points[node_inds_A]
                 points_set_B = self.mesh.points[node_inds_B]
 
@@ -288,17 +252,12 @@ class FiniteElement:
                 node_inds_B_ordered = []
                 for node_ind in node_inds_A:
                     point_A = self.mesh.points[node_ind]
-                    dist = onp.linalg.norm(mappings[i](point_A)[None, :] -
-                                           points_set_B,
-                                           axis=-1)
-                    node_ind_B_ordered = node_inds_B[onp.argwhere(
-                        dist < EPS)].reshape(-1)
+                    dist = onp.linalg.norm(mappings[i](point_A)[None, :] - points_set_B, axis=-1)
+                    node_ind_B_ordered = node_inds_B[onp.argwhere(dist < EPS)].reshape(-1)
                     node_inds_B_ordered.append(node_ind_B_ordered)
 
-                node_inds_B_ordered = onp.array(node_inds_B_ordered).reshape(
-                    -1)
-                vec_inds = onp.ones_like(node_inds_A,
-                                         dtype=onp.int32) * vecs[i]
+                node_inds_B_ordered = onp.array(node_inds_B_ordered).reshape(-1)
+                vec_inds = onp.ones_like(node_inds_A, dtype=onp.int32) * vecs[i]
 
                 p_node_inds_list_A.append(node_inds_A)
                 p_node_inds_list_B.append(node_inds_B_ordered)
@@ -337,8 +296,7 @@ class FiniteElement:
 
                 vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
                 boundary_flags = vvmap_on_boundary(cell_face_points)
-                boundary_inds = onp.argwhere(
-                    boundary_flags)  # (num_selected_faces, 2)
+                boundary_inds = onp.argwhere(boundary_flags)  # (num_selected_faces, 2)
                 boundary_inds_list.append(boundary_inds)
         return boundary_inds_list
 
@@ -358,9 +316,7 @@ class FiniteElement:
         # (num_total_nodes, vec) -> (num_cells, num_nodes, vec)
         cells_sol = sol[self.cells]
         # (num_cells, 1, num_nodes, vec) * (1, num_quads, num_nodes, 1) -> (num_cells, num_quads, num_nodes, vec) -> (num_cells, num_quads, vec)
-        u = np.sum(cells_sol[:, None, :, :] *
-                   self.shape_vals[None, :, :, None],
-                   axis=2)
+        u = np.sum(cells_sol[:, None, :, :] * self.shape_vals[None, :, :, None], axis=2)
         return u
 
     def convert_from_dof_to_face_quad(self, sol, boundary_inds):
@@ -400,9 +356,7 @@ class FiniteElement:
             (num_cells, num_quads, vec, dim)
         """
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim)
-        u_grads = np.take(sol, self.cells,
-                          axis=0)[:, None, :, :,
-                                  None] * self.shape_grads[:, :, :, None, :]
+        u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :]
         u_grads = np.sum(u_grads, axis=2)  # (num_cells, num_quads, vec, dim)
         return u_grads
 

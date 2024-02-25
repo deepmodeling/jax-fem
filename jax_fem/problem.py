@@ -20,7 +20,7 @@ class Problem:
     ele_type: str = 'HEX8'
     gauss_order: int = None
     dirichlet_bc_info: Optional[List[Union[List[Callable], List[int], List[Callable]]]] = None
-    location_fns: Any = None
+    location_fns: Optional[List[Callable]] = None
     additional_info: Any = ()
 
     def __post_init__(self):

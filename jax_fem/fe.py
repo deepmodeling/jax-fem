@@ -6,11 +6,10 @@ import time
 import functools
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, List, Union
-
 from jax_fem.common import timeit
 from jax_fem.generate_mesh import Mesh
 from jax_fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grads
-from jax_fem.autodiff_utils import jax_array_list_to_numpy_diff
+# from jax_fem.autodiff_utils import jax_array_list_to_numpy_diff
 from jax.config import config
 from jax_fem import logger
 

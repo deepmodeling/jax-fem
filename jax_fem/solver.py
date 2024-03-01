@@ -11,6 +11,9 @@ from petsc4py import PETSc
 
 from jax_fem import logger
 
+from jax.config import config
+config.update("jax_enable_x64", True)
+
 ################################################################################
 # PETSc linear solver or JAX linear solver
 

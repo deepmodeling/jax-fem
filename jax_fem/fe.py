@@ -15,7 +15,7 @@ from jax.config import config
 from jax_fem import logger
 
 
-config.update("jax_enable_x64", True)
+# config.update("jax_enable_x64", True)
 
 onp.set_printoptions(threshold=sys.maxsize,
                      linewidth=1000,

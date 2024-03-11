@@ -215,7 +215,15 @@ class FiniteElement:
             location_fns, vecs, value_fns = dirichlet_bc_info
             assert len(location_fns) == len(value_fns) and len(value_fns) == len(vecs)
             for i in range(len(location_fns)):
-                node_inds = onp.argwhere(jax.vmap(location_fns[i])(self.mesh.points)).reshape(-1)
+                num_args = location_fns[i].__code__.co_argcount
+                if num_args == 1:
+                    location_fn = lambda point, ind: location_fns[i](point)
+                elif num_args == 2:
+                    location_fn = location_fns[i]
+                else:
+                    raise ValueError(f"Wrong number of arguments for location_fn: must be 1 or 2, get {num_args}")
+
+                node_inds = onp.argwhere(jax.vmap(location_fn)(self.mesh.points, np.arange(self.num_total_nodes))).reshape(-1)
                 vec_inds = onp.ones_like(node_inds, dtype=onp.int32) * vecs[i]
                 values = jax.vmap(value_fns[i])(self.mesh.points[node_inds].reshape(-1, self.dim)).reshape(-1)
                 node_inds_list.append(node_inds)
@@ -271,8 +279,10 @@ class FiniteElement:
         Parameters
         ----------
         location_fns : List[Callable]
-            Callable: a function that inputs a point (ndarray) and returns if the point satisfies the location condition
+            Callable: a location function that inputs a point (ndarray) and returns if the point satisfies the location condition
                       e.g., lambda x: np.isclose(x[0], 0.)
+                      If this location function takes 2 arguments, then the first is point and the second is index.
+                      e.g., lambda x, ind: np.isclose(x[0], 0.) & np.isin(ind, np.array([1, 3, 10]))
 
         Returns
         -------
@@ -284,19 +294,28 @@ class FiniteElement:
         # TODO: assume this works for all variables, and return the same result
         cell_points = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
         cell_face_points = onp.take(cell_points, self.face_inds, axis=1)  # (num_cells, num_faces, num_face_nodes, dim)
+        cell_face_inds = onp.take(self.cells, self.face_inds, axis=1) # (num_cells, num_faces, num_face_nodes)
         boundary_inds_list = []
         if location_fns is not None:
             for i in range(len(location_fns)):
-                vmap_location_fn = jax.vmap(location_fns[i])
+                num_args = location_fns[i].__code__.co_argcount
+                if num_args == 1:
+                    location_fn = lambda point, ind: location_fns[i](point)
+                elif num_args == 2:
+                    location_fn = location_fns[i]
+                else:
+                    raise ValueError(f"Wrong number of arguments for location_fn: must be 1 or 2, get {num_args}")
 
-                def on_boundary(cell_points):
-                    boundary_flag = vmap_location_fn(cell_points)
+                vmap_location_fn = jax.vmap(location_fn)
+                def on_boundary(cell_points, cell_inds):
+                    boundary_flag = vmap_location_fn(cell_points, cell_inds)
                     return onp.all(boundary_flag)
 
                 vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
-                boundary_flags = vvmap_on_boundary(cell_face_points)
+                boundary_flags = vvmap_on_boundary(cell_face_points, cell_face_inds)
                 boundary_inds = onp.argwhere(boundary_flags)  # (num_selected_faces, 2)
                 boundary_inds_list.append(boundary_inds)
+
         return boundary_inds_list
 
     def convert_from_dof_to_quad(self, sol):

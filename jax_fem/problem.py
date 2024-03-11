@@ -218,7 +218,10 @@ class Problem:
 
         def get_kernel_fn_cell():
             def kernel(cell_sol_flat, physical_quad_points, cell_shape_grads, cell_JxW, cell_v_grads_JxW, *cell_internal_vars):
-
+                """
+                universal_kernel should be able to cover all situations (including mass_kernel and laplace_kernel).
+                mass_kernel and laplace_kernel are from legacy JAX-FEM. They can still be used, but not mandatory.
+                """
                 if hasattr(self, 'get_mass_map'):
                     mass_kernel = self.get_mass_kernel(self.get_mass_map())
                     mass_val = mass_kernel(cell_sol_flat, physical_quad_points, cell_JxW, *cell_internal_vars)
@@ -249,6 +252,10 @@ class Problem:
 
         def get_kernel_fn_face(ind):
             def kernel(cell_sol_flat, physical_surface_quad_points, face_shape_vals, face_shape_grads, face_nanson_scale, *cell_internal_vars_surface):
+                """
+                universal_kernel should be able to cover all situations (including surface_kernel).
+                surface_kernel is from legacy JAX-FEM. It can still be used, but not mandatory.
+                """
                 if hasattr(self, 'get_surface_maps'):
                     surface_kernel = self.get_surface_kernel(self.get_surface_maps()[ind])
                     surface_val = surface_kernel(cell_sol_flat, physical_surface_quad_points, face_shape_vals,
@@ -257,8 +264,8 @@ class Problem:
                     surface_val = 0.
 
                 if hasattr(self, 'get_universal_kernels_surface'):
-                    surface_kernel = self.get_universal_kernels_surface()[ind]
-                    universal_val = surface_kernel(cell_sol_flat, physical_surface_quad_points, face_shape_vals,
+                    universal_kernel = self.get_universal_kernels_surface()[ind]
+                    universal_val = universal_kernel(cell_sol_flat, physical_surface_quad_points, face_shape_vals,
                         face_shape_grads, face_nanson_scale, *cell_internal_vars_surface)
                 else:
                     universal_val = 0.

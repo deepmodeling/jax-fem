@@ -14,19 +14,21 @@ import logging
 logger.setLevel(logging.DEBUG)
 
 
-# Define constitutive relationship.
+# Material properties.
+E = 70e3
+nu = 0.3
+mu = E/(2.*(1.+nu))
+lmbda = E*nu/((1+nu)*(1-2*nu))
+            
+
+# Weak forms.
 class LinearElasticity(Problem):
     # The function 'get_tensor_map' overrides base class method. Generally, JAX-FEM 
     # solves -div(f(u_grad)) = b. Here, we have f(u_grad) = sigma.
     def get_tensor_map(self):
         def stress(u_grad):
-            E = 70e3
-            nu = 0.3
-            mu = E / (2. * (1. + nu))
-            lmbda = E * nu / ((1 + nu) * (1 - 2 * nu))
             epsilon = 0.5 * (u_grad + u_grad.T)
-            sigma = lmbda * np.trace(epsilon) * np.eye(
-                self.dim) + 2 * mu * epsilon
+            sigma = lmbda * np.trace(epsilon) * np.eye(self.dim) + 2*mu*epsilon
             return sigma
         return stress
 
@@ -84,7 +86,24 @@ problem = LinearElasticity(mesh,
                            dirichlet_bc_info=dirichlet_bc_info,
                            location_fns=location_fns)
 # Solve the defined problem.
-sol_list = solver(problem, linear=True, use_petsc=True)
+sol_list = solver(problem, use_petsc=True)
+
+
+# Postprocess for stress evaluations
+# (num_cells, num_quads, vec, dim)
+u_grad = problem.fes[0].sol_to_grad(sol_list[0])
+epsilon = 0.5 * (u_grad + u_grad.transpose(0,1,3,2))
+# (num_cells, bnum_quads, 1, 1) * (num_cells, num_quads, vec, dim)
+# -> (num_cells, num_quads, vec, dim)
+sigma = lmbda * np.trace(epsilon, axis1=2, axis2=3)[:,:,None,None] * np.eye(problem.dim) + 2*mu*epsilon
+# (num_cells, num_quads)
+cells_JxW = problem.JxW[:,0,:]
+# (num_cells, num_quads, vec, dim) * (num_cells, num_quads, 1, 1) ->
+# (num_cells, vec, dim) / (num_cells, 1, 1)
+#  --> (num_cells, vec, dim)
+sigma_average = np.sum(sigma * cells_JxW[:,:,None,None], axis=1) / np.sum(cells_JxW,axis=1)[:,None,None]
+
+
 # Store the solution to local file.
 vtk_path = os.path.join(data_dir, 'vtk/u.vtu')
 save_sol(problem.fes[0], sol_list[0], vtk_path)

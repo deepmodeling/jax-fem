@@ -222,6 +222,9 @@ class Problem:
                 universal_kernel should be able to cover all situations (including mass_kernel and laplace_kernel).
                 mass_kernel and laplace_kernel are from legacy JAX-FEM. They can still be used, but not mandatory.
                 """
+
+                # TODO: If there is no kernel map, returning 0. is not a good choice. 
+                # Return a zero array with proper shape will be better.
                 if hasattr(self, 'get_mass_map'):
                     mass_kernel = self.get_mass_kernel(self.get_mass_map())
                     mass_val = mass_kernel(cell_sol_flat, physical_quad_points, cell_JxW, *cell_internal_vars)

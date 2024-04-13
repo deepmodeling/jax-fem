@@ -366,7 +366,6 @@ class FiniteElement:
         ----------
         sol : np.DeviceArray
             (num_total_nodes, vec)
-        index : int
 
         Returns
         -------

@@ -101,7 +101,7 @@ cells_JxW = problem.JxW[:,0,:]
 # (num_cells, num_quads, vec, dim) * (num_cells, num_quads, 1, 1) ->
 # (num_cells, vec, dim) / (num_cells, 1, 1)
 #  --> (num_cells, vec, dim)
-sigma_average = np.sum(sigma * cells_JxW[:,:,None,None], axis=1) / np.sum(cells_JxW,axis=1)[:,None,None]
+sigma_average = np.sum(sigma * cells_JxW[:,:,None,None], axis=1) / np.sum(cells_JxW, axis=1)[:,None,None]
 
 
 # Store the solution to local file.

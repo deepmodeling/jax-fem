@@ -9,7 +9,7 @@ from functools import partial
 from jax_fem.problem import Problem
 
 
-from jax.config import config
+from jax import config
 config.update("jax_enable_x64", True)
 
 onp.set_printoptions(threshold=sys.maxsize, linewidth=1000, suppress=True, precision=10)

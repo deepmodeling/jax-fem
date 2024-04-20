@@ -16,7 +16,7 @@ from functools import partial
 import time
 import scipy
 
-from jax.config import config
+from jax import config
 config.update("jax_enable_x64", True)
 
 

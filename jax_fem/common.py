@@ -2,31 +2,10 @@ import jax
 import numpy as onp
 import os
 import meshio
-import json
-import yaml
-
 import time
 from functools import wraps
 
 from jax_fem import logger
-
-
-def json_parse(json_filepath):
-    with open(json_filepath) as f:
-        args = json.load(f)
-    json_formatted_str = json.dumps(args, indent=4)
-    print(json_formatted_str)
-    return args
-
-
-def yaml_parse(yaml_filepath):
-    with open(yaml_filepath) as f:
-        args = yaml.load(f, Loader=yaml.FullLoader)
-        print("YAML parameters:")
-        # TODO: These are just default parameters
-        print(yaml.dump(args, default_flow_style=False))
-        print("These are default parameters")
-    return args
 
 
 def box_mesh(Nx, Ny, Nz, domain_x, domain_y, domain_z):

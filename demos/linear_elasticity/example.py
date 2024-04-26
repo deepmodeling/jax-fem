@@ -108,7 +108,7 @@ sigma_average = np.sum(sigma * cells_JxW[:,:,None,None], axis=1) / np.sum(cells_
 s_dev = (sigma_average - 1/problem.dim * np.trace(sigma_average, axis1=1, axis2=2)[:,None,None]
                                        * np.eye(problem.dim)[None,:,:])
 # (num_cells,)
-vm_stress = np.sqrt(3./2.*np.sum(s_dev*s_dev,axis=(1,2)))
+vm_stress = np.sqrt(3./2.*np.sum(s_dev*s_dev, axis=(1,2)))
 
 # Store the solution to local file.
 vtk_path = os.path.join(data_dir, 'vtk/u.vtu')

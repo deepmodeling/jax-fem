@@ -101,7 +101,7 @@ def reorder_inds(inds, re_order):
     return new_inds
 
 
-def get_shape_vals_and_grads(ele_type, gauss_order):
+def get_shape_vals_and_grads(ele_type, gauss_order=None):
     """TODO: Add comments
 
     Returns
@@ -127,7 +127,7 @@ def get_shape_vals_and_grads(ele_type, gauss_order):
     return shape_values, shape_grads_ref, weights
 
 
-def get_face_shape_vals_and_grads(ele_type, gauss_order):
+def get_face_shape_vals_and_grads(ele_type, gauss_order=None):
     """TODO: Add comments
 
     Returns

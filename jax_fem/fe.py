@@ -290,8 +290,8 @@ class FiniteElement:
         """
         # TODO: assume this works for all variables, and return the same result
         cell_points = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
-        cell_face_points = onp.take(cell_points, self.face_inds, axis=1)  # (num_cells, num_faces, num_face_nodes, dim)
-        cell_face_inds = onp.take(self.cells, self.face_inds, axis=1) # (num_cells, num_faces, num_face_nodes)
+        cell_face_points = onp.take(cell_points, self.face_inds, axis=1)  # (num_cells, num_faces, num_face_vertices, dim)
+        cell_face_inds = onp.take(self.cells, self.face_inds, axis=1) # (num_cells, num_faces, num_face_vertices)
         boundary_inds_list = []
         if location_fns is not None:
             for i in range(len(location_fns)):

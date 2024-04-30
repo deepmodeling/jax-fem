@@ -78,11 +78,9 @@ class Problem:
         self.cells_flat = jax.vmap(lambda *x: jax.flatten_util.ravel_pytree(x)[0])(*self.cells_list) # (num_cells, num_nodes + ...)
 
         dumb_array_dof = [np.zeros((fe.num_nodes, fe.vec)) for fe in self.fes]
-        # TODO: dumb_array_dof is useless?
         dumb_array_node = [np.zeros(fe.num_nodes) for fe in self.fes]
-        # _, unflatten_fn_node = jax.flatten_util.ravel_pytree(dumb_array_node)
         _, self.unflatten_fn_dof = jax.flatten_util.ravel_pytree(dumb_array_dof)
-        
+        # _, unflatten_fn_node = jax.flatten_util.ravel_pytree(dumb_array_node)
         dumb_sol_list = [np.zeros((fe.num_total_nodes, fe.vec)) for fe in self.fes]
         dumb_dofs, self.unflatten_fn_sol_list = jax.flatten_util.ravel_pytree(dumb_sol_list)
         self.num_total_dofs_all_vars = len(dumb_dofs)

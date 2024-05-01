@@ -730,7 +730,8 @@ def ad_wrapper(problem, linear=False, use_petsc=False, petsc_options=None, use_p
     @jax.custom_vjp
     def fwd_pred(params):
         problem.set_params(params)
-        sol_list = solver(problem, linear=linear, use_petsc=use_petsc, petsc_options=petsc_options)
+        initial_guess = problem.initial_guess if hasattr(problem, 'initial_guess') else None
+        sol_list = solver(problem, linear=linear, initial_guess=initial_guess, use_petsc=use_petsc, petsc_options=petsc_options)
         return sol_list
 
     def f_fwd(params):

@@ -1,3 +1,7 @@
+"""
+Deprecated legacy cdoe.
+"""
+
 """Testing the ad_wrappers
 1. Check original ad_wrapper against finite differences
 2. Check new ad_wrapper_jvp against finite differences

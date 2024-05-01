@@ -1,3 +1,6 @@
+"""
+Explicit finite element solver
+"""
 import jax
 import jax.numpy as np
 import jax.flatten_util
@@ -9,13 +12,13 @@ import glob
 import scipy
 
 from jax_fem.generate_mesh import Mesh, get_meshio_cell_type, rectangle_mesh
-from jax_fem.utils import save_sol, modify_vtu_file, json_parse
+from jax_fem.utils import save_sol, json_parse
 from jax_fem.problem import Problem
 
 from jax import config
 config.update("jax_enable_x64", False)
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 onp.set_printoptions(threshold=sys.maxsize, linewidth=1000, suppress=True, precision=6)
 
@@ -24,31 +27,16 @@ input_dir = os.path.join(crt_dir, 'input')
 output_dir = os.path.join(crt_dir, 'output')
 vtk_dir = os.path.join(output_dir, 'vtk')
 os.makedirs(vtk_dir, exist_ok=True)
-png_dir = os.path.join(output_dir, 'png')
-os.makedirs(png_dir, exist_ok=True)
-gif_dir = os.path.join(output_dir, 'gif')
-os.makedirs(gif_dir, exist_ok=True)
 
 
 def safe_arctan2(y, x):
-    """When y and x are both zero, gradient needs special care.
-
-    For reference, analytical gradient of function np.arctan2(y, x) is
-    grad tan^-1 (y/x) = [-y/(x^2 + y^2), x/(x^2 + y^2)]
-
-    The following tests will produce 
-
-    x, y = 0., 0.
-    jax.jacrev(np.arctan2, argnums=0)(y, x) # nan
-    jax.jacfwd(np.arctan2, argnums=0)(y, x) # nan
-    jax.jacrev(safe_atan2, argnums=0)(y, x) # nan
-    jax.jacfwd(safe_atan2, argnums=0)(y, x) # 0. (This is what we want.)
-    """
     safe_theta = np.where((y == 0.) & (x == 0.), 0., np.arctan2(y, x))
     return safe_theta
  
 
 class SolidificationMass(Problem):
+    """If the problem structure is MU = F(U), this class handles the mass matrix M.
+    """
     def custom_init(self, params):
         self.fe_p = self.fes[0]
         self.fe_T = self.fes[1]
@@ -66,7 +54,6 @@ class SolidificationMass(Problem):
             cell_shape_grads: (num_quads, num_nodes + ..., dim)
             cell_JxW: (num_vars, num_quads)
             cell_v_grads_JxW: (num_quads, num_nodes + ..., 1, dim)
-            chi: (num_quads,)
             """
             cell_sol_list = self.unflatten_fn_dof(cell_sol_flat) 
             # cell_sol_p: (num_nodes_p, vec), cell_sol_T: (num_nodes, vec)
@@ -102,8 +89,9 @@ class SolidificationMass(Problem):
         return universal_kernel
 
 
-
 class SolidificationForce(Problem):
+    """If the problem structure is MU = F(U), this class handles the force vector F(U).
+    """
     def custom_init(self, params):
         self.fe_p = self.fes[0]
         self.fe_T = self.fes[1]
@@ -272,7 +260,7 @@ def simulation():
 
     nIter = int(t_OFF/dt)
     for i in range(nIter + 1):
-        print(f"\nStep {i + 1} in {nIter}, time = {(i + 1)*dt}")
+        print(f"\nStep {i + 1} in {nIter + 1}, time = {(i + 1)*dt}")
         chi = jax.random.uniform(jax.random.PRNGKey(0), shape=(problem_force.fe_p.num_cells,)) - 0.5
         sol_list = explicit_euler(sol_list, chi)
 
@@ -282,4 +270,3 @@ def simulation():
 
 if __name__ == '__main__':
     simulation()
-

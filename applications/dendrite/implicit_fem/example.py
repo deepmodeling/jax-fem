@@ -1,3 +1,6 @@
+"""
+Implicit finite element solver
+"""
 import jax
 import jax.numpy as np
 import jax.flatten_util
@@ -24,10 +27,6 @@ input_dir = os.path.join(crt_dir, 'input')
 output_dir = os.path.join(crt_dir, 'output')
 vtk_dir = os.path.join(output_dir, 'vtk')
 os.makedirs(vtk_dir, exist_ok=True)
-png_dir = os.path.join(output_dir, 'png')
-os.makedirs(png_dir, exist_ok=True)
-gif_dir = os.path.join(output_dir, 'gif')
-os.makedirs(gif_dir, exist_ok=True)
 
 
 def safe_arctan2(y, x):
@@ -42,7 +41,7 @@ def safe_arctan2(y, x):
     jax.jacrev(np.arctan2, argnums=0)(y, x) # nan
     jax.jacfwd(np.arctan2, argnums=0)(y, x) # nan
     jax.jacrev(safe_atan2, argnums=0)(y, x) # nan
-    jax.jacfwd(safe_atan2, argnums=0)(y, x) # 0. (This is what we want.)
+    jax.jacfwd(safe_atan2, argnums=0)(y, x) # 0. (This is what we want. Used by jax_fem/problem.py)
     """
     safe_theta = np.where((y == 0.) & (x == 0.), 0., np.arctan2(y, x))
     return safe_theta
@@ -81,6 +80,11 @@ class Solidification(Problem):
             p_old: (num_quads,)
             T_old: (num_quads,)
             chi: (num_quads,)
+
+            You may define fully implicit weak form, but that doesn't converge.
+            Therefore, some of the terms are changed to explicit for good reason.
+            In summary, only the "diffusion" like term is kept implict, and other terms are explicit.
+            The entire weak form will be linear.
             """
             cell_sol_list = self.unflatten_fn_dof(cell_sol_flat) 
             # cell_sol_p: (num_nodes_p, vec), cell_sol_T: (num_nodes, vec)
@@ -93,7 +97,7 @@ class Solidification(Problem):
             cell_v_grads_JxW_p, cell_v_grads_JxW_T = cell_v_grads_JxW_list
             cell_JxW_p, cell_JxW_T = cell_JxW[0], cell_JxW[1]
 
-            # Handles the term `inner(..., grad(q)*dx`
+            # Handles the term `inner(..., grad(q)*dx` [Hybrid implicit/explicit]
             # (1, num_nodes_p, vec_p, 1) * (num_quads, num_nodes_p, 1, dim) -> (num_quads, num_nodes_p, vec_p, dim)
             p_grads = np.sum(cell_sol_p[None, :, :, None] * cell_shape_grads_p[:, :, None, :], axis=1) # (num_quads, vec_p, dim)
             p_grads_old = np.sum(cell_sol_p_old[None, :, :, None] * cell_shape_grads_p[:, :, None, :], axis=1) # (num_quads, vec_p, dim)
@@ -101,6 +105,7 @@ class Solidification(Problem):
             p_grads_y = p_grads[:, 0, 1] # (num_quads,)
             p_grads_x_old = p_grads_old[:, 0, 0] # (num_quads,)
             p_grads_y_old = p_grads_old[:, 0, 1] # (num_quads,)
+            # The coefficient before the "diffusion" term is explicit, but the "diffusion" term itself is implicit
             thetas = vmap_safe_arctan2(p_grads_y_old, p_grads_x_old) # (num_quads,)
             epsilons = vmap_eps_fn(thetas) # (num_quads,)
             epsilons_p = vmap_eps_grad(thetas) # (num_quads,)
@@ -111,45 +116,43 @@ class Solidification(Problem):
             # (num_quads, num_nodes_p, vec_p, dim) -> (num_nodes_p, vec_p)
             val1 = np.sum(tmp1[:, None, :, :] * cell_v_grads_JxW_p, axis=(0, -1))
 
-            # Handles the term `-p*(1-p)*(p-1/2+m)*q*dx`
+            # Handles the term `-p*(1-p)*(p-1/2+m)*q*dx` [Explicit]
             # (1, num_nodes_p, vec_p) * (num_quads, num_nodes_p, 1) -> (num_quads, num_nodes_p, vec_p) -> (num_quads, vec_p/vec_T)
             p = np.sum(cell_sol_p[None, :, :] * self.fe_p.shape_vals[:, :, None], axis=1)[:, 0] # (num_quads,)
             T = np.sum(cell_sol_T[None, :, :] * self.fe_T.shape_vals[:, :, None], axis=1)[:, 0] # (num_quads,)
             alpha = self.params['alpha']
             gamma = self.params['gamma']
             T_eq = self.params['T_eq']
-            m = alpha / np.pi * np.arctan(gamma*(T_eq - T)) # (num_quads,)
-            tmp2 = -p * (1 - p) * (p - 0.5 + m) # (num_quads,)
+            m = alpha / np.pi * np.arctan(gamma*(T_eq - T_old)) # (num_quads,)
+            tmp2 = -p_old * (1 - p_old) * (p_old - 0.5 + m) # (num_quads,)
             # (num_quads, 1, vec_p) * (num_quads, num_nodes_p, 1) * (num_quads, 1, 1) -> (num_nodes_p, vec_p)
             val2 = np.sum(tmp2[:, None, None] * self.fe_p.shape_vals[:, :, None] * cell_JxW_p[:, None, None], axis=0)
 
-            # Handles the term `tau*(p - p_old)*q*dx`
+            # Handles the term `tau*(p - p_old)*q*dx` [Left hand side]
             dt = self.params['dt']
             tau = self.params['tau']
             tmp3 = tau*(p - p_old)/dt # (num_quads,)
             # (num_quads, 1, vec_p) * (num_quads, num_nodes_p, 1) * (num_quads, 1, 1) -> (num_nodes_p, vec_p)
             val3 = np.sum(tmp3[:, None, None] * self.fe_p.shape_vals[:, :, None] * cell_JxW_p[:, None, None], axis=0)
 
-            # Handles the term `-a*p*(1-p)*chi*q*dx`
+            # Handles the term `-a*p*(1-p)*chi*q*dx` [Explicit]
             a = self.params['a']
-            tmp4 = -a * p * (1 - p) * chi # (num_quads,)
+            tmp4 = -a * p_old * (1 - p_old) * chi # (num_quads,)
             # (num_quads, 1, vec_p) * (num_quads, num_nodes_p, 1) * (num_quads, 1, 1) -> (num_nodes_p, vec_p)
             val4 = np.sum(tmp4[:, None, None] * self.fe_p.shape_vals[:, :, None] * cell_JxW_p[:, None, None], axis=0)
 
-            # Handles the term `inner(grad(T), grad(S)*dx`
+            # Handles the term `inner(grad(T), grad(S)*dx` [Implicit]
             # (1, num_nodes_T, vec_T, 1) * (num_quads, num_nodes_T, 1, dim) -> (num_quads, num_nodes_T, vec_T, dim)
-            T_grads = cell_sol_T[None, :, :, None] * cell_shape_grads_T[:, :, None, :]     
-            T_grads = np.sum(T_grads, axis=1)  # (num_quads, vec_T, dim)
-            # (num_quads, 1, vec_T, dim) * (num_quads, num_nodes_T, 1, dim)
-            # (num_quads, num_nodes_T, vec_T, dim) -> (num_nodes_T, vec_T)
+            T_grads = np.sum(cell_sol_T[None, :, :, None] * cell_shape_grads_T[:, :, None, :], axis=1) # (num_quads, vec_T, dim)   
+            # (num_quads, 1, vec_T, dim) * (num_quads, num_nodes_T, 1, dim) -> (num_quads, num_nodes_T, vec_T, dim) -> (num_nodes_T, vec_T)
             val5 = np.sum(T_grads[:, None, :, :] * cell_v_grads_JxW_T, axis=(0, -1))
 
-            # Handles the term `(T - T_old)*S*dx`
+            # Handles the term `(T - T_old)*S*dx` [Left hand side]
             tmp6 = (T - T_old)/dt # (num_quads,)
             # (num_quads, 1, vec_T) * (num_quads, num_nodes_T, 1) * (num_quads, 1, 1) -> (num_nodes_T, vec_T)
             val6 = np.sum(tmp6[:, None, None] * self.fe_T.shape_vals[:, :, None] * cell_JxW_T[:, None, None], axis=0)
 
-            # Handles the term `-K*(p - p_old)*S*dx`
+            # Handles the term `-K*(p - p_old)*S*dx` [Left hand side]
             K = self.params['K']
             tmp7 = -K*(p - p_old)/dt # (num_quads,)
             # (num_quads, 1, vec_T) * (num_quads, num_nodes_T, 1) * (num_quads, 1, 1) -> (num_nodes_T, vec_T)
@@ -208,9 +211,8 @@ def simulation():
     save_sols(problem, sol_list, 0)
 
     nIter = int(t_OFF/dt)
-    # nIter = 3
     for i in range(nIter + 1):
-        print(f"\nStep {i + 1} in {nIter}, time = {(i + 1)*dt}")
+        print(f"\nStep {i + 1} in {nIter + 1}, time = {(i + 1)*dt}")
         chi = jax.random.uniform(jax.random.PRNGKey(0), shape=(problem.fe_p.num_cells,)) - 0.5
         problem.set_params([sol_list[0], sol_list[1], chi])
         sol_list = solver(problem, use_petsc=True, initial_guess=sol_list)
@@ -221,4 +223,3 @@ def simulation():
 
 if __name__ == '__main__':
     simulation()
-

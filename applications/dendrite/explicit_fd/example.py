@@ -1,7 +1,7 @@
 """
-Copied from https://drzgan.github.io/Python_CFD/Konayashi_1993-main/jax_version/kobayashi_aniso_jax_ZGAN-2.html
+Explicit finite difference solver
+Copied and modified from https://drzgan.github.io/Python_CFD/Konayashi_1993-main/jax_version/kobayashi_aniso_jax_ZGAN-2.html
 """
-
 import os
 import jax
 import jax.numpy as np
@@ -168,9 +168,7 @@ def simulation():
             plt.colorbar()
 
             plt.savefig(os.path.join(png_dir, f'{case_name}_{t:f}.png'))
-
-            # plt.savefig(case_path + os.sep + "%s_%f.png" % (case_name, t))  
-            #plt.show()
+            # plt.show()
             plt.close()
             
         t += dt

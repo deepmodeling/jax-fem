@@ -3,12 +3,12 @@ The main module for solving P2D problems with JAX-FEM
 
 The macro variables (p,c,s,j) are coupled and solved at the same time step.
 
-Last modified: 21/03/2024
+Last modified: 08/05/2024
 
 '''
 
 # JAX-FEM packages
-from jax_fem.solver import solver
+from jax_fem.solver import solver,ad_wrapper
 from jax_fem.generate_mesh import Mesh
 from jax_fem.problem import Problem
 from jax_fem import logger
@@ -22,76 +22,48 @@ import numpy as onp
 import jax
 import jax.numpy as np
 
+from jax import config
+config.update("jax_enable_x64", True)
+
 
 # Custom modules for P2D problems
+from prep import prep_mesh_macro,assign_init_sol
 from para import param_sets_macro, param_sets_micro
 from micro import prep_micro_problem, res_node_flux, solve_micro_problem
-from matlab_fns import assign_init_sol,calcKappa_Deriv
-from utils import plot_macro_micro_mesh, plot_micro_verify_data, postprocess
+from matlab_fns import calcKappa_Deriv
+from utils import output_sol
 
 
 # Data dir
 input_dir = os.path.join(os.path.dirname(__file__), 'input')
 output_dir = os.path.join(os.path.dirname(__file__), 'output')
 
+import logging
+# logger.setLevel(logging.WARNING)
 
 start_time = time.time()
 
-# ==================== Initialization ====================
-
-# time
-t_start = 0.0                              # start time
-t_end = 10.0                               # end time
-dt = 1.0                                   # time step size
-num_t = int((t_end-t_start)/dt)            # total time = num_t * dt
-timesteps = num_t + 1                      # initial + time evolution
+t_sta = 0.0                    
+t_end = 10.0                    
+dt = 1.0                                   
+steps_time = int((t_end-t_sta)/dt)            
+# steps_total = steps_time + 1
 
 # parameters
 params_macro = param_sets_macro(dt)
 params_micro = param_sets_micro(dt, params_macro.r_an, params_macro.r_ca)
 
-# mesh
-macro_mesh = scio.loadmat(os.path.join(input_dir, f'mesh/macro_mesh.mat')) 
-micro_mesh = scio.loadmat(os.path.join(input_dir, f'mesh/micro_mesh.mat')) 
-# plot_macro_micro_mesh(macro_mesh, micro_mesh, output_dir)
+# mesh data from MATLAB
+mat_mesh_macro = scio.loadmat(os.path.join(input_dir, f'mesh/macro_mesh.mat')) 
+mat_mesh_micro = scio.loadmat(os.path.join(input_dir, f'mesh/micro_mesh.mat')) 
+# from utils import plot_macro_micro_mesh
+# plot_macro_micro_mesh(mat_mesh_macro, mat_mesh_micro, output_dir)
 
-# micro problem-related variables sets
-micro_problem = prep_micro_problem(micro_mesh, params_micro, dt)
+# mesh data for jax-fem (macro)
+mesh_macro = prep_mesh_macro(mat_mesh_macro)
+# problem data for jax-fem (micro)
+problem_micro = prep_micro_problem(mat_mesh_micro, params_micro, dt, 'matlab')
 
-# nodes
-nnode_macro = int(macro_mesh['nnode'])
-nodes_anode = (onp.unique(macro_mesh['connect_anode'])-1).astype(onp.int32)
-nodes_cathode = (onp.unique(macro_mesh['connect_cathode'])-1).astype(onp.int32)
-
-nodes_separator = (onp.unique(macro_mesh['connect_separator'])-1).astype(onp.int32)
-bound_anright = (onp.unique(macro_mesh['bound_anright'])-1).astype(onp.int32)
-ca_left = (onp.unique(macro_mesh['bound_caleft'])-1).astype(onp.int32)
-nodes_separator = onp.setdiff1d(nodes_separator, onp.union1d(bound_anright, ca_left))
-
-# dofs
-dofs_p = onp.linspace(0, nnode_macro-1, nnode_macro, dtype=onp.int32)
-dofs_p_an = nodes_anode
-dofs_p_ca = nodes_cathode
-
-dofs_c = dofs_p + nnode_macro
-dofs_c_an = nnode_macro + nodes_anode
-dofs_c_ca = nnode_macro + nodes_cathode
-
-# following dofs (s, j) are defined in all domain but only meaningful in electrode
-
-dofs_s = dofs_c + nnode_macro 
-dofs_s_an = 2*nnode_macro + nodes_anode
-dofs_s_ca = 2*nnode_macro + nodes_cathode
-
-dofs_pcs = onp.hstack((dofs_p,dofs_c,dofs_s))
-
-dofs_j = dofs_s + nnode_macro
-dofs_j_an = 3*nnode_macro + nodes_anode
-dofs_j_ca = 3*nnode_macro + nodes_cathode
-
-
-
-# ==================== The weak form ====================
 
 class macro_P2D(Problem):
     def custom_init(self):
@@ -102,7 +74,7 @@ class macro_P2D(Problem):
         
     def get_universal_kernel(self):
         def universal_kernel(cell_sol_flat, x, cell_shape_grads, cell_JxW, cell_v_grads_JxW, 
-                             cell_c_quad_old, cell_sol_micro_old, cell_tag, cell_nodes_tag, cell_nodes_sum):
+                             cell_theta, cell_c_quad_old, cell_sol_micro_old, cell_tag, cell_nodes_tag, cell_nodes_sum):
             
             # ---- Split the input variables ----
             
@@ -151,8 +123,8 @@ class macro_P2D(Problem):
             sour_ac = (lag1*params_macro.sour_an + lag2*params_macro.sour_ca)
             
             svr = 3 * eps_inc / r
-            ratio_mat = (eps_mat)**(params_macro.alpha)
-            ratio_inc = (eps_inc)**(params_macro.alpha)
+            ratio_mat = (eps_mat)**(params_macro.alpha * cell_theta)
+            ratio_inc = (eps_inc)**(params_macro.alpha * cell_theta)
             
             
             # ---- Residual of potential in electrolyte  ----
@@ -247,7 +219,7 @@ class macro_P2D(Problem):
             # cell_sol_micro_old (num_nodes, num_total_nodes_micro)
             # cell_tag (num_nodes,)
         
-            Rj = res_node_flux(cell_sol_list, cell_sol_micro_old, cell_nodes_tag, micro_problem, params_macro, params_micro)
+            Rj = res_node_flux(cell_sol_list, cell_sol_micro_old, cell_nodes_tag, problem_micro, params_macro, params_micro)
             
             # Rj = ((lag1+lag2)*Rj + lag3*np.zeros((len(cell_sol_j),1)))/cell_nodes_sum
             
@@ -301,265 +273,161 @@ class macro_P2D(Problem):
         """
         Input variables to the kernel
         """
-        sol_c_old, sol_micro_old, cells_tag, cells_nodes_tag, cells_nodes_sum = params
+        cells_theta, sol_macro_old, sol_c_old, sol_micro_old, cells_tag, cells_nodes_tag, cells_nodes_sum = params
+        
+        self.initial_guess = sol_macro_old
         
         # (num_cells, num_quads)
         sol_c_old = self.fe_c.convert_from_dof_to_quad(sol_c_old.reshape((-1,1)))[:,:,0]
         # (num_cells, num_nodes, num_micro_nodes)
         sol_micro_old = sol_micro_old[self.cells_list[0]]
         
-        self.internal_vars = [sol_c_old, sol_micro_old, cells_tag, cells_nodes_tag, cells_nodes_sum]
+        self.internal_vars = [cells_theta, sol_c_old, sol_micro_old, cells_tag, cells_nodes_tag, cells_nodes_sum]
 
 
-
-
-# ==================== Some helpful functions ====================
-
-def get_macro_mesh(macro_mesh, ele_type):
-    
-    # mesh
-    points = onp.array( macro_mesh['coords'], dtype=onp.float64)
-    
-    cells_anode = onp.array(macro_mesh['connect_anode']-1, dtype=onp.int32)
-    cells_separator = onp.array(macro_mesh['connect_separator']-1, dtype=onp.int32)
-    cells_cathode = onp.array(macro_mesh['connect_cathode']-1, dtype=onp.int32)
-    cells = onp.vstack((cells_anode,cells_separator,cells_cathode))
-    
-    mesh = Mesh(points, cells, ele_type=ele_type)
-    
-    # cells tag
-    cells_tag = onp.zeros((len(cells),1))
-    cells_tag[0:len(cells_anode)] = 1
-    cells_tag[-len(cells_cathode):] = 2
-    
-    # nodes tag
-    nodes_tag = onp.zeros((len(points)))
-    nodes_tag[nodes_anode] = 1
-    nodes_tag[nodes_cathode] = 2
-    
-    # cell nodes tag
-    cells_nodes_tag = onp.take(nodes_tag, cells)
-    
-    # repeat num of each node
-    nodes,nodes_sum = onp.unique(cells,return_counts=True)
-    cells_nodes_sum = onp.take(nodes_sum,cells)[:,:,None]
-    
-    return mesh, cells_tag, cells_nodes_tag, cells_nodes_sum, nodes_tag
-
-
-def modify_init_sol(sol_macro_time, sol_micro_time, itime):
-    '''
-    This function copy the solution in MATLAB to replace the initial solution.
-    
-    '''
-    if itime>=0:
-        # itime = 1 # the end time step to be copied
-        
-        # macro
-        macro_ref = scio.loadmat(os.path.join(input_dir, f'data/sol_macro.mat'))
-        sol_macro_time[dofs_p,0:itime+1] = macro_ref['sol_p'][:,0:itime+1]
-        sol_macro_time[dofs_c,0:itime+1] = macro_ref['sol_c'][:,0:itime+1] 
-        sol_macro_time[dofs_s_an,0:itime+1] = macro_ref['sol_s_an'][:,0:itime+1] 
-        sol_macro_time[dofs_s_ca,0:itime+1] = macro_ref['sol_s_ca'][:,0:itime+1]
-        sol_macro_time[dofs_j_an,0:itime+1] = macro_ref['sol_j_an'][:,0:itime+1] 
-        sol_macro_time[dofs_j_ca,0:itime+1] = macro_ref['sol_j_ca'][:,0:itime+1] 
-        
-        # micro
-        micro_ref = scio.loadmat(os.path.join(input_dir, f'data/sol_micro.mat')) 
-        sol_micro_time[nodes_anode,:,0:itime+1] = ((micro_ref['sol_micro_an']).transpose(2,0,1))[:,:,0:itime+1] 
-        sol_micro_time[nodes_cathode,:,0:itime+1] = ((micro_ref['sol_micro_ca']).transpose(2,0,1))[:,:,0:itime+1] 
-    
-    return sol_macro_time, sol_micro_time
-
-
-def verify_micro_problem(micro_problem, nodes_tag, sol_macro_time, sol_micro_time):
-    '''
-    To verify the micro problems
-    '''
-    itime = 2  # time step to verify
-    
-    from micro import Bulter_Volmer
-    from micro import solve_micro_problem
-    
-    css = onp.ones((nnode_macro,1))
-    j = onp.ones((nnode_macro,1))
-    
-    for ind, node_sets in enumerate([nodes_anode,nodes_separator,nodes_cathode]):
-        for inode in node_sets:
-            node_flux = sol_macro_time[dofs_j[inode],itime-1]
-            sol_micro_old = sol_micro_time[inode,:,itime-1].reshape(-1,1)
-            sol_micro = solve_micro_problem(micro_problem, params_micro, nodes_tag[inode], sol_micro_old, node_flux)
-            css[inode] = sol_micro[micro_problem.bound_right]
-            sol_p = sol_macro_time[dofs_p[inode],itime-1]
-            sol_c = sol_macro_time[dofs_c[inode],itime-1]
-            sol_s = sol_macro_time[dofs_s[inode],itime-1]
-            j[inode] = Bulter_Volmer(sol_p, sol_c, sol_s, css[inode], nodes_tag[inode], params_macro)
-    
-    # data obtained from MATLAB
-    node_flux_ref = scio.loadmat(os.path.join(input_dir, f'data/sol_j_t2.mat'))
-    
-    j_mat = onp.zeros((nnode_macro,1))
-    j_mat[nodes_anode] = node_flux_ref['j0_an'] * node_flux_ref['BV_an']
-    j_mat[nodes_cathode] = node_flux_ref['j0_ca'] * node_flux_ref['BV_ca']
-    
-    css_mat = onp.zeros((nnode_macro,1))
-    css_mat[nodes_anode] = node_flux_ref['css_an']
-    css_mat[nodes_cathode] = node_flux_ref['css_ca']
-    
-    plot_micro_verify_data(j,j_mat,css,css_mat,output_dir)
-    
-    return None
-
-
-def switch_A_sp_jax(micro_problem, jax_flag):
-    
-    if jax_flag:
-        micro_problem.A_an_inv = micro_problem.A_an_inv_jax
-        micro_problem.A_ca_inv = micro_problem.A_ca_inv_jax
-    else:
-        micro_problem.A_an_inv = micro_problem.A_an_inv_sp
-        micro_problem.A_ca_inv = micro_problem.A_ca_inv_sp
-    
-    return micro_problem
-
-# ==================== The main function to solve P2D problems ====================
-
-
-def macro_problem():
+def battery():
     
     '''
     Solve the macro P2D problem (phi_e, c_e, phi_s ,j)
     '''
     
-    # ---- mesh object for JAX-FEM ----
-    
-    # macro
+    # mesh for JAX-FEM
     ele_type = 'QUAD4'
-    mesh, cells_tag, cells_nodes_tag, cells_nodes_sum, nodes_tag = get_macro_mesh(macro_mesh, ele_type)
+    jax_mesh = Mesh(mesh_macro.points, mesh_macro.cells, ele_type=ele_type)
+    
+    cells_tag, cells_nodes_tag, cells_nodes_sum = mesh_macro.cells_vars
+    nodes_tag = mesh_macro.nodes_vars[0]
+    
+    cells_nodes_sum = cells_nodes_sum.astype(onp.float64)
     
     
-    # ---- boundary conditions ----
+    dofs_p, dofs_c, dofs_s, dofs_j = mesh_macro.dofs
     
+    # boundary conditions
     # only for the electrode potential (s) 
+    x_max = (jax_mesh.points).max(0)[0] # 225.
+    x_min = (jax_mesh.points).min(0)[0] # 0.
     
-    min_x = np.min(mesh.points[:,0]) # x = 0.
-    max_x = np.max(mesh.points[:,0]) # x = 225.
-    
-    # x = 100.
-    # anright_x = onp.unique(mesh.points[(macro_mesh['bound_anright']-1).astype(onp.int32),0]) 
-    # x = 125.
-    # caleft_x = onp.unique(mesh.points[(macro_mesh['bound_caleft']-1).astype(onp.int32),0])   
-    anright_x = 100.
-    caleft_x = 125.
+    x_anright = (jax_mesh.points[mesh_macro.nodes_bound_anright,:]).max(0)[0] # 100.
+    x_caleft = (jax_mesh.points[mesh_macro.nodes_bound_caleft,:]).max(0)[0]   # 125.
     
     def left(point):
-        return np.isclose(point[0], min_x, atol=1e-5)
+        return np.isclose(point[0], x_min, atol=1e-5)
     
     def right(point):
-        return np.isclose(point[0], max_x, atol=1e-5)
+        return np.isclose(point[0], x_max, atol=1e-5)
     
     def separator(point):
-        return (point[0] > anright_x) & (point[0] < caleft_x)
-    
-    def dirichlet_s_location(point):
-        return np.logical_or(left(point), separator(point))
+        return (point[0] > x_anright) & (point[0] < x_caleft)
 
     def zero_dirichlet(point):
         return 0.
 
-    dirichlet_bc_info_s = [[dirichlet_s_location], [0], [zero_dirichlet]]
+    dirichlet_bc_info_s = [[left, separator], [0,0], [zero_dirichlet]*2]
     dirichlet_bc_info_j = [[separator], [0], [zero_dirichlet]]
     
     location_fns_s = [right]
     
     
-    # ---- macro problem ----
-    
     # macro problem for (p,c,s,j)
-    problem_macro = macro_P2D([mesh]*4, vec = [1]*4, dim=2, 
+    problem_macro = macro_P2D([jax_mesh]*4, vec = [1]*4, dim=2, 
                         ele_type = [ele_type]*4, gauss_order=[2]*4,
                         dirichlet_bc_info = [None,None,dirichlet_bc_info_s,dirichlet_bc_info_j],
                         location_fns = location_fns_s)
     
     
-    # ---- initial sol ----
-    
-    # macro: (4*nnode_macro, timesteps)
-    # micro: (nnode_macro, nnode_micro, timesteps)
-    
-    sol_macro_time, sol_micro_time = assign_init_sol(macro_mesh, micro_mesh, timesteps, params_macro)
-    
-    mod_itime = 0
-    sol_macro_time, sol_micro_time = modify_init_sol(sol_macro_time, sol_micro_time, mod_itime)
-    
-    
-    # verify_micro_problem(micro_problem, nodes_tag, sol_macro_time, sol_micro_time)
-    
-    
-    # ---- time evolution ----
-    
-    for itime in range(1, timesteps): # time steps [1,...,10]
-    
-        logger.debug(f'time step {itime}')
+    def fwd_pred_seq(cells_theta):
         
-        switch_A_sp_jax(micro_problem, True)
+        # sol_macro_time: (4*nnode_macro, timesteps)
+        # sol_micro_time: (nnode_macro, nnode_micro, timesteps)
         
-        # ---- preparations ----
+        logger.debug(f"\nGet the solution for the first time step...")
+        copy_time = -1
+        sol_macro_time, sol_micro_time = assign_init_sol(mesh_macro, problem_micro, params_macro, 
+                                                         steps_total, input_dir, copy_time)
         
-        # sol at the previous step
-        if itime>0:
+        options = {'ksp_type': 'bcgsl', 'pc_type': 'jacobi'}
+        fwd_pred = ad_wrapper(problem_macro, use_petsc=True, petsc_options=options,
+                                             use_petsc_adjoint=True, petsc_options_adjoint=options)
+            
+        for itime in range(1, steps_total): # time steps [1,...,10]
+        
+            logger.debug(f"\nStep {itime} in {steps_total-1}")
+            
             sol_macro_old = sol_macro_time[:,itime-1]
-            sol_micro_old = sol_micro_time[:,:,itime-1]
-        else:
-            sol_macro_old = sol_macro_time[:,itime]
-            sol_micro_old = sol_micro_time[:,:,itime]
-        # sol_crt = sol_old   
-        initial_guess = sol_macro_old
-        # c_crt - c_old = 0
-        sol_c_old = sol_macro_old[dofs_c]
-        # set parameters
-        problem_macro.set_params([sol_c_old, sol_micro_old, cells_tag, cells_nodes_tag, cells_nodes_sum])
+            sol_micro_old = sol_micro_time[:,:,itime-1]   
+            sol_c_old = sol_macro_old[dofs_c] # c_crt - c_old = 0
+            
+            sol_p, sol_c, sol_s, sol_j = fwd_pred([cells_theta, sol_macro_old, sol_c_old, sol_micro_old, 
+                                                   cells_tag, cells_nodes_tag, cells_nodes_sum])
+            
+            sol_macro_time = sol_macro_time.at[dofs_p,itime].set(sol_p.reshape(-1))
+            sol_macro_time = sol_macro_time.at[dofs_c,itime].set(sol_c.reshape(-1))
+            sol_macro_time = sol_macro_time.at[dofs_s,itime].set(sol_s.reshape(-1))
+            sol_macro_time = sol_macro_time.at[dofs_j,itime].set(sol_j.reshape(-1))
+
+            sol = np.vstack((sol_p, sol_c, sol_s, sol_j))
+            
+            logger.debug(f"\nUpdate micro solution - need to solve the micro problem again...")
+            for ind, node_sets in enumerate([mesh_macro.nodes_anode,mesh_macro.nodes_cathode]):
+                for inode in node_sets:
+                    node_flux = sol_macro_time[dofs_j[inode],itime]
+                    sol_micro_old = sol_micro_time[inode,:,itime-1].reshape(-1,1)
+                    sol_micro = solve_micro_problem(problem_micro, params_micro, nodes_tag[inode], sol_micro_old, node_flux).reshape(-1)
+                    sol_micro_time = sol_micro_time.at[inode,:,itime].set(sol_micro)
         
+        if forward_flag:
+            output_sol(mesh_macro, sol_macro_time, sol_micro_time, input_dir, output_dir)
         
-        # ---- solve ----
-        
-        sol_p, sol_c, sol_s, sol_j = solver(problem_macro, linear=False, precond=False, 
-                                     initial_guess=initial_guess, use_petsc=True)
-        
-        # ---- update macro variables ----
-        
-        sol_macro_time[dofs_p,itime] = sol_p.reshape(-1)
-        sol_macro_time[dofs_c,itime] = sol_c.reshape(-1)
-        sol_macro_time[dofs_s,itime] = sol_s.reshape(-1)
-        sol_macro_time[dofs_j,itime] = sol_j.reshape(-1)
-        
-        
-        # ---- update micro variables ----
-        switch_A_sp_jax(micro_problem, False)
-        for ind, node_sets in enumerate([nodes_anode,nodes_cathode]):
-            for inode in node_sets:
-                node_flux = sol_macro_time[dofs_j[inode],itime]
-                sol_micro_old = sol_micro_time[inode,:,itime-1].reshape(-1,1)
-                sol_micro_time[inode,:,itime] = solve_micro_problem(micro_problem, params_micro, nodes_tag[inode], sol_micro_old, node_flux).reshape(-1)
-        
-        
-    # ---- Post-processing ----
+        return sol
     
-    sol_macro_list = [sol_macro_time[dofs_p,:],sol_macro_time[dofs_c,:],
-                      sol_macro_time[dofs_s[nodes_anode],:],sol_macro_time[dofs_s[nodes_cathode],:],
-                      sol_macro_time[dofs_j[nodes_anode],:],sol_macro_time[dofs_j[nodes_cathode],:]]
     
-    sol_micro_list = [sol_micro_time[nodes_anode,:,:],sol_micro_time[nodes_cathode,:,:]]
+    def get_macro_sol(cells_theta):
+        sol = fwd_pred_seq(cells_theta)
+        return sol
     
-    postprocess(mesh, sol_macro_list, sol_micro_list, input_dir, output_dir)
+    def J_total(cells_theta):
+        sol = get_macro_sol(cells_theta)
+        J = sol[371,0]
+        return J
     
+    def test_fun_fwd(theta):
+        cells_theta = theta*np.ones((len(jax_mesh.cells),1))
+        sol = get_macro_sol(cells_theta)
+        return sol
+    
+    def test_fun_grad(theta):
+        cells_theta = theta*np.ones((len(jax_mesh.cells),1))
+        J = J_total(cells_theta)
+        return J
+    
+    
+    forward_flag = True
+    if forward_flag:
+        logger.debug(f"\nCheck the forward problem...")
+        steps_total = 11
+        theta = 1.
+        sol_jax = test_fun_fwd(theta)
+        
+        
+    gradient_flag = False
+    if gradient_flag:
+        logger.debug(f"\nCheck the gradient...")
+        steps_total = 11
+        h = 1e-3
+        theta = 1.
+        J_minus = test_fun_grad(theta - h)
+        J_plus = test_fun_grad(theta + h)
+        fd_gradient = (J_plus - J_minus)/(2*h)
+        ad_gradient = jax.grad(test_fun_grad)(theta)
+        print(f"Step {steps_total-1}")
+        print(f"fd_gradient = {fd_gradient:.10f}\nad_gradient = {ad_gradient:.10f}")
+        print(f"error:{np.abs(fd_gradient-ad_gradient)/np.abs(fd_gradient)*100:.6f}%")
+        
     end_time = time.time()
-    
     total_time = end_time - start_time
-    
-    logger.debug(f'Finish! Total time cost:{total_time:.2f}s')
+    logger.debug(f"\nFinish! Total time cost:{total_time:.2f}s")
 
 
 if __name__ == "__main__":
-    # main
-    macro_problem()
+    battery()

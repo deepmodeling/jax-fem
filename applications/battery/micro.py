@@ -3,7 +3,7 @@ This module is for solving microscopic diffusion problem of particle in P2D prob
 
 The JAX-FEM package is not used here.
 
-Last modified: 29/02/2024
+Last modified: 08/05/2024
 
 '''
 from dataclasses import dataclass
@@ -13,6 +13,10 @@ import os
 import jax
 import jax.numpy as np
 from jax.experimental.sparse import BCOO
+
+from jax import config
+config.update("jax_enable_x64", True)
+
 
 import basix
 import scipy
@@ -28,7 +32,7 @@ class micro_core:
     dt:float # time step size
 
 
-def prep_micro_problem(micro_mesh, params_micro, dt):
+def prep_micro_problem(micro_mesh, params_micro, dt, stiff_flag='matlab'):
     '''
     This function initializes the mciro problem
     '''
@@ -96,25 +100,22 @@ def prep_micro_problem(micro_mesh, params_micro, dt):
             JxW = problem.JxW
             # (num_cells, num_quads, num_nodes, 1, dim)
             v_grads_JxW = problem.v_grads_JxW
-            # (num_quads, dim)
-            # x = problem.quad_points
             
-            # To be consistent with MATLAB. However, this seems wrong!
-            x = onp.array([-1/np.sqrt(3),1/np.sqrt(3)])
+            x = problem.quad_coords_physical
             
-            # (1, num_quads, 1, 1) * 
+            # (num_cells, num_quads, 1, 1) * 
             # (1, num_quads, num_nodes, 1) @ (1, num_quads, 1, num_nodes) *
             # (num_cells, num_quads, 1, 1)
             # +
-            # (1, num_quads, 1, 1) * 
+            # (num_cells, num_quads, 1, 1) * 
             # (num_cells, num_quads, num_nodes, 1) @ (num_cells, num_quads, 1, num_nodes) *
             # (num_cells, num_quads, 1, 1)
             
-            V = (dtco_inc * 4 * onp.pi * x[None,:,None,None]**2 *
+            V = (dtco_inc * 4 * onp.pi * x[:,:,None,None]**2 *
                     shape_vals[None,:,:,None] @ shape_vals[None,:,None,:] *
                     JxW[:,:,None,None]
                     +
-                    df * 4 * onp.pi * x[None,:,None,None]**2 *
+                    df * 4 * onp.pi * x[:,:,None,None]**2 *
                     shape_grads[:,:,:,None,0] @ shape_grads[:,:,None,:,0] * JxW[:,:,None,None]
                     ) 
             V = onp.sum(V,axis=1)
@@ -138,6 +139,7 @@ def prep_micro_problem(micro_mesh, params_micro, dt):
     # Mesh
     problem.points = onp.array(micro_mesh['coords'], dtype=onp.float64)
     problem.cells = onp.array(micro_mesh['connect']-1, dtype=onp.int32)
+    problem.num_nodes = len(problem.points)
     problem.ndofs = len(problem.points)
     problem.right = onp.max(problem.points) # x = 1.
     problem.bound_right = onp.array(micro_mesh['bound_right']-1, dtype=onp.int32).reshape(-1)
@@ -146,6 +148,23 @@ def prep_micro_problem(micro_mesh, params_micro, dt):
     problem.shape_vals, problem.shape_grads_ref, problem.quad_weights, problem.quad_points = basis_interval()
     problem.shape_grads, problem.JxW , problem.v_grads_JxW = get_shape_grads(problem)
     
+    if stiff_flag == 'jax':
+        # Notes: the quadrature interval in basix is [0,1]
+        # (num_quads, )
+        quad_coords_ref = problem.quad_points.reshape(-1)
+        cells_coords = onp.take(problem.points, problem.cells)
+        quad_coords_physical = ((cells_coords[:,1] - cells_coords[:,0])[:,None]* 
+                                quad_coords_ref[None,:] + cells_coords[:,0][:,None])
+        # (num_cells, num_quads)
+        problem.quad_coords_physical = quad_coords_physical
+        
+    elif stiff_flag == 'matlab':
+        # To be consistent with MATLAB. However, this seems wrong!
+        quad_coords_ref = onp.array([-1/np.sqrt(3),1/np.sqrt(3)])
+        # (num_cells, num_quads) --> (1, num_quads)
+        problem.quad_coords_physical = quad_coords_ref[None,:]
+    else:
+        raise ValueError("Wrong input for 'stiff_flag'")
     
     # Assembly
     problem.I = onp.repeat(problem.cells,repeats=2,axis=1).reshape(-1)
@@ -163,6 +182,14 @@ def prep_micro_problem(micro_mesh, params_micro, dt):
 
     problem.A_an_inv_jax = BCOO.from_scipy_sparse(scipy.sparse.linalg.inv(problem.A_an))
     problem.A_ca_inv_jax = BCOO.from_scipy_sparse(scipy.sparse.linalg.inv(problem.A_ca))
+    
+    
+    problem.A_an_inv = np.array(problem.A_an_inv_sp.toarray(),dtype=np.float64)
+    problem.A_ca_inv = np.array(problem.A_ca_inv_sp.toarray(),dtype=np.float64)
+    
+    
+    # problem.A_an_inv = problem.A_an_inv_jax
+    # problem.A_ca_inv = problem.A_ca_inv_jax
     
     return problem
 
@@ -186,12 +213,8 @@ def compute_micro_residual(problem, params_micro, nodes_tag, sol_micro, sol_micr
     JxW = problem.JxW
     # (num_cells, num_quads, num_nodes, 1, dim)
     v_grads_JxW = problem.v_grads_JxW
-    # (num_quads, dim)
-    # x = problem.quad_points
-    
-    # To be consistent with MATLAB. However, this seems wrong!
-    x = np.array([-1/np.sqrt(3),1/np.sqrt(3)])
-    
+    # (num_cells, num_quads)
+    x = problem.quad_coords_physical
     
     # parameters
     lag1 = -1*nodes_tag*(nodes_tag-2)       # anode - 1
@@ -208,14 +231,14 @@ def compute_micro_residual(problem, params_micro, nodes_tag, sol_micro, sol_micr
     sol_micro_old = np.sum(sol_micro_old[:,None,:,:] * shape_vals[None,:,:,None], axis=2)
     d_cs = sol_micro_crt - sol_micro_old
     
-    # (1, num_quads, 1, 1) * (num_cells, num_quads, 1, vec) *
-    # (1, num_quads, num_nodes, 1) * (num_cells, num_quads,1,1) --> (num_cells,num_nodes,vec)
-    res = 4 * np.pi * dtco_inc * np.sum(x[None,:,None,None]**2 * d_cs[:,:,None,:] 
+    # (num_cells, num_quads, 1, 1) * (num_cells, num_quads, 1, vec) *
+    # (1, num_quads, num_nodes, 1) * (num_cells, num_quads, 1, 1) --> (num_cells,num_nodes,vec)
+    res = 4 * np.pi * dtco_inc * np.sum(x[:,:,None,None]**2 * d_cs[:,:,None,:] 
                                         * shape_vals[None,:,:,None] * JxW[:,:,None,None],axis=1)
     # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, vec, dim)
     cs_grads = np.sum(sol_micro[:, None, :, :, None] * shape_grads[:, :, :, None, :],axis=2)
-    # (1, num_quads, 1, 1, 1) * (num_cells, num_quads, 1, vec, dim) * (num_cells, num_quads, num_nodes, 1, dim) -> 
-    res = res + 4 * np.pi * df * np.sum(x[None,:,None,None,None]**2 * cs_grads[:,:,None,:,:] * v_grads_JxW, axis=(1,-1))
+    # (num_cells, num_quads, 1, 1, 1) * (num_cells, num_quads, 1, vec, dim) * (num_cells, num_quads, num_nodes, 1, dim) -> 
+    res = res + 4 * np.pi * df * np.sum(x[:,:,None,None,None]**2 * cs_grads[:,:,None,:,:] * v_grads_JxW, axis=(1,-1))
     
     weak_form = np.zeros((len(problem.points)))
     weak_form = weak_form.at[problem.cells.reshape(-1)].add(res.reshape(-1))
@@ -248,8 +271,8 @@ def solve_micro_problem(problem, params_micro, node_tag, sol_micro_old, node_flu
     # previous time step solutions as initial solutions
     sol_micro = sol_micro_old
     res, res_val = newton_update(sol_micro)
-    jax.debug.print('Solve micro problem tag {}', node_tag)
-    jax.debug.print('Before  residual values: {}',res_val)
+    # jax.debug.print('Solve micro problem tag {}', node_tag)
+    # jax.debug.print('Before  residual values: {}',res_val)
     tol = 1e-6
     num = 0
     # while res_val > tol:
@@ -257,7 +280,7 @@ def solve_micro_problem(problem, params_micro, node_tag, sol_micro_old, node_flu
     sol_micro_inc = A_inv @ (-res)
     sol_micro = sol_micro + sol_micro_inc
     res, res_val = newton_update(sol_micro)
-    jax.debug.print('Iter {}  residual values: {}',num, res_val)
+    # jax.debug.print('Iter {}  Micro-res: {}',num, res_val)
     return sol_micro
 
 

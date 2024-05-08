@@ -166,3 +166,9 @@ class param_sets_micro:
         self.ds_ref_ca = df_ca_ref;
         self.dtco_inc_ca = dtco_ca;
         self.q_bc_ca = q_ca;
+
+
+@dataclass
+class data_sets:
+    id:str
+    

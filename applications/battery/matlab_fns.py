@@ -8,50 +8,6 @@ Last modified: 29/02/2024
 import numpy as onp
 import jax.numpy as np
 
-def assign_init_sol(macro_mesh, micro_mesh, timesteps, params_macro):
-    
-    # Get the initial solutions with the matched dimension for JAX-FEM
-    
-    # For p, c, s, j
-    ndof_macro = 4 # QUAD4 elements
-    nnode_macro = int(macro_mesh['nnode'])
-    
-    ndof_micro = 1 # Interval elements
-    nnode_micro = int(micro_mesh['nnode'])
-    
-    nodes_anode = onp.unique(macro_mesh['connect_anode'])
-    nodes_separator = onp.unique(macro_mesh['connect_separator'])
-    nodes_cathode = onp.unique(macro_mesh['connect_cathode'])
-    
-    
-    # Initial macro solutions
-    # (num_macro_nodes * num_dofs, timesteps)
-    sol_init_macro = onp.zeros((ndof_macro*nnode_macro,timesteps)) 
-    
-    # Initial micro solutions
-    # The separator has no pore wall flux j, however, it is still considered here.
-    # (num_macro_nodes * num_micro_nodes * num_dofs, timesteps)
-    sol_init_micro = onp.zeros((nnode_macro, nnode_micro*ndof_micro, timesteps)) 
-    
-    # dof index
-    dofsPhi_e = onp.linspace(0, nnode_macro-1, nnode_macro, dtype=onp.int32)
-    dofsC_e = dofsPhi_e + nnode_macro
-    dofsPhi_an = 2*nnode_macro + nodes_anode-1
-    dofsPhi_ca = 2*nnode_macro + nodes_cathode-1
-    
-    
-    # macro solution
-    sol_init_macro[dofsPhi_e,0] = params_macro.phi0_el
-    sol_init_macro[dofsC_e,0] = params_macro.c0_el
-    sol_init_macro[dofsPhi_an,0] = params_macro.phi0_an
-    sol_init_macro[dofsPhi_ca,0] = params_macro.phi0_ca
-    
-    # micro solution
-    sol_init_micro[nodes_anode-1,:,0] = params_macro.c0_an
-    sol_init_micro[nodes_cathode-1,:,0] = params_macro.c0_ca
-    
-    return sol_init_macro, sol_init_micro
-
 def calcUoc(c_ss,node_tag,params_macro):
     
     # F = 96485.33289; % Faraday's constant (C/mol)

@@ -10,6 +10,63 @@ import scipy.io as scio
 import matplotlib.pyplot as plt
 import matplotlib.patches as pat
 
+
+def verify_micro_problem(mesh_macro, problem_micro, params_macro, params_micro, nodes_tag, 
+                         sol_macro_time, sol_micro_time, input_dir, output_dir):
+    '''
+    To verify the micro problems
+    
+    Move the follwoing codes into 'main.py':
+    
+    # # copy_time = 1
+    # from utils import verify_micro_problem
+    # switch_A_sp_jax(problem_micro, False)
+    # verify_micro_problem(mesh_macro, problem_micro, params_macro, params_micro, nodes_tag, 
+    #                      sol_macro_time, sol_micro_time, input_dir, output_dir)
+    
+    '''
+    itime = 2  # time step to verify
+    
+    from micro import Bulter_Volmer
+    from micro import solve_micro_problem
+    
+    dofs_p, dofs_c, dofs_s, dofs_j = mesh_macro.dofs
+    nnode_macro = mesh_macro.num_nodes
+    nodes_anode = mesh_macro.nodes_anode
+    nodes_separator = mesh_macro.nodes_separator
+    nodes_cathode = mesh_macro.nodes_cathode
+    
+    css = onp.ones((nnode_macro,1))
+    j = onp.ones((nnode_macro,1))
+    
+    for ind, node_sets in enumerate([nodes_anode,nodes_separator,nodes_cathode]):
+        for inode in node_sets:
+            node_flux = sol_macro_time[dofs_j[inode],itime-1]
+            sol_micro_old = sol_micro_time[inode,:,itime-1].reshape(-1,1)
+            sol_micro = solve_micro_problem(problem_micro, params_micro, nodes_tag[inode], sol_micro_old, node_flux)
+            css[inode] = sol_micro[problem_micro.bound_right]
+            sol_p = sol_macro_time[dofs_p[inode],itime-1]
+            sol_c = sol_macro_time[dofs_c[inode],itime-1]
+            sol_s = sol_macro_time[dofs_s[inode],itime-1]
+            j[inode] = Bulter_Volmer(sol_p, sol_c, sol_s, css[inode], nodes_tag[inode], params_macro)
+    
+    # data obtained from MATLAB
+    node_flux_ref = scio.loadmat(os.path.join(input_dir, f'data/sol_j_t2.mat'))
+    
+    j_mat = onp.zeros((nnode_macro,1))
+    j_mat[nodes_anode] = node_flux_ref['j0_an'] * node_flux_ref['BV_an']
+    j_mat[nodes_cathode] = node_flux_ref['j0_ca'] * node_flux_ref['BV_ca']
+    
+    css_mat = onp.zeros((nnode_macro,1))
+    css_mat[nodes_anode] = node_flux_ref['css_an']
+    css_mat[nodes_cathode] = node_flux_ref['css_ca']
+    
+    from utils import plot_micro_verify_data
+    plot_micro_verify_data(j,j_mat,css,css_mat,output_dir)
+    
+    return None
+
+
 def show_macro_mesh(cells_an, cells_sp, cells_ca, points, fc='w', ec='k'):
     # Show the macro
     fig, ax = plt.subplots()
@@ -148,7 +205,22 @@ def plot_micro_verify_data(j,j_mat,css,css_mat,output_dir):
 
 
 
-def postprocess(mesh, sol_macro_time_list, sol_micro_time_list, input_dir, output_dir):
+def output_sol(mesh_macro, sol_macro_time, sol_micro_time, input_dir, output_dir):
+    
+    dofs_p, dofs_c, dofs_s, dofs_j = mesh_macro.dofs
+    nodes_anode = mesh_macro.nodes_anode
+    nodes_cathode = mesh_macro.nodes_cathode
+    nodes_separator = mesh_macro.nodes_separator
+    
+    # solution obtained from JAX-FEM
+    sol_p = sol_macro_time[dofs_p,:]
+    sol_c = sol_macro_time[dofs_c,:]
+    sol_s_an = sol_macro_time[dofs_s[nodes_anode],:]
+    sol_s_ca = sol_macro_time[dofs_s[nodes_cathode],:]
+    sol_j_an = sol_macro_time[dofs_j[nodes_anode],:]
+    sol_j_ca = sol_macro_time[dofs_j[nodes_cathode],:]
+    
+    sol_micro_an, sol_micro_ca = [sol_micro_time[nodes_anode,:,:],sol_micro_time[nodes_cathode,:,:]]
     
     # solution obtained from MATLAB
     macro_ref = scio.loadmat(os.path.join(input_dir, f'data/sol_macro.mat'))
@@ -162,10 +234,6 @@ def postprocess(mesh, sol_macro_time_list, sol_micro_time_list, input_dir, outpu
     micro_ref = scio.loadmat(os.path.join(input_dir, f'data/sol_micro.mat')) 
     sol_micro_an_mat =  micro_ref['sol_micro_an'].transpose(2,0,1)
     sol_micro_ca_mat =  micro_ref['sol_micro_ca'].transpose(2,0,1)
-    
-    # solution obtained from JAX-FEM
-    sol_p, sol_c, sol_s_an, sol_s_ca, sol_j_an, sol_j_ca = sol_macro_time_list
-    sol_micro_an, sol_micro_ca = sol_micro_time_list
     
     # p
     fig, ax = plt.subplots()
@@ -280,3 +348,57 @@ def postprocess(mesh, sol_macro_time_list, sol_micro_time_list, input_dir, outpu
     #             dpi=300, format="svg",bbox_inches='tight')
     
     return None
+
+
+
+# ------------- Some test codes for main.py -------------
+
+
+# Objevtive curve
+
+# theta = np.linspace(1.-2e-4, 1.+2e-4, 5)
+# J_curve = np.zeros_like(theta)
+# for i in range(len(J_curve)):
+#     J_curve = J_curve.at[i].set(test_fun_grad(theta[i]))
+# import matplotlib.pyplot as plt
+# fig, ax = plt.subplots()
+# plt.plot(theta, J_curve, color='r',linestyle='-',marker='o')
+# plt.text(0.15, 0.9, f'slope:{(J_curve[0]-J_curve[-1])/(theta[0]-theta[-1]):.8e}',transform=ax.transAxes)
+# plt.text(0.05, 0.55, f'slope:{(J_curve[1]-J_curve[-2])/(theta[1]-theta[-2]):.8e}',transform=ax.transAxes)
+# ax.set_xticks(theta)
+# plt.xlabel("$\\theta$")
+# plt.ylabel("objective")
+# plt.title("t=10s")
+# plt.show()
+
+
+# Get the initial solution (MATLAB)
+
+# def get_init_sol_mat(sol_macro_time, sol_micro_time, cells_theta):
+#     '''
+#     get the initial solution for the first time step (MATLAB)
+#     '''
+#     init_val_p = lambda point: params_macro.phi0_el
+#     init_val_s_an = lambda point: params_macro.phi0_an
+#     init_val_s_ca = lambda point: params_macro.phi0_ca
+    
+#     dirichlet_p_init = [[left], [0], [init_val_p]]
+#     dirichlet_s_init = [[left, right, separator], [0]*3, [init_val_s_an, init_val_s_ca, zero_dirichlet]]
+    
+#     problem_macro_init = macro_P2D([jax_mesh]*4, vec = [1]*4, dim=2, 
+#                                     ele_type = [ele_type]*4, gauss_order=[2]*4,
+#                                     dirichlet_bc_info = [dirichlet_p_init,None,dirichlet_s_init,dirichlet_bc_info_j],
+#                                     location_fns = [lambda point:False])
+    
+#     sol_macro_old = sol_macro_time[:,0]
+#     sol_micro_old = sol_micro_time[:,:,0]   
+#     sol_c_old = sol_macro_old[dofs_c] # c_crt - c_old = 0
+    
+#     problem_macro_init.set_params([cells_theta, sol_macro_old, sol_c_old, sol_micro_old, cells_tag, cells_nodes_tag, cells_nodes_sum])
+    
+#     sol_p, sol_c, sol_s, sol_j = solver(problem_macro_init, linear=False, precond=True, 
+#                                  initial_guess=sol_macro_old, use_petsc=True)
+    
+#     return sol_macro_time, sol_micro_time
+
+    

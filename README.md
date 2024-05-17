@@ -209,3 +209,9 @@ If you found this library useful in academic or industry work, we appreciate you
   publisher={Elsevier}
 }
 ```
+
+## Acknowledgement
+
+The initiator of JAX-FEM, Dr. Tianju Xue, acknowledges the support from the Department of Defense Vannevar Bush Faculty Fellowship to Prof. Jian Cao at Northwestern University of USA (N00014-19-1-2642) for supporting the foundation of this package.
+
+Dr. Tianju Xue (now at HKUST) also acknowledges the support from Beijing DP Technology Co., Ltd for the continuous development of JAX-FEM.

@@ -9,7 +9,7 @@ import meshio
 import matplotlib.pyplot as plt
 
 from jax_fem.solver import solver
-from jax_fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
+from jax_fem.generate_mesh import Mesh, box_mesh_gmsh, get_meshio_cell_type
 from jax_fem.utils import save_sol
 
 from applications.fem.crystal_plasticity.models import CrystalPlasticity

@@ -7,7 +7,7 @@ import os
 import meshio
 import time
 
-from jax_fem.generate_mesh import Mesh, box_mesh
+from jax_fem.generate_mesh import Mesh, box_mesh_gmsh
 from jax_fem.solver import solver, ad_wrapper
 from jax_fem.utils import save_sol
 

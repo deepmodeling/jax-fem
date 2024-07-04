@@ -8,7 +8,7 @@ import os
 from jax_fem.problem import Problem
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
-from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
+from jax_fem.generate_mesh import box_mesh_gmsh, get_meshio_cell_type, Mesh
 
 
 # Define constitutive relationship.
@@ -46,7 +46,7 @@ ele_type = 'HEX8'
 cell_type = get_meshio_cell_type(ele_type)
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 Lx, Ly, Lz = 1., 1., 1.
-meshio_mesh = box_mesh(Nx=20,
+meshio_mesh = box_mesh_gmsh(Nx=20,
                        Ny=20,
                        Nz=20,
                        Lx=Lx,

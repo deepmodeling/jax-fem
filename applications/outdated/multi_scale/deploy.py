@@ -5,7 +5,7 @@ import os
 import matplotlib.pyplot as plt
 import time
 
-from jax_fem.generate_mesh import Mesh, box_mesh
+from jax_fem.generate_mesh import Mesh, box_mesh_gmsh
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
 
@@ -57,7 +57,7 @@ def homogenization_problem(case, dns_info=None):
     else:
         num_hex = args.num_hex
 
-    meshio_mesh = box_mesh(num_hex*args.num_units_x, num_hex*args.num_units_y, num_hex*args.num_units_z,
+    meshio_mesh = box_mesh_gmsh(num_hex*args.num_units_x, num_hex*args.num_units_y, num_hex*args.num_units_z,
                            L*args.num_units_x, L*args.num_units_y, L*args.num_units_z, data_dir)
 
     jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])

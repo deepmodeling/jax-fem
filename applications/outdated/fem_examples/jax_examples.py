@@ -8,7 +8,7 @@ import os
 from jax_fem.models import LinearElasticity, HyperElasticity, Plasticity
 from jax_fem.solver import solver
 from jax_fem.utils import modify_vtu_file, save_sol
-from jax_fem.generate_mesh import Mesh, cylinder_mesh
+from jax_fem.generate_mesh import Mesh, cylinder_mesh_gmsh
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
@@ -64,7 +64,7 @@ def linear_elasticity_dogbone(disp, index):
 
 
 def linear_elasticity_cylinder(disps):
-    meshio_mesh = cylinder_mesh(data_dir)
+    meshio_mesh = cylinder_mesh_gmsh(data_dir)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def bottom(point):
@@ -99,7 +99,7 @@ def linear_elasticity_cylinder(disps):
 
 
 def hyperelasticity_cylinder(disps):
-    meshio_mesh = cylinder_mesh(data_dir)
+    meshio_mesh = cylinder_mesh_gmsh(data_dir)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def bottom(point):

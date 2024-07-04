@@ -16,7 +16,7 @@ import meshio
 import sys
 import os
 
-from jax_fem.generate_mesh import cylinder_mesh 
+from jax_fem.generate_mesh import cylinder_mesh_gmsh 
 
 np.set_printoptions(threshold=sys.maxsize, linewidth=1000, suppress=True, precision=5)
 
@@ -184,7 +184,7 @@ def linear_elasticity_cube(N):
 
 
 def linear_elasticity_cylinder():
-    meshio_mesh = cylinder_mesh(data_dir)
+    meshio_mesh = cylinder_mesh_gmsh(data_dir)
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
@@ -263,7 +263,7 @@ def linear_elasticity_cylinder():
 
 
 def hyperelasticity():
-    meshio_mesh = cylinder_mesh(data_dir)
+    meshio_mesh = cylinder_mesh_gmsh(data_dir)
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
@@ -359,7 +359,7 @@ def hyperelasticity():
 
 
 def plasticity(disps, path, case):
-    meshio_mesh = cylinder_mesh(data_dir)
+    meshio_mesh = cylinder_mesh_gmsh(data_dir)
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})

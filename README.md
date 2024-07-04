@@ -27,37 +27,37 @@ FEM is a powerful tool, where we support the following features
 - Weak form is now defined through  volume integral and surface integral. We can now treat body force, "mass kernel" and "Laplace kernel" in a unified way through volume integral, and treat "Neumann B.C." and "Robin B.C." in a unified way through surface integral. 
 
 <p align="middle">
-  <img src="docs/ded.gif" width="600" />
+  <img src="images/ded.gif" width="600" />
 </p>
 <p align="middle">
     <em >Thermal profile in direct energy deposition.</em>
 </p>
 
 <p align="middle">
-  <img src="docs/von_mises.png" width="400" />
+  <img src="images/von_mises.png" width="400" />
 </p>
 <p align="middle">
     <em >Linear static analysis of a bracket.</em>
 </p>
 
 <p align="middle">
-  <img src="docs/polycrystal_grain.gif" width="360" />
-  <img src="docs/polycrystal_stress.gif" width="360" />
+  <img src="images/polycrystal_grain.gif" width="360" />
+  <img src="images/polycrystal_stress.gif" width="360" />
 </p>
 <p align="middle">
     <em >Crystal plasticity: grain structure (left) and stress-xx (right).</em>
 </p>
 
 <p align="middle">
-  <img src="docs/stokes_u.png" width="360" />
-  <img src="docs/stokes_p.png" width="360" />
+  <img src="images/stokes_u.png" width="360" />
+  <img src="images/stokes_p.png" width="360" />
 </p>
 <p align="middle">
     <em >Stokes flow: velocity (left) and pressure(right).</em>
 </p>
 
 <p align="middle">
-  <img src="docs/to.gif" width="600" />
+  <img src="images/to.gif" width="600" />
 </p>
 <p align="middle">
     <em >Topology optimization with differentiable simulation.</em>
@@ -73,7 +73,7 @@ conda activate jax-fem-env
 ```
 
 Install JAX
-- See jax installation [instructions](https://jax.readthedocs.io/en/latest/installation.html#). Depending on your hardware, you may install the CPU or GPU version of JAX. Both will work, while GPU version usually gives better performance.
+- See jax installation [instructions](https://jax.readtheimages.io/en/latest/installation.html#). Depending on your hardware, you may install the CPU or GPU version of JAX. Both will work, while GPU version usually gives better performance.
 
 
 Then there are two options to continue:
@@ -145,12 +145,6 @@ class Poisson(Problem):
             return val
         return mass_map
 
-    def get_surface_maps(self):
-        def surface_map(u, x):
-            return -np.array([np.sin(5.*x[0])])
-
-        return [surface_map, surface_map]
-
 ele_type = 'QUAD4'
 cell_type = get_meshio_cell_type(ele_type)
 Lx, Ly = 1., 1.
@@ -169,26 +163,30 @@ def bottom(point):
 def top(point):
     return np.isclose(point[1], Ly, atol=1e-5)
 
-def dirichlet_val_left(point):
+def dirichlet_val(point):
     return 0.
 
-def dirichlet_val_right(point):
-    return 0.
-
-location_fns = [left, right]
-value_fns = [dirichlet_val_left, dirichlet_val_right]
-vecs = [0, 0]
+location_fns = [left, right, bottom, top]
+value_fns = [dirichlet_val]*4
+vecs = [0]*4
 dirichlet_bc_info = [location_fns, vecs, value_fns]
 
-location_fns = [bottom, top]
-
-problem = Poisson(mesh=mesh, vec=1, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, location_fns=location_fns)
+problem = Poisson(mesh=mesh, vec=1, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info)
 sol = solver(problem, linear=True, use_petsc=True)
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
 save_sol(problem.fes[0], sol[0], vtk_path)
 ```
+
+By running the code above and use [Paraview](https://www.paraview.org/) for visualization, you should see the following solution
+
+<p align="middle">
+  <img src="images/poisson.png" width="400" />
+</p>
+<p align="middle">
+    <em >Solution to the Poisson's equation due to a source term.</em>
+</p>
 
 
 ## License

@@ -5,7 +5,7 @@ import os
 import glob
 import meshio
 
-from jax_fem.generate_mesh import box_mesh, Mesh
+from jax_fem.generate_mesh import box_mesh_gmsh, Mesh
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
 
@@ -39,7 +39,7 @@ def bare_plate_single_track():
     problem_name = f'bare_plate'
     Nx, Ny, Nz = 150, 30, 10
     Lx, Ly, Lz = 30e-3, 6e-3, 2e-3
-    meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
+    meshio_mesh = box_mesh_gmsh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
     full_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def top(point):

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from jax_fem.problem import Problem
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
-from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
+from jax_fem.generate_mesh import box_mesh_gmsh, get_meshio_cell_type, Mesh
 
 
 # Define constitutive relationship.
@@ -93,7 +93,7 @@ cell_type = get_meshio_cell_type(ele_type)
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
 Lx, Ly, Lz = 10., 10., 10.
-meshio_mesh = box_mesh(Nx=10, Ny=10, Nz=10, Lx=Lx, Ly=Ly, Lz=Lz, data_dir=data_dir, ele_type=ele_type)
+meshio_mesh = box_mesh_gmsh(Nx=10, Ny=10, Nz=10, Lx=Lx, Ly=Ly, Lz=Lz, data_dir=data_dir, ele_type=ele_type)
 mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
 

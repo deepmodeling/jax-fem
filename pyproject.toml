@@ -1,3 +1,28 @@
 [build-system]
 requires = ["setuptools>=43.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "jax-fem"
+version = "0.0.6"
+requires-python = ">=3.9"
+authors = [
+  {name = "Tianju Xue", email = "cetxue@ust.hk"},
+  {name = "Weipeng Xu", email = "xwpscut@outlook.com"}
+]
+description = "A GPU accelerated Finite element analysis package in JAX."
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["JAX", "GPU", "Python", "Finite element analysis", "Differentiable programming"]
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Physics",
+  "License :: OSI Approved :: BSD License",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3"
+]
+
+[tool.setuptools]
+packages = ["jax_fem"]

@@ -7,7 +7,7 @@ import glob
 from functools import partial
 from scipy.stats import qmc
 
-from jax_fem.generate_mesh import Mesh, box_mesh
+from jax_fem.generate_mesh import Mesh, box_mesh_gmsh
 from jax_fem.solver import solver, assign_bc, get_A_fn_linear_fn
 from jax_fem.utils import save_sol
 
@@ -24,7 +24,7 @@ def rve_problem(data_dir):
     args.num_units_z = 1
 
     L = args.L
-    meshio_mesh = box_mesh(args.num_hex*args.num_units_x, args.num_hex*args.num_units_y, args.num_hex*args.num_units_z,
+    meshio_mesh = box_mesh_gmsh(args.num_hex*args.num_units_x, args.num_hex*args.num_units_y, args.num_hex*args.num_units_z,
                            L*args.num_units_x, L*args.num_units_y, L*args.num_units_z, data_dir)
     jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 

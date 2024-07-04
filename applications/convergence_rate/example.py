@@ -7,7 +7,7 @@ import os
 
 from jax_fem.problem import Problem
 from jax_fem.solver import solver
-from jax_fem.generate_mesh import Mesh, box_mesh, get_meshio_cell_type
+from jax_fem.generate_mesh import Mesh, box_mesh_gmsh, get_meshio_cell_type
 from jax_fem.utils import save_sol
 
 
@@ -58,7 +58,7 @@ def true_u_fn(point):
 
 def problem(ele_type, N, data_dir):
     cell_type = get_meshio_cell_type(ele_type)
-    meshio_mesh = box_mesh(N, N, N, 1., 1., 1., data_dir, ele_type)
+    meshio_mesh = box_mesh_gmsh(N, N, N, 1., 1., 1., data_dir, ele_type)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
     def left(point):

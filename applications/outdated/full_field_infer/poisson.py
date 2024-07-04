@@ -10,7 +10,7 @@ import scipy.optimize as opt
 from jax_fem.core import FEM
 from jax_fem.solver import solver, ad_wrapper
 from jax_fem.utils import modify_vtu_file, save_sol
-from jax_fem.generate_mesh import Mesh, box_mesh
+from jax_fem.generate_mesh import Mesh, box_mesh_gmsh
 
 onp.random.seed(0)
 
@@ -74,7 +74,7 @@ def param_id():
 
     Lx, Ly, Lz = 1., 1., 0.2
     Nx, Ny, Nz = 50, 50, 10
-    meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
+    meshio_mesh = box_mesh_gmsh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
     jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def min_x_loc(point):

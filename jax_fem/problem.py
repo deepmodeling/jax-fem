@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional, List, Union
 import functools
 
-from jax_fem.common import timeit 
+from jax_fem.utils import timeit 
 from jax_fem.generate_mesh import Mesh
 from jax_fem.fe import FiniteElement
 from jax_fem import logger

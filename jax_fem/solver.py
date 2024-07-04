@@ -5,8 +5,6 @@ import numpy as onp
 from jax.experimental.sparse import BCOO
 import scipy
 import time
-
-# petsc4py.init()
 from petsc4py import PETSc
 
 from jax_fem import logger
@@ -17,6 +15,12 @@ config.update("jax_enable_x64", True)
 ################################################################################
 # PETSc linear solver or JAX linear solver
 
+def umfpack_solve():
+    """
+    To be implemented
+    """
+    pass
+
 def petsc_solve(A, b, ksp_type, pc_type):
     rhs = PETSc.Vec().createSeq(len(b))
     rhs.setValues(range(len(b)), onp.array(b))
@@ -26,10 +30,7 @@ def petsc_solve(A, b, ksp_type, pc_type):
     ksp.setType(ksp_type)
     ksp.pc.setType(pc_type)
 
-    logger.debug(
-        f'PETSc - Solving with ksp_type = {ksp.getType()}, '
-        f'pc = {ksp.pc.getType()}'
-    )
+    logger.debug( f'PETSc Solver - Solving linear system with ksp_type = {ksp.getType()},' f'pc = {ksp.pc.getType()}')
     x = PETSc.Vec().createSeq(len(b))
     ksp.solve(rhs, x)
 
@@ -38,7 +39,7 @@ def petsc_solve(A, b, ksp_type, pc_type):
     A.mult(x, y)
 
     err = np.linalg.norm(y.getArray() - rhs.getArray())
-    logger.debug(f"PETSc linear solve res = {err}")
+    logger.debug(f"PETSc Solver - Finished solving, linear solve res = {err}")
     # assert err < 0.1, f"PETSc linear solver failed to converge, err = {err}"
 
     return x.getArray()
@@ -55,6 +56,7 @@ def jax_solve(problem, A_fn, b, x0, precond, pc_matrix=None):
     pc_matrix
         The matrix to use as preconditioner
     """
+    logger.debug(f"JAX Solver - Solving linear system")
     pc = get_jacobi_precond(jacobi_preconditioner(problem)) if precond else None
     x, info = jax.scipy.sparse.linalg.bicgstab(A_fn,
                                                b,
@@ -66,7 +68,7 @@ def jax_solve(problem, A_fn, b, x0, precond, pc_matrix=None):
 
     # Verify convergence
     err = np.linalg.norm(A_fn(x) - b)
-    logger.debug(f"JAX scipy linear solve res = {err}")
+    logger.debug(f"JAX Solver - Finshed solving, res = {err}")
 
     # Remarks(Tianju): assert seems to unexpectedly change the behavior of bicgstab (on my Linux machine).
     # Sometimes the solver simply fails without converging (it does converge without assert)
@@ -222,7 +224,6 @@ def operator_to_matrix(operator_fn, problem):
 
 
 def jacobi_preconditioner(problem):
-    logger.debug(f"Compute and use jacobi preconditioner")
     jacobi = np.array(problem.A_sp_scipy.diagonal())
     jacobi = assign_ones_bc(jacobi.reshape(-1), problem)
     return jacobi
@@ -567,7 +568,6 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
                        where=(q - q_old) != 0))
 
         # calculating the jacobian matrix
-
         if ((onp.max(eps) > 1) and (iKMat > nKMat)): #SPR JAN max --> min
             if info == True:
                 print('\nRecalculating the tangent matrix: ', nIters)

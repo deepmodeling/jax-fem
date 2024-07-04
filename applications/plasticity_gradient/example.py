@@ -8,7 +8,7 @@ import meshio
 import time
 
 from jax_fem.problem import Problem
-from jax_fem.generate_mesh import Mesh, box_mesh
+from jax_fem.generate_mesh import Mesh, box_mesh_gmsh
 from jax_fem.solver import ad_wrapper
 from jax_fem.utils import save_sol
 from jax_fem.mma import optimize
@@ -129,7 +129,7 @@ def topology_optimization():
     for f in files:
         os.remove(f)
 
-    meshio_mesh = box_mesh(50, 30, 1, 50., 30., 1., output_path)
+    meshio_mesh = box_mesh_gmsh(50, 30, 1, 50., 30., 1., output_path)
     jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def fixed_location(point):

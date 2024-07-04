@@ -6,7 +6,7 @@ import glob
 
 
 # Import JAX-FEM specific modules.
-from jax_fem.generate_mesh import box_mesh, Mesh, get_meshio_cell_type
+from jax_fem.generate_mesh import box_mesh_gmsh, Mesh, get_meshio_cell_type
 from jax_fem.solver import solver
 from jax_fem.problem import Problem
 from jax_fem.utils import save_sol
@@ -206,7 +206,7 @@ ele_type = 'HEX8'
 cell_type = get_meshio_cell_type(ele_type)
 Nx, Ny, Nz = 50, 20, 5
 Lx, Ly, Lz = 0.5e-3, 0.2e-3, 0.05e-3 # domain size
-meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
+meshio_mesh = box_mesh_gmsh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
 mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
 

@@ -7,7 +7,7 @@ import os
 import meshio
 import time
 
-from jax_fem.generate_mesh import Mesh, box_mesh
+from jax_fem.generate_mesh import Mesh, box_mesh_gmsh
 from jax_fem.solver import ad_wrapper
 from jax_fem.utils import save_sol
 from jax_fem.common import walltime
@@ -29,7 +29,7 @@ def topology_optimization():
     Lx, Ly, Lz = 2., 0.5, 1.
     Nx, Ny, Nz = 80, 20, 40
 
-    meshio_mesh = box_mesh(Nx, Ny, Nz, Lx, Ly, Lz, data_path)
+    meshio_mesh = box_mesh_gmsh(Nx, Ny, Nz, Lx, Ly, Lz, data_path)
     jax_mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
     def fixed_location(point):

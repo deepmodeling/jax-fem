@@ -7,7 +7,7 @@ import os
 from jax_fem.problem import Problem
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
-from jax_fem.generate_mesh import box_mesh, get_meshio_cell_type, Mesh
+from jax_fem.generate_mesh import box_mesh_gmsh, get_meshio_cell_type, Mesh
 from jax_fem import logger
 
 import logging
@@ -44,7 +44,7 @@ cell_type = get_meshio_cell_type(ele_type)
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 Lx, Ly, Lz = 10., 2., 2.
 Nx, Ny, Nz = 25, 5, 5
-meshio_mesh = box_mesh(Nx=Nx,
+meshio_mesh = box_mesh_gmsh(Nx=Nx,
                        Ny=Ny,
                        Nz=Nz,
                        Lx=Lx,

@@ -13,7 +13,7 @@ import meshio
 import sys
 import os
 
-from jax_fem.generate_mesh import cylinder_mesh 
+from jax_fem.generate_mesh import cylinder_mesh_gmsh 
 
 comm = MPI.COMM_WORLD
 
@@ -60,7 +60,7 @@ def generate_xdmf():
         out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
         xdmf_file = get_dog_bone_file_path('xdmf', i) 
         out_mesh.write(xdmf_file)
-    meshio_mesh = cylinder_mesh(data_dir)
+    meshio_mesh = cylinder_mesh_gmsh(data_dir)
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})
     xdmf_file = get_cylinder_file_path()
@@ -241,7 +241,7 @@ def hyperelasticity(disp):
 
 
 def plasticity(disps, path):
-    meshio_mesh = cylinder_mesh(data_dir)
+    meshio_mesh = cylinder_mesh_gmsh(data_dir)
     cell_type = 'hexahedron'
     cells = meshio_mesh.get_cells_type(cell_type)
     out_mesh = meshio.Mesh(points=meshio_mesh.points, cells={cell_type: cells})

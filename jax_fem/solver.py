@@ -739,22 +739,6 @@ def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
 
 
 def ad_wrapper(problem, solver_options={}, adjoint_solver_options={}):
-    """
-    Attributes
-    ----------
-    problem : Problem object
-        finite element problem instance
-    linear : bool   
-        if forward problem is linear (adjoint problem is alwasy linear, no need to specify)
-    use_petsc: bool
-        if PETSc solver should be called to solve the linear system for the forward problem
-    petsc_options: dic   
-        PETSc solver options specified by user for the forward problem
-    use_petsc_adjoint: bool
-        if PETSc solver should be called to solve the linear system for the adjoint problem
-    petsc_options_adjoint: dic   
-        PETSc solver options specified by user for the adjoint problem             
-    """
     @jax.custom_vjp
     def fwd_pred(params):
         problem.set_params(params)

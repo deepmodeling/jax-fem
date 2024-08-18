@@ -68,10 +68,8 @@ def simulation():
 
     for i, scale in enumerate(scales):
         print(f"\nStep {i} in {len(scales)}, scale = {scale}")
-
         problem.set_params([int_vars, scale])
-        sol_list = solver(problem, initial_guess=sol_list, use_petsc=False)
-
+        sol_list = solver(problem, solver_options={'initial_guess': sol_list})   
         int_vars_copy = int_vars
         int_vars = problem.update_int_vars_gp(sol_list[0], int_vars)
         sigmas = problem.compute_stress(sol_list[0], int_vars_copy).mean(axis=1)

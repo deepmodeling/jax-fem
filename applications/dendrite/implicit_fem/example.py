@@ -215,7 +215,7 @@ def simulation():
         print(f"\nStep {i + 1} in {nIter + 1}, time = {(i + 1)*dt}")
         chi = jax.random.uniform(jax.random.PRNGKey(0), shape=(problem.fe_p.num_cells,)) - 0.5
         problem.set_params([sol_list[0], sol_list[1], chi])
-        sol_list = solver(problem, use_petsc=True, initial_guess=sol_list)
+        sol_list = solver(problem, solver_options={'petsc_solver': {}, 'initial_guess': sol_list})   
 
         if (i + 1) % 10 == 0:
             save_sols(problem, sol_list, i + 1)

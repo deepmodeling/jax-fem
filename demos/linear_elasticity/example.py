@@ -86,8 +86,7 @@ problem = LinearElasticity(mesh,
                            dirichlet_bc_info=dirichlet_bc_info,
                            location_fns=location_fns)
 # Solve the defined problem.
-sol_list = solver(problem, use_petsc=True)
-
+sol_list = solver(problem, solver_options={'umfpack_solver': {}})
 
 # Postprocess for stress evaluations
 # (num_cells, num_quads, vec, dim)

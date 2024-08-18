@@ -275,7 +275,7 @@ for i in range(len(ts[1:])):
 
     # Set parameter and solve for T
     problem_T.set_params([sol_T_old, laser_center, switch])
-    sol_T_new_list = solver(problem_T, use_petsc=False) # The flag use_petsc=False will use JAX solver - Good for GPU 
+    sol_T_new_list = solver(problem_T)
     sol_T_new = sol_T_new_list[0]
 
     # Since mechanics problem is more expensive to solve, we may skip some steps of the thermal problem.
@@ -284,7 +284,7 @@ for i in range(len(ts[1:])):
 
         # Set parameter and solve for u
         problem_u.set_params(params_u)
-        sol_u_list = solver(problem_u, initial_guess=sol_u_list, use_petsc=False) 
+        sol_u_list = solver(problem_u, solver_options={'initial_guess': sol_u_list})
 
         params_u, plastic_info = problem_u.update_stress_strain(sol_u_list[0], params_u) 
 

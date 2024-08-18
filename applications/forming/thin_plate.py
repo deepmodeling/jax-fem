@@ -82,7 +82,7 @@ def simulation():
         problem.set_params([int_vars, scale])
 
         # The line search method is necessary to get a converged solution.
-        sol_list = solver(problem, initial_guess=sol_list, use_petsc=False, line_search_flag=True)
+        sol_list = solver(problem, solver_options={'initial_guess': sol_list, 'line_search_flag': True})   
 
         int_vars_copy = int_vars
         int_vars = problem.update_int_vars_gp(sol_list[0], int_vars)

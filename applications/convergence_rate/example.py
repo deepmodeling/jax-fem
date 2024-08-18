@@ -89,7 +89,7 @@ def problem(ele_type, N, data_dir):
     problem = LinearPoisson(mesh, vec=1, dim=3, ele_type=ele_type,
                             dirichlet_bc_info=dirichlet_bc_info)
 
-    sol_list = solver(problem, linear=True, precond=True)
+    sol_list = solver(problem)
     sol = sol_list[0]
     vtk_dir = os.path.join(data_dir, 'vtk')
     os.makedirs(vtk_dir, exist_ok=True)

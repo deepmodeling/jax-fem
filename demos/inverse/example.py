@@ -126,15 +126,16 @@ scale_d_plus = (1 + h)*scale_d
 params_scale_d = [E, rho, scale_d_plus]
 dscale_d_fd = (composed_fn(params_scale_d) - val)/(h*scale_d)
 
-
 # Derivative obtained by automatic differentiation
 dE, drho, dscale_d = jax.grad(composed_fn)(params)
 
-
 # Comparison
 print(f"\nDerivative comparison between automatic differentiation (AD) and finite difference (FD)")
-print(f"\ndE = {dE}, dE_fd = {dE_fd}, WRONG results! Please avoid gradients w.r.t self.E")
-print(f"This is due to the use of glob variable self.E, inside a jax jitted function.")
 print(f"\ndrho[0, 0] = {drho[0, 0]}, drho_fd_00 = {drho_fd_00}")
 print(f"\ndscale_d = {dscale_d}, dscale_d_fd = {dscale_d_fd}")
 
+print(f"\ndE = {dE}, dE_fd = {dE_fd}, WRONG results! Please avoid gradients w.r.t self.E")
+print(f"This is due to the use of glob variable self.E, inside a jax jitted function.")
+
+# TODO: show the following will cause an error
+# dE_E, _, _ = jax.grad(composed_fn)(params_E)

@@ -172,7 +172,7 @@ vecs = [0]*4
 dirichlet_bc_info = [location_fns, vecs, value_fns]
 
 problem = Poisson(mesh=mesh, vec=1, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info)
-sol = solver(problem, linear=True, use_petsc=True)
+sol = solver(problem)
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
@@ -202,6 +202,7 @@ By running the code above and use [Paraview](https://www.paraview.org/) for visu
 | [wave](https://github.com/deepmodeling/jax-fem/tree/main/demos/wave) | $${\color{lightblue}Time \space Dependent \space Problem:}$$ The scalar wave equation is solved with backward difference scheme. |
 | [topology_optimization](https://github.com/deepmodeling/jax-fem/tree/main/demos/topology_optimization) | $${\color{red}Inverse \space Problem:}$$ SIMP topology optimization for a 2D beam. Note that sensitivity analysis is done by the program, rather than manual derivation. |
 | [inverse](https://github.com/deepmodeling/jax-fem/tree/main/demos/inverse) | $${\color{red}Inverse \space Problem:}$$ Sanity check of how automatic differentiation works. |
+| [plasticity_gradient](https://github.com/deepmodeling/jax-fem/tree/main/applications/plasticity_gradient) | $${\color{red}Inverse \space Problem:}$$ Automatic sensitivity analysis involving history variables such as plasticity. |
 
 ## License
 

@@ -13,39 +13,9 @@ from jax import config
 config.update("jax_enable_x64", True)
 
 ################################################################################
-# PETSc linear solver or JAX linear solver
+# JAX solver or UMFPACK solver or PETSc solver
 
-def umfpack_solve():
-    """
-    To be implemented
-    """
-    pass
-
-def petsc_solve(A, b, ksp_type, pc_type):
-    rhs = PETSc.Vec().createSeq(len(b))
-    rhs.setValues(range(len(b)), onp.array(b))
-    ksp = PETSc.KSP().create()
-    ksp.setOperators(A)
-    ksp.setFromOptions()
-    ksp.setType(ksp_type)
-    ksp.pc.setType(pc_type)
-
-    logger.debug( f'PETSc Solver - Solving linear system with ksp_type = {ksp.getType()},' f'pc = {ksp.pc.getType()}')
-    x = PETSc.Vec().createSeq(len(b))
-    ksp.solve(rhs, x)
-
-    # Verify convergence
-    y = PETSc.Vec().createSeq(len(b))
-    A.mult(x, y)
-
-    err = np.linalg.norm(y.getArray() - rhs.getArray())
-    logger.debug(f"PETSc Solver - Finished solving, linear solve res = {err}")
-    # assert err < 0.1, f"PETSc linear solver failed to converge, err = {err}"
-
-    return x.getArray()
-
-
-def jax_solve(problem, A_fn, b, x0, precond, pc_matrix=None):
+def jax_solve(problem, A_fn, b, x0, precond):
     """Solves the equilibrium equation using a JAX solver.
     Is fully traceable and runs on GPU.
 
@@ -53,8 +23,6 @@ def jax_solve(problem, A_fn, b, x0, precond, pc_matrix=None):
     ----------
     precond
         Whether to calculate the preconditioner or not
-    pc_matrix
-        The matrix to use as preconditioner
     """
     logger.debug(f"JAX Solver - Solving linear system")
     pc = get_jacobi_precond(jacobi_preconditioner(problem)) if precond else None
@@ -75,10 +43,42 @@ def jax_solve(problem, A_fn, b, x0, precond, pc_matrix=None):
     # Particularly happening in topology optimization examples.
     # Don't know why yet.
 
-    # assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
-    # x = np.where(err < 0.1, x, np.nan) # For assert purpose, some how this also affects bicgstab.
+    assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
+    x = np.where(err < 0.1, x, np.nan) # For assert purpose, some how this also affects bicgstab.
 
     return x
+
+def umfpack_solve(A, b):
+    logger.debug(f"Scipy Solver - Solving linear system with UMFPACK")
+    ai, aj, av = A.getValuesCSR()
+    Asp = scipy.sparse.csr_matrix((av, aj, ai))
+    x = scipy.sparse.linalg.spsolve(Asp, onp.array(b))
+    logger.debug(f'Scipy Solver - Finished solving, linear solve res = {np.linalg.norm(Asp @ x - b)}')
+    return x
+
+
+def petsc_solve(A, b, ksp_type, pc_type):
+    rhs = PETSc.Vec().createSeq(len(b))
+    rhs.setValues(range(len(b)), onp.array(b))
+    ksp = PETSc.KSP().create()
+    ksp.setOperators(A)
+    ksp.setFromOptions()
+    ksp.setType(ksp_type)
+    ksp.pc.setType(pc_type)
+
+    logger.debug( f'PETSc Solver - Solving linear system with ksp_type = {ksp.getType()},' f'pc = {ksp.pc.getType()}')
+    x = PETSc.Vec().createSeq(len(b))
+    ksp.solve(rhs, x)
+
+    # Verify convergence
+    y = PETSc.Vec().createSeq(len(b))
+    A.mult(x, y)
+
+    err = np.linalg.norm(y.getArray() - rhs.getArray())
+    logger.debug(f"PETSc Solver - Finished solving, linear solve res = {err}")
+    assert err < 0.1, f"PETSc linear solver failed to converge, err = {err}"
+
+    return x.getArray()
 
 
 ################################################################################
@@ -251,27 +251,33 @@ def test_jacobi_precond(problem, jacobi, A_fn):
     logger.debug(f"finish jacobi preconditioner")
 
 
-def linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc, petsc_options, line_search_flag):
-    """Lift solver
+def linear_incremental_solver(problem, res_vec, A_fn, dofs, solver_options):
     """
-    logger.debug(f"Solving linear system with lift solver...")
+    Linear solver at each Newton's iteration
+    """
+    logger.debug(f"Solving linear system...")
     b = -res_vec
 
-    if use_petsc:
-        if petsc_options is not None:
-            ksp_type = petsc_options['ksp_type']
-            pc_type = petsc_options['pc_type']
-        else:
-            ksp_type = 'bcgsl'
-            pc_type = 'ilu'
-        inc = petsc_solve(A_fn, b, ksp_type, pc_type)
-    else:
+    # If user does not specify any solver, set jax_solver as the default one.
+    if  len(solver_options.keys() & {'jax_solver', 'umfpack_solver', 'petsc_solver'}) == 0: 
+        solver_options['jax_solver'] = {}
+
+    if 'jax_solver' in solver_options:
         # x0 will always be correct at boundary locations
         x0_1 = assign_bc(np.zeros_like(b), problem)
         x0_2 = copy_bc(dofs, problem)
         x0 = x0_1 - x0_2
+        precond = solver_options['jax_solver']['precond'] if 'precond' in solver_options['jax_solver'] else True
         inc = jax_solve(problem, A_fn, b, x0, precond)
+    elif 'umfpack_solver' in solver_options:
+        inc = umfpack_solve(A_fn, b)
+    else:
+        ksp_type = solver_options['petsc_solver']['ksp_type'] if 'ksp_type' in solver_options['petsc_solver'] else  'bcgsl' 
+        pc_type = solver_options['petsc_solver']['pc_type'] if 'pc_type' in solver_options['petsc_solver'] else 'ilu'
+        inc = petsc_solve(A_fn, b, ksp_type, pc_type)
 
+
+    line_search_flag = solver_options['line_search_flag'] if 'line_search_flag' in solver_options else False
     if line_search_flag:
         dofs = line_search(problem, dofs, inc)
     else:
@@ -316,11 +322,10 @@ def line_search(problem, dofs, inc):
             break
         res_norm = res_norm_half
 
-
     return dofs + alpha*inc
 
 
-def get_A_fn(problem, use_petsc):
+def get_A_fn(problem, solver_options):
     logger.debug(f"Creating sparse matrix with scipy...")
     A_sp_scipy = scipy.sparse.csr_array(
         (onp.array(problem.V), (problem.I, problem.J)),
@@ -333,22 +338,66 @@ def get_A_fn(problem, use_petsc):
     def compute_linearized_residual(dofs):
         return A_sp @ dofs
 
-    if use_petsc:
+    jax_type = True if len(solver_options.keys() & {'umfpack_solver', 'petsc_solver'}) == 0 else False 
+
+    if jax_type:
+        A = row_elimination(compute_linearized_residual, problem)
+    else:
         # https://scicomp.stackexchange.com/questions/2355/32bit-64bit-issue-when-working-with-numpy-and-petsc4py/2356#2356
         A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape, csr=(A_sp_scipy.indptr.astype(PETSc.IntType, copy=False),
                                                        A_sp_scipy.indices.astype(PETSc.IntType, copy=False), A_sp_scipy.data))
+
         for ind, fe in enumerate(problem.fes):
             for i in range(len(fe.node_inds_list)):
                 row_inds = onp.array(fe.node_inds_list[i] * fe.vec + fe.vec_inds_list[i] + problem.offset[ind], dtype=onp.int32)
-                A.zeroRows(row_inds)
-    else:
-        A = row_elimination(compute_linearized_residual, problem)
+                A.zeroRows(row_inds)        
 
     return A
 
 
-def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc, petsc_options, line_search_flag):
-    """The solver imposes Dirichlet B.C. with "row elimination" method.
+################################################################################
+# The "row elimination" solver
+
+def solver(problem, solver_options={}):
+    """
+    Specify exactly either 'jax_solver' or 'umfpack_solver' or 'petsc_solver'
+    
+    Examples:
+    (1) solver_options = {'jax_solver': {}}
+    (2) solver_options = {'umfpack_solver': {}}
+    (3) solver_options = {'petsc_solver': {'ksp_type': 'bcgsl', 'pc_type': 'jacobi'}, 'initial_guess': some_guess}
+
+    Default parameters will be used if no instruction is found:
+
+    solver_options = 
+    {
+        # If multiple solvers are specified or no solver is specified, 'jax_solver' will be used.
+        'jax_solver': 
+        {
+            # The JAX built-in linear solver 
+            # Reference: https://jax.readthedocs.io/en/latest/_autosummary/jax.scipy.sparse.linalg.bicgstab.html
+            'precond': True,
+        }
+
+        'umfpack_solver': 
+        {   
+            # The scipy solver that calls UMFPACK
+            # Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html
+        }
+
+        'petsc_solver':
+        {   
+            # PETSc solver
+            # For more ksp_type and pc_type: https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html
+            'ksp_type': 'bcgsl', # e.g., 'minres', 'gmres', 'tfqmr'
+            'pc_type': 'ilu', # e.g., 'jacobi'
+        }
+
+        'line_search_flag': False, # Line search method
+        'initial_guess': initial_guess, # Same shape as sol_list
+    }
+
+    The solver imposes Dirichlet B.C. with "row elimination" method.
 
     Some memo:
 
@@ -365,44 +414,36 @@ def solver_row_elimination(problem, linear, precond, initial_guess, use_petsc, p
 
     The function newton_update computes r(u) and dr/du
     """
-    logger.debug(
-        f"Calling the row elimination solver for imposing Dirichlet B.C.")
+    logger.debug(f"Calling the row elimination solver for imposing Dirichlet B.C.")
     logger.debug("Start timing")
     start = time.time()
 
-    dofs = np.zeros(problem.num_total_dofs_all_vars)
+    jax_type = True if solver_options == {} or 'jax_solver' in solver_options else False
+
+    if 'initial_guess' in solver_options:
+        initial_guess = solver_options['initial_guess']
+        dofs = jax.flatten_util.ravel_pytree(initial_guess)[0]
+    else:
+        dofs = np.zeros(problem.num_total_dofs_all_vars)
 
     def newton_update_helper(dofs):
         sol_list = problem.unflatten_fn_sol_list(dofs)
         res_list = problem.newton_update(sol_list)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem)
-        A_fn = get_A_fn(problem, use_petsc)
+        A_fn = get_A_fn(problem, solver_options)
         return res_vec, A_fn
 
-    if linear:
-        # We might not need this linear solver as well
-        dofs = assign_bc(dofs, problem)
+    res_vec, A_fn = newton_update_helper(dofs)
+    res_val = np.linalg.norm(res_vec)
+    logger.debug(f"Before, res l_2 = {res_val}")
+    tol = 1e-6
+    while res_val > tol:
+        dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, solver_options)
         res_vec, A_fn = newton_update_helper(dofs)
-        dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc, petsc_options, line_search_flag)
-        res_vec, A_fn = newton_update_helper(dofs)
+        # test_jacobi_precond(problem, jacobi_preconditioner(problem, dofs), A_fn)
         res_val = np.linalg.norm(res_vec)
-        logger.debug(f"Linear solve, res l_2 = {res_val}")
-
-    else:
-        if initial_guess is not None:
-            dofs = jax.flatten_util.ravel_pytree(initial_guess)[0]
-
-        res_vec, A_fn = newton_update_helper(dofs)
-        res_val = np.linalg.norm(res_vec)
-        logger.debug(f"Before, res l_2 = {res_val}")
-        tol = 1e-6
-        while res_val > tol:
-            dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond, use_petsc, petsc_options, line_search_flag)
-            res_vec, A_fn = newton_update_helper(dofs)
-            # test_jacobi_precond(problem, jacobi_preconditioner(problem, dofs), A_fn)
-            res_val = np.linalg.norm(res_vec)
-            logger.debug(f"res l_2 = {res_val}")
+        logger.debug(f"res l_2 = {res_val}")
 
     assert np.all(np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
     assert np.all(np.isfinite(dofs)), f"dofs contains NaN, stop the program!"
@@ -434,10 +475,11 @@ def assembleCSR(problem, dofs):
    
     A_sp_scipy = scipy.sparse.csr_array((problem.V, (problem.I, problem.J)),
         shape=(problem.fes[0].num_total_dofs, problem.fes[0].num_total_dofs))
-
-    A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape,
-                              csr=(A_sp_scipy.indptr, A_sp_scipy.indices,
+    A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape, 
+                              csr=(A_sp_scipy.indptr.astype(PETSc.IntType, copy=False),
+                                   A_sp_scipy.indices.astype(PETSc.IntType, copy=False), 
                                    A_sp_scipy.data))
+
     for i in range(len(problem.fes[0].node_inds_list)):
         row_inds = onp.array(problem.fes[0].node_inds_list[i] * problem.fes[0].vec +
                              problem.fes[0].vec_inds_list[i],
@@ -491,17 +533,20 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
     There is a FEniCS version of this dynamic relaxation algorithm.
     The code below is a direct translation from the FEniCS version.
     """
+    solver_options = {'umfpack_solver': {}}
+
     def newton_update_helper(dofs):
         sol_list = problem.unflatten_fn_sol_list(dofs)
         res_list = problem.newton_update(sol_list)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem)
-        A_fn = get_A_fn(problem, use_petsc=False)
+        A_fn = get_A_fn(problem, solver_options)
         return res_vec, A_fn
  
     dofs = np.zeros(problem.num_total_dofs_all_vars)
     res_vec, A_fn = newton_update_helper(dofs)
-    dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, precond=True, use_petsc=False, petsc_options=None)
+
+    dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, solver_options)
 
     # parameters not to change
     cmin = 1e-3
@@ -604,32 +649,9 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
 
 
 ################################################################################
-# General
-
-def solver(problem,
-           linear=False,
-           precond=True,
-           initial_guess=None,
-           use_petsc=False,
-           petsc_options=None,
-           lagrangian_solver=False,
-           line_search_flag=False):
-    """periodic B.C. is a special form of adding a linear constraint.
-    Lagrange multiplier seems to be convenient to impose this constraint.
-    """
-    # TODO: print platform jax.lib.xla_bridge.get_backend().platform
-    # and suggest PETSc or jax solver
-    if lagrangian_solver:
-        assert False, f"Lagrangian multiplier solver needs refactoring: Not working for now."
-        return solver_lagrange_multiplier(problem, linear, use_petsc)
-    else:
-        return solver_row_elimination(problem, linear, precond, initial_guess, use_petsc, petsc_options, line_search_flag)
-
-
-################################################################################
 # Implicit differentiation with the adjoint method
 
-def implicit_vjp(problem, sol_list, params, v_list, use_petsc_adjoint, petsc_options_adjoint):
+def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
 
     def constraint_fn(dofs, params):
         """c(u, p)
@@ -676,11 +698,26 @@ def implicit_vjp(problem, sol_list, params, v_list, use_petsc_adjoint, petsc_opt
 
     problem.set_params(params)
     problem.newton_update(sol_list)
-    A_fn = get_A_fn(problem, use_petsc_adjoint)
 
+    A_fn = get_A_fn(problem, adjoint_solver_options)
     v_vec = jax.flatten_util.ravel_pytree(v_list)[0]
 
-    if use_petsc_adjoint:
+    if adjoint_solver_options == {}:
+        adjoint_solver_options = {'jax_solver': {}}
+
+    # If user does not specify any solver, set jax_solver as the default one.
+    if  len(adjoint_solver_options.keys() & {'jax_solver', 'umfpack_solver', 'petsc_solver'}) == 0: 
+        adjoint_solver_options['jax_solver'] = {}
+
+    if 'jax_solver' in adjoint_solver_options:
+        dofs = jax.flatten_util.ravel_pytree(sol_list)[0]
+        adjoint_linear_fn = get_vjp_contraint_fn_dofs(dofs)
+        precond = adjoint_solver_options['jax_solver']['precond'] if 'precond' in adjoint_solver_options['jax_solver'] else True
+        adjoint_vec = jax_solve(problem, adjoint_linear_fn, v_vec, None, precond)
+    elif 'umfpack_solver' in adjoint_solver_options:
+        A_transpose = A_fn.transpose()
+        adjoint_vec = umfpack_solve(A_transpose, v_vec)
+    else:
         A_transpose = A_fn.transpose()
 
         # Remark: Eliminating rows seems to make A better conditioned.
@@ -688,21 +725,12 @@ def implicit_vjp(problem, sol_list, params, v_list, use_petsc_adjoint, petsc_opt
         # for i in range(len(problem.node_inds_list)):
         #     row_inds = onp.array(problem.node_inds_list[i]*problem.vec + problem.vec_inds_list[i], dtype=onp.int32)
         #     A_transpose.zeroRows(row_inds)
-        # v = assign_zeros_bc(v, problem)
+        # v_vec = assign_zeros_bc(v_vec, problem)
 
-        if petsc_options_adjoint is not None:
-            ksp_type = petsc_options_adjoint['ksp_type']
-            pc_type = petsc_options_adjoint['pc_type']
-        else:
-            ksp_type = 'minres'
-            pc_type = 'ilu'
-
+        ksp_type = adjoint_solver_options['petsc_solver']['ksp_type'] if 'ksp_type' in adjoint_solver_options['petsc_solver'] else  'bcgsl' 
+        pc_type = adjoint_solver_options['petsc_solver']['pc_type'] if 'pc_type' in adjoint_solver_options['petsc_solver'] else 'ilu'
         adjoint_vec = petsc_solve(A_transpose, v_vec, ksp_type, pc_type)
-    else:
-        dofs = jax.flatten_util.ravel_pytree(sol_list)[0]
-        adjoint_linear_fn = get_vjp_contraint_fn_dofs(dofs)
-        adjoint_vec = jax_solve(problem, adjoint_linear_fn, v_vec, None, True)
-
+ 
     vjp_linear_fn = get_vjp_contraint_fn_params(params, sol_list)
     vjp_result = vjp_linear_fn(problem.unflatten_fn_sol_list(adjoint_vec))
     vjp_result = jax.tree_map(lambda x: -x, vjp_result)
@@ -710,7 +738,7 @@ def implicit_vjp(problem, sol_list, params, v_list, use_petsc_adjoint, petsc_opt
     return vjp_result
 
 
-def ad_wrapper(problem, linear=False, use_petsc=False, petsc_options=None, use_petsc_adjoint=False, petsc_options_adjoint=None):
+def ad_wrapper(problem, solver_options={}, adjoint_solver_options={}):
     """
     Attributes
     ----------
@@ -730,8 +758,7 @@ def ad_wrapper(problem, linear=False, use_petsc=False, petsc_options=None, use_p
     @jax.custom_vjp
     def fwd_pred(params):
         problem.set_params(params)
-        initial_guess = problem.initial_guess if hasattr(problem, 'initial_guess') else None
-        sol_list = solver(problem, linear=linear, initial_guess=initial_guess, use_petsc=use_petsc, petsc_options=petsc_options)
+        sol_list = solver(problem, solver_options)
         return sol_list
 
     def f_fwd(params):
@@ -741,7 +768,7 @@ def ad_wrapper(problem, linear=False, use_petsc=False, petsc_options=None, use_p
     def f_bwd(res, v):
         logger.info("Running backward and solving the adjoint problem...")
         params, sol_list = res
-        vjp_result = implicit_vjp(problem, sol_list, params, v, use_petsc_adjoint, petsc_options_adjoint)
+        vjp_result = implicit_vjp(problem, sol_list, params, v, adjoint_solver_options)
         return (vjp_result, )
 
     fwd_pred.defvjp(f_fwd, f_bwd)

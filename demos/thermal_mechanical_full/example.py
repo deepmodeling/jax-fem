@@ -211,9 +211,9 @@ def main_fns():
     Nincr = 200
     t = onp.logspace(1,4,Nincr+1)
     for (i, dt_i) in enumerate(onp.diff(t)):
-        print(f'Increment{i+1}; dt {i+1}:{dt_i}')
+        print(f'Increment {i+1}; dt {i+1}:{dt_i}')
         problem.set_params([sol_u, sol_dT, dt_i])
-        sol_list = solver(problem, linear=False, precond=True, use_petsc=True)
+        sol_list = solver(problem, solver_options={'petsc_solver': {}})
         sol_u, sol_dT = sol_list
         # Store the solution to local file.
         vtk_path_u = os.path.join(output_dir, f'vtk/u_{i}.vtk')

@@ -85,7 +85,7 @@ def problem():
 
     problem = LinearElasticity([mesh]*2, vec=[1, 2], dim=3, ele_type=[ele_type]*2, gauss_order=[None, None],
         dirichlet_bc_info=[dirichlet_bc_info1, dirichlet_bc_info2])
-    sol_list = solver(problem, linear=True, precond=True, use_petsc=False)
+    sol_list = solver(problem)
     vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
 
 

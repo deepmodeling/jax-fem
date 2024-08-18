@@ -215,8 +215,10 @@ def problem():
     # Here, we choose 'ksp_type' to be 'tfqmr' and 'pc_type' to be 'ilu'
     # But see a variety of other choices in PETSc:
     # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html
-    sol_list = solver(problem, linear=False, precond=True, use_petsc=True, 
-                      petsc_options={'ksp_type': 'tfqmr', 'pc_type': 'ilu'})
+    sol_list = solver(problem, solver_options={'petsc_solver': {'ksp_type': 'tfqmr', 'pc_type': 'ilu'}})
+
+    # Alternatively, you may use the UMFPACK solver
+    # sol_list = solver(problem, solver_options={'umfpack_solver': {}})
 
     u, p = sol_list
     print(f"Max u = {onp.max(u)}, Min u = {onp.min(u)}")

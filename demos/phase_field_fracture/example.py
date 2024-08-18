@@ -254,10 +254,10 @@ if simulation_flag:
         while err > tol:
             print(f"####### max history = {np.max(history)}")
             problem_u.set_params([sol_d_list[0], disp])
-            sol_u_list = solver(problem_u, use_petsc=False)
+            sol_u_list = solver(problem_u)
     
             problem_d.set_params(history)
-            sol_d_list = solver(problem_d, use_petsc=False)
+            sol_d_list = solver(problem_d)
     
             history = problem_u.compute_history(sol_u_list[0], history_old)
             sol_d_list = [onp.maximum(sol_d_list[0], sol_d_old)]

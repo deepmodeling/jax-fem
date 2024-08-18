@@ -151,8 +151,7 @@ def problem():
         problem.fes[0].update_Dirichlet_boundary_conditions(dirichlet_bc_info)
         problem.set_params(params)
 
-        # sol = solver(problem, use_petsc=True)
-        sol_list = solver(problem, initial_guess=sol_list, use_petsc=False)   
+        sol_list = solver(problem, solver_options={'petsc_solver':{}, 'initial_guess': sol_list})   
 
         print(f"Computing stress...")
         sigma_cell_data = problem.compute_avg_stress(sol_list[0], params)[:, 0, 0]

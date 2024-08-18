@@ -171,7 +171,7 @@ def main_fns():
     for i in range(steps):
         print(f'Time increment {i+1}\n')
         problem.set_params([sol_2dt,sol_dt])
-        sol = solver(problem, linear=True, use_petsc=False)[0]
+        sol = solver(problem)[0]
         sol_2dt = sol_dt
         sol_dt = sol
         # Store the solution to local file.

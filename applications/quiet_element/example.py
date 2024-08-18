@@ -304,7 +304,7 @@ def quiet_element_simulation():
                     quiet_point_inds_set = get_quiet_point_inds_set(problem, active_cell_truth_tab)
 
                 problem.set_params([sol_list[0], dt, laser_center, switch, quiet_point_inds_set, active_cell_truth_tab, active_face_truth_tab])
-                sol_list = solver(problem, linear=True, use_petsc=False)
+                sol_list = solver(problem)
        
                 if j % 10 == 0:
                     vtk_path = os.path.join(vtk_dir, f"u_{i:05d}_{j:05d}.vtu")
@@ -319,7 +319,7 @@ def quiet_element_simulation():
                 print(f"\n############################################################")
                 print(f"Laser off: i = {i} in {toolpath.shape[0]} , j = {j} in {num_dt_laser_off}")
                 problem.set_params([sol_list[0], dt, laser_center, switch, quiet_point_inds_set, active_cell_truth_tab, active_face_truth_tab])
-                sol_list = solver(problem, use_petsc=True)
+                sol_list = solver(problem, solver_options={'petsc_solver': {}})
                 vtk_path = os.path.join(vtk_dir, f"u_{i:05d}_{j:05d}.vtu")
                 save_sol(problem.fe, sol_list[0], vtk_path, cell_infos=[('active', onp.array(active_cell_truth_tab, dtype=onp.int32))])
 

@@ -114,11 +114,8 @@ problem = Elasticity(mesh, vec=2, dim=2, ele_type=ele_type, dirichlet_bc_info=di
 
 
 # Apply the automatic differentiation wrapper. 
-# The flag 'use_petsc' specifies how the forward problem (could be linear or nonlinear) 
-# and the backward adjoint problem (always linear) should be solved by specifying use_petsc_adjoint. 
 # This is a critical step that makes the problem solver differentiable.
-fwd_pred = ad_wrapper(problem, linear=True, use_petsc=True, use_petsc_adjoint=True)
-
+fwd_pred = ad_wrapper(problem, solver_options={'umfpack_solver': {}}, adjoint_solver_options={'umfpack_solver': {}})
 
 # Define the objective function 'J_total(theta)'. 
 # In the following, 'sol = fwd_pred(params)' basically says U = U(theta).

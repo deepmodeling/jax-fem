@@ -132,7 +132,7 @@ def problem():
                               ele_type=ele_type,
                               dirichlet_bc_info=dirichlet_bc_info)
     # Solve the defined problem.
-    sol_list = solver(problem, use_petsc=True)
+    sol_list = solver(problem, solver_options={'petsc_solver': {}})
     sol = sol_list[0]
     # Store the solution to local file.
     vtk_path = os.path.join(data_dir, f'vtk/u.vtu')

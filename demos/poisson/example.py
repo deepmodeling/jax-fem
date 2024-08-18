@@ -86,12 +86,10 @@ problem = Poisson(mesh=mesh, vec=1, dim=2, ele_type=ele_type, dirichlet_bc_info=
 
 
 # Solve the problem. 
-# Setting the flag 'linear' is optional, but gives a slightly better performance. 
-# If the program runs on CPU, we suggest setting 'use_petsc' to be True to use 
-# PETSc solver; if GPU is available, we suggest setting 'use_petsc' to be False 
-# to call the JAX built-in solver that can often times be faster.
-sol = solver(problem, linear=True, use_petsc=True)
-
+# solver_options can be changed for other linear solver options
+sol = solver(problem)
+# sol = solver(problem, solver_options={'umfpack_solver': {}})
+# sol = solver(problem, solver_options={'petsc_solver': {'ksp_type': 'bcgsl', 'pc_type': 'ilu'}})
 
 # Save the solution to a local folder that can be visualized with ParaWiew.
 data_dir = os.path.join(os.path.dirname(__file__), 'data')

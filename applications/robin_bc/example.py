@@ -125,7 +125,7 @@ def problem():
     # gauss_order=2 produces the same result with FEniCS
     problem = Poisson(mesh, vec, dim, ele_type, gauss_order=2, dirichlet_bc_info=dirichlet_bc_info, location_fns=location_fns)
 
-    sol_list = solver(problem, linear=False)
+    sol_list = solver(problem)
 
     vtk_file = os.path.join(output_dir, f"vtk/u_jax-fem.vtu")
     save_sol(problem.fes[0], sol_list[0], vtk_file)

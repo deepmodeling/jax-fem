@@ -421,7 +421,8 @@ def solver(problem, solver_options={}):
     jax_type = True if solver_options == {} or 'jax_solver' in solver_options else False
 
     if 'initial_guess' in solver_options:
-        initial_guess = solver_options['initial_guess']
+        # We dont't want inititual guess to play a role in the differentiation chain.
+        initial_guess = jax.lax.stop_gradient(solver_options['initial_guess'])
         dofs = jax.flatten_util.ravel_pytree(initial_guess)[0]
     else:
         dofs = np.zeros(problem.num_total_dofs_all_vars)

@@ -166,6 +166,9 @@ def topology_optimization():
     def fwd_pred_seq(theta):
         rs = np.linspace(0.2, 1., 5)
         body_params = problem.init_params(theta)
+
+        sol_list = [np.ones((problem.fe.num_total_nodes, problem.fe.vec))]
+
         for i in range(len(rs)):
             print(f"\nStep {i + 1} in {len(rs)}")
             load_value = rs[i]*max_load
@@ -175,7 +178,8 @@ def topology_optimization():
             surface_params = load_value*np.ones((problem.physical_surface_quad_points[0].shape[0], problem.fe.num_face_quads)) 
 
             # If you want to set initial guess, do as follows:
-            # solver_options['initial_guess'] = i*1e-5*onp.ones((problem.fe.num_total_nodes, problem.fe.vec))
+            solver_options['initial_guess'] = sol_list
+
             sol_list = fwd_pred([body_params, surface_params])
             body_params = problem.update_stress_strain(sol_list[0], body_params)  
         return sol_list[0]     

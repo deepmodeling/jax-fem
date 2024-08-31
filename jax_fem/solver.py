@@ -276,7 +276,6 @@ def linear_incremental_solver(problem, res_vec, A_fn, dofs, solver_options):
         pc_type = solver_options['petsc_solver']['pc_type'] if 'pc_type' in solver_options['petsc_solver'] else 'ilu'
         inc = petsc_solve(A_fn, b, ksp_type, pc_type)
 
-
     line_search_flag = solver_options['line_search_flag'] if 'line_search_flag' in solver_options else False
     if line_search_flag:
         dofs = line_search(problem, dofs, inc)
@@ -395,6 +394,8 @@ def solver(problem, solver_options={}):
 
         'line_search_flag': False, # Line search method
         'initial_guess': initial_guess, # Same shape as sol_list
+        'tol': 1e-5, # Absolute tolerance for residual vector (l2 norm), used in Newton's method
+        'rel_tol': 1e-8, # Relative tolerance for residual vector (l2 norm), used in Newton's method
     }
 
     The solver imposes Dirichlet B.C. with "row elimination" method.
@@ -418,14 +419,15 @@ def solver(problem, solver_options={}):
     logger.debug("Start timing")
     start = time.time()
 
-    jax_type = True if solver_options == {} or 'jax_solver' in solver_options else False
-
     if 'initial_guess' in solver_options:
         # We dont't want inititual guess to play a role in the differentiation chain.
         initial_guess = jax.lax.stop_gradient(solver_options['initial_guess'])
         dofs = jax.flatten_util.ravel_pytree(initial_guess)[0]
     else:
         dofs = np.zeros(problem.num_total_dofs_all_vars)
+
+    rel_tol = solver_options['rel_tol'] if 'rel_tol' in solver_options else 1e-8
+    tol = solver_options['tol'] if 'tol' in solver_options else 1e-5
 
     def newton_update_helper(dofs):
         sol_list = problem.unflatten_fn_sol_list(dofs)
@@ -437,14 +439,17 @@ def solver(problem, solver_options={}):
 
     res_vec, A_fn = newton_update_helper(dofs)
     res_val = np.linalg.norm(res_vec)
-    logger.debug(f"Before, res l_2 = {res_val}")
-    tol = 1e-6
-    while res_val > tol:
+    res_val_initial = res_val
+    rel_res_val = res_val/res_val_initial
+    logger.debug(f"Before, l_2 res = {res_val}, relative l_2 res = {rel_res_val}")
+    while (rel_res_val > rel_tol) or (res_val > tol):
         dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, solver_options)
         res_vec, A_fn = newton_update_helper(dofs)
+        # logger.debug(f"DEBUG: l_2 res = {np.linalg.norm(apply_bc_vec(A_fn(dofs), dofs, problem))}")
         # test_jacobi_precond(problem, jacobi_preconditioner(problem, dofs), A_fn)
         res_val = np.linalg.norm(res_vec)
-        logger.debug(f"res l_2 = {res_val}")
+        rel_res_val = res_val/res_val_initial
+        logger.debug(f"l_2 res = {res_val}, relative l_2 res = {rel_res_val}")
 
     assert np.all(np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
     assert np.all(np.isfinite(dofs)), f"dofs contains NaN, stop the program!"

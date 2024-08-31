@@ -81,7 +81,7 @@ def get_elements(ele_type):
         basix_face_ele = basix.CellType.interval
         gauss_order = 0 # 1, full integration
         degree = 1
-    elif  ele_type == 'TRI6':
+    elif ele_type == 'TRI6':
         re_order = [0, 1, 2, 5, 3, 4]
         basix_ele = basix.CellType.triangle
         basix_face_ele = basix.CellType.interval

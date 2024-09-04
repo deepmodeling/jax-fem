@@ -212,10 +212,10 @@ def problem():
     # Preconditioning is very important for a problem like this. See discussions:
     # https://fenicsproject.discourse.group/t/steady-stokes-equation-3d-dolfinx/9709/4
     # https://fenicsproject.org/olddocs/dolfin/2019.1.0/python/demos/stokes-iterative/demo_stokes-iterative.py.html
-    # Here, we choose 'ksp_type' to be 'tfqmr' and 'pc_type' to be 'ilu'
+    # Here, we choose 'ksp_type' to be 'tfqmr' and 'pc_type' to be 'lu'
     # But see a variety of other choices in PETSc:
     # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html
-    sol_list = solver(problem, solver_options={'petsc_solver': {'ksp_type': 'tfqmr', 'pc_type': 'ilu'}})
+    sol_list = solver(problem, solver_options={'petsc_solver': {'ksp_type': 'tfqmr', 'pc_type': 'lu'}})
 
     # Alternatively, you may use the UMFPACK solver
     # sol_list = solver(problem, solver_options={'umfpack_solver': {}})

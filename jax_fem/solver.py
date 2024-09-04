@@ -37,12 +37,6 @@ def jax_solve(problem, A_fn, b, x0, precond):
     # Verify convergence
     err = np.linalg.norm(A_fn(x) - b)
     logger.debug(f"JAX Solver - Finshed solving, res = {err}")
-
-    # Remarks(Tianju): assert seems to unexpectedly change the behavior of bicgstab (on my Linux machine).
-    # Sometimes the solver simply fails without converging (it does converge without assert)
-    # Particularly happening in topology optimization examples.
-    # Don't know why yet.
-
     assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
     x = np.where(err < 0.1, x, np.nan) # For assert purpose, some how this also affects bicgstab.
 
@@ -53,6 +47,10 @@ def umfpack_solve(A, b):
     ai, aj, av = A.getValuesCSR()
     Asp = scipy.sparse.csr_matrix((av, aj, ai))
     x = scipy.sparse.linalg.spsolve(Asp, onp.array(b))
+
+    # TODO: try https://jax.readthedocs.io/en/latest/_autosummary/jax.experimental.sparse.linalg.spsolve.html
+    # x = jax.experimental.sparse.linalg.spsolve(av, aj, ai, b)
+
     logger.debug(f'Scipy Solver - Finished solving, linear solve res = {np.linalg.norm(Asp @ x - b)}')
     return x
 
@@ -66,7 +64,11 @@ def petsc_solve(A, b, ksp_type, pc_type):
     ksp.setType(ksp_type)
     ksp.pc.setType(pc_type)
 
-    logger.debug( f'PETSc Solver - Solving linear system with ksp_type = {ksp.getType()},' f'pc = {ksp.pc.getType()}')
+    # TODO: This works better. Do we need to generalize the code a little bit?
+    if ksp_type == 'tfqmr':
+        ksp.pc.setFactorSolverType('mumps')
+
+    logger.debug(f'PETSc Solver - Solving linear system with ksp_type = {ksp.getType()}, pc = {ksp.pc.getType()}')
     x = PETSc.Vec().createSeq(len(b))
     ksp.solve(rhs, x)
 
@@ -427,7 +429,7 @@ def solver(problem, solver_options={}):
         dofs = np.zeros(problem.num_total_dofs_all_vars)
 
     rel_tol = solver_options['rel_tol'] if 'rel_tol' in solver_options else 1e-8
-    tol = solver_options['tol'] if 'tol' in solver_options else 1e-5
+    tol = solver_options['tol'] if 'tol' in solver_options else 1e-6
 
     def newton_update_helper(dofs):
         sol_list = problem.unflatten_fn_sol_list(dofs)
@@ -442,7 +444,7 @@ def solver(problem, solver_options={}):
     res_val_initial = res_val
     rel_res_val = res_val/res_val_initial
     logger.debug(f"Before, l_2 res = {res_val}, relative l_2 res = {rel_res_val}")
-    while (rel_res_val > rel_tol) or (res_val > tol):
+    while (rel_res_val > rel_tol) and (res_val > tol):
         dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, solver_options)
         res_vec, A_fn = newton_update_helper(dofs)
         # logger.debug(f"DEBUG: l_2 res = {np.linalg.norm(apply_bc_vec(A_fn(dofs), dofs, problem))}")

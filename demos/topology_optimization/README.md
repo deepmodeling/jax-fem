@@ -36,7 +36,9 @@ where $\boldsymbol{u}^h(\boldsymbol{x}) = \sum_k \boldsymbol{U}[k] \boldsymbol{\
 As one of its salient features, *JAX-FEM* allows users to solve such problems in a handy way. In this example, the external MMA optimizer [2] is adopted. The original optimization problem is reformulated in the following reduced form:
 
 $$
+\begin{align*} 
 \nonumber \min_{\boldsymbol{\Theta}\in\mathbb{R}^{M}} \widehat{J}(\boldsymbol{\Theta}) = J(\boldsymbol{U}(\boldsymbol{\Theta}),\boldsymbol{\Theta}).
+\end{align*}
 $$
 
 Note that $\boldsymbol{U}$ is implicitly a function of $\boldsymbol{\Theta}$. To call the MMA optimizer, we need to provide the total derivative $\frac{\textrm{d}\widehat{J}}{\textrm{d}\boldsymbol{\Theta}}$, which is computed automatically with *JAX-FEM*. The adjoint method is used under the hood. 

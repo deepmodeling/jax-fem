@@ -23,10 +23,11 @@ The neutral network surrogate model computational homogenization procedure steps
 <center><p>Geometry for RVE</p></center>
 
 FEM calculation on the RVE under macroscopic deformations $\bar F$ by prescribing the following periodic boundary conditions:
+
 $$
-\begin{align*} 
-\boldsymbol{u}(\boldsymbol{X})=(\overline{\boldsymbol{F}}-\boldsymbol{I}) \cdot \boldsymbol{X}+\boldsymbol{u}^*(\boldsymbol{X})=\overline{\boldsymbol{H}} \cdot \boldsymbol{X}+\boldsymbol{u}^*(\boldsymbol{X})
-\end{align*}
+\begin{align} 
+\boldsymbol{u}(\boldsymbol{X})=(\overline{\boldsymbol{F}}-\boldsymbol{I}) \cdot \boldsymbol{X}+\boldsymbol{u}^\star(\boldsymbol{X})=\overline{\boldsymbol{H}} \cdot \boldsymbol{X}+\boldsymbol{u}^\star(\boldsymbol{X})
+\end{align}
 $$
 
 See [1] for more details.

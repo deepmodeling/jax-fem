@@ -47,7 +47,7 @@ Visualized with ParaView:
   <img src="materials/compression.png" width="500" />
 </p>
 <p align="middle">
-    <em >Deformation under 20% stretch (left) and 5% compression< (right)</em>
+    <em >Deformation under 20% stretch (left) and 5% compression (right)</em>
 </p>
 
 

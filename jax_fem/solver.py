@@ -357,6 +357,82 @@ def get_A_fn(problem, solver_options):
 
 
 ################################################################################
+# The "arc length" solver
+# Reference: Vasios, Nikolaos. "Nonlinear analysis of structures." The Arc-Length method. Harvard (2015).
+# Our implementation follows the Crisfeld's formulation
+
+# TODO: how to consider displacement-control rather than force-control problems?
+
+def arc_length_solver(problem, prev_u_vec, prev_lamda, q_vec):
+
+    def newton_update_helper(dofs):
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        res_list = problem.newton_update(sol_list)
+        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
+        res_vec = apply_bc_vec(res_vec, dofs, problem)
+        A_fn = get_A_fn(problem, solver_options={'umfpack_solver':{}})
+        return res_vec, A_fn
+
+    u_vec = prev_u_vec
+    lamda = prev_lamda
+    q_vec_mapped = assign_zeros_bc(q_vec, problem)
+    
+    tol = 1e-6
+    res_val = 1.
+    while res_val > tol:
+        res_vec, A_fn = newton_update_helper(u_vec)
+        res_val = np.linalg.norm(res_vec + lamda*q_vec_mapped)
+        logger.debug(f"Arc length solver: res_val = {res_val}")
+
+        # TODO: the scipy umfpack solver seems to be far better than the jax linear solver, so we use umfpack solver here.
+        # x0_1 = assign_bc(np.zeros_like(u_vec), problem)
+        # x0_2 = copy_bc(u_vec, problem)
+        # delta_u_bar = jax_solve(problem, A_fn, -(res_vec + lamda*q_vec_mapped), x0=x0_1 - x0_2, precond=True)   
+        # delta_u_t = jax_solve(problem, A_fn, -q_vec_mapped, x0=np.zeros_like(u_vec), precond=True)   
+
+        delta_u_bar = umfpack_solve(A_fn, -(res_vec + lamda*q_vec_mapped))
+        delta_u_t = umfpack_solve(A_fn, -q_vec_mapped)
+
+        # TODO: how to determine these hyper-parameters?
+        psi = 1.
+        Delta_l = 1.
+        Delta_u = u_vec - prev_u_vec
+        Delta_lamda = lamda - prev_lamda
+        a1 = np.sum(delta_u_t**2.) + psi**2.*np.sum(q_vec_mapped**2.)
+        a2 = 2.* np.sum((Delta_u + delta_u_bar)*delta_u_t) + 2.*psi**2.*Delta_lamda*np.sum(q_vec_mapped**2.)
+        a3 = np.sum((Delta_u + delta_u_bar)**2.) + psi**2.*Delta_lamda**2.*np.sum(q_vec_mapped**2.) - Delta_l**2.
+
+        # TODO: failure warning
+        delta_lamda1 = (-a2 + np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
+        delta_lamda2 = (-a2 - np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
+
+        logger.debug(f"Arc length solver: delta_lamda1 = {delta_lamda1}, delta_lamda2 = {delta_lamda2}")
+ 
+        # TODO: there are better ways to determine which delta_lamda to use.
+        delta_lamda = np.maximum(delta_lamda1, delta_lamda2)
+
+        delta_u = delta_u_bar + delta_lamda * delta_u_t
+
+        lamda = lamda + delta_lamda
+        u_vec = u_vec + delta_u
+
+    logger.debug(f"Arc length solver: finished for one step, with Delta lambda = {lamda - prev_lamda}")
+ 
+    return u_vec, lamda
+
+
+def get_q_vec(problem):
+    """
+    Used in the arc length method only, to get the external force vector q_vec
+    """
+    dofs = np.zeros(problem.num_total_dofs_all_vars)
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    res_list = problem.newton_update(sol_list)
+    q_vec = jax.flatten_util.ravel_pytree(res_list)[0]
+    return q_vec
+
+
+################################################################################
 # The "row elimination" solver
 
 def solver(problem, solver_options={}):

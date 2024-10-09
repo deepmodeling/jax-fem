@@ -44,7 +44,7 @@ class HyperElasticityAux(Problem):
 
     def get_surface_maps(self):
         def surface_map(u, x):
-            return np.array([100., 0.1])
+            return np.array([100., 1e-3])
         return [surface_map]
 
 
@@ -77,14 +77,14 @@ def example():
     problem_aux = HyperElasticityAux(mesh, vec=2, dim=2, ele_type=ele_type, location_fns=location_fns)
 
     q_vec = get_q_vec(problem_aux)
-
-
     u_vec = np.zeros(problem_main.num_total_dofs_all_vars)
     lamda = 0.
- 
-    for i in range(700):
+    Delta_u_vec_dir = np.zeros(problem_main.num_total_dofs_all_vars)
+    Delta_lamda_dir = 0.
+
+    for i in range(500):
         print(f"\n\nStep {i}, lamda = {lamda}")
-        u_vec, lamda = arc_length_solver(problem_main, u_vec, lamda, q_vec)
+        u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir = arc_length_solver(problem_main, u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir, q_vec)
         sol_list = problem_main.unflatten_fn_sol_list(u_vec)
         if i % 10 == 0:
             vtk_path = os.path.join(vtk_dir, f'u{i:05d}.vtu')

@@ -16,7 +16,7 @@ FEM is a powerful tool, where we support the following features
   - Linear elasticity
   - Hyperelasticity
   - Plasticity (macro and crystal plasticity)
-- Differentiable simulation for solving inverse/design problems __without__ human deriving sensitivities, e.g.,
+- Differentiable simulation for solving inverse/design problems __without__ deriving sensitivities by hand, e.g.,
   - Topology optimization
   - Optimal thermal control
 - Integration with PETSc for solver choices

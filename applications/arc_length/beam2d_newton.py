@@ -1,6 +1,6 @@
 """
 This example tries to use Newton's method to solve the same problem as in "beam2d_arc_length.py".
-You can see that Newton's solver does not converge.
+You can see that Newton's solver CANNOT achieve the buckling behavior.
 """
 import jax
 import jax.numpy as np
@@ -41,8 +41,7 @@ class HyperElasticity(Problem):
 
     def get_surface_maps(self):
         def surface_map(u, x):
-            # Newton's solver can converge if 100. is changed to 1.
-            return np.array([100., 0.1])
+            return np.array([100., 1e-3])
         return [surface_map]
 
 

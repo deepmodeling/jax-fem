@@ -363,7 +363,7 @@ def get_A_fn(problem, solver_options):
 
 # TODO: how to consider displacement-control rather than force-control problems?
 
-def arc_length_solver(problem, prev_u_vec, prev_lamda, q_vec):
+def arc_length_solver(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec, prev_Delta_lamda, q_vec):
 
     def newton_update_helper(dofs):
         sol_list = problem.unflatten_fn_sol_list(dofs)
@@ -373,10 +373,16 @@ def arc_length_solver(problem, prev_u_vec, prev_lamda, q_vec):
         A_fn = get_A_fn(problem, solver_options={'umfpack_solver':{}})
         return res_vec, A_fn
 
+    def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
+        return np.sum(Delta_u_vec1*Delta_u_vec2) + psi**2.*Delta_lamda1*Delta_lamda2*np.sum(q_vec_mapped**2.)
+ 
     u_vec = prev_u_vec
     lamda = prev_lamda
     q_vec_mapped = assign_zeros_bc(q_vec, problem)
-    
+
+    Delta_u_vec_dir = prev_Delta_u_vec
+    Delta_lamda_dir = prev_Delta_lamda
+
     tol = 1e-6
     res_val = 1.
     while res_val > tol:
@@ -396,29 +402,51 @@ def arc_length_solver(problem, prev_u_vec, prev_lamda, q_vec):
         # TODO: how to determine these hyper-parameters?
         psi = 1.
         Delta_l = 1.
-        Delta_u = u_vec - prev_u_vec
+        Delta_u_vec = u_vec - prev_u_vec
         Delta_lamda = lamda - prev_lamda
         a1 = np.sum(delta_u_t**2.) + psi**2.*np.sum(q_vec_mapped**2.)
-        a2 = 2.* np.sum((Delta_u + delta_u_bar)*delta_u_t) + 2.*psi**2.*Delta_lamda*np.sum(q_vec_mapped**2.)
-        a3 = np.sum((Delta_u + delta_u_bar)**2.) + psi**2.*Delta_lamda**2.*np.sum(q_vec_mapped**2.) - Delta_l**2.
+        a2 = 2.* np.sum((Delta_u_vec + delta_u_bar)*delta_u_t) + 2.*psi**2.*Delta_lamda*np.sum(q_vec_mapped**2.)
+        a3 = np.sum((Delta_u_vec + delta_u_bar)**2.) + psi**2.*Delta_lamda**2.*np.sum(q_vec_mapped**2.) - Delta_l**2.
 
         # TODO: failure warning
         delta_lamda1 = (-a2 + np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
         delta_lamda2 = (-a2 - np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
 
         logger.debug(f"Arc length solver: delta_lamda1 = {delta_lamda1}, delta_lamda2 = {delta_lamda2}")
- 
-        # TODO: there are better ways to determine which delta_lamda to use.
-        delta_lamda = np.maximum(delta_lamda1, delta_lamda2)
 
-        delta_u = delta_u_bar + delta_lamda * delta_u_t
+        delta_u_vec1 = delta_u_bar + delta_lamda1 * delta_u_t
+        delta_u_vec2 = delta_u_bar + delta_lamda2 * delta_u_t
+
+        Delta_u_vec_dir1 = u_vec + delta_u_vec1 - prev_u_vec
+        Delta_lamda_dir1 = lamda + delta_lamda1 - prev_lamda
+        dot_prod1 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir1, Delta_lamda_dir1)
+
+        Delta_u_vec_dir2 = u_vec + delta_u_vec2 - prev_u_vec
+        Delta_lamda_dir2 = lamda + delta_lamda2 - prev_lamda
+        dot_prod2 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir2, Delta_lamda_dir2)
+
+        # print(f"dot_prod1 = {dot_prod1}, dot_prod2 = {dot_prod2}")
+        # print(f"delta_lamda1 = {delta_lamda1}, delta_lamda1 = {delta_lamda2}")
+
+        if np.abs(dot_prod1) < 1e-10 and np.abs(dot_prod2) < 1e-10:
+            # At initial step, (Delta_u_vec_dir, Delta_lamda_dir) is zero, so both dot_prod1 and dot_prod2 are zero.
+            # We simply select the larger value for delta_lamda.
+            delta_lamda = np.maximum(delta_lamda1, delta_lamda2)
+        elif dot_prod1 > dot_prod2:
+            delta_lamda = delta_lamda1
+        else:
+            delta_lamda = delta_lamda2
 
         lamda = lamda + delta_lamda
+        delta_u = delta_u_bar + delta_lamda * delta_u_t
         u_vec = u_vec + delta_u
+
+        Delta_u_vec_dir = u_vec - prev_u_vec
+        Delta_lamda_dir = lamda - prev_lamda
 
     logger.debug(f"Arc length solver: finished for one step, with Delta lambda = {lamda - prev_lamda}")
  
-    return u_vec, lamda
+    return u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir
 
 
 def get_q_vec(problem):

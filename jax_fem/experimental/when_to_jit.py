@@ -28,6 +28,7 @@ def f3(x, h):
     return h(x)
 
 
+# Good: only jit once
 print(f"\nTest f1...")
 for i in range(10):
     start = time.time()
@@ -35,6 +36,7 @@ for i in range(10):
     print(time.time() - start)
 
 
+# Bad: repeated jit
 print(f"\nTest f2...")
 for i in range(10):
     start = time.time()
@@ -42,6 +44,7 @@ for i in range(10):
     print(time.time() - start)
 
 
+# Good: only jit once
 print(f"\nTest f3...")
 for i in range(10):
     start = time.time()

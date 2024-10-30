@@ -4,7 +4,7 @@ import os
 import glob
 
 from jax_fem.problem import Problem
-from jax_fem.solver import solver, arc_length_solver, get_q_vec
+from jax_fem.solver import solver, arc_length_solver_force_driven, get_q_vec
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import get_meshio_cell_type, Mesh, rectangle_mesh
 
@@ -35,6 +35,12 @@ class HyperElasticityMain(Problem):
 
         return first_PK_stress
 
+    def get_surface_maps(self):
+        def surface_map(u, x):
+            # Some small noise to guide the arc-length solver
+            return np.array([0., 1e-5])
+        return [surface_map]
+
 
 class HyperElasticityAux(Problem):
     def get_tensor_map(self):
@@ -44,7 +50,7 @@ class HyperElasticityAux(Problem):
 
     def get_surface_maps(self):
         def surface_map(u, x):
-            return np.array([100., 1e-3])
+            return np.array([10., 0])
         return [surface_map]
 
 
@@ -69,12 +75,17 @@ def example():
     def zero_dirichlet_val(point):
         return 0.
 
+    def middle(point):
+        return np.isclose(point[1], 0., atol=1e-5) & (point[0] > Lx/2. - 2.) & (point[0] < Lx/2. + 2.)
+
+    location_fns_middle = [middle]
+
     dirichlet_bc_info = [[left]*2, [0, 1], [zero_dirichlet_val]*2]
 
-    location_fns = [right]
+    location_fns_right = [right]
 
-    problem_main = HyperElasticityMain(mesh, vec=2, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info)
-    problem_aux = HyperElasticityAux(mesh, vec=2, dim=2, ele_type=ele_type, location_fns=location_fns)
+    problem_main = HyperElasticityMain(mesh, vec=2, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info, location_fns=location_fns_middle)
+    problem_aux = HyperElasticityAux(mesh, vec=2, dim=2, ele_type=ele_type, location_fns=location_fns_right)
 
     q_vec = get_q_vec(problem_aux)
     u_vec = np.zeros(problem_main.num_total_dofs_all_vars)
@@ -84,12 +95,23 @@ def example():
 
     for i in range(500):
         print(f"\n\nStep {i}, lamda = {lamda}")
-        u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir = arc_length_solver(problem_main, u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir, q_vec)
+        if i < 200:
+            Delta_l = 0.1
+            psi = 0.5
+        else:
+            Delta_l = 1.
+            psi = 0.5
+
+        u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir = arc_length_solver_force_driven(problem_main, u_vec, 
+            lamda, Delta_u_vec_dir, Delta_lamda_dir, q_vec, Delta_l, psi)
         sol_list = problem_main.unflatten_fn_sol_list(u_vec)
         if i % 10 == 0:
             vtk_path = os.path.join(vtk_dir, f'u{i:05d}.vtu')
             sol = sol_list[0]
             save_sol(problem_main.fes[0], np.hstack((sol, np.zeros((len(sol), 1)))), vtk_path)
+
+        if lamda > 1.:
+            break
 
 
 if __name__ == "__main__":

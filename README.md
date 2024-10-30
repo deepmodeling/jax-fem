@@ -73,7 +73,7 @@ conda activate jax-fem-env
 ```
 
 Install JAX
-- See jax installation [instructions](https://jax.readtheimages.io/en/latest/installation.html#). Depending on your hardware, you may install the CPU or GPU version of JAX. Both will work, while GPU version usually gives better performance.
+- See jax installation [instructions](https://github.com/jax-ml/jax?tab=readme-ov-file#installation). Depending on your hardware, you may install the CPU or GPU version of JAX. Both will work, while GPU version usually gives better performance.
 
 
 Then there are two options to continue:

@@ -86,7 +86,7 @@ def petsc_solve(A, b, ksp_type, pc_type):
 ################################################################################
 # "row elimination" solver
 
-def apply_bc_vec(res_vec, dofs, problem):
+def apply_bc_vec(res_vec, dofs, problem, scale=1.):
     res_list = problem.unflatten_fn_sol_list(res_vec)
     sol_list = problem.unflatten_fn_sol_list(dofs)
 
@@ -96,20 +96,20 @@ def apply_bc_vec(res_vec, dofs, problem):
         for i in range(len(fe.node_inds_list)):
             res = (res.at[fe.node_inds_list[i], fe.vec_inds_list[i]].set(
                 sol[fe.node_inds_list[i], fe.vec_inds_list[i]], unique_indices=True))
-            res = res.at[fe.node_inds_list[i], fe.vec_inds_list[i]].add(-fe.vals_list[i])
+            res = res.at[fe.node_inds_list[i], fe.vec_inds_list[i]].add(-fe.vals_list[i]*scale)
 
         res_list[ind] = res
 
     return jax.flatten_util.ravel_pytree(res_list)[0]
 
 
-def apply_bc(res_fn, problem):
+def apply_bc(res_fn, problem, scale=1.):
 
     def A_fn(dofs):
         """Apply Dirichlet boundary conditions
         """
         res_vec = res_fn(dofs)
-        return apply_bc_vec(res_vec, dofs, problem)
+        return apply_bc_vec(res_vec, dofs, problem, scale)
 
     return A_fn
 
@@ -361,9 +361,85 @@ def get_A_fn(problem, solver_options):
 # Reference: Vasios, Nikolaos. "Nonlinear analysis of structures." The Arc-Length method. Harvard (2015).
 # Our implementation follows the Crisfeld's formulation
 
-# TODO: how to consider displacement-control rather than force-control problems?
+# TODO: Do we want to merge displacement-control and force-control codes?
 
-def arc_length_solver(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec, prev_Delta_lamda, q_vec):
+def arc_length_solver_disp_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec, prev_Delta_lamda, Delta_l=0.1, psi=1.):
+
+    def newton_update_helper(dofs):
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        res_list = problem.newton_update(sol_list)
+        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
+        res_vec = apply_bc_vec(res_vec, dofs, problem, lamda)
+        A_fn = get_A_fn(problem, solver_options={'umfpack_solver':{}})
+        return res_vec, A_fn
+
+    def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
+        return np.sum(Delta_u_vec1*Delta_u_vec2) + psi**2.*Delta_lamda1*Delta_lamda2*np.sum(u_b**2.)
+ 
+    u_vec = prev_u_vec
+    lamda = prev_lamda
+
+    u_b = assign_bc(np.zeros_like(prev_u_vec), problem)
+
+    Delta_u_vec_dir = prev_Delta_u_vec
+    Delta_lamda_dir = prev_Delta_lamda
+
+    tol = 1e-6
+    res_val = 1.
+    while res_val > tol:
+
+        res_vec, A_fn = newton_update_helper(u_vec)
+        res_val = np.linalg.norm(res_vec)
+        logger.debug(f"Arc length solver: res_val = {res_val}")
+  
+        delta_u_bar = umfpack_solve(A_fn, -res_vec)
+        delta_u_t = umfpack_solve(A_fn, u_b)
+
+        Delta_u_vec = u_vec - prev_u_vec
+        Delta_lamda = lamda - prev_lamda
+        a1 = np.sum(delta_u_t**2.) + psi**2.*np.sum(u_b**2.)
+        a2 = 2.* np.sum((Delta_u_vec + delta_u_bar)*delta_u_t) + 2.*psi**2.*Delta_lamda*np.sum(u_b**2.)
+        a3 = np.sum((Delta_u_vec + delta_u_bar)**2.) + psi**2.*Delta_lamda**2.*np.sum(u_b**2.) - Delta_l**2.
+
+        delta_lamda1 = (-a2 + np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
+        delta_lamda2 = (-a2 - np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
+
+        logger.debug(f"Arc length solver: delta_lamda1 = {delta_lamda1}, delta_lamda2 = {delta_lamda2}")
+        assert np.isfinite(delta_lamda1) and np.isfinite(delta_lamda2), f"No valid solutions for delta lambda, a1 = {a1}, a2 = {a2}, a3 = {a3}"
+
+        delta_u_vec1 = delta_u_bar + delta_lamda1 * delta_u_t
+        delta_u_vec2 = delta_u_bar + delta_lamda2 * delta_u_t
+
+        Delta_u_vec_dir1 = u_vec + delta_u_vec1 - prev_u_vec
+        Delta_lamda_dir1 = lamda + delta_lamda1 - prev_lamda
+        dot_prod1 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir1, Delta_lamda_dir1)
+
+        Delta_u_vec_dir2 = u_vec + delta_u_vec2 - prev_u_vec
+        Delta_lamda_dir2 = lamda + delta_lamda2 - prev_lamda
+        dot_prod2 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir2, Delta_lamda_dir2)
+
+        if np.abs(dot_prod1) < 1e-10 and np.abs(dot_prod2) < 1e-10:
+            # At initial step, (Delta_u_vec_dir, Delta_lamda_dir) is zero, so both dot_prod1 and dot_prod2 are zero.
+            # We simply select the larger value for delta_lamda.
+            delta_lamda = np.maximum(delta_lamda1, delta_lamda2)
+        elif dot_prod1 > dot_prod2:
+            delta_lamda = delta_lamda1
+        else:
+            delta_lamda = delta_lamda2
+
+        lamda = lamda + delta_lamda
+        delta_u = delta_u_bar + delta_lamda * delta_u_t
+        u_vec = u_vec + delta_u
+
+        Delta_u_vec_dir = u_vec - prev_u_vec
+        Delta_lamda_dir = lamda - prev_lamda
+
+    logger.debug(f"Arc length solver: finished for one step, with Delta lambda = {lamda - prev_lamda}")
+ 
+    return u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir
+
+
+def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec, prev_Delta_lamda, q_vec, Delta_l=0.1, psi=1.):
 
     def newton_update_helper(dofs):
         sol_list = problem.unflatten_fn_sol_list(dofs)
@@ -399,20 +475,17 @@ def arc_length_solver(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec, prev_De
         delta_u_bar = umfpack_solve(A_fn, -(res_vec + lamda*q_vec_mapped))
         delta_u_t = umfpack_solve(A_fn, -q_vec_mapped)
 
-        # TODO: how to determine these hyper-parameters?
-        psi = 1.
-        Delta_l = 1.
         Delta_u_vec = u_vec - prev_u_vec
         Delta_lamda = lamda - prev_lamda
         a1 = np.sum(delta_u_t**2.) + psi**2.*np.sum(q_vec_mapped**2.)
         a2 = 2.* np.sum((Delta_u_vec + delta_u_bar)*delta_u_t) + 2.*psi**2.*Delta_lamda*np.sum(q_vec_mapped**2.)
         a3 = np.sum((Delta_u_vec + delta_u_bar)**2.) + psi**2.*Delta_lamda**2.*np.sum(q_vec_mapped**2.) - Delta_l**2.
 
-        # TODO: failure warning
         delta_lamda1 = (-a2 + np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
         delta_lamda2 = (-a2 - np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
 
         logger.debug(f"Arc length solver: delta_lamda1 = {delta_lamda1}, delta_lamda2 = {delta_lamda2}")
+        assert np.isfinite(delta_lamda1) and np.isfinite(delta_lamda2), f"No valid solutions for delta lambda, a1 = {a1}, a2 = {a2}, a3 = {a3}"
 
         delta_u_vec1 = delta_u_bar + delta_lamda1 * delta_u_t
         delta_u_vec2 = delta_u_bar + delta_lamda2 * delta_u_t
@@ -424,9 +497,6 @@ def arc_length_solver(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec, prev_De
         Delta_u_vec_dir2 = u_vec + delta_u_vec2 - prev_u_vec
         Delta_lamda_dir2 = lamda + delta_lamda2 - prev_lamda
         dot_prod2 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir2, Delta_lamda_dir2)
-
-        # print(f"dot_prod1 = {dot_prod1}, dot_prod2 = {dot_prod2}")
-        # print(f"delta_lamda1 = {delta_lamda1}, delta_lamda1 = {delta_lamda2}")
 
         if np.abs(dot_prod1) < 1e-10 and np.abs(dot_prod2) < 1e-10:
             # At initial step, (Delta_u_vec_dir, Delta_lamda_dir) is zero, so both dot_prod1 and dot_prod2 are zero.
@@ -633,7 +703,7 @@ def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info, info_f
             print('Max acceleration: ',np.max(np.absolute(qdotdot)))
 
 
-def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info_force=True):
+def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info_force=True, initial_guess=None):
     """
     Implementation of
 
@@ -647,6 +717,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
     """
     solver_options = {'umfpack_solver': {}}
 
+    # TODO: combine these into initial guess
     def newton_update_helper(dofs):
         sol_list = problem.unflatten_fn_sol_list(dofs)
         res_list = problem.newton_update(sol_list)
@@ -657,8 +728,11 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
  
     dofs = np.zeros(problem.num_total_dofs_all_vars)
     res_vec, A_fn = newton_update_helper(dofs)
-
     dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, solver_options)
+
+    if initial_guess is not None:
+        dofs = initial_guess
+        dofs = assign_bc(dofs, problem)
 
     # parameters not to change
     cmin = 1e-3

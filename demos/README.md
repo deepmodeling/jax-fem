@@ -32,7 +32,9 @@ Since _JAX_ itself is a framework for machine learning, _JAX-FEM_ trivially has 
 1. **Kernels**. _JAX-FEM_ uses kernels to handle different terms in the FEM weak form, a concept similar as in [_MOOSE_](https://mooseframework.inl.gov/syntax/Kernels/). Currently, we can handle the "Laplace kernel" $\int_{\Omega} f(\nabla u)\cdot \nabla v$ and the "mass kernel" $\int_{\Omega}h(u)v$ in the weak form. This covers solving typical second-order elliptic equations like those occurring in quasi-static solid mechanics, or time-dependent parabolic problems like a heat equation. We also provide a "universal kernel" that lets users define their own weak form. This is a new feature introduced on Dec 11, 2023.
 
 2. **Performance**. In most cases, the majority of computational time is spent on solving the linear system from the Newton's method. If CPU is available, the linear system will be solved by [_PETSc_](https://petsc.org/release/); if GPU is available, solving the linear system with _JAX_ built-in sparse linear solvers will usually be faster and scalable to larger problems. Exploiting multiple CPUs and/or even multiple GPUs is our future work. Please see our _JAX-FEM_ journal paper for performance report.
+
 3. **Memory**. The largest problem that is solved without causing memory insufficiency issue on a 48G memory RTX8000 Nvidia GPU contains around 9 million DOFs. 
 
-3. **Nonlinearity**. _JAX-FEM_ handles material nonlinearity well, but currently does not handle other types of nonlinearities such as contact nonlinearity or geometric nonlinearity. Secondary development is needed.
-4. **Boundary conditions**. As of now, we cannot handle periodic boundary conditions. We need some help on this.
+4. **Nonlinearity**. _JAX-FEM_ handles material nonlinearity well, but currently does not handle other types of nonlinearities such as contact. Secondary development is needed.
+
+5. **Boundary conditions**. As of now, we cannot handle periodic boundary conditions. We need some help on this.

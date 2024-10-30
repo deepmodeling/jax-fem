@@ -61,7 +61,7 @@ def right_dirichlet_val_x1(point):
     return -0.2*Lx
 
 def right_dirichlet_val_x2(point):
-    return 2.*Ly
+    return 0.005*Ly
 
 def right_dirichlet_val_x3(point):
     return 0.*Lz

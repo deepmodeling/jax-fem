@@ -15,10 +15,13 @@ from jax import jit, grad, random, jacfwd, value_and_grad
 from functools import partial
 import time
 import scipy
+from jax.experimental.sparse import BCOO
 
 from jax import config
 config.update("jax_enable_x64", True)
 
+density_filtering = False
+sensitivity_filtering = True
 
 def compute_filter_kd_tree(fe):
     """This function is created by Tianju. Not from the original code.
@@ -48,20 +51,17 @@ def compute_filter_kd_tree(fe):
         V += vals.tolist()
     H_sp = scipy.sparse.csc_array((V, (I, J)), shape=(flex_num_cells, flex_num_cells))
 
-    # TODO(Tianju): No need to create the full matrix. 
-    # Will cause memory issue for large size problem.
-    # High priority!
-
-    H = H_sp.todense()
-    Hs = np.sum(H, 1)
+    H = BCOO.from_scipy_sparse(H_sp).sort_indices()
+    Hs = H.sum(1).todense()
     return H, Hs
 
-
 def applySensitivityFilter(ft, rho, dJ, dvc):
-    dJ = np.matmul(ft['H'], rho*dJ/np.maximum(1e-3, rho)/ft['Hs'][:, None])
-    dvc = np.matmul(ft['H'][None, :, :], rho[None, :, :]*dvc/np.maximum(1e-3, rho[None, :, :])/ft['Hs'][None, :, None])
+    dJ = ft['H'] @ (rho*dJ/np.maximum(1e-3, rho)/ft['Hs'][:, None])
+    dvc = ft['H'][None, :, :] @ (rho[None, :, :]*dvc/np.maximum(1e-3, rho[None, :, :])/ft['Hs'][None, :, None])
     return dJ, dvc
 
+def applyDensityFilter(ft, rho):
+    return ft['H'] @ rho / ft['Hs'][:, None]
 
 #%% Optimizer
 class MMA:
@@ -443,10 +443,16 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
 
         print(f"MMA solver...")
         
-        J, dJ = objectiveHandle(rho)
-        vc, dvc = consHandle(rho, loop)
+        if density_filtering:
+            rho_physical = applyDensityFilter(ft, rho)
+        else:
+            rho_physical = rho
+            
+        J, dJ = objectiveHandle(rho_physical)
+        vc, dvc = consHandle(rho_physical, loop)
 
-        dJ, dvc = applySensitivityFilter(ft, rho, dJ, dvc)
+        if sensitivity_filtering:
+            dJ, dvc = applySensitivityFilter(ft, rho, dJ, dvc)
 
         J, dJ = J, dJ.reshape(-1)[:, None]
         vc, dvc = vc[:, None], dvc.reshape(dvc.shape[0], -1)

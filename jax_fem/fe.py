@@ -77,7 +77,9 @@ class FiniteElement:
         self.num_faces = self.face_shape_vals.shape[0]
         self.shape_grads, self.JxW = self.get_shape_grads()
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(self.dirichlet_bc_info)
-        self.p_node_inds_list_A, self.p_node_inds_list_B, self.p_vec_inds_list = self.periodic_boundary_conditions()
+        
+        # self.p_node_inds_list_A, self.p_node_inds_list_B, self.p_vec_inds_list = self.periodic_boundary_conditions()
+
         # (num_cells, num_quads, num_nodes, 1, dim)
         self.v_grads_JxW = self.shape_grads[:, :, :, None, :] * self.JxW[:, :, None, None, None]
         self.num_face_quads = self.face_quad_weights.shape[1]
@@ -235,38 +237,6 @@ class FiniteElement:
         dirichlet_bc_info : [location_fns, vecs, value_fns]
         """
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(dirichlet_bc_info)
-
-    def periodic_boundary_conditions(self):
-        """Not working
-        """
-        p_node_inds_list_A = []
-        p_node_inds_list_B = []
-        p_vec_inds_list = []
-        if self.periodic_bc_info is not None:
-            location_fns_A, location_fns_B, mappings, vecs = self.periodic_bc_info
-            for i in range(len(location_fns_A)):
-                node_inds_A = onp.argwhere(jax.vmap(location_fns_A[i])(self.mesh.points)).reshape(-1)
-                node_inds_B = onp.argwhere(jax.vmap(location_fns_B[i])(self.mesh.points)).reshape(-1)
-                points_set_A = self.mesh.points[node_inds_A]
-                points_set_B = self.mesh.points[node_inds_B]
-
-                EPS = 1e-5
-                node_inds_B_ordered = []
-                for node_ind in node_inds_A:
-                    point_A = self.mesh.points[node_ind]
-                    dist = onp.linalg.norm(mappings[i](point_A)[None, :] - points_set_B, axis=-1)
-                    node_ind_B_ordered = node_inds_B[onp.argwhere(dist < EPS)].reshape(-1)
-                    node_inds_B_ordered.append(node_ind_B_ordered)
-
-                node_inds_B_ordered = onp.array(node_inds_B_ordered).reshape(-1)
-                vec_inds = onp.ones_like(node_inds_A, dtype=onp.int32) * vecs[i]
-
-                p_node_inds_list_A.append(node_inds_A)
-                p_node_inds_list_B.append(node_inds_B_ordered)
-                p_vec_inds_list.append(vec_inds)
-                assert len(node_inds_A) == len(node_inds_B_ordered)
-
-        return p_node_inds_list_A, p_node_inds_list_B, p_vec_inds_list
 
     def get_boundary_conditions_inds(self, location_fns):
         """Given location functions, compute which faces satisfy the condition.

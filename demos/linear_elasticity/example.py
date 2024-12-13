@@ -1,7 +1,9 @@
 # Import some useful modules.
 import jax.numpy as np
+import numpy as onp
 import os
-
+import pypardiso
+import scipy
 
 # Import JAX-FEM specific modules.
 from jax_fem.problem import Problem
@@ -12,6 +14,24 @@ from jax_fem import logger
 
 import logging
 logger.setLevel(logging.DEBUG)
+
+
+def pardiso_solver(A, b, x0, solver_options):
+    """
+    Solves Ax=b with x0 being the initial guess.
+
+    A: PETSc sparse matrix
+    b: JAX array
+    x0: JAX array (forward problem) or None (adjoint problem)
+    solver_options: anything the user defines, at least satisfying solver_options['custom_solver'] = pardiso_solver
+    """
+    logger.debug(f"Pardiso Solver - Solving linear system")
+
+    # If you need to convert PETSc to scipy
+    indptr, indices, data = A.getValuesCSR()
+    A_sp_scipy = scipy.sparse.csr_array((data, indices, indptr), shape=A.getSize())
+    x = pypardiso.spsolve(A_sp_scipy, onp.array(b))
+    return x
 
 
 # Material properties.
@@ -85,8 +105,10 @@ problem = LinearElasticity(mesh,
                            ele_type=ele_type,
                            dirichlet_bc_info=dirichlet_bc_info,
                            location_fns=location_fns)
+
 # Solve the defined problem.
-sol_list = solver(problem, solver_options={'umfpack_solver': {}})
+sol_list = solver(problem, solver_options={'custom_solver': pardiso_solver})
+# sol_list = solver(problem, solver_options={'umfpack_solver': {}})
 
 # Postprocess for stress evaluations
 # (num_cells, num_quads, vec, dim)

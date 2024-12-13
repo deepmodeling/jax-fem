@@ -16,7 +16,7 @@ config.update("jax_enable_x64", True)
 ################################################################################
 # JAX solver or scipy solver or PETSc solver
 
-def jax_solve(problem, A, b, x0, precond):
+def jax_solve(A, b, x0, precond):
     """Solves the equilibrium equation using a JAX solver.
     Is fully traceable and runs on GPU.
 
@@ -26,11 +26,11 @@ def jax_solve(problem, A, b, x0, precond):
         Whether to calculate the preconditioner or not
     """
     logger.debug(f"JAX Solver - Solving linear system")
-
-    # TODO: Can we extract diagonal directly from the BCOO matrix A? Then, we don't need to use saved A_sp_scipy here.
-    jacobi = np.array(problem.A_sp_scipy.diagonal())
+    indptr, indices, data = A.getValuesCSR()
+    A_sp_scipy = scipy.sparse.csr_array((data, indices, indptr), shape=A.getSize())
+    A = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
+    jacobi = np.array(A_sp_scipy.diagonal())
     pc = lambda x: x * (1. / jacobi) if precond else None
-
     x, info = jax.scipy.sparse.linalg.bicgstab(A,
                                                b,
                                                x0=x0,
@@ -49,8 +49,8 @@ def jax_solve(problem, A, b, x0, precond):
 
 def umfpack_solve(A, b):
     logger.debug(f"Scipy Solver - Solving linear system with UMFPACK")
-    ai, aj, av = A.getValuesCSR()
-    Asp = scipy.sparse.csr_matrix((av, aj, ai))
+    indptr, indices, data = A.getValuesCSR()
+    Asp = scipy.sparse.csr_matrix((data, indices, indptr))
     x = scipy.sparse.linalg.spsolve(Asp, onp.array(b))
 
     # TODO: try https://jax.readthedocs.io/en/latest/_autosummary/jax.experimental.sparse.linalg.spsolve.html
@@ -88,6 +88,31 @@ def petsc_solve(A, b, ksp_type, pc_type):
     return x.getArray()
 
 
+def linear_solver(A, b, x0, solver_options):
+
+    # If user does not specify any solver, set jax_solver as the default one.
+    if  len(solver_options.keys() & {'jax_solver', 'umfpack_solver', 'petsc_solver', 'custom_solver'}) == 0: 
+        solver_options['jax_solver'] = {}
+
+    if 'jax_solver' in solver_options:      
+        precond = solver_options['jax_solver']['precond'] if 'precond' in solver_options['jax_solver'] else True
+        x = jax_solve(A, b, x0, precond)
+    elif 'umfpack_solver' in solver_options:
+        x = umfpack_solve(A, b)
+    elif 'petsc_solver' in solver_options:   
+        ksp_type = solver_options['petsc_solver']['ksp_type'] if 'ksp_type' in solver_options['petsc_solver'] else  'bcgsl' 
+        pc_type = solver_options['petsc_solver']['pc_type'] if 'pc_type' in solver_options['petsc_solver'] else 'ilu'
+        x = petsc_solve(A, b, ksp_type, pc_type)
+    elif 'custom_solver' in solver_options:
+        # Users can define their own solver
+        custom_solver = solver_options['custom_solver']
+        x = custom_solver(A, b, x0, solver_options)
+    else:
+        raise NotImplementedError(f"Unknown linear solver.")
+
+    return x
+
+
 ################################################################################
 # "row elimination" solver
 
@@ -109,14 +134,12 @@ def apply_bc_vec(res_vec, dofs, problem, scale=1.):
 
 
 def apply_bc(res_fn, problem, scale=1.):
-
-    def A_fn(dofs):
+    def res_fn_bc(dofs):
         """Apply Dirichlet boundary conditions
         """
         res_vec = res_fn(dofs)
         return apply_bc_vec(res_vec, dofs, problem, scale)
-
-    return A_fn
+    return res_fn_bc
 
 
 def assign_bc(dofs, problem):
@@ -187,34 +210,23 @@ def operator_to_matrix(operator_fn, problem):
     return J
 
 
-def linear_incremental_solver(problem, res_vec, A_fn, dofs, solver_options):
+def linear_incremental_solver(problem, res_vec, A, dofs, solver_options):
     """
     Linear solver at each Newton's iteration
     """
     logger.debug(f"Solving linear system...")
     b = -res_vec
 
-    # If user does not specify any solver, set jax_solver as the default one.
-    if  len(solver_options.keys() & {'jax_solver', 'umfpack_solver', 'petsc_solver'}) == 0: 
-        solver_options['jax_solver'] = {}
-
-    if 'jax_solver' in solver_options:
-        # x0 will always be correct at boundary locations
-        x0_1 = assign_bc(np.zeros(problem.num_total_dofs_all_vars), problem)
-        if hasattr(problem, 'P_mat'):
-            x0_2 = copy_bc(problem.P_mat @ dofs, problem)
-            x0 = problem.P_mat.T @ (x0_1 - x0_2)
-        else:
-            x0_2 = copy_bc(dofs, problem)
-            x0 = x0_1 - x0_2
-        precond = solver_options['jax_solver']['precond'] if 'precond' in solver_options['jax_solver'] else True
-        inc = jax_solve(problem, A_fn, b, x0, precond)
-    elif 'umfpack_solver' in solver_options:
-        inc = umfpack_solve(A_fn, b)
+    # x0 will always be correct at boundary locations
+    x0_1 = assign_bc(np.zeros(problem.num_total_dofs_all_vars), problem)
+    if hasattr(problem, 'P_mat'):
+        x0_2 = copy_bc(problem.P_mat @ dofs, problem)
+        x0 = problem.P_mat.T @ (x0_1 - x0_2)
     else:
-        ksp_type = solver_options['petsc_solver']['ksp_type'] if 'ksp_type' in solver_options['petsc_solver'] else  'bcgsl' 
-        pc_type = solver_options['petsc_solver']['pc_type'] if 'pc_type' in solver_options['petsc_solver'] else 'ilu'
-        inc = petsc_solve(A_fn, b, ksp_type, pc_type)
+        x0_2 = copy_bc(dofs, problem)
+        x0 = x0_1 - x0_2
+
+    inc = linear_solver(A, b, x0, solver_options)
 
     line_search_flag = solver_options['line_search_flag'] if 'line_search_flag' in solver_options else False
     if line_search_flag:
@@ -264,10 +276,11 @@ def line_search(problem, dofs, inc):
     return dofs + alpha*inc
 
 
-def get_A_fn(problem, solver_options):
+def get_A(problem, solver_options):
     logger.debug(f"Creating sparse matrix with scipy...")
     A_sp_scipy = scipy.sparse.csr_array((onp.array(problem.V), (problem.I, problem.J)),
         shape=(problem.num_total_dofs_all_vars, problem.num_total_dofs_all_vars))
+    # logger.info(f"Global sparse matrix takes about {A_sp_scipy.data.shape[0]*8*3/2**30} G memory to store.")
 
     A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape, 
                               csr=(A_sp_scipy.indptr.astype(PETSc.IntType, copy=False),
@@ -287,15 +300,6 @@ def get_A_fn(problem, solver_options):
         tmp = A.matMult(P)
         P_T = P.transpose()
         A = P_T.matMult(tmp)
-
-    jax_type = True if len(solver_options.keys() & {'umfpack_solver', 'petsc_solver'}) == 0 else False 
-    if jax_type:
-        indptr, indices, data = A.getValuesCSR()
-        A_sp_scipy = scipy.sparse.csr_array((data, indices, indptr), shape=A.getSize())
-        # logger.debug(f"Creating sparse matrix from scipy using JAX BCOO...")
-        A = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
-        problem.A_sp_scipy = A_sp_scipy
-        # logger.info(f"Global sparse matrix takes about {A_sp.data.shape[0]*8*3/2**30} G memory to store.")
 
     return A
 
@@ -357,7 +361,7 @@ def solver(problem, solver_options={}):
          [0 1 0 0]
          [0 0 1 0]
          [0 0 0 1]
-    A_fn = d(res)/d(u) = D*dr/du + (I - D)
+    A = d(res)/d(u) = D*dr/du + (I - D)
 
     TODO: linear multipoint constraint
 
@@ -392,18 +396,18 @@ def solver(problem, solver_options={}):
         if hasattr(problem, 'P_mat'):
             res_vec = problem.P_mat.T @ res_vec
 
-        A_fn = get_A_fn(problem, solver_options)
-        return res_vec, A_fn
+        A = get_A(problem, solver_options)
+        return res_vec, A
 
-    res_vec, A_fn = newton_update_helper(dofs)
+    res_vec, A = newton_update_helper(dofs)
     res_val = np.linalg.norm(res_vec)
     res_val_initial = res_val
     rel_res_val = res_val/res_val_initial
     logger.debug(f"Before, l_2 res = {res_val}, relative l_2 res = {rel_res_val}")
     while (rel_res_val > rel_tol) and (res_val > tol):
-        dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, solver_options)
-        res_vec, A_fn = newton_update_helper(dofs)
-        # logger.debug(f"DEBUG: l_2 res = {np.linalg.norm(apply_bc_vec(A_fn(dofs), dofs, problem))}")
+        dofs = linear_incremental_solver(problem, res_vec, A, dofs, solver_options)
+        res_vec, A = newton_update_helper(dofs)
+        # logger.debug(f"DEBUG: l_2 res = {np.linalg.norm(apply_bc_vec(A @ dofs, dofs, problem))}")
         res_val = np.linalg.norm(res_vec)
         rel_res_val = res_val/res_val_initial
 
@@ -449,8 +453,8 @@ def arc_length_solver_disp_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_
         res_list = problem.newton_update(sol_list)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem, lamda)
-        A_fn = get_A_fn(problem, solver_options={'umfpack_solver':{}})
-        return res_vec, A_fn
+        A = get_A(problem, solver_options={'umfpack_solver':{}})
+        return res_vec, A
 
     def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
         return np.sum(Delta_u_vec1*Delta_u_vec2) + psi**2.*Delta_lamda1*Delta_lamda2*np.sum(u_b**2.)
@@ -467,12 +471,12 @@ def arc_length_solver_disp_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_
     res_val = 1.
     while res_val > tol:
 
-        res_vec, A_fn = newton_update_helper(u_vec)
+        res_vec, A = newton_update_helper(u_vec)
         res_val = np.linalg.norm(res_vec)
         logger.debug(f"Arc length solver: res_val = {res_val}")
   
-        delta_u_bar = umfpack_solve(A_fn, -res_vec)
-        delta_u_t = umfpack_solve(A_fn, u_b)
+        delta_u_bar = umfpack_solve(A, -res_vec)
+        delta_u_t = umfpack_solve(A, u_b)
 
         Delta_u_vec = u_vec - prev_u_vec
         Delta_lamda = lamda - prev_lamda
@@ -527,8 +531,8 @@ def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u
         res_list = problem.newton_update(sol_list)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem)
-        A_fn = get_A_fn(problem, solver_options={'umfpack_solver':{}})
-        return res_vec, A_fn
+        A = get_A(problem, solver_options={'umfpack_solver':{}})
+        return res_vec, A
 
     def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
         return np.sum(Delta_u_vec1*Delta_u_vec2) + psi**2.*Delta_lamda1*Delta_lamda2*np.sum(q_vec_mapped**2.)
@@ -543,18 +547,18 @@ def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u
     tol = 1e-6
     res_val = 1.
     while res_val > tol:
-        res_vec, A_fn = newton_update_helper(u_vec)
+        res_vec, A = newton_update_helper(u_vec)
         res_val = np.linalg.norm(res_vec + lamda*q_vec_mapped)
         logger.debug(f"Arc length solver: res_val = {res_val}")
 
         # TODO: the scipy umfpack solver seems to be far better than the jax linear solver, so we use umfpack solver here.
         # x0_1 = assign_bc(np.zeros_like(u_vec), problem)
         # x0_2 = copy_bc(u_vec, problem)
-        # delta_u_bar = jax_solve(problem, A_fn, -(res_vec + lamda*q_vec_mapped), x0=x0_1 - x0_2, precond=True)   
-        # delta_u_t = jax_solve(problem, A_fn, -q_vec_mapped, x0=np.zeros_like(u_vec), precond=True)   
+        # delta_u_bar = jax_solve(problem, A, -(res_vec + lamda*q_vec_mapped), x0=x0_1 - x0_2, precond=True)   
+        # delta_u_t = jax_solve(problem, A, -q_vec_mapped, x0=np.zeros_like(u_vec), precond=True)   
 
-        delta_u_bar = umfpack_solve(A_fn, -(res_vec + lamda*q_vec_mapped))
-        delta_u_t = umfpack_solve(A_fn, -q_vec_mapped)
+        delta_u_bar = umfpack_solve(A, -(res_vec + lamda*q_vec_mapped))
+        delta_u_t = umfpack_solve(A, -q_vec_mapped)
 
         Delta_u_vec = u_vec - prev_u_vec
         Delta_lamda = lamda - prev_lamda
@@ -680,12 +684,12 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
         res_list = problem.newton_update(sol_list)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem)
-        A_fn = get_A_fn(problem, solver_options)
-        return res_vec, A_fn
+        A = get_A(problem, solver_options)
+        return res_vec, A
  
     dofs = np.zeros(problem.num_total_dofs_all_vars)
-    res_vec, A_fn = newton_update_helper(dofs)
-    dofs = linear_incremental_solver(problem, res_vec, A_fn, dofs, solver_options)
+    res_vec, A = newton_update_helper(dofs)
+    dofs = linear_incremental_solver(problem, res_vec, A, dofs, solver_options)
 
     if initial_guess is not None:
         dofs = initial_guess
@@ -831,31 +835,14 @@ def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
     problem.set_params(params)
     problem.newton_update(sol_list)
 
-    A_fn = get_A_fn(problem, adjoint_solver_options)
+    A = get_A(problem, adjoint_solver_options)
     v_vec = jax.flatten_util.ravel_pytree(v_list)[0]
 
     if hasattr(problem, 'P_mat'):
         v_vec = problem.P_mat.T @ v_vec
 
-    A_transpose = A_fn.transpose()
+    adjoint_vec = linear_solver(A.transpose(), v_vec, None, adjoint_solver_options)
 
-    if adjoint_solver_options == {}:
-        adjoint_solver_options = {'jax_solver': {}}
-
-    # If user does not specify any solver, set jax_solver as the default one.
-    if  len(adjoint_solver_options.keys() & {'jax_solver', 'umfpack_solver', 'petsc_solver'}) == 0: 
-        adjoint_solver_options['jax_solver'] = {}
-
-    if 'jax_solver' in adjoint_solver_options:
-        precond = adjoint_solver_options['jax_solver']['precond'] if 'precond' in adjoint_solver_options['jax_solver'] else True
-        adjoint_vec = jax_solve(problem, A_transpose, v_vec, None, precond)
-    elif 'umfpack_solver' in adjoint_solver_options:
-        adjoint_vec = umfpack_solve(A_transpose, v_vec)
-    else:
-        ksp_type = adjoint_solver_options['petsc_solver']['ksp_type'] if 'ksp_type' in adjoint_solver_options['petsc_solver'] else  'bcgsl' 
-        pc_type = adjoint_solver_options['petsc_solver']['pc_type'] if 'pc_type' in adjoint_solver_options['petsc_solver'] else 'ilu'
-        adjoint_vec = petsc_solve(A_transpose, v_vec, ksp_type, pc_type)
- 
     if hasattr(problem, 'P_mat'):
         adjoint_vec = problem.P_mat @ adjoint_vec
 

@@ -18,7 +18,6 @@ config.update("jax_enable_x64", True)
 
 def jax_solve(A, b, x0, precond):
     """Solves the equilibrium equation using a JAX solver.
-    Is fully traceable and runs on GPU.
 
     Parameters
     ----------
@@ -276,7 +275,7 @@ def line_search(problem, dofs, inc):
     return dofs + alpha*inc
 
 
-def get_A(problem, solver_options):
+def get_A(problem):
     logger.debug(f"Creating sparse matrix with scipy...")
     A_sp_scipy = scipy.sparse.csr_array((onp.array(problem.V), (problem.I, problem.J)),
         shape=(problem.num_total_dofs_all_vars, problem.num_total_dofs_all_vars))
@@ -396,7 +395,7 @@ def solver(problem, solver_options={}):
         if hasattr(problem, 'P_mat'):
             res_vec = problem.P_mat.T @ res_vec
 
-        A = get_A(problem, solver_options)
+        A = get_A(problem)
         return res_vec, A
 
     res_vec, A = newton_update_helper(dofs)
@@ -453,7 +452,7 @@ def arc_length_solver_disp_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_
         res_list = problem.newton_update(sol_list)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem, lamda)
-        A = get_A(problem, solver_options={'umfpack_solver':{}})
+        A = get_A(problem)
         return res_vec, A
 
     def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
@@ -531,7 +530,7 @@ def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u
         res_list = problem.newton_update(sol_list)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem)
-        A = get_A(problem, solver_options={'umfpack_solver':{}})
+        A = get_A(problem)
         return res_vec, A
 
     def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
@@ -678,13 +677,13 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
     """
     solver_options = {'umfpack_solver': {}}
 
-    # TODO: combine these into initial guess
+    # TODO: consider these in initial guess
     def newton_update_helper(dofs):
         sol_list = problem.unflatten_fn_sol_list(dofs)
         res_list = problem.newton_update(sol_list)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem)
-        A = get_A(problem, solver_options)
+        A = get_A(problem)
         return res_vec, A
  
     dofs = np.zeros(problem.num_total_dofs_all_vars)
@@ -827,7 +826,7 @@ def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
         """
         partial_c_fn = get_partial_params_c_fn(sol_list)
         def vjp_linear_fn(v_list):
-            primals, f_vjp = jax.vjp(partial_c_fn, params)
+            primals_output, f_vjp = jax.vjp(partial_c_fn, params)
             val, = f_vjp(v_list)
             return val
         return vjp_linear_fn
@@ -835,12 +834,13 @@ def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
     problem.set_params(params)
     problem.newton_update(sol_list)
 
-    A = get_A(problem, adjoint_solver_options)
+    A = get_A(problem)
     v_vec = jax.flatten_util.ravel_pytree(v_list)[0]
 
     if hasattr(problem, 'P_mat'):
         v_vec = problem.P_mat.T @ v_vec
 
+    # Be careful that A.transpose() does in-place change to A
     adjoint_vec = linear_solver(A.transpose(), v_vec, None, adjoint_solver_options)
 
     if hasattr(problem, 'P_mat'):

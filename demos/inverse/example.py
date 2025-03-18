@@ -135,7 +135,7 @@ print(f"\ndrho[0, 0] = {drho[0, 0]}, drho_fd_00 = {drho_fd_00}")
 print(f"\ndscale_d = {dscale_d}, dscale_d_fd = {dscale_d_fd}")
 
 print(f"\ndE = {dE}, dE_fd = {dE_fd}, WRONG results! Please avoid gradients w.r.t self.E")
-print(f"This is due to the use of glob variable self.E, inside a jax jitted function.")
+print(f"This is due to the use of global variable self.E, inside a jax jitted function.")
 
 # TODO: show the following will cause an error
 # dE_E, _, _ = jax.grad(composed_fn)(params_E)

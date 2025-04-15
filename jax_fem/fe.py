@@ -89,6 +89,7 @@ class FiniteElement:
 
         logger.debug(f"Done pre-computations, took {compute_time} [s]")
         logger.info(f"Solving a problem with {len(self.cells)} cells, {self.num_total_nodes}x{self.vec} = {self.num_total_dofs} dofs.")
+        logger.info(f"Element type is {self.ele_type}, using {self.num_quads} quad points per element.")
 
     def get_shape_grads(self):
         """Compute shape function gradient value

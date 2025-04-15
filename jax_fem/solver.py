@@ -430,8 +430,8 @@ def solver(problem, solver_options={}):
     end = time.time()
     solve_time = end - start
     logger.info(f"Solve took {solve_time} [s]")
-    logger.debug(f"max of dofs = {np.max(dofs)}")
-    logger.debug(f"min of dofs = {np.min(dofs)}")
+    logger.info(f"max of dofs = {np.max(dofs)}")
+    logger.info(f"min of dofs = {np.min(dofs)}")
 
     return sol_list
 

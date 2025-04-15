@@ -67,12 +67,8 @@ class Elasticity(Problem):
         # (num_selected_faces, 1, num_nodes, vec) * # (num_selected_faces, num_face_quads, num_nodes, 1)    
         u_face = sol[self.fe.cells][boundary_inds[:, 0]][:, None, :, :] * self.fe.face_shape_vals[boundary_inds[:, 1]][:, :, :, None]
         u_face = np.sum(u_face, axis=2) # (num_selected_faces, num_face_quads, vec)
-        # (num_cells, num_faces, num_face_quads, dim) -> (num_selected_faces, num_face_quads, dim)
-        
-        # subset_quad_points = self.get_physical_surface_quad_points(boundary_inds)
-
+        # (num_selected_faces, num_face_quads, dim)
         subset_quad_points = self.physical_surface_quad_points[0]
-
         neumann_fn = self.get_surface_maps()[0]
         traction = -jax.vmap(jax.vmap(neumann_fn))(u_face, subset_quad_points) # (num_selected_faces, num_face_quads, vec)
         val = np.sum(traction * u_face * nanson_scale[:, :, None])

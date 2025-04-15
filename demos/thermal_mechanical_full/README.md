@@ -14,7 +14,7 @@ $$\boldsymbol{\sigma} = \boldsymbol{C}:(\boldsymbol{\varepsilon}-\alpha(T-T_0)\b
 
 $$\rho s = \rho s_0+\displaystyle\frac{\rho C_{\varepsilon}}{T_0}(T-T_0) + \kappa tr(\boldsymbol{\varepsilon})$$
 
-where $\lambda$ and $\mu$ are the Lamé coefficients. $\rho$ is the material density. $\alpha$ is the thermal expansion coefficient. $\kappa = \alpha(3\lambda+2\mu)$ is the thermal conductiivty. $C_{\varepsilon}$ is the specific heat per unit of mass at constant strain. $s$ is the entropy per unit of mass in the current.
+where $\lambda$ and $\mu$ are the Lamé coefficients. $\rho$ is the material density. $\alpha$ is the thermal expansion coefficient. $\kappa = \alpha(3\lambda+2\mu)$ is the thermal conductivity. $C_{\varepsilon}$ is the specific heat per unit of mass at constant strain. $s$ is the entropy per unit of mass in the current.
 
 The governing PDE of temperature field without source terms states that:
 

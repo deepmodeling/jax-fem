@@ -68,10 +68,10 @@ def dirichlet_val_left(point):
 def dirichlet_val_right(point):
     return 0.
 
-location_fns = [left, right]
+location_fns_dirichlet = [left, right]
 value_fns = [dirichlet_val_left, dirichlet_val_right]
 vecs = [0, 0]
-dirichlet_bc_info = [location_fns, vecs, value_fns]
+dirichlet_bc_info = [location_fns_dirichlet, vecs, value_fns]
 
 
 # Define Neumann boundary locations.

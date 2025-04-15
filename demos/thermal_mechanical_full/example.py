@@ -89,7 +89,7 @@ class thermal_mechanical_full(Problem):
             val3 = np.sum(k * T_grads[:,None,:,:] * cell_v_grads_JxW_T,axis=(0,-1))
             
             ## Handles the term 'inner(sigma,grad(v)) * dx'
-            u_physics = jax.vmap(stress)(u_grads,T)
+            u_physics = jax.vmap(stress)(u_grads, T)
             # (num_quads, 1, vec, dim) * (num_quads, num_nodes, 1, dim) ->  (num_nodes, vec) 
             val4 = np.sum(u_physics[:,None,:,:] * cell_v_grads_JxW_u,axis=(0,-1))
         
@@ -138,7 +138,7 @@ def transform_cells(cells, points, ele_type):
          
         if (o == 0):
             print(f"Linear")
-            print(f"Can't be linear, somethign wrong!")
+            print(f"Can't be linear, something wrong!")
             exit()
         elif (o == 1):
             # print(f"Clockwise")

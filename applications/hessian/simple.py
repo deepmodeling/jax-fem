@@ -6,6 +6,8 @@ import scipy
 
 from jax_fem.hessian import incremental_forward_and_adjoint
 
+logger.setLevel(logging.DEBUG)
+
 
 class HessVecProductSimple:
     def __init__(self, u_init, J_fn):
@@ -51,7 +53,7 @@ class HessVecProductSimple:
 
 def forward_step_simple(θ, u_init):
     def F_fn(u, θ):
-        return np.array([θ[0]**2 *u[0] + θ[1] - 1, θ[1]**2 *u[0]**2 + θ[1] * u[1]**2 - 2])
+        return np.array([θ[0]**2 * u[0] + θ[1] - 1, θ[1]**2 * u[0]**2 + θ[1] * u[1]**2 - 2])
 
     _, unflatten = jax.flatten_util.ravel_pytree(u_init)
 
@@ -161,3 +163,5 @@ hess_vec_prod_simple = HessVecProductSimple(u_init, J_fn)
 hess_vec_prod_simple.hessp(θ, θ_hat)
 finite_difference_hessp_simple(hess_vec_prod_simple, θ, θ_hat)
 analytical_hessp_simple(θ, θ_hat)
+
+

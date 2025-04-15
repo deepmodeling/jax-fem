@@ -137,5 +137,5 @@ print(f"\ndscale_d = {dscale_d}, dscale_d_fd = {dscale_d_fd}")
 print(f"\ndE = {dE}, dE_fd = {dE_fd}, WRONG results! Please avoid gradients w.r.t self.E")
 print(f"This is due to the use of global variable self.E, inside a jax jitted function.")
 
-# TODO: show the following will cause an error
+# TODO: show the following will cause an error or not?
 # dE_E, _, _ = jax.grad(composed_fn)(params_E)

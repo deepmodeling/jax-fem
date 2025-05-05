@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=43.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling==1.26.3", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [project]
 name = "jax-fem"
-version = "0.0.8"
+version = "0.0.9"
 requires-python = ">=3.9"
 authors = [
   {name = "Tianju Xue", email = "cetxue@ust.hk"},

@@ -39,7 +39,6 @@ class thermal_mechanical_full(Problem):
             return 0.5 * (u_grad + u_grad.T)
         
         def stress(u_grad, dT):
-                   
             epsilon = 0.5 * (u_grad + u_grad.T)
             sigma = lmbda * np.trace(epsilon) * np.eye(self.dim) + 2 * mu * epsilon \
                 - kappa * dT * np.eye(self.dim)

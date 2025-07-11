@@ -1,4 +1,4 @@
-A GPU-accelerated differentiable finite element analysis package based on [JAX](https://github.com/google/jax). Used to be part of the suite of open-source python packages for Additive Manufacturing (AM) research, [JAX-AM](https://github.com/tianjuxue/jax-am).....
+A differentiable finite element package based on [JAX](https://github.com/google/jax).
 
 ## Finite Element Method (FEM)
 ![Github Star](https://img.shields.io/github/stars/deepmodeling/jax-fem)

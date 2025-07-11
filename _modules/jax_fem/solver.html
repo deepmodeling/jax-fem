@@ -1,0 +1,1335 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jax_fem.solver &#8212; JAX-FEM 0.0.9 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=7935197f" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=39f6cbd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jax_fem/solver';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">JAX-FEM 0.0.9 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../learn/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/poisson.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/linear_elasticity.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/hyperelasticity.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/plasticity.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/compute_gradients.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/topology_optimization.html">Topology optimization</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/FAQ/FAQ_main.html">Frequently asked questions (FAQ)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/FAQ/FAQ_mesh.html">About mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/FAQ/FAQ_solver.html">About solver</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/useful/main.html">Useful links</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/useful/notes/main.html">Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/useful/lecture.html">Lectures</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_logger_setup.html">jax_fem.logger_setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">About the project</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jax_fem.solver</h1><div class="highlight"><pre>
+<span></span>import jax
+import jax.numpy as np
+import jax.flatten_util
+import numpy as onp
+from jax.experimental.sparse import BCOO
+import scipy
+import time
+from petsc4py import PETSc
+
+from jax_fem import logger
+
+from jax import config
+config.update(&quot;jax_enable_x64&quot;, True)
+
+
+################################################################################
+# JAX solver or scipy solver or PETSc solver
+
+<div class="viewcode-block" id="jax_solve">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.jax_solve">[docs]</a>
+def jax_solve(A, b, x0, precond):
+    &quot;&quot;&quot;Solves the equilibrium equation using a JAX solver.
+
+    Parameters
+    ----------
+    precond
+        Whether to calculate the preconditioner or not
+    &quot;&quot;&quot;
+    logger.debug(f&quot;JAX Solver - Solving linear system&quot;)
+    indptr, indices, data = A.getValuesCSR()
+    A_sp_scipy = scipy.sparse.csr_array((data, indices, indptr), shape=A.getSize())
+    A = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
+    jacobi = np.array(A_sp_scipy.diagonal())
+    pc = lambda x: x * (1. / jacobi) if precond else None
+    x, info = jax.scipy.sparse.linalg.bicgstab(A,
+                                               b,
+                                               x0=x0,
+                                               M=pc,
+                                               tol=1e-10,
+                                               atol=1e-10,
+                                               maxiter=10000)
+
+    # Verify convergence
+    err = np.linalg.norm(A @ x - b)
+    logger.debug(f&quot;JAX Solver - Finshed solving, res = {err}&quot;)
+    assert err &lt; 0.1, f&quot;JAX linear solver failed to converge with err = {err}&quot;
+    x = np.where(err &lt; 0.1, x, np.nan) # For assert purpose, some how this also affects bicgstab.
+
+    return x</div>
+
+
+<div class="viewcode-block" id="umfpack_solve">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.umfpack_solve">[docs]</a>
+def umfpack_solve(A, b):
+    logger.debug(f&quot;Scipy Solver - Solving linear system with UMFPACK&quot;)
+    indptr, indices, data = A.getValuesCSR()
+    Asp = scipy.sparse.csr_matrix((data, indices, indptr))
+    x = scipy.sparse.linalg.spsolve(Asp, onp.array(b))
+
+    # TODO: try https://jax.readthedocs.io/en/latest/_autosummary/jax.experimental.sparse.linalg.spsolve.html
+    # x = jax.experimental.sparse.linalg.spsolve(av, aj, ai, b)
+
+    logger.debug(f&#39;Scipy Solver - Finished solving, linear solve res = {np.linalg.norm(Asp @ x - b)}&#39;)
+    return x</div>
+
+
+
+<div class="viewcode-block" id="petsc_solve">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.petsc_solve">[docs]</a>
+def petsc_solve(A, b, ksp_type, pc_type):
+    rhs = PETSc.Vec().createSeq(len(b))
+    rhs.setValues(range(len(b)), onp.array(b))
+    ksp = PETSc.KSP().create()
+    ksp.setOperators(A)
+    ksp.setFromOptions()
+    ksp.setType(ksp_type)
+    ksp.pc.setType(pc_type)
+
+    # TODO: This works better. Do we need to generalize the code a little bit?
+    if ksp_type == &#39;tfqmr&#39;:
+        ksp.pc.setFactorSolverType(&#39;mumps&#39;)
+
+    logger.debug(f&#39;PETSc Solver - Solving linear system with ksp_type = {ksp.getType()}, pc = {ksp.pc.getType()}&#39;)
+    x = PETSc.Vec().createSeq(len(b))
+    ksp.solve(rhs, x)
+
+    # Verify convergence
+    y = PETSc.Vec().createSeq(len(b))
+    A.mult(x, y)
+
+    err = np.linalg.norm(y.getArray() - rhs.getArray())
+    logger.debug(f&quot;PETSc Solver - Finished solving, linear solve res = {err}&quot;)
+    assert err &lt; 0.1, f&quot;PETSc linear solver failed to converge, err = {err}&quot;
+
+    return x.getArray()</div>
+
+
+
+<div class="viewcode-block" id="linear_solver">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.linear_solver">[docs]</a>
+def linear_solver(A, b, x0, solver_options):
+
+    # If user does not specify any solver, set jax_solver as the default one.
+    if  len(solver_options.keys() &amp; {&#39;jax_solver&#39;, &#39;umfpack_solver&#39;, &#39;petsc_solver&#39;, &#39;custom_solver&#39;}) == 0: 
+        solver_options[&#39;jax_solver&#39;] = {}
+
+    if &#39;jax_solver&#39; in solver_options:      
+        precond = solver_options[&#39;jax_solver&#39;][&#39;precond&#39;] if &#39;precond&#39; in solver_options[&#39;jax_solver&#39;] else True
+        x = jax_solve(A, b, x0, precond)
+    elif &#39;umfpack_solver&#39; in solver_options:
+        x = umfpack_solve(A, b)
+    elif &#39;petsc_solver&#39; in solver_options:   
+        ksp_type = solver_options[&#39;petsc_solver&#39;][&#39;ksp_type&#39;] if &#39;ksp_type&#39; in solver_options[&#39;petsc_solver&#39;] else  &#39;bcgsl&#39; 
+        pc_type = solver_options[&#39;petsc_solver&#39;][&#39;pc_type&#39;] if &#39;pc_type&#39; in solver_options[&#39;petsc_solver&#39;] else &#39;ilu&#39;
+        x = petsc_solve(A, b, ksp_type, pc_type)
+    elif &#39;custom_solver&#39; in solver_options:
+        # Users can define their own solver
+        custom_solver = solver_options[&#39;custom_solver&#39;]
+        x = custom_solver(A, b, x0, solver_options)
+    else:
+        raise NotImplementedError(f&quot;Unknown linear solver.&quot;)
+
+    return x</div>
+
+
+
+################################################################################
+# &quot;row elimination&quot; solver
+
+<div class="viewcode-block" id="apply_bc_vec">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.apply_bc_vec">[docs]</a>
+def apply_bc_vec(res_vec, dofs, problem, scale=1.):
+    res_list = problem.unflatten_fn_sol_list(res_vec)
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+
+    for ind, fe in enumerate(problem.fes):
+        res = res_list[ind]
+        sol = sol_list[ind]
+        for i in range(len(fe.node_inds_list)):
+            res = (res.at[fe.node_inds_list[i], fe.vec_inds_list[i]].set(
+                sol[fe.node_inds_list[i], fe.vec_inds_list[i]], unique_indices=True))
+            res = res.at[fe.node_inds_list[i], fe.vec_inds_list[i]].add(-fe.vals_list[i]*scale)
+
+        res_list[ind] = res
+
+    return jax.flatten_util.ravel_pytree(res_list)[0]</div>
+
+
+
+<div class="viewcode-block" id="apply_bc">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.apply_bc">[docs]</a>
+def apply_bc(res_fn, problem, scale=1.):
+    def res_fn_bc(dofs):
+        &quot;&quot;&quot;Apply Dirichlet boundary conditions
+        &quot;&quot;&quot;
+        res_vec = res_fn(dofs)
+        return apply_bc_vec(res_vec, dofs, problem, scale)
+    return res_fn_bc</div>
+
+
+
+<div class="viewcode-block" id="assign_bc">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.assign_bc">[docs]</a>
+def assign_bc(dofs, problem):
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    for ind, fe in enumerate(problem.fes):
+        sol = sol_list[ind]
+        for i in range(len(fe.node_inds_list)):
+            sol = sol.at[fe.node_inds_list[i],
+                         fe.vec_inds_list[i]].set(fe.vals_list[i])
+        sol_list[ind] = sol
+    return jax.flatten_util.ravel_pytree(sol_list)[0]</div>
+
+
+
+<div class="viewcode-block" id="assign_ones_bc">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.assign_ones_bc">[docs]</a>
+def assign_ones_bc(dofs, problem):
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    for ind, fe in enumerate(problem.fes):
+        sol = sol_list[ind]
+        for i in range(len(fe.node_inds_list)):
+            sol = sol.at[fe.node_inds_list[i],
+                         fe.vec_inds_list[i]].set(1.)
+        sol_list[ind] = sol
+    return jax.flatten_util.ravel_pytree(sol_list)[0]</div>
+
+
+
+<div class="viewcode-block" id="assign_zeros_bc">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.assign_zeros_bc">[docs]</a>
+def assign_zeros_bc(dofs, problem):
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    for ind, fe in enumerate(problem.fes):
+        sol = sol_list[ind]
+        for i in range(len(fe.node_inds_list)):
+            sol = sol.at[fe.node_inds_list[i],
+                         fe.vec_inds_list[i]].set(0.)
+        sol_list[ind] = sol
+    return jax.flatten_util.ravel_pytree(sol_list)[0]</div>
+
+
+
+<div class="viewcode-block" id="copy_bc">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.copy_bc">[docs]</a>
+def copy_bc(dofs, problem):
+    new_dofs = np.zeros_like(dofs)
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    new_sol_list = problem.unflatten_fn_sol_list(new_dofs)
+  
+    for ind, fe in enumerate(problem.fes):
+        sol = sol_list[ind]
+        new_sol = new_sol_list[ind]
+        for i in range(len(fe.node_inds_list)):
+            new_sol = (new_sol.at[fe.node_inds_list[i],
+                                  fe.vec_inds_list[i]].set(sol[fe.node_inds_list[i],
+                                          fe.vec_inds_list[i]]))
+        new_sol_list[ind] = new_sol
+
+    return jax.flatten_util.ravel_pytree(new_sol_list)[0]</div>
+
+
+
+<div class="viewcode-block" id="get_flatten_fn">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.get_flatten_fn">[docs]</a>
+def get_flatten_fn(fn_sol_list, problem):
+
+    def fn_dofs(dofs):
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        val_list = fn_sol_list(sol_list)
+        return jax.flatten_util.ravel_pytree(val_list)[0]
+
+    return fn_dofs</div>
+
+
+
+<div class="viewcode-block" id="operator_to_matrix">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.operator_to_matrix">[docs]</a>
+def operator_to_matrix(operator_fn, problem):
+    &quot;&quot;&quot;Only used for when debugging.
+    Can be used to print the matrix, check the conditional number, etc.
+    &quot;&quot;&quot;
+    J = jax.jacfwd(operator_fn)(np.zeros(problem.num_total_dofs_all_vars))
+    return J</div>
+
+
+
+<div class="viewcode-block" id="linear_incremental_solver">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.linear_incremental_solver">[docs]</a>
+def linear_incremental_solver(problem, res_vec, A, dofs, solver_options):
+    &quot;&quot;&quot;
+    Linear solver at each Newton&#39;s iteration
+    &quot;&quot;&quot;
+    logger.debug(f&quot;Solving linear system...&quot;)
+    b = -res_vec
+
+    # x0 will always be correct at boundary locations
+    x0_1 = assign_bc(np.zeros(problem.num_total_dofs_all_vars), problem)
+    if hasattr(problem, &#39;P_mat&#39;):
+        x0_2 = copy_bc(problem.P_mat @ dofs, problem)
+        x0 = problem.P_mat.T @ (x0_1 - x0_2)
+    else:
+        x0_2 = copy_bc(dofs, problem)
+        x0 = x0_1 - x0_2
+
+    inc = linear_solver(A, b, x0, solver_options)
+
+    line_search_flag = solver_options[&#39;line_search_flag&#39;] if &#39;line_search_flag&#39; in solver_options else False
+    if line_search_flag:
+        dofs = line_search(problem, dofs, inc)
+    else:
+        dofs = dofs + inc
+
+    return dofs</div>
+
+
+
+<div class="viewcode-block" id="line_search">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.line_search">[docs]</a>
+def line_search(problem, dofs, inc):
+    &quot;&quot;&quot;
+    TODO: This is useful for finite deformation plasticity.
+    &quot;&quot;&quot;
+    res_fn = problem.compute_residual
+    res_fn = get_flatten_fn(res_fn, problem)
+    res_fn = apply_bc(res_fn, problem)
+
+    def res_norm_fn(alpha):
+        res_vec = res_fn(dofs + alpha*inc)
+        return np.linalg.norm(res_vec)
+
+    # grad_res_norm_fn = jax.grad(res_norm_fn)
+    # hess_res_norm_fn = jax.hessian(res_norm_fn)
+
+    # tol = 1e-3
+    # alpha = 1.
+    # lr = 1.
+    # grad_alpha = 1.
+    # while np.abs(grad_alpha) &gt; tol:
+    #     grad_alpha = grad_res_norm_fn(alpha)
+    #     hess_alpha = hess_res_norm_fn(alpha)
+    #     alpha = alpha - 1./hess_alpha*grad_alpha
+    #     print(f&quot;alpha = {alpha}, grad_alpha = {grad_alpha}, hess_alpha = {hess_alpha}&quot;)
+
+    alpha = 1.
+    res_norm = res_norm_fn(alpha)
+    for i in range(3):
+        alpha *= 0.5
+        res_norm_half = res_norm_fn(alpha)
+        print(f&quot;i = {i}, res_norm = {res_norm}, res_norm_half = {res_norm_half}&quot;)
+        if res_norm_half &gt; res_norm:
+            alpha *= 2.
+            break
+        res_norm = res_norm_half
+
+    return dofs + alpha*inc</div>
+
+
+
+<div class="viewcode-block" id="get_A">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.get_A">[docs]</a>
+def get_A(problem):
+    logger.debug(f&quot;Creating sparse matrix with scipy...&quot;)
+    A_sp_scipy = scipy.sparse.csr_array((onp.array(problem.V), (problem.I, problem.J)),
+        shape=(problem.num_total_dofs_all_vars, problem.num_total_dofs_all_vars))
+    # logger.info(f&quot;Global sparse matrix takes about {A_sp_scipy.data.shape[0]*8*3/2**30} G memory to store.&quot;)
+
+    A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape, 
+                              csr=(A_sp_scipy.indptr.astype(PETSc.IntType, copy=False),
+                                   A_sp_scipy.indices.astype(PETSc.IntType, copy=False), 
+                                   A_sp_scipy.data))
+
+    for ind, fe in enumerate(problem.fes):
+        for i in range(len(fe.node_inds_list)):
+            row_inds = onp.array(fe.node_inds_list[i] * fe.vec + fe.vec_inds_list[i] + problem.offset[ind], dtype=onp.int32)
+            A.zeroRows(row_inds)
+
+    # Linear multipoint constraints
+    if hasattr(problem, &#39;P_mat&#39;):
+        P = PETSc.Mat().createAIJ(size=problem.P_mat.shape, csr=(problem.P_mat.indptr.astype(PETSc.IntType, copy=False),
+                                                   problem.P_mat.indices.astype(PETSc.IntType, copy=False), problem.P_mat.data))
+
+        tmp = A.matMult(P)
+        P_T = P.transpose()
+        A = P_T.matMult(tmp)
+
+    return A</div>
+
+
+
+################################################################################
+# The &quot;row elimination&quot; solver
+
+<div class="viewcode-block" id="solver">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.solver">[docs]</a>
+def solver(problem, solver_options={}):
+    &quot;&quot;&quot;
+    Specify exactly either &#39;jax_solver&#39; or &#39;umfpack_solver&#39; or &#39;petsc_solver&#39;
+    
+    Examples:
+    (1) solver_options = {&#39;jax_solver&#39;: {}}
+    (2) solver_options = {&#39;umfpack_solver&#39;: {}}
+    (3) solver_options = {&#39;petsc_solver&#39;: {&#39;ksp_type&#39;: &#39;bcgsl&#39;, &#39;pc_type&#39;: &#39;jacobi&#39;}, &#39;initial_guess&#39;: some_guess}
+
+    Default parameters will be used if no instruction is found:
+
+    solver_options = 
+    {
+        # If multiple solvers are specified or no solver is specified, &#39;jax_solver&#39; will be used.
+        &#39;jax_solver&#39;: 
+        {
+            # The JAX built-in linear solver 
+            # Reference: https://jax.readthedocs.io/en/latest/_autosummary/jax.scipy.sparse.linalg.bicgstab.html
+            &#39;precond&#39;: True,
+        }
+
+        &#39;umfpack_solver&#39;: 
+        {   
+            # The scipy solver that calls UMFPACK
+            # Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html
+        }
+
+        &#39;petsc_solver&#39;:
+        {   
+            # PETSc solver
+            # For more ksp_type and pc_type: https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html
+            &#39;ksp_type&#39;: &#39;bcgsl&#39;, # e.g., &#39;minres&#39;, &#39;gmres&#39;, &#39;tfqmr&#39;
+            &#39;pc_type&#39;: &#39;ilu&#39;, # e.g., &#39;jacobi&#39;
+        }
+
+        &#39;line_search_flag&#39;: False, # Line search method
+        &#39;initial_guess&#39;: initial_guess, # Same shape as sol_list
+        &#39;tol&#39;: 1e-5, # Absolute tolerance for residual vector (l2 norm), used in Newton&#39;s method
+        &#39;rel_tol&#39;: 1e-8, # Relative tolerance for residual vector (l2 norm), used in Newton&#39;s method
+    }
+
+    The solver imposes Dirichlet B.C. with &quot;row elimination&quot; method.
+
+    Some memo:
+
+    res(u) = D*r(u) + (I - D)u - u_b
+    D = [[1 0 0 0]
+         [0 1 0 0]
+         [0 0 0 0]
+         [0 0 0 1]]
+    I = [[1 0 0 0]
+         [0 1 0 0]
+         [0 0 1 0]
+         [0 0 0 1]
+    A = d(res)/d(u) = D*dr/du + (I - D)
+
+    TODO: linear multipoint constraint
+
+    The function newton_update computes r(u) and dr/du
+    &quot;&quot;&quot;
+    logger.debug(f&quot;Calling the row elimination solver for imposing Dirichlet B.C.&quot;)
+    logger.debug(&quot;Start timing&quot;)
+    start = time.time()
+
+    if &#39;initial_guess&#39; in solver_options:
+        # We dont&#39;t want inititual guess to play a role in the differentiation chain.
+        initial_guess = jax.lax.stop_gradient(solver_options[&#39;initial_guess&#39;])
+        dofs = jax.flatten_util.ravel_pytree(initial_guess)[0]
+    else:
+        if hasattr(problem, &#39;P_mat&#39;):
+            dofs = np.zeros(problem.P_mat.shape[1]) # reduced dofs
+        else:
+            dofs = np.zeros(problem.num_total_dofs_all_vars)
+
+    rel_tol = solver_options[&#39;rel_tol&#39;] if &#39;rel_tol&#39; in solver_options else 1e-8
+    tol = solver_options[&#39;tol&#39;] if &#39;tol&#39; in solver_options else 1e-6
+
+    def newton_update_helper(dofs):
+        if hasattr(problem, &#39;P_mat&#39;):
+            dofs = problem.P_mat @ dofs
+
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        res_list = problem.newton_update(sol_list)
+        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
+        res_vec = apply_bc_vec(res_vec, dofs, problem)
+
+        if hasattr(problem, &#39;P_mat&#39;):
+            res_vec = problem.P_mat.T @ res_vec
+
+        A = get_A(problem)
+        return res_vec, A
+
+    res_vec, A = newton_update_helper(dofs)
+    res_val = np.linalg.norm(res_vec)
+    res_val_initial = res_val
+    rel_res_val = res_val/res_val_initial
+    logger.debug(f&quot;Before, l_2 res = {res_val}, relative l_2 res = {rel_res_val}&quot;)
+    while (rel_res_val &gt; rel_tol) and (res_val &gt; tol):
+        dofs = linear_incremental_solver(problem, res_vec, A, dofs, solver_options)
+        res_vec, A = newton_update_helper(dofs)
+        # logger.debug(f&quot;DEBUG: l_2 res = {np.linalg.norm(apply_bc_vec(A @ dofs, dofs, problem))}&quot;)
+        res_val = np.linalg.norm(res_vec)
+        rel_res_val = res_val/res_val_initial
+
+        logger.debug(f&quot;l_2 res = {res_val}, relative l_2 res = {rel_res_val}&quot;)
+
+    assert np.all(np.isfinite(res_val)), f&quot;res_val contains NaN, stop the program!&quot;
+    assert np.all(np.isfinite(dofs)), f&quot;dofs contains NaN, stop the program!&quot;
+
+    if hasattr(problem, &#39;P_mat&#39;):
+        dofs = problem.P_mat @ dofs
+
+    # If sol_list = [[[u1x, u1y], 
+    #                 [u2x, u2y], 
+    #                 [u3x, u3y], 
+    #                 [u4x, u4y]], 
+    #                [[p1], 
+    #                 [p2]]],
+    # the flattend DOF vector will be [u1x, u1y, u2x, u2y, u3x, u3y, u4x, u4y, p1, p2]
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+
+    end = time.time()
+    solve_time = end - start
+    logger.info(f&quot;Solve took {solve_time} [s]&quot;)
+    logger.info(f&quot;max of dofs = {np.max(dofs)}&quot;)
+    logger.info(f&quot;min of dofs = {np.min(dofs)}&quot;)
+
+    return sol_list</div>
+
+
+
+################################################################################
+# The &quot;arc length&quot; solver
+# Reference: Vasios, Nikolaos. &quot;Nonlinear analysis of structures.&quot; The Arc-Length method. Harvard (2015).
+# Our implementation follows the Crisfeld&#39;s formulation
+
+# TODO: Do we want to merge displacement-control and force-control codes?
+
+<div class="viewcode-block" id="arc_length_solver_disp_driven">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.arc_length_solver_disp_driven">[docs]</a>
+def arc_length_solver_disp_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec, prev_Delta_lamda, Delta_l=0.1, psi=1.):
+    &quot;&quot;&quot;
+    TODO: Does not support periodic B.C., need some work here.
+    &quot;&quot;&quot;
+    def newton_update_helper(dofs):
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        res_list = problem.newton_update(sol_list)
+        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
+        res_vec = apply_bc_vec(res_vec, dofs, problem, lamda)
+        A = get_A(problem)
+        return res_vec, A
+
+    def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
+        return np.sum(Delta_u_vec1*Delta_u_vec2) + psi**2.*Delta_lamda1*Delta_lamda2*np.sum(u_b**2.)
+ 
+    u_vec = prev_u_vec
+    lamda = prev_lamda
+
+    u_b = assign_bc(np.zeros_like(prev_u_vec), problem)
+
+    Delta_u_vec_dir = prev_Delta_u_vec
+    Delta_lamda_dir = prev_Delta_lamda
+
+    tol = 1e-6
+    res_val = 1.
+    while res_val &gt; tol:
+
+        res_vec, A = newton_update_helper(u_vec)
+        res_val = np.linalg.norm(res_vec)
+        logger.debug(f&quot;Arc length solver: res_val = {res_val}&quot;)
+  
+        delta_u_bar = umfpack_solve(A, -res_vec)
+        delta_u_t = umfpack_solve(A, u_b)
+
+        Delta_u_vec = u_vec - prev_u_vec
+        Delta_lamda = lamda - prev_lamda
+        a1 = np.sum(delta_u_t**2.) + psi**2.*np.sum(u_b**2.)
+        a2 = 2.* np.sum((Delta_u_vec + delta_u_bar)*delta_u_t) + 2.*psi**2.*Delta_lamda*np.sum(u_b**2.)
+        a3 = np.sum((Delta_u_vec + delta_u_bar)**2.) + psi**2.*Delta_lamda**2.*np.sum(u_b**2.) - Delta_l**2.
+
+        delta_lamda1 = (-a2 + np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
+        delta_lamda2 = (-a2 - np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
+
+        logger.debug(f&quot;Arc length solver: delta_lamda1 = {delta_lamda1}, delta_lamda2 = {delta_lamda2}&quot;)
+        assert np.isfinite(delta_lamda1) and np.isfinite(delta_lamda2), f&quot;No valid solutions for delta lambda, a1 = {a1}, a2 = {a2}, a3 = {a3}&quot;
+
+        delta_u_vec1 = delta_u_bar + delta_lamda1 * delta_u_t
+        delta_u_vec2 = delta_u_bar + delta_lamda2 * delta_u_t
+
+        Delta_u_vec_dir1 = u_vec + delta_u_vec1 - prev_u_vec
+        Delta_lamda_dir1 = lamda + delta_lamda1 - prev_lamda
+        dot_prod1 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir1, Delta_lamda_dir1)
+
+        Delta_u_vec_dir2 = u_vec + delta_u_vec2 - prev_u_vec
+        Delta_lamda_dir2 = lamda + delta_lamda2 - prev_lamda
+        dot_prod2 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir2, Delta_lamda_dir2)
+
+        if np.abs(dot_prod1) &lt; 1e-10 and np.abs(dot_prod2) &lt; 1e-10:
+            # At initial step, (Delta_u_vec_dir, Delta_lamda_dir) is zero, so both dot_prod1 and dot_prod2 are zero.
+            # We simply select the larger value for delta_lamda.
+            delta_lamda = np.maximum(delta_lamda1, delta_lamda2)
+        elif dot_prod1 &gt; dot_prod2:
+            delta_lamda = delta_lamda1
+        else:
+            delta_lamda = delta_lamda2
+
+        lamda = lamda + delta_lamda
+        delta_u = delta_u_bar + delta_lamda * delta_u_t
+        u_vec = u_vec + delta_u
+
+        Delta_u_vec_dir = u_vec - prev_u_vec
+        Delta_lamda_dir = lamda - prev_lamda
+
+    logger.debug(f&quot;Arc length solver: finished for one step, with Delta lambda = {lamda - prev_lamda}&quot;)
+ 
+    return u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir</div>
+
+
+
+<div class="viewcode-block" id="arc_length_solver_force_driven">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.arc_length_solver_force_driven">[docs]</a>
+def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec, prev_Delta_lamda, q_vec, Delta_l=0.1, psi=1.):
+    &quot;&quot;&quot;
+    TODO: Does not support periodic B.C., need some work here.
+    &quot;&quot;&quot;
+    def newton_update_helper(dofs):
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        res_list = problem.newton_update(sol_list)
+        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
+        res_vec = apply_bc_vec(res_vec, dofs, problem)
+        A = get_A(problem)
+        return res_vec, A
+
+    def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
+        return np.sum(Delta_u_vec1*Delta_u_vec2) + psi**2.*Delta_lamda1*Delta_lamda2*np.sum(q_vec_mapped**2.)
+ 
+    u_vec = prev_u_vec
+    lamda = prev_lamda
+    q_vec_mapped = assign_zeros_bc(q_vec, problem)
+
+    Delta_u_vec_dir = prev_Delta_u_vec
+    Delta_lamda_dir = prev_Delta_lamda
+
+    tol = 1e-6
+    res_val = 1.
+    while res_val &gt; tol:
+        res_vec, A = newton_update_helper(u_vec)
+        res_val = np.linalg.norm(res_vec + lamda*q_vec_mapped)
+        logger.debug(f&quot;Arc length solver: res_val = {res_val}&quot;)
+
+        # TODO: the scipy umfpack solver seems to be far better than the jax linear solver, so we use umfpack solver here.
+        # x0_1 = assign_bc(np.zeros_like(u_vec), problem)
+        # x0_2 = copy_bc(u_vec, problem)
+        # delta_u_bar = jax_solve(problem, A, -(res_vec + lamda*q_vec_mapped), x0=x0_1 - x0_2, precond=True)   
+        # delta_u_t = jax_solve(problem, A, -q_vec_mapped, x0=np.zeros_like(u_vec), precond=True)   
+
+        delta_u_bar = umfpack_solve(A, -(res_vec + lamda*q_vec_mapped))
+        delta_u_t = umfpack_solve(A, -q_vec_mapped)
+
+        Delta_u_vec = u_vec - prev_u_vec
+        Delta_lamda = lamda - prev_lamda
+        a1 = np.sum(delta_u_t**2.) + psi**2.*np.sum(q_vec_mapped**2.)
+        a2 = 2.* np.sum((Delta_u_vec + delta_u_bar)*delta_u_t) + 2.*psi**2.*Delta_lamda*np.sum(q_vec_mapped**2.)
+        a3 = np.sum((Delta_u_vec + delta_u_bar)**2.) + psi**2.*Delta_lamda**2.*np.sum(q_vec_mapped**2.) - Delta_l**2.
+
+        delta_lamda1 = (-a2 + np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
+        delta_lamda2 = (-a2 - np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
+
+        logger.debug(f&quot;Arc length solver: delta_lamda1 = {delta_lamda1}, delta_lamda2 = {delta_lamda2}&quot;)
+        assert np.isfinite(delta_lamda1) and np.isfinite(delta_lamda2), f&quot;No valid solutions for delta lambda, a1 = {a1}, a2 = {a2}, a3 = {a3}&quot;
+
+        delta_u_vec1 = delta_u_bar + delta_lamda1 * delta_u_t
+        delta_u_vec2 = delta_u_bar + delta_lamda2 * delta_u_t
+
+        Delta_u_vec_dir1 = u_vec + delta_u_vec1 - prev_u_vec
+        Delta_lamda_dir1 = lamda + delta_lamda1 - prev_lamda
+        dot_prod1 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir1, Delta_lamda_dir1)
+
+        Delta_u_vec_dir2 = u_vec + delta_u_vec2 - prev_u_vec
+        Delta_lamda_dir2 = lamda + delta_lamda2 - prev_lamda
+        dot_prod2 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir2, Delta_lamda_dir2)
+
+        if np.abs(dot_prod1) &lt; 1e-10 and np.abs(dot_prod2) &lt; 1e-10:
+            # At initial step, (Delta_u_vec_dir, Delta_lamda_dir) is zero, so both dot_prod1 and dot_prod2 are zero.
+            # We simply select the larger value for delta_lamda.
+            delta_lamda = np.maximum(delta_lamda1, delta_lamda2)
+        elif dot_prod1 &gt; dot_prod2:
+            delta_lamda = delta_lamda1
+        else:
+            delta_lamda = delta_lamda2
+
+        lamda = lamda + delta_lamda
+        delta_u = delta_u_bar + delta_lamda * delta_u_t
+        u_vec = u_vec + delta_u
+
+        Delta_u_vec_dir = u_vec - prev_u_vec
+        Delta_lamda_dir = lamda - prev_lamda
+
+    logger.debug(f&quot;Arc length solver: finished for one step, with Delta lambda = {lamda - prev_lamda}&quot;)
+ 
+    return u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir</div>
+
+
+
+<div class="viewcode-block" id="get_q_vec">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.get_q_vec">[docs]</a>
+def get_q_vec(problem):
+    &quot;&quot;&quot;
+    Used in the arc length method only, to get the external force vector q_vec
+    &quot;&quot;&quot;
+    dofs = np.zeros(problem.num_total_dofs_all_vars)
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    res_list = problem.newton_update(sol_list)
+    q_vec = jax.flatten_util.ravel_pytree(res_list)[0]
+    return q_vec</div>
+
+
+
+################################################################################
+# Dynamic relaxation solver
+
+<div class="viewcode-block" id="assembleCSR">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.assembleCSR">[docs]</a>
+def assembleCSR(problem, dofs):
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    problem.newton_update(sol_list)
+    A_sp_scipy = scipy.sparse.csr_array((problem.V, (problem.I, problem.J)),
+        shape=(problem.fes[0].num_total_dofs, problem.fes[0].num_total_dofs))
+
+    for ind, fe in enumerate(problem.fes):
+        for i in range(len(fe.node_inds_list)):
+            row_inds = onp.array(fe.node_inds_list[i] * fe.vec + fe.vec_inds_list[i] + problem.offset[ind], dtype=onp.int32)
+            for row_ind in row_inds:
+                A_sp_scipy.data[A_sp_scipy.indptr[row_ind]: A_sp_scipy.indptr[row_ind + 1]] = 0.
+                A_sp_scipy[row_ind, row_ind] = 1.
+
+    return A_sp_scipy</div>
+
+
+
+<div class="viewcode-block" id="calC">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.calC">[docs]</a>
+def calC(t, cmin, cmax):
+
+    if t &lt; 0.: t = 0.
+
+    c = 2. * onp.sqrt(t)
+    if (c &lt; cmin): c = cmin
+    if (c &gt; cmax): c = cmax
+
+    return c</div>
+
+
+
+<div class="viewcode-block" id="printInfo">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.printInfo">[docs]</a>
+def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info, info_force):
+
+    ## printing control
+    if nIters % nPrint == 1:
+        #logger.info(&#39;\t------------------------------------&#39;)
+        if info_force == True:
+            print((&#39;\nDR Iteration %d: Max force (residual error) = %g (tol = %g)&#39; +
+                   &#39;Max velocity = %g&#39;) % (nIters, error, tol,
+                                            np.max(np.absolute(qdot))))
+        if info == True:
+            print(&#39;\nDamping t: &#39;,t, );
+            print(&#39;Damping coefficient: &#39;, c)
+            print(&#39;Max epsilon: &#39;,np.max(eps))
+            print(&#39;Max acceleration: &#39;,np.max(np.absolute(qdotdot)))</div>
+
+
+
+<div class="viewcode-block" id="dynamic_relax_solve">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.dynamic_relax_solve">[docs]</a>
+def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info_force=True, initial_guess=None):
+    &quot;&quot;&quot;
+    Implementation of
+
+    Luet, David Joseph. Bounding volume hierarchy and non-uniform rational B-splines for contact enforcement
+    in large deformation finite element analysis of sheet metal forming. Diss. Princeton University, 2016.
+    Chapter 4.3 Nonlinear System Solution
+
+    Particularly good for handling buckling behavior.
+    There is a FEniCS version of this dynamic relaxation algorithm.
+    The code below is a direct translation from the FEniCS version.
+
+ 
+    TODO: Does not support periodic B.C., need some work here.
+    &quot;&quot;&quot;
+    solver_options = {&#39;umfpack_solver&#39;: {}}
+
+    # TODO: consider these in initial guess
+    def newton_update_helper(dofs):
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        res_list = problem.newton_update(sol_list)
+        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
+        res_vec = apply_bc_vec(res_vec, dofs, problem)
+        A = get_A(problem)
+        return res_vec, A
+ 
+    dofs = np.zeros(problem.num_total_dofs_all_vars)
+    res_vec, A = newton_update_helper(dofs)
+    dofs = linear_incremental_solver(problem, res_vec, A, dofs, solver_options)
+
+    if initial_guess is not None:
+        dofs = initial_guess
+        dofs = assign_bc(dofs, problem)
+
+    # parameters not to change
+    cmin = 1e-3
+    cmax = 3.9
+    h_tilde = 1.1
+    h = 1.
+
+    # initialize all arrays
+    N = len(dofs)  #print(&quot;--------num of DOF&#39;s: %d-----------&quot; % N)
+    #initialize displacements, velocities and accelerations
+    q, qdot, qdotdot = onp.zeros(N), onp.zeros(N), onp.zeros(N)
+    #initialize displacements, velocities and accelerations from a previous time step
+    q_old, qdot_old, qdotdot_old = onp.zeros(N), onp.zeros(N), onp.zeros(N)
+    #initialize the M, eps, R_old arrays
+    eps, M, R, R_old = onp.zeros(N), onp.zeros(N), onp.zeros(N), onp.zeros(N)
+
+    @jax.jit
+    def assembleVec(dofs):
+        res_fn = get_flatten_fn(problem.compute_residual, problem)
+        res_vec = res_fn(dofs)
+        res_vec = assign_zeros_bc(res_vec, problem)
+        return res_vec
+
+    R = onp.array(assembleVec(dofs))
+    KCSR = assembleCSR(problem, dofs)
+
+    M[:] = h_tilde * h_tilde / 4. * onp.array(
+        onp.absolute(KCSR).sum(axis=1)).squeeze()
+    q[:] = dofs
+    qdot[:] = -h / 2. * R / M
+    # set the counters for iterations and
+    nIters, iKMat = 0, 0
+    error = 1.0
+    timeZ = time.time() #Measurement of loop time.
+
+    assert onp.all(onp.isfinite(M)), f&quot;M not finite&quot;
+    assert onp.all(onp.isfinite(q)), f&quot;q not finite&quot;
+    assert onp.all(onp.isfinite(qdot)), f&quot;qdot not finite&quot;
+
+    error = onp.max(onp.absolute(R))
+
+    while error &gt; tol:
+
+        print(f&quot;error = {error}&quot;)
+        # marching forward
+        q_old[:] = q[:]; R_old[:] = R[:]
+        q[:] += h*qdot; dofs = np.array(q)
+
+        R = onp.array(assembleVec(dofs))
+
+        nIters += 1
+        iKMat += 1
+        error = onp.max(onp.absolute(R))
+
+        # damping calculation
+        S0 = onp.dot((R - R_old) / h, qdot)
+        t = S0 / onp.einsum(&#39;i,i,i&#39;, qdot, M, qdot)
+        c = calC(t, cmin, cmax)
+
+        # determine whether to recal KMat
+        eps = h_tilde * h_tilde / 4. * onp.absolute(
+            onp.divide((qdotdot - qdotdot_old), (q - q_old),
+                       out=onp.zeros_like((qdotdot - qdotdot_old)),
+                       where=(q - q_old) != 0))
+
+        # calculating the jacobian matrix
+        if ((onp.max(eps) &gt; 1) and (iKMat &gt; nKMat)): #SPR JAN max --&gt; min
+            if info == True:
+                print(&#39;\nRecalculating the tangent matrix: &#39;, nIters)
+
+            iKMat = 0
+            KCSR = assembleCSR(problem, dofs)
+            M[:] = h_tilde * h_tilde / 4. * onp.array(
+                onp.absolute(KCSR).sum(axis=1)).squeeze()
+
+        # compute new velocities and accelerations
+        qdot_old[:] = qdot[:]; qdotdot_old[:] = qdotdot[:];
+        qdot = (2.- c*h)/(2 + c*h) * qdot_old - 2.*h/(2.+c*h)* R / M
+        qdot_old[:] = qdot[:]
+        qdotdot = qdot - qdot_old
+
+        # output on screen
+        printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info, info_force)
+
+    # check if converged
+    convergence = True
+    if onp.isnan(onp.max(onp.absolute(R))):
+        convergence = False
+
+    # print final info
+    if convergence:
+        print(&quot;DRSolve finished in %d iterations and %fs&quot; % \
+              (nIters, time.time() - timeZ))
+    else:
+        print(&quot;FAILED to converged&quot;)
+
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+
+    return sol_list[0]</div>
+
+
+
+################################################################################
+# Implicit differentiation with the adjoint method
+
+<div class="viewcode-block" id="implicit_vjp">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.implicit_vjp">[docs]</a>
+def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
+
+    def constraint_fn(dofs, params):
+        &quot;&quot;&quot;c(u, p)
+        &quot;&quot;&quot;
+        problem.set_params(params)
+        res_fn = problem.compute_residual
+        res_fn = get_flatten_fn(res_fn, problem)
+        res_fn = apply_bc(res_fn, problem)
+        return res_fn(dofs)
+
+    def constraint_fn_sol_to_sol(sol_list, params):
+        dofs = jax.flatten_util.ravel_pytree(sol_list)[0]
+        con_vec = constraint_fn(dofs, params)
+        return problem.unflatten_fn_sol_list(con_vec)
+
+    def get_partial_params_c_fn(sol_list):
+        &quot;&quot;&quot;c(u=u, p)
+        &quot;&quot;&quot;
+        def partial_params_c_fn(params):
+            return constraint_fn_sol_to_sol(sol_list, params)
+
+        return partial_params_c_fn
+
+    def get_vjp_contraint_fn_params(params, sol_list):
+        &quot;&quot;&quot;v*(partial dc/dp)
+        &quot;&quot;&quot;
+        partial_c_fn = get_partial_params_c_fn(sol_list)
+        def vjp_linear_fn(v_list):
+            primals_output, f_vjp = jax.vjp(partial_c_fn, params)
+            val, = f_vjp(v_list)
+            return val
+        return vjp_linear_fn
+
+    problem.set_params(params)
+    problem.newton_update(sol_list)
+
+    A = get_A(problem)
+    v_vec = jax.flatten_util.ravel_pytree(v_list)[0]
+
+    if hasattr(problem, &#39;P_mat&#39;):
+        v_vec = problem.P_mat.T @ v_vec
+
+    # Be careful that A.transpose() does in-place change to A
+    adjoint_vec = linear_solver(A.transpose(), v_vec, None, adjoint_solver_options)
+
+    if hasattr(problem, &#39;P_mat&#39;):
+        adjoint_vec = problem.P_mat @ adjoint_vec
+
+    vjp_linear_fn = get_vjp_contraint_fn_params(params, sol_list)
+    vjp_result = vjp_linear_fn(problem.unflatten_fn_sol_list(adjoint_vec))
+    vjp_result = jax.tree_map(lambda x: -x, vjp_result)
+
+    return vjp_result</div>
+
+
+
+<div class="viewcode-block" id="ad_wrapper">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.ad_wrapper">[docs]</a>
+def ad_wrapper(problem, solver_options={}, adjoint_solver_options={}):
+    @jax.custom_vjp
+    def fwd_pred(params):
+        problem.set_params(params)
+        sol_list = solver(problem, solver_options)
+        return sol_list
+
+    def f_fwd(params):
+        sol_list = fwd_pred(params)
+        return sol_list, (params, sol_list)
+
+    def f_bwd(res, v):
+        logger.info(&quot;Running backward and solving the adjoint problem...&quot;)
+        params, sol_list = res
+        vjp_result = implicit_vjp(problem, sol_list, params, v, adjoint_solver_options)
+        return (vjp_result, )
+
+    fwd_pred.defvjp(f_fwd, f_bwd)
+    return fwd_pred</div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

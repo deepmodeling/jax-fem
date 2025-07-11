@@ -1,0 +1,684 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jax_fem.generate_mesh &#8212; JAX-FEM 0.0.9 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=7935197f" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=39f6cbd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jax_fem/generate_mesh';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">JAX-FEM 0.0.9 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../learn/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/poisson.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/linear_elasticity.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/hyperelasticity.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/plasticity.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/compute_gradients.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/topology_optimization.html">Topology optimization</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/FAQ/FAQ_main.html">Frequently asked questions (FAQ)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/FAQ/FAQ_mesh.html">About mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/FAQ/FAQ_solver.html">About solver</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/useful/main.html">Useful links</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/useful/notes/main.html">Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/useful/lecture.html">Lectures</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_logger_setup.html">jax_fem.logger_setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">About the project</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jax_fem.generate_mesh</h1><div class="highlight"><pre>
+<span></span>import os
+import gmsh
+import numpy as onp
+import meshio
+
+from jax_fem.basis import get_elements
+from jax_fem.basis import get_face_shape_vals_and_grads
+
+import jax
+import jax.numpy as np
+
+
+<div class="viewcode-block" id="Mesh">
+<a class="viewcode-back" href="../../more/api/api_problem.html#jax_fem.generate_mesh.Mesh">[docs]</a>
+class Mesh():
+    &quot;&quot;&quot;
+    A custom mesh manager might be better using a third-party library like
+    meshio.
+    &quot;&quot;&quot;
+    def __init__(self, points, cells, ele_type=&#39;TET4&#39;):
+        # TODO (Very important for debugging purpose!): Assert that cells must have correct orders
+        self.points = points
+        self.cells = cells
+        self.ele_type = ele_type
+
+<div class="viewcode-block" id="Mesh.count_selected_faces">
+<a class="viewcode-back" href="../../more/api/api_problem.html#jax_fem.generate_mesh.Mesh.count_selected_faces">[docs]</a>
+    def count_selected_faces(self, location_fn):
+        &quot;&quot;&quot;Given location functions, compute the count of faces that satisfy
+        the location function. Useful for setting up distributed load
+        conditions.
+
+        Parameters
+        ----------
+        location_fns : List[Callable]
+            Callable: a function that inputs a point and returns a boolean
+            value describing whether the boundary condition should be applied.
+
+        Returns
+        -------
+        face_count : int
+        &quot;&quot;&quot;
+        _, _, _, _, face_inds = get_face_shape_vals_and_grads(self.ele_type)
+        cell_points = onp.take(self.points, self.cells, axis=0)
+        cell_face_points = onp.take(cell_points, face_inds, axis=1)
+
+        vmap_location_fn = jax.vmap(location_fn)
+
+        def on_boundary(cell_points):
+            boundary_flag = vmap_location_fn(cell_points)
+            return onp.all(boundary_flag)
+
+        vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
+        boundary_flags = vvmap_on_boundary(cell_face_points)
+        boundary_inds = onp.argwhere(boundary_flags)
+        return boundary_inds.shape[0]</div>
+</div>
+
+
+
+<div class="viewcode-block" id="check_mesh_TET4">
+<a class="viewcode-back" href="../../more/api/api_generate_mesh.html#jax_fem.generate_mesh.check_mesh_TET4">[docs]</a>
+def check_mesh_TET4(points, cells):
+    # TODO
+    def quality(pts):
+        p1, p2, p3, p4 = pts
+        v1 = p2 - p1
+        v2 = p3 - p1
+        v12 = np.cross(v1, v2)
+        v3 = p4 - p1
+        return np.dot(v12, v3)
+    qlts = jax.vmap(quality)(points[cells])
+    return qlts</div>
+
+
+
+<div class="viewcode-block" id="get_meshio_cell_type">
+<a class="viewcode-back" href="../../more/api/api_utils.html#jax_fem.generate_mesh.get_meshio_cell_type">[docs]</a>
+def get_meshio_cell_type(ele_type):
+    &quot;&quot;&quot;Reference:
+    https://github.com/nschloe/meshio/blob/9dc6b0b05c9606cad73ef11b8b7785dd9b9ea325/src/meshio/xdmf/common.py#L36
+    &quot;&quot;&quot;
+    if ele_type == &#39;TET4&#39;:
+        cell_type = &#39;tetra&#39;
+    elif ele_type == &#39;TET10&#39;:
+        cell_type = &#39;tetra10&#39;
+    elif ele_type == &#39;HEX8&#39;:
+        cell_type = &#39;hexahedron&#39;
+    elif ele_type == &#39;HEX27&#39;:
+        cell_type = &#39;hexahedron27&#39;
+    elif  ele_type == &#39;HEX20&#39;:
+        cell_type = &#39;hexahedron20&#39;
+    elif ele_type == &#39;TRI3&#39;:
+        cell_type = &#39;triangle&#39;
+    elif ele_type == &#39;TRI6&#39;:
+        cell_type = &#39;triangle6&#39;
+    elif ele_type == &#39;QUAD4&#39;:
+        cell_type = &#39;quad&#39;
+    elif ele_type == &#39;QUAD8&#39;:
+        cell_type = &#39;quad8&#39;
+    else:
+        raise NotImplementedError
+    return cell_type</div>
+
+
+
+<div class="viewcode-block" id="rectangle_mesh">
+<a class="viewcode-back" href="../../more/api/api_generate_mesh.html#jax_fem.generate_mesh.rectangle_mesh">[docs]</a>
+def rectangle_mesh(Nx, Ny, domain_x, domain_y):
+    &quot;&quot;&quot;
+    QUAD4 mesh, generated by our own code
+    &quot;&quot;&quot;
+    dim = 2
+    x = onp.linspace(0, domain_x, Nx + 1)
+    y = onp.linspace(0, domain_y, Ny + 1)
+    xv, yv = onp.meshgrid(x, y, indexing=&#39;ij&#39;)
+    points_xy = onp.stack((xv, yv), axis=dim)
+    points = points_xy.reshape(-1, dim)
+    points_inds = onp.arange(len(points))
+    points_inds_xy = points_inds.reshape(Nx + 1, Ny + 1)
+    inds1 = points_inds_xy[:-1, :-1]
+    inds2 = points_inds_xy[1:, :-1]
+    inds3 = points_inds_xy[1:, 1:]
+    inds4 = points_inds_xy[:-1, 1:]
+    cells = onp.stack((inds1, inds2, inds3, inds4), axis=dim).reshape(-1, 4)
+    out_mesh = meshio.Mesh(points=points, cells={&#39;quad&#39;: cells})
+    return out_mesh</div>
+
+
+
+<div class="viewcode-block" id="box_mesh">
+<a class="viewcode-back" href="../../more/api/api_generate_mesh.html#jax_fem.generate_mesh.box_mesh">[docs]</a>
+def box_mesh(Nx, Ny, Nz, domain_x, domain_y, domain_z):
+    &quot;&quot;&quot;
+    HEX8 mesh, generated by our own code
+    &quot;&quot;&quot;
+    dim = 3
+    x = onp.linspace(0, domain_x, Nx + 1)
+    y = onp.linspace(0, domain_y, Ny + 1)
+    z = onp.linspace(0, domain_z, Nz + 1)
+    xv, yv, zv = onp.meshgrid(x, y, z, indexing=&#39;ij&#39;)
+    points_xyz = onp.stack((xv, yv, zv), axis=dim)
+    points = points_xyz.reshape(-1, dim)
+    points_inds = onp.arange(len(points))
+    points_inds_xyz = points_inds.reshape(Nx + 1, Ny + 1, Nz + 1)
+    inds1 = points_inds_xyz[:-1, :-1, :-1]
+    inds2 = points_inds_xyz[1:, :-1, :-1]
+    inds3 = points_inds_xyz[1:, 1:, :-1]
+    inds4 = points_inds_xyz[:-1, 1:, :-1]
+    inds5 = points_inds_xyz[:-1, :-1, 1:]
+    inds6 = points_inds_xyz[1:, :-1, 1:]
+    inds7 = points_inds_xyz[1:, 1:, 1:]
+    inds8 = points_inds_xyz[:-1, 1:, 1:]
+    cells = onp.stack((inds1, inds2, inds3, inds4, inds5, inds6, inds7, inds8),
+                      axis=dim).reshape(-1, 8)
+    out_mesh = meshio.Mesh(points=points, cells={&#39;hexahedron&#39;: cells})
+    return out_mesh</div>
+
+
+
+<div class="viewcode-block" id="box_mesh_gmsh">
+<a class="viewcode-back" href="../../more/api/api_generate_mesh.html#jax_fem.generate_mesh.box_mesh_gmsh">[docs]</a>
+def box_mesh_gmsh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir, ele_type=&#39;HEX8&#39;):
+    &quot;&quot;&quot;References:
+    https://gitlab.onelab.info/gmsh/gmsh/-/blob/master/examples/api/hex.py
+    https://gitlab.onelab.info/gmsh/gmsh/-/blob/gmsh_4_7_1/tutorial/python/t1.py
+    https://gitlab.onelab.info/gmsh/gmsh/-/blob/gmsh_4_7_1/tutorial/python/t3.py
+
+    Accepts ele_type = &#39;HEX8&#39;, &#39;TET4&#39; or &#39;TET10&#39;, mesh will be generated with the help of gmsh
+    &quot;&quot;&quot;
+
+    assert ele_type != &#39;HEX20&#39;, f&quot;gmsh cannot produce HEX20 mesh?&quot;
+
+    cell_type = get_meshio_cell_type(ele_type)
+    _, _, _, _, degree, _ = get_elements(ele_type)
+
+    msh_dir = os.path.join(data_dir, &#39;msh&#39;)
+    os.makedirs(msh_dir, exist_ok=True)
+    msh_file = os.path.join(msh_dir, &#39;box.msh&#39;)
+
+    offset_x = 0.
+    offset_y = 0.
+    offset_z = 0.
+    domain_x = Lx
+    domain_y = Ly
+    domain_z = Lz
+
+    gmsh.initialize()
+    gmsh.option.setNumber(&quot;Mesh.MshFileVersion&quot;, 2.2)  # save in old MSH format
+    if cell_type.startswith(&#39;tetra&#39;):
+        Rec2d = False  # tris or quads
+        Rec3d = False  # tets, prisms or hexas
+    else:
+        Rec2d = True
+        Rec3d = True
+    p = gmsh.model.geo.addPoint(offset_x, offset_y, offset_z)
+    l = gmsh.model.geo.extrude([(0, p)], domain_x, 0, 0, [Nx], [1])
+    s = gmsh.model.geo.extrude([l[1]], 0, domain_y, 0, [Ny], [1], recombine=Rec2d)
+    v = gmsh.model.geo.extrude([s[1]], 0, 0, domain_z, [Nz], [1], recombine=Rec3d)
+
+    gmsh.model.geo.synchronize()
+    gmsh.model.mesh.generate(3)
+    gmsh.model.mesh.setOrder(degree)
+    gmsh.write(msh_file)
+    gmsh.finalize()
+
+    mesh = meshio.read(msh_file)
+    points = mesh.points # (num_total_nodes, dim)
+    cells =  mesh.cells_dict[cell_type] # (num_cells, num_nodes)
+    out_mesh = meshio.Mesh(points=points, cells={cell_type: cells})
+
+    return out_mesh</div>
+
+
+
+<div class="viewcode-block" id="cylinder_mesh_gmsh">
+<a class="viewcode-back" href="../../more/api/api_generate_mesh.html#jax_fem.generate_mesh.cylinder_mesh_gmsh">[docs]</a>
+def cylinder_mesh_gmsh(data_dir, R=5, H=10, circle_mesh=5, hight_mesh=20, rect_ratio=0.4):
+    &quot;&quot;&quot;By Xinxin Wu at PKU in July, 2022
+    Reference: https://www.researchgate.net/post/How_can_I_create_a_structured_mesh_using_a_transfinite_volume_in_gmsh
+    R: radius
+    H: hight
+    circle_mesh:num of meshs in circle lines
+    hight_mesh:num of meshs in hight
+    rect_ratio: rect length/R
+    &quot;&quot;&quot;
+    rect_coor = R*rect_ratio
+    msh_dir = os.path.join(data_dir, &#39;msh&#39;)
+    os.makedirs(msh_dir, exist_ok=True)
+    geo_file = os.path.join(msh_dir, &#39;cylinder.geo&#39;)
+    msh_file = os.path.join(msh_dir, &#39;cylinder.msh&#39;)
+
+    string=&#39;&#39;&#39;
+        Point(1) = {{0, 0, 0, 1.0}};
+        Point(2) = {{-{rect_coor}, {rect_coor}, 0, 1.0}};
+        Point(3) = {{{rect_coor}, {rect_coor}, 0, 1.0}};
+        Point(4) = {{{rect_coor}, -{rect_coor}, 0, 1.0}};
+        Point(5) = {{-{rect_coor}, -{rect_coor}, 0, 1.0}};
+        Point(6) = {{{R}*Cos(3*Pi/4), {R}*Sin(3*Pi/4), 0, 1.0}};
+        Point(7) = {{{R}*Cos(Pi/4), {R}*Sin(Pi/4), 0, 1.0}};
+        Point(8) = {{{R}*Cos(-Pi/4), {R}*Sin(-Pi/4), 0, 1.0}};
+        Point(9) = {{{R}*Cos(-3*Pi/4), {R}*Sin(-3*Pi/4), 0, 1.0}};
+
+        Line(1) = {{2, 3}};
+        Line(2) = {{3, 4}};
+        Line(3) = {{4, 5}};
+        Line(4) = {{5, 2}};
+        Line(5) = {{2, 6}};
+        Line(6) = {{3, 7}};
+        Line(7) = {{4, 8}};
+        Line(8) = {{5, 9}};
+
+        Circle(9) = {{6, 1, 7}};
+        Circle(10) = {{7, 1, 8}};
+        Circle(11) = {{8, 1, 9}};
+        Circle(12) = {{9, 1, 6}};
+
+        Curve Loop(1) = {{1, 2, 3, 4}};
+        Plane Surface(1) = {{1}};
+        Curve Loop(2) = {{1, 6, -9, -5}};
+        Plane Surface(2) = {{2}};
+        Curve Loop(3) = {{2, 7, -10, -6}};
+        Plane Surface(3) = {{3}};
+        Curve Loop(4) = {{3, 8, -11, -7}};
+        Plane Surface(4) = {{4}};
+        Curve Loop(5) = {{4, 5, -12, -8}};
+        Plane Surface(5) = {{5}};
+
+        Transfinite Curve {{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}} = {circle_mesh} Using Progression 1;
+
+        Transfinite Surface {{1}};
+        Transfinite Surface {{2}};
+        Transfinite Surface {{3}};
+        Transfinite Surface {{4}};
+        Transfinite Surface {{5}};
+        Recombine Surface {{1, 2, 3, 4, 5}};
+
+        Extrude {{0, 0, {H}}} {{
+          Surface{{1:5}}; Layers {{{hight_mesh}}}; Recombine;
+        }}
+
+        Mesh 3;&#39;&#39;&#39;.format(R=R, H=H, rect_coor=rect_coor, circle_mesh=circle_mesh, hight_mesh=hight_mesh)
+
+    with open(geo_file, &quot;w&quot;) as f:
+        f.write(string)
+    os.system(&quot;gmsh -3 {geo_file} -o {msh_file} -format msh2&quot;.format(geo_file=geo_file, msh_file=msh_file))
+
+    mesh = meshio.read(msh_file)
+    points = mesh.points # (num_total_nodes, dim)
+    cells =  mesh.cells_dict[&#39;hexahedron&#39;] # (num_cells, num_nodes)
+
+    # The mesh somehow has two redundant points...
+    points = onp.vstack((points[1:14], points[15:]))
+    cells = onp.where(cells &gt; 14, cells - 2, cells - 1)
+
+    out_mesh = meshio.Mesh(points=points, cells={&#39;hexahedron&#39;: cells})
+    return out_mesh</div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

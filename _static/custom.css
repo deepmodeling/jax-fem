@@ -1,0 +1,32 @@
+/* _static/custom.css */
+.spaced-image {
+    margin: 10em 0;
+    display: block;
+}
+
+table tr:hover {
+  background-color: transparent !important;
+  color: inherit !important;
+  cursor: default !important;
+}
+table td:hover, table th:hover {
+  background-color: transparent !important;
+}
+
+.prompt {
+    display: none !important;
+}
+
+.toctree-wrapper.api-toc .toctree-l1 > a {
+    font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace !important;
+    /* font-size: 1.15em; */
+    font-weight: bold;
+    background: #f8f8f8;
+    border-radius: 4px;
+    padding: 2px 8px;
+    color: #a558a0 !important;
+    border: 1px solid #e0e0e0;
+    display: inline-block;
+    margin-bottom: 2px;
+    vertical-align: middle;
+}

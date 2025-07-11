@@ -1,0 +1,592 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jax_fem.basis &#8212; JAX-FEM 0.0.9 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=7935197f" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=39f6cbd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jax_fem/basis';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">JAX-FEM 0.0.9 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../learn/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/poisson.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/linear_elasticity.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/hyperelasticity.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/plasticity.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/compute_gradients.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/topology_optimization.html">Topology optimization</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/FAQ/FAQ_main.html">Frequently asked questions (FAQ)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/FAQ/FAQ_mesh.html">About mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/FAQ/FAQ_solver.html">About solver</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/useful/main.html">Useful links</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/useful/notes/main.html">Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/useful/lecture.html">Lectures</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_logger_setup.html">jax_fem.logger_setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">About the project</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jax_fem.basis</h1><div class="highlight"><pre>
+<span></span>import basix
+import numpy as onp
+
+from jax_fem import logger
+
+
+# def get_full_integration_poly_degree(ele_type, lag_order, dim):
+#     &quot;&quot;&quot;Only works for weak forms of (grad_u, grad_v).
+#     TODO: Is this correct?
+#     Reference:
+#     https://zhuanlan.zhihu.com/p/521630645
+#     &quot;&quot;&quot;
+#     if ele_type == &#39;hexahedron&#39; or ele_type == &#39;quadrilateral&#39;:
+#         return 2 * (dim*lag_order - 1)
+
+#     if ele_type == &#39;tetrahedron&#39; or ele_type == &#39;triangle&#39;:
+#         return 2 * (dim*(lag_order - 1) - 1)
+
+<div class="viewcode-block" id="get_elements">
+<a class="viewcode-back" href="../../more/api/api_generate_mesh.html#jax_fem.basis.get_elements">[docs]</a>
+def get_elements(ele_type):
+    &quot;&quot;&quot;Mesh node ordering is important.
+    If the input mesh file is Gmsh .msh or Abaqus .inp, meshio would convert it to
+    its own ordering. My experience shows that meshio ordering is the same as Abaqus.
+    For example, for a 10-node tetrahedron element, the ordering of meshio is the following
+    https://web.mit.edu/calculix_v2.7/CalculiX/ccx_2.7/doc/ccx/node33.html
+    The troublesome thing is that basix has a different ordering. As shown below
+    https://defelement.com/elements/lagrange.html
+    The consequence is that we need to define this &quot;re_order&quot; variable to make sure the
+    ordering is correct.
+    &quot;&quot;&quot;
+    element_family = basix.ElementFamily.P
+    if ele_type == &#39;HEX8&#39;:
+        re_order = [0, 1, 3, 2, 4, 5, 7, 6]
+        basix_ele = basix.CellType.hexahedron
+        basix_face_ele = basix.CellType.quadrilateral
+        gauss_order = 2 # 2x2x2, TODO: is this full integration?
+        degree = 1
+    elif ele_type == &#39;HEX27&#39;:
+        print(f&quot;Warning: 27-node hexahedron is rarely used in practice and not recommended.&quot;)
+        re_order = [0, 1, 3, 2, 4, 5, 7, 6, 8, 11, 13, 9, 16, 18, 19,
+                    17, 10, 12, 15, 14, 22, 23, 21, 24, 20, 25, 26]
+        basix_ele = basix.CellType.hexahedron
+        basix_face_ele = basix.CellType.quadrilateral
+        gauss_order = 10 # 6x6x6, full integration
+        degree = 2
+    elif ele_type == &#39;HEX20&#39;:
+        re_order = [0, 1, 3, 2, 4, 5, 7, 6, 8, 11, 13, 9, 16, 18, 19, 17, 10, 12, 15, 14]
+        element_family = basix.ElementFamily.serendipity
+        basix_ele = basix.CellType.hexahedron
+        basix_face_ele = basix.CellType.quadrilateral
+        gauss_order = 2 # 6x6x6, full integration
+        degree = 2
+    elif ele_type == &#39;TET4&#39;:
+        re_order = [0, 1, 2, 3]
+        basix_ele = basix.CellType.tetrahedron
+        basix_face_ele = basix.CellType.triangle
+        gauss_order = 0 # 1, full integration
+        degree = 1
+    elif ele_type == &#39;TET10&#39;:
+        re_order = [0, 1, 2, 3, 9, 6, 8, 7, 5, 4]
+        basix_ele = basix.CellType.tetrahedron
+        basix_face_ele = basix.CellType.triangle
+        gauss_order = 2 # 4, full integration
+        degree = 2
+    # TODO: Check if this is correct.
+    elif ele_type == &#39;QUAD4&#39;:
+        re_order = [0, 1, 3, 2]
+        basix_ele = basix.CellType.quadrilateral
+        basix_face_ele = basix.CellType.interval
+        gauss_order = 2
+        degree = 1
+    elif ele_type == &#39;QUAD8&#39;:
+        re_order = [0, 1, 3, 2, 4, 6, 7, 5]
+        element_family = basix.ElementFamily.serendipity
+        basix_ele = basix.CellType.quadrilateral
+        basix_face_ele = basix.CellType.interval
+        gauss_order = 2
+        degree = 2
+    elif ele_type == &#39;TRI3&#39;:
+        re_order = [0, 1, 2]
+        basix_ele = basix.CellType.triangle
+        basix_face_ele = basix.CellType.interval
+        gauss_order = 0 # 1, full integration
+        degree = 1
+    elif ele_type == &#39;TRI6&#39;:
+        re_order = [0, 1, 2, 5, 3, 4]
+        basix_ele = basix.CellType.triangle
+        basix_face_ele = basix.CellType.interval
+        gauss_order = 2 # 3, full integration
+        degree = 2
+    else:
+        raise NotImplementedError
+
+    return element_family, basix_ele, basix_face_ele, gauss_order, degree, re_order</div>
+
+
+
+<div class="viewcode-block" id="reorder_inds">
+<a class="viewcode-back" href="../../more/api/api_basis.html#jax_fem.basis.reorder_inds">[docs]</a>
+def reorder_inds(inds, re_order):
+    new_inds = []
+    for ind in inds.reshape(-1):
+        new_inds.append(onp.argwhere(re_order == ind))
+    new_inds = onp.array(new_inds).reshape(inds.shape)
+    return new_inds</div>
+
+
+
+<div class="viewcode-block" id="get_shape_vals_and_grads">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.basis.get_shape_vals_and_grads">[docs]</a>
+def get_shape_vals_and_grads(ele_type, gauss_order=None):
+    &quot;&quot;&quot;TODO: Add comments
+
+    Returns
+    -------
+    shape_values: ndarray
+        (8, 8) = (num_quads, num_nodes)
+    shape_grads_ref: ndarray
+        (8, 8, 3) = (num_quads, num_nodes, dim)
+    weights: ndarray
+        (8,) = (num_quads,)
+    &quot;&quot;&quot;
+    element_family, basix_ele, basix_face_ele, gauss_order_default, degree, re_order = get_elements(ele_type)
+
+    if gauss_order is None:
+        gauss_order = gauss_order_default
+
+    quad_points, weights = basix.make_quadrature(basix_ele, gauss_order)
+    element = basix.create_element(element_family, basix_ele, degree)
+    vals_and_grads = element.tabulate(1, quad_points)[:, :, re_order, :]
+    shape_values = vals_and_grads[0, :, :, 0]
+    shape_grads_ref = onp.transpose(vals_and_grads[1:, :, :, 0], axes=(1, 2, 0))
+    logger.debug(f&quot;ele_type = {ele_type}, quad_points.shape = (num_quads, dim) = {quad_points.shape}&quot;)
+    return shape_values, shape_grads_ref, weights</div>
+
+
+
+<div class="viewcode-block" id="get_face_shape_vals_and_grads">
+<a class="viewcode-back" href="../../more/api/api_generate_mesh.html#jax_fem.basis.get_face_shape_vals_and_grads">[docs]</a>
+def get_face_shape_vals_and_grads(ele_type, gauss_order=None):
+    &quot;&quot;&quot;TODO: Add comments
+
+    Returns
+    -------
+    face_shape_vals: ndarray
+        (6, 4, 8) = (num_faces, num_face_quads, num_nodes)
+    face_shape_grads_ref: ndarray
+        (6, 4, 3) = (num_faces, num_face_quads, num_nodes, dim)
+    face_weights: ndarray
+        (6, 4) = (num_faces, num_face_quads)
+    face_normals:ndarray
+        (6, 3) = (num_faces, dim)
+    face_inds: ndarray
+        (6, 4) = (num_faces, num_face_vertices)
+    &quot;&quot;&quot;
+    element_family, basix_ele, basix_face_ele, gauss_order_default, degree, re_order = get_elements(ele_type)
+
+    if gauss_order is None:
+        gauss_order = gauss_order_default
+
+    # TODO: Check if this is correct.
+    # We should provide freedom for seperate gauss_order for volume integral and surface integral
+    # Currently, they&#39;re using the same gauss_order!
+    points, weights = basix.make_quadrature(basix_face_ele, gauss_order)
+
+    map_degree = 1
+    lagrange_map = basix.create_element(basix.ElementFamily.P, basix_face_ele, map_degree)
+    values = lagrange_map.tabulate(0, points)[0, :, :, 0]
+    vertices = basix.geometry(basix_ele)
+    dim = len(vertices[0])
+    facets = basix.cell.sub_entity_connectivity(basix_ele)[dim - 1]
+    # Map face points
+    # Reference: https://docs.fenicsproject.org/basix/main/python/demo/demo_facet_integral.py.html
+    face_quad_points = []
+    face_inds = []
+    face_weights = []
+    for f, facet in enumerate(facets):
+        mapped_points = []
+        for i in range(len(points)):
+            vals = values[i]
+            mapped_point = onp.sum(vertices[facet[0]] * vals[:, None], axis=0)
+            mapped_points.append(mapped_point)
+        face_quad_points.append(mapped_points)
+        face_inds.append(facet[0])
+        jacobian = basix.cell.facet_jacobians(basix_ele)[f]
+        if dim == 2:
+            size_jacobian = onp.linalg.norm(jacobian)
+        else:
+            size_jacobian = onp.linalg.norm(onp.cross(jacobian[:, 0], jacobian[:, 1]))
+        face_weights.append(weights*size_jacobian)
+    face_quad_points = onp.stack(face_quad_points)
+    face_weights = onp.stack(face_weights)
+
+    face_normals = basix.cell.facet_outward_normals(basix_ele)
+    face_inds = onp.array(face_inds)
+    face_inds = reorder_inds(face_inds, re_order)
+    num_faces, num_face_quads, dim = face_quad_points.shape
+    element = basix.create_element(element_family, basix_ele, degree)
+    vals_and_grads = element.tabulate(1, face_quad_points.reshape(-1, dim))[:, :, re_order, :]
+    face_shape_vals = vals_and_grads[0, :, :, 0].reshape(num_faces, num_face_quads, -1)
+    face_shape_grads_ref = vals_and_grads[1:, :, :, 0].reshape(dim, num_faces, num_face_quads, -1)
+    face_shape_grads_ref = onp.transpose(face_shape_grads_ref, axes=(1, 2, 3, 0))
+    logger.debug(f&quot;face_quad_points.shape = (num_faces, num_face_quads, dim) = {face_quad_points.shape}&quot;)
+    return face_shape_vals, face_shape_grads_ref, face_weights, face_normals, face_inds</div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

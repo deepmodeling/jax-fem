@@ -1,0 +1,1384 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>functools &#8212; JAX-FEM 0.0.9 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=7935197f" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=39f6cbd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/functools';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">JAX-FEM 0.0.9 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../learn/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/poisson.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/linear_elasticity.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/hyperelasticity.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/plasticity.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/compute_gradients.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/topology_optimization.html">Topology optimization</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../more/FAQ/FAQ_main.html">Frequently asked questions (FAQ)</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../more/FAQ/FAQ_mesh.html">About mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/FAQ/FAQ_solver.html">About solver</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../more/useful/main.html">Useful links</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../more/useful/notes/main.html">Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/useful/lecture.html">Lectures</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_logger_setup.html">jax_fem.logger_setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../more/project.html">About the project</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../more/citation.html">Citations</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for functools</h1><div class="highlight"><pre>
+<span></span>&quot;&quot;&quot;functools.py - Tools for working with functions and callable objects
+&quot;&quot;&quot;
+# Python module wrapper for _functools C module
+# to allow utilities written in Python to be added
+# to the functools module.
+# Written by Nick Coghlan &lt;ncoghlan at gmail.com&gt;,
+# Raymond Hettinger &lt;python at rcn.com&gt;,
+# and Łukasz Langa &lt;lukasz at langa.pl&gt;.
+#   Copyright (C) 2006-2013 Python Software Foundation.
+# See C source code for _functools credits/copyright
+
+__all__ = [&#39;update_wrapper&#39;, &#39;wraps&#39;, &#39;WRAPPER_ASSIGNMENTS&#39;, &#39;WRAPPER_UPDATES&#39;,
+           &#39;total_ordering&#39;, &#39;cache&#39;, &#39;cmp_to_key&#39;, &#39;lru_cache&#39;, &#39;reduce&#39;,
+           &#39;partial&#39;, &#39;partialmethod&#39;, &#39;singledispatch&#39;, &#39;singledispatchmethod&#39;,
+           &#39;cached_property&#39;]
+
+from abc import get_cache_token
+from collections import namedtuple
+# import types, weakref  # Deferred to single_dispatch()
+from reprlib import recursive_repr
+from _thread import RLock
+from types import GenericAlias
+
+
+################################################################################
+### update_wrapper() and wraps() decorator
+################################################################################
+
+# update_wrapper() and wraps() are tools to help write
+# wrapper functions that can handle naive introspection
+
+WRAPPER_ASSIGNMENTS = (&#39;__module__&#39;, &#39;__name__&#39;, &#39;__qualname__&#39;, &#39;__doc__&#39;,
+                       &#39;__annotations__&#39;)
+WRAPPER_UPDATES = (&#39;__dict__&#39;,)
+def update_wrapper(wrapper,
+                   wrapped,
+                   assigned = WRAPPER_ASSIGNMENTS,
+                   updated = WRAPPER_UPDATES):
+    &quot;&quot;&quot;Update a wrapper function to look like the wrapped function
+
+       wrapper is the function to be updated
+       wrapped is the original function
+       assigned is a tuple naming the attributes assigned directly
+       from the wrapped function to the wrapper function (defaults to
+       functools.WRAPPER_ASSIGNMENTS)
+       updated is a tuple naming the attributes of the wrapper that
+       are updated with the corresponding attribute from the wrapped
+       function (defaults to functools.WRAPPER_UPDATES)
+    &quot;&quot;&quot;
+    for attr in assigned:
+        try:
+            value = getattr(wrapped, attr)
+        except AttributeError:
+            pass
+        else:
+            setattr(wrapper, attr, value)
+    for attr in updated:
+        getattr(wrapper, attr).update(getattr(wrapped, attr, {}))
+    # Issue #17482: set __wrapped__ last so we don&#39;t inadvertently copy it
+    # from the wrapped function when updating __dict__
+    wrapper.__wrapped__ = wrapped
+    # Return the wrapper so this can be used as a decorator via partial()
+    return wrapper
+
+<div class="viewcode-block" id="wraps">
+<a class="viewcode-back" href="../more/api/api_utils.html#jax_fem.mma.wraps">[docs]</a>
+def wraps(wrapped,
+          assigned = WRAPPER_ASSIGNMENTS,
+          updated = WRAPPER_UPDATES):
+    &quot;&quot;&quot;Decorator factory to apply update_wrapper() to a wrapper function
+
+       Returns a decorator that invokes update_wrapper() with the decorated
+       function as the wrapper argument and the arguments to wraps() as the
+       remaining arguments. Default arguments are as for update_wrapper().
+       This is a convenience function to simplify applying partial() to
+       update_wrapper().
+    &quot;&quot;&quot;
+    return partial(update_wrapper, wrapped=wrapped,
+                   assigned=assigned, updated=updated)</div>
+
+
+
+################################################################################
+### total_ordering class decorator
+################################################################################
+
+# The total ordering functions all invoke the root magic method directly
+# rather than using the corresponding operator.  This avoids possible
+# infinite recursion that could occur when the operator dispatch logic
+# detects a NotImplemented result and then calls a reflected method.
+
+def _gt_from_lt(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &gt; b.  Computed by @total_ordering from (not a &lt; b) and (a != b).&#39;
+    op_result = type(self).__lt__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return not op_result and self != other
+
+def _le_from_lt(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &lt;= b.  Computed by @total_ordering from (a &lt; b) or (a == b).&#39;
+    op_result = type(self).__lt__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return op_result or self == other
+
+def _ge_from_lt(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &gt;= b.  Computed by @total_ordering from (not a &lt; b).&#39;
+    op_result = type(self).__lt__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return not op_result
+
+def _ge_from_le(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &gt;= b.  Computed by @total_ordering from (not a &lt;= b) or (a == b).&#39;
+    op_result = type(self).__le__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return not op_result or self == other
+
+def _lt_from_le(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &lt; b.  Computed by @total_ordering from (a &lt;= b) and (a != b).&#39;
+    op_result = type(self).__le__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return op_result and self != other
+
+def _gt_from_le(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &gt; b.  Computed by @total_ordering from (not a &lt;= b).&#39;
+    op_result = type(self).__le__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return not op_result
+
+def _lt_from_gt(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &lt; b.  Computed by @total_ordering from (not a &gt; b) and (a != b).&#39;
+    op_result = type(self).__gt__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return not op_result and self != other
+
+def _ge_from_gt(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &gt;= b.  Computed by @total_ordering from (a &gt; b) or (a == b).&#39;
+    op_result = type(self).__gt__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return op_result or self == other
+
+def _le_from_gt(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &lt;= b.  Computed by @total_ordering from (not a &gt; b).&#39;
+    op_result = type(self).__gt__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return not op_result
+
+def _le_from_ge(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &lt;= b.  Computed by @total_ordering from (not a &gt;= b) or (a == b).&#39;
+    op_result = type(self).__ge__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return not op_result or self == other
+
+def _gt_from_ge(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &gt; b.  Computed by @total_ordering from (a &gt;= b) and (a != b).&#39;
+    op_result = type(self).__ge__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return op_result and self != other
+
+def _lt_from_ge(self, other, NotImplemented=NotImplemented):
+    &#39;Return a &lt; b.  Computed by @total_ordering from (not a &gt;= b).&#39;
+    op_result = type(self).__ge__(self, other)
+    if op_result is NotImplemented:
+        return op_result
+    return not op_result
+
+_convert = {
+    &#39;__lt__&#39;: [(&#39;__gt__&#39;, _gt_from_lt),
+               (&#39;__le__&#39;, _le_from_lt),
+               (&#39;__ge__&#39;, _ge_from_lt)],
+    &#39;__le__&#39;: [(&#39;__ge__&#39;, _ge_from_le),
+               (&#39;__lt__&#39;, _lt_from_le),
+               (&#39;__gt__&#39;, _gt_from_le)],
+    &#39;__gt__&#39;: [(&#39;__lt__&#39;, _lt_from_gt),
+               (&#39;__ge__&#39;, _ge_from_gt),
+               (&#39;__le__&#39;, _le_from_gt)],
+    &#39;__ge__&#39;: [(&#39;__le__&#39;, _le_from_ge),
+               (&#39;__gt__&#39;, _gt_from_ge),
+               (&#39;__lt__&#39;, _lt_from_ge)]
+}
+
+def total_ordering(cls):
+    &quot;&quot;&quot;Class decorator that fills in missing ordering methods&quot;&quot;&quot;
+    # Find user-defined comparisons (not those inherited from object).
+    roots = {op for op in _convert if getattr(cls, op, None) is not getattr(object, op, None)}
+    if not roots:
+        raise ValueError(&#39;must define at least one ordering operation: &lt; &gt; &lt;= &gt;=&#39;)
+    root = max(roots)       # prefer __lt__ to __le__ to __gt__ to __ge__
+    for opname, opfunc in _convert[root]:
+        if opname not in roots:
+            opfunc.__name__ = opname
+            setattr(cls, opname, opfunc)
+    return cls
+
+
+################################################################################
+### cmp_to_key() function converter
+################################################################################
+
+def cmp_to_key(mycmp):
+    &quot;&quot;&quot;Convert a cmp= function into a key= function&quot;&quot;&quot;
+    class K(object):
+        __slots__ = [&#39;obj&#39;]
+        def __init__(self, obj):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) &lt; 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) &gt; 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) &lt;= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) &gt;= 0
+        __hash__ = None
+    return K
+
+try:
+    from _functools import cmp_to_key
+except ImportError:
+    pass
+
+
+################################################################################
+### reduce() sequence to a single item
+################################################################################
+
+_initial_missing = object()
+
+def reduce(function, sequence, initial=_initial_missing):
+    &quot;&quot;&quot;
+    reduce(function, iterable[, initial]) -&gt; value
+
+    Apply a function of two arguments cumulatively to the items of a sequence
+    or iterable, from left to right, so as to reduce the iterable to a single
+    value.  For example, reduce(lambda x, y: x+y, [1, 2, 3, 4, 5]) calculates
+    ((((1+2)+3)+4)+5).  If initial is present, it is placed before the items
+    of the iterable in the calculation, and serves as a default when the
+    iterable is empty.
+    &quot;&quot;&quot;
+
+    it = iter(sequence)
+
+    if initial is _initial_missing:
+        try:
+            value = next(it)
+        except StopIteration:
+            raise TypeError(
+                &quot;reduce() of empty iterable with no initial value&quot;) from None
+    else:
+        value = initial
+
+    for element in it:
+        value = function(value, element)
+
+    return value
+
+try:
+    from _functools import reduce
+except ImportError:
+    pass
+
+
+################################################################################
+### partial() argument application
+################################################################################
+
+# Purely functional, no descriptor behaviour
+<div class="viewcode-block" id="partial">
+<a class="viewcode-back" href="../more/api/api_mma.html#jax_fem.mma.partial">[docs]</a>
+class partial:
+    &quot;&quot;&quot;New function with partial application of the given arguments
+    and keywords.
+    &quot;&quot;&quot;
+
+    __slots__ = &quot;func&quot;, &quot;args&quot;, &quot;keywords&quot;, &quot;__dict__&quot;, &quot;__weakref__&quot;
+
+    def __new__(cls, func, /, *args, **keywords):
+        if not callable(func):
+            raise TypeError(&quot;the first argument must be callable&quot;)
+
+        if hasattr(func, &quot;func&quot;):
+            args = func.args + args
+            keywords = {**func.keywords, **keywords}
+            func = func.func
+
+        self = super(partial, cls).__new__(cls)
+
+        self.func = func
+        self.args = args
+        self.keywords = keywords
+        return self
+
+    def __call__(self, /, *args, **keywords):
+        keywords = {**self.keywords, **keywords}
+        return self.func(*self.args, *args, **keywords)
+
+    @recursive_repr()
+    def __repr__(self):
+        qualname = type(self).__qualname__
+        args = [repr(self.func)]
+        args.extend(repr(x) for x in self.args)
+        args.extend(f&quot;{k}={v!r}&quot; for (k, v) in self.keywords.items())
+        if type(self).__module__ == &quot;functools&quot;:
+            return f&quot;functools.{qualname}({&#39;, &#39;.join(args)})&quot;
+        return f&quot;{qualname}({&#39;, &#39;.join(args)})&quot;
+
+    def __reduce__(self):
+        return type(self), (self.func,), (self.func, self.args,
+               self.keywords or None, self.__dict__ or None)
+
+    def __setstate__(self, state):
+        if not isinstance(state, tuple):
+            raise TypeError(&quot;argument to __setstate__ must be a tuple&quot;)
+        if len(state) != 4:
+            raise TypeError(f&quot;expected 4 items in state, got {len(state)}&quot;)
+        func, args, kwds, namespace = state
+        if (not callable(func) or not isinstance(args, tuple) or
+           (kwds is not None and not isinstance(kwds, dict)) or
+           (namespace is not None and not isinstance(namespace, dict))):
+            raise TypeError(&quot;invalid partial state&quot;)
+
+        args = tuple(args) # just in case it&#39;s a subclass
+        if kwds is None:
+            kwds = {}
+        elif type(kwds) is not dict: # XXX does it need to be *exactly* dict?
+            kwds = dict(kwds)
+        if namespace is None:
+            namespace = {}
+
+        self.__dict__ = namespace
+        self.func = func
+        self.args = args
+        self.keywords = kwds</div>
+
+
+try:
+    from _functools import partial
+except ImportError:
+    pass
+
+# Descriptor version
+class partialmethod(object):
+    &quot;&quot;&quot;Method descriptor with partial application of the given arguments
+    and keywords.
+
+    Supports wrapping existing descriptors and handles non-descriptor
+    callables as instance methods.
+    &quot;&quot;&quot;
+
+    def __init__(self, func, /, *args, **keywords):
+        if not callable(func) and not hasattr(func, &quot;__get__&quot;):
+            raise TypeError(&quot;{!r} is not callable or a descriptor&quot;
+                                 .format(func))
+
+        # func could be a descriptor like classmethod which isn&#39;t callable,
+        # so we can&#39;t inherit from partial (it verifies func is callable)
+        if isinstance(func, partialmethod):
+            # flattening is mandatory in order to place cls/self before all
+            # other arguments
+            # it&#39;s also more efficient since only one function will be called
+            self.func = func.func
+            self.args = func.args + args
+            self.keywords = {**func.keywords, **keywords}
+        else:
+            self.func = func
+            self.args = args
+            self.keywords = keywords
+
+    def __repr__(self):
+        args = &quot;, &quot;.join(map(repr, self.args))
+        keywords = &quot;, &quot;.join(&quot;{}={!r}&quot;.format(k, v)
+                                 for k, v in self.keywords.items())
+        format_string = &quot;{module}.{cls}({func}, {args}, {keywords})&quot;
+        return format_string.format(module=self.__class__.__module__,
+                                    cls=self.__class__.__qualname__,
+                                    func=self.func,
+                                    args=args,
+                                    keywords=keywords)
+
+    def _make_unbound_method(self):
+        def _method(cls_or_self, /, *args, **keywords):
+            keywords = {**self.keywords, **keywords}
+            return self.func(cls_or_self, *self.args, *args, **keywords)
+        _method.__isabstractmethod__ = self.__isabstractmethod__
+        _method._partialmethod = self
+        return _method
+
+    def __get__(self, obj, cls=None):
+        get = getattr(self.func, &quot;__get__&quot;, None)
+        result = None
+        if get is not None:
+            new_func = get(obj, cls)
+            if new_func is not self.func:
+                # Assume __get__ returning something new indicates the
+                # creation of an appropriate callable
+                result = partial(new_func, *self.args, **self.keywords)
+                try:
+                    result.__self__ = new_func.__self__
+                except AttributeError:
+                    pass
+        if result is None:
+            # If the underlying descriptor didn&#39;t do anything, treat this
+            # like an instance method
+            result = self._make_unbound_method().__get__(obj, cls)
+        return result
+
+    @property
+    def __isabstractmethod__(self):
+        return getattr(self.func, &quot;__isabstractmethod__&quot;, False)
+
+    __class_getitem__ = classmethod(GenericAlias)
+
+
+# Helper functions
+
+def _unwrap_partial(func):
+    while isinstance(func, partial):
+        func = func.func
+    return func
+
+################################################################################
+### LRU Cache function decorator
+################################################################################
+
+_CacheInfo = namedtuple(&quot;CacheInfo&quot;, [&quot;hits&quot;, &quot;misses&quot;, &quot;maxsize&quot;, &quot;currsize&quot;])
+
+class _HashedSeq(list):
+    &quot;&quot;&quot; This class guarantees that hash() will be called no more than once
+        per element.  This is important because the lru_cache() will hash
+        the key multiple times on a cache miss.
+
+    &quot;&quot;&quot;
+
+    __slots__ = &#39;hashvalue&#39;
+
+    def __init__(self, tup, hash=hash):
+        self[:] = tup
+        self.hashvalue = hash(tup)
+
+    def __hash__(self):
+        return self.hashvalue
+
+def _make_key(args, kwds, typed,
+             kwd_mark = (object(),),
+             fasttypes = {int, str},
+             tuple=tuple, type=type, len=len):
+    &quot;&quot;&quot;Make a cache key from optionally typed positional and keyword arguments
+
+    The key is constructed in a way that is flat as possible rather than
+    as a nested structure that would take more memory.
+
+    If there is only a single argument and its data type is known to cache
+    its hash value, then that argument is returned without a wrapper.  This
+    saves space and improves lookup speed.
+
+    &quot;&quot;&quot;
+    # All of code below relies on kwds preserving the order input by the user.
+    # Formerly, we sorted() the kwds before looping.  The new way is *much*
+    # faster; however, it means that f(x=1, y=2) will now be treated as a
+    # distinct call from f(y=2, x=1) which will be cached separately.
+    key = args
+    if kwds:
+        key += kwd_mark
+        for item in kwds.items():
+            key += item
+    if typed:
+        key += tuple(type(v) for v in args)
+        if kwds:
+            key += tuple(type(v) for v in kwds.values())
+    elif len(key) == 1 and type(key[0]) in fasttypes:
+        return key[0]
+    return _HashedSeq(key)
+
+def lru_cache(maxsize=128, typed=False):
+    &quot;&quot;&quot;Least-recently-used cache decorator.
+
+    If *maxsize* is set to None, the LRU features are disabled and the cache
+    can grow without bound.
+
+    If *typed* is True, arguments of different types will be cached separately.
+    For example, f(3.0) and f(3) will be treated as distinct calls with
+    distinct results.
+
+    Arguments to the cached function must be hashable.
+
+    View the cache statistics named tuple (hits, misses, maxsize, currsize)
+    with f.cache_info().  Clear the cache and statistics with f.cache_clear().
+    Access the underlying function with f.__wrapped__.
+
+    See:  https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU)
+
+    &quot;&quot;&quot;
+
+    # Users should only access the lru_cache through its public API:
+    #       cache_info, cache_clear, and f.__wrapped__
+    # The internals of the lru_cache are encapsulated for thread safety and
+    # to allow the implementation to change (including a possible C version).
+
+    if isinstance(maxsize, int):
+        # Negative maxsize is treated as 0
+        if maxsize &lt; 0:
+            maxsize = 0
+    elif callable(maxsize) and isinstance(typed, bool):
+        # The user_function was passed in directly via the maxsize argument
+        user_function, maxsize = maxsize, 128
+        wrapper = _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo)
+        wrapper.cache_parameters = lambda : {&#39;maxsize&#39;: maxsize, &#39;typed&#39;: typed}
+        return update_wrapper(wrapper, user_function)
+    elif maxsize is not None:
+        raise TypeError(
+            &#39;Expected first argument to be an integer, a callable, or None&#39;)
+
+    def decorating_function(user_function):
+        wrapper = _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo)
+        wrapper.cache_parameters = lambda : {&#39;maxsize&#39;: maxsize, &#39;typed&#39;: typed}
+        return update_wrapper(wrapper, user_function)
+
+    return decorating_function
+
+def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
+    # Constants shared by all lru cache instances:
+    sentinel = object()          # unique object used to signal cache misses
+    make_key = _make_key         # build a key from the function arguments
+    PREV, NEXT, KEY, RESULT = 0, 1, 2, 3   # names for the link fields
+
+    cache = {}
+    hits = misses = 0
+    full = False
+    cache_get = cache.get    # bound method to lookup a key or return None
+    cache_len = cache.__len__  # get cache size without calling len()
+    lock = RLock()           # because linkedlist updates aren&#39;t threadsafe
+    root = []                # root of the circular doubly linked list
+    root[:] = [root, root, None, None]     # initialize by pointing to self
+
+    if maxsize == 0:
+
+        def wrapper(*args, **kwds):
+            # No caching -- just a statistics update
+            nonlocal misses
+            misses += 1
+            result = user_function(*args, **kwds)
+            return result
+
+    elif maxsize is None:
+
+        def wrapper(*args, **kwds):
+            # Simple caching without ordering or size limit
+            nonlocal hits, misses
+            key = make_key(args, kwds, typed)
+            result = cache_get(key, sentinel)
+            if result is not sentinel:
+                hits += 1
+                return result
+            misses += 1
+            result = user_function(*args, **kwds)
+            cache[key] = result
+            return result
+
+    else:
+
+        def wrapper(*args, **kwds):
+            # Size limited caching that tracks accesses by recency
+            nonlocal root, hits, misses, full
+            key = make_key(args, kwds, typed)
+            with lock:
+                link = cache_get(key)
+                if link is not None:
+                    # Move the link to the front of the circular queue
+                    link_prev, link_next, _key, result = link
+                    link_prev[NEXT] = link_next
+                    link_next[PREV] = link_prev
+                    last = root[PREV]
+                    last[NEXT] = root[PREV] = link
+                    link[PREV] = last
+                    link[NEXT] = root
+                    hits += 1
+                    return result
+                misses += 1
+            result = user_function(*args, **kwds)
+            with lock:
+                if key in cache:
+                    # Getting here means that this same key was added to the
+                    # cache while the lock was released.  Since the link
+                    # update is already done, we need only return the
+                    # computed result and update the count of misses.
+                    pass
+                elif full:
+                    # Use the old root to store the new key and result.
+                    oldroot = root
+                    oldroot[KEY] = key
+                    oldroot[RESULT] = result
+                    # Empty the oldest link and make it the new root.
+                    # Keep a reference to the old key and old result to
+                    # prevent their ref counts from going to zero during the
+                    # update. That will prevent potentially arbitrary object
+                    # clean-up code (i.e. __del__) from running while we&#39;re
+                    # still adjusting the links.
+                    root = oldroot[NEXT]
+                    oldkey = root[KEY]
+                    oldresult = root[RESULT]
+                    root[KEY] = root[RESULT] = None
+                    # Now update the cache dictionary.
+                    del cache[oldkey]
+                    # Save the potentially reentrant cache[key] assignment
+                    # for last, after the root and links have been put in
+                    # a consistent state.
+                    cache[key] = oldroot
+                else:
+                    # Put result in a new link at the front of the queue.
+                    last = root[PREV]
+                    link = [last, root, key, result]
+                    last[NEXT] = root[PREV] = cache[key] = link
+                    # Use the cache_len bound method instead of the len() function
+                    # which could potentially be wrapped in an lru_cache itself.
+                    full = (cache_len() &gt;= maxsize)
+            return result
+
+    def cache_info():
+        &quot;&quot;&quot;Report cache statistics&quot;&quot;&quot;
+        with lock:
+            return _CacheInfo(hits, misses, maxsize, cache_len())
+
+    def cache_clear():
+        &quot;&quot;&quot;Clear the cache and cache statistics&quot;&quot;&quot;
+        nonlocal hits, misses, full
+        with lock:
+            cache.clear()
+            root[:] = [root, root, None, None]
+            hits = misses = 0
+            full = False
+
+    wrapper.cache_info = cache_info
+    wrapper.cache_clear = cache_clear
+    return wrapper
+
+try:
+    from _functools import _lru_cache_wrapper
+except ImportError:
+    pass
+
+
+################################################################################
+### cache -- simplified access to the infinity cache
+################################################################################
+
+def cache(user_function, /):
+    &#39;Simple lightweight unbounded cache.  Sometimes called &quot;memoize&quot;.&#39;
+    return lru_cache(maxsize=None)(user_function)
+
+
+################################################################################
+### singledispatch() - single-dispatch generic function decorator
+################################################################################
+
+def _c3_merge(sequences):
+    &quot;&quot;&quot;Merges MROs in *sequences* to a single MRO using the C3 algorithm.
+
+    Adapted from https://www.python.org/download/releases/2.3/mro/.
+
+    &quot;&quot;&quot;
+    result = []
+    while True:
+        sequences = [s for s in sequences if s]   # purge empty sequences
+        if not sequences:
+            return result
+        for s1 in sequences:   # find merge candidates among seq heads
+            candidate = s1[0]
+            for s2 in sequences:
+                if candidate in s2[1:]:
+                    candidate = None
+                    break      # reject the current head, it appears later
+            else:
+                break
+        if candidate is None:
+            raise RuntimeError(&quot;Inconsistent hierarchy&quot;)
+        result.append(candidate)
+        # remove the chosen candidate
+        for seq in sequences:
+            if seq[0] == candidate:
+                del seq[0]
+
+def _c3_mro(cls, abcs=None):
+    &quot;&quot;&quot;Computes the method resolution order using extended C3 linearization.
+
+    If no *abcs* are given, the algorithm works exactly like the built-in C3
+    linearization used for method resolution.
+
+    If given, *abcs* is a list of abstract base classes that should be inserted
+    into the resulting MRO. Unrelated ABCs are ignored and don&#39;t end up in the
+    result. The algorithm inserts ABCs where their functionality is introduced,
+    i.e. issubclass(cls, abc) returns True for the class itself but returns
+    False for all its direct base classes. Implicit ABCs for a given class
+    (either registered or inferred from the presence of a special method like
+    __len__) are inserted directly after the last ABC explicitly listed in the
+    MRO of said class. If two implicit ABCs end up next to each other in the
+    resulting MRO, their ordering depends on the order of types in *abcs*.
+
+    &quot;&quot;&quot;
+    for i, base in enumerate(reversed(cls.__bases__)):
+        if hasattr(base, &#39;__abstractmethods__&#39;):
+            boundary = len(cls.__bases__) - i
+            break   # Bases up to the last explicit ABC are considered first.
+    else:
+        boundary = 0
+    abcs = list(abcs) if abcs else []
+    explicit_bases = list(cls.__bases__[:boundary])
+    abstract_bases = []
+    other_bases = list(cls.__bases__[boundary:])
+    for base in abcs:
+        if issubclass(cls, base) and not any(
+                issubclass(b, base) for b in cls.__bases__
+            ):
+            # If *cls* is the class that introduces behaviour described by
+            # an ABC *base*, insert said ABC to its MRO.
+            abstract_bases.append(base)
+    for base in abstract_bases:
+        abcs.remove(base)
+    explicit_c3_mros = [_c3_mro(base, abcs=abcs) for base in explicit_bases]
+    abstract_c3_mros = [_c3_mro(base, abcs=abcs) for base in abstract_bases]
+    other_c3_mros = [_c3_mro(base, abcs=abcs) for base in other_bases]
+    return _c3_merge(
+        [[cls]] +
+        explicit_c3_mros + abstract_c3_mros + other_c3_mros +
+        [explicit_bases] + [abstract_bases] + [other_bases]
+    )
+
+def _compose_mro(cls, types):
+    &quot;&quot;&quot;Calculates the method resolution order for a given class *cls*.
+
+    Includes relevant abstract base classes (with their respective bases) from
+    the *types* iterable. Uses a modified C3 linearization algorithm.
+
+    &quot;&quot;&quot;
+    bases = set(cls.__mro__)
+    # Remove entries which are already present in the __mro__ or unrelated.
+    def is_related(typ):
+        return (typ not in bases and hasattr(typ, &#39;__mro__&#39;)
+                                 and not isinstance(typ, GenericAlias)
+                                 and issubclass(cls, typ))
+    types = [n for n in types if is_related(n)]
+    # Remove entries which are strict bases of other entries (they will end up
+    # in the MRO anyway.
+    def is_strict_base(typ):
+        for other in types:
+            if typ != other and typ in other.__mro__:
+                return True
+        return False
+    types = [n for n in types if not is_strict_base(n)]
+    # Subclasses of the ABCs in *types* which are also implemented by
+    # *cls* can be used to stabilize ABC ordering.
+    type_set = set(types)
+    mro = []
+    for typ in types:
+        found = []
+        for sub in typ.__subclasses__():
+            if sub not in bases and issubclass(cls, sub):
+                found.append([s for s in sub.__mro__ if s in type_set])
+        if not found:
+            mro.append(typ)
+            continue
+        # Favor subclasses with the biggest number of useful bases
+        found.sort(key=len, reverse=True)
+        for sub in found:
+            for subcls in sub:
+                if subcls not in mro:
+                    mro.append(subcls)
+    return _c3_mro(cls, abcs=mro)
+
+def _find_impl(cls, registry):
+    &quot;&quot;&quot;Returns the best matching implementation from *registry* for type *cls*.
+
+    Where there is no registered implementation for a specific type, its method
+    resolution order is used to find a more generic implementation.
+
+    Note: if *registry* does not contain an implementation for the base
+    *object* type, this function may return None.
+
+    &quot;&quot;&quot;
+    mro = _compose_mro(cls, registry.keys())
+    match = None
+    for t in mro:
+        if match is not None:
+            # If *match* is an implicit ABC but there is another unrelated,
+            # equally matching implicit ABC, refuse the temptation to guess.
+            if (t in registry and t not in cls.__mro__
+                              and match not in cls.__mro__
+                              and not issubclass(match, t)):
+                raise RuntimeError(&quot;Ambiguous dispatch: {} or {}&quot;.format(
+                    match, t))
+            break
+        if t in registry:
+            match = t
+    return registry.get(match)
+
+def singledispatch(func):
+    &quot;&quot;&quot;Single-dispatch generic function decorator.
+
+    Transforms a function into a generic function, which can have different
+    behaviours depending upon the type of its first argument. The decorated
+    function acts as the default implementation, and additional
+    implementations can be registered using the register() attribute of the
+    generic function.
+    &quot;&quot;&quot;
+    # There are many programs that use functools without singledispatch, so we
+    # trade-off making singledispatch marginally slower for the benefit of
+    # making start-up of such applications slightly faster.
+    import types, weakref
+
+    registry = {}
+    dispatch_cache = weakref.WeakKeyDictionary()
+    cache_token = None
+
+    def dispatch(cls):
+        &quot;&quot;&quot;generic_func.dispatch(cls) -&gt; &lt;function implementation&gt;
+
+        Runs the dispatch algorithm to return the best available implementation
+        for the given *cls* registered on *generic_func*.
+
+        &quot;&quot;&quot;
+        nonlocal cache_token
+        if cache_token is not None:
+            current_token = get_cache_token()
+            if cache_token != current_token:
+                dispatch_cache.clear()
+                cache_token = current_token
+        try:
+            impl = dispatch_cache[cls]
+        except KeyError:
+            try:
+                impl = registry[cls]
+            except KeyError:
+                impl = _find_impl(cls, registry)
+            dispatch_cache[cls] = impl
+        return impl
+
+    def _is_valid_dispatch_type(cls):
+        return isinstance(cls, type) and not isinstance(cls, GenericAlias)
+
+    def register(cls, func=None):
+        &quot;&quot;&quot;generic_func.register(cls, func) -&gt; func
+
+        Registers a new implementation for the given *cls* on a *generic_func*.
+
+        &quot;&quot;&quot;
+        nonlocal cache_token
+        if _is_valid_dispatch_type(cls):
+            if func is None:
+                return lambda f: register(cls, f)
+        else:
+            if func is not None:
+                raise TypeError(
+                    f&quot;Invalid first argument to `register()`. &quot;
+                    f&quot;{cls!r} is not a class.&quot;
+                )
+            ann = getattr(cls, &#39;__annotations__&#39;, {})
+            if not ann:
+                raise TypeError(
+                    f&quot;Invalid first argument to `register()`: {cls!r}. &quot;
+                    f&quot;Use either `@register(some_class)` or plain `@register` &quot;
+                    f&quot;on an annotated function.&quot;
+                )
+            func = cls
+
+            # only import typing if annotation parsing is necessary
+            from typing import get_type_hints
+            argname, cls = next(iter(get_type_hints(func).items()))
+            if not _is_valid_dispatch_type(cls):
+                raise TypeError(
+                    f&quot;Invalid annotation for {argname!r}. &quot;
+                    f&quot;{cls!r} is not a class.&quot;
+                )
+
+        registry[cls] = func
+        if cache_token is None and hasattr(cls, &#39;__abstractmethods__&#39;):
+            cache_token = get_cache_token()
+        dispatch_cache.clear()
+        return func
+
+    def wrapper(*args, **kw):
+        if not args:
+            raise TypeError(f&#39;{funcname} requires at least &#39;
+                            &#39;1 positional argument&#39;)
+
+        return dispatch(args[0].__class__)(*args, **kw)
+
+    funcname = getattr(func, &#39;__name__&#39;, &#39;singledispatch function&#39;)
+    registry[object] = func
+    wrapper.register = register
+    wrapper.dispatch = dispatch
+    wrapper.registry = types.MappingProxyType(registry)
+    wrapper._clear_cache = dispatch_cache.clear
+    update_wrapper(wrapper, func)
+    return wrapper
+
+
+# Descriptor version
+class singledispatchmethod:
+    &quot;&quot;&quot;Single-dispatch generic method descriptor.
+
+    Supports wrapping existing descriptors and handles non-descriptor
+    callables as instance methods.
+    &quot;&quot;&quot;
+
+    def __init__(self, func):
+        if not callable(func) and not hasattr(func, &quot;__get__&quot;):
+            raise TypeError(f&quot;{func!r} is not callable or a descriptor&quot;)
+
+        self.dispatcher = singledispatch(func)
+        self.func = func
+
+    def register(self, cls, method=None):
+        &quot;&quot;&quot;generic_method.register(cls, func) -&gt; func
+
+        Registers a new implementation for the given *cls* on a *generic_method*.
+        &quot;&quot;&quot;
+        return self.dispatcher.register(cls, func=method)
+
+    def __get__(self, obj, cls=None):
+        def _method(*args, **kwargs):
+            method = self.dispatcher.dispatch(args[0].__class__)
+            return method.__get__(obj, cls)(*args, **kwargs)
+
+        _method.__isabstractmethod__ = self.__isabstractmethod__
+        _method.register = self.register
+        update_wrapper(_method, self.func)
+        return _method
+
+    @property
+    def __isabstractmethod__(self):
+        return getattr(self.func, &#39;__isabstractmethod__&#39;, False)
+
+
+################################################################################
+### cached_property() - computed once per instance, cached as attribute
+################################################################################
+
+_NOT_FOUND = object()
+
+
+class cached_property:
+    def __init__(self, func):
+        self.func = func
+        self.attrname = None
+        self.__doc__ = func.__doc__
+        self.lock = RLock()
+
+    def __set_name__(self, owner, name):
+        if self.attrname is None:
+            self.attrname = name
+        elif name != self.attrname:
+            raise TypeError(
+                &quot;Cannot assign the same cached_property to two different names &quot;
+                f&quot;({self.attrname!r} and {name!r}).&quot;
+            )
+
+    def __get__(self, instance, owner=None):
+        if instance is None:
+            return self
+        if self.attrname is None:
+            raise TypeError(
+                &quot;Cannot use cached_property instance without calling __set_name__ on it.&quot;)
+        try:
+            cache = instance.__dict__
+        except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
+            msg = (
+                f&quot;No &#39;__dict__&#39; attribute on {type(instance).__name__!r} &quot;
+                f&quot;instance to cache {self.attrname!r} property.&quot;
+            )
+            raise TypeError(msg) from None
+        val = cache.get(self.attrname, _NOT_FOUND)
+        if val is _NOT_FOUND:
+            with self.lock:
+                # check if another thread filled cache while we awaited lock
+                val = cache.get(self.attrname, _NOT_FOUND)
+                if val is _NOT_FOUND:
+                    val = self.func(instance)
+                    try:
+                        cache[self.attrname] = val
+                    except TypeError:
+                        msg = (
+                            f&quot;The &#39;__dict__&#39; attribute on {type(instance).__name__!r} instance &quot;
+                            f&quot;does not support item assignment for caching {self.attrname!r} property.&quot;
+                        )
+                        raise TypeError(msg) from None
+        return val
+
+    __class_getitem__ = classmethod(GenericAlias)
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

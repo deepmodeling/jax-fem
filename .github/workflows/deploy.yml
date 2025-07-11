@@ -1,0 +1,37 @@
+name: Deploy Docs
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:  
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+          pip install sphinx sphinx-book-theme myst-parser nbsphinx sphinx-copybutton
+          cd docs && make html
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/build/html
+          force_orphan: true  

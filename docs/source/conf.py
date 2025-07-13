@@ -64,9 +64,24 @@ autodoc_docstring_signature = False
 autosummary_generate = True
 
 # ipynb
-nbsphinx_execute = 'never' 
-# nbsphinx_allow_errors = True 
-# nbsphinx_ignore_errors = True
+nbsphinx_execute = 'never'
+
+html_sourcelink_suffix = ''
+
+nbsphinx_prolog = """
+{% set docname = env.doc2path(env.docname, base=None) %}
+.. raw:: html
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const downloadLinks = document.querySelectorAll('a.reference.download.internal');
+        downloadLinks.forEach(link => {
+            link.setAttribute('download', '');
+            link.href = '../_sources/' + link.getAttribute('href');
+        });
+    });
+    </script>
+"""
 
 
 highlight_language = 'none'

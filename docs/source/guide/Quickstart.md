@@ -3,7 +3,6 @@
 You can create an `example.py` to solve the classical Poisson's equation:
 
 ```python
-
 import jax
 import jax.numpy as np
 import os
@@ -71,12 +70,12 @@ The generated result file `u.vtu` can be visualized with [ParaView](https://www.
     <em >Solution to the Poisson's equation due to a source term.</em>
 </p>
 
-You can also navigate to `jax_fem/` and run
+<!-- You can also navigate to `jax_fem/` and run
 
 ```bash
 python -m tests.benchmarks
 ```
-to execute a set of test cases.
+to execute a set of test cases. -->
 
 
 <!-- You can also check [`demos/`](https://github.com/deepmodeling/jax-fem/tree/main/demos) for a variety of FEM cases. 

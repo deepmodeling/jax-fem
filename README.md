@@ -8,7 +8,7 @@ JAX-FEM is a differentiable finite element package based on [JAX](https://github
 
 ## Documentation
 
-For installation and use of `jax_fem`, please visit our [documentation](https://deepmodeling.github.io/jax-fem/) for details.
+For installation and user guide, please visit our [documentation](https://deepmodeling.github.io/jax-fem/) for details.
 
 ## Key features
 

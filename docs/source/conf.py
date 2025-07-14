@@ -84,7 +84,7 @@ nbsphinx_prolog = """
 """
 
 
-highlight_language = 'none'
+highlight_language = 'python'
 
 python_use_unqualified_type_names = True
 

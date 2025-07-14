@@ -1,9 +1,10 @@
 A differentiable finite element package based on [JAX](https://github.com/google/jax).
 
-## Finite Element Method (FEM)
 ![Github Star](https://img.shields.io/github/stars/deepmodeling/jax-fem)
 ![Github Fork](https://img.shields.io/github/forks/deepmodeling/jax-fem)
 ![License](https://img.shields.io/github/license/deepmodeling/jax-fem)
+
+## Finite Element Method (FEM)
 
 FEM is a powerful tool, where we support the following features.
 
@@ -21,10 +22,14 @@ FEM is a powerful tool, where we support the following features.
   - Optimal thermal control
 - Integration with PETSc for solver choices
 
-**Updates** (Dec 11, 2023):
+## Documentation
+
+For installation and usage of `jax_fem`, please visit our [documentation](https://deepmodeling.github.io/jax-fem/) for details.
+
+<!-- **Updates** (Dec 11, 2023):
 
 - We now support multi-physics problems in the sense that multiple variables can be solved monolithically. For example, consider running  `python -m applications.stokes.example`
-- Weak form is now defined through  volume integral and surface integral. We can now treat body force, "mass kernel" and "Laplace kernel" in a unified way through volume integral, and treat "Neumann B.C." and "Robin B.C." in a unified way through surface integral. 
+- Weak form is now defined through  volume integral and surface integral. We can now treat body force, "mass kernel" and "Laplace kernel" in a unified way through volume integral, and treat "Neumann B.C." and "Robin B.C." in a unified way through surface integral.  -->
 
 <p align="middle">
   <img src="docs/source/_static/images/ded.gif" width="600" />

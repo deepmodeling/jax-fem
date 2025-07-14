@@ -10,7 +10,7 @@ Welcome to JAX-FEM's documentation!
 .. `reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
 .. documentation for details.
 
-🚀 `JAX-FEM <https://github.com/deepmodeling/jax-fem>`_ is a GPU-accelerated differentiable finite element analysis package based on `JAX <https://github.com/google/jax>`_. Used to be part of the suite of open-source python packages for Additive Manufacturing (AM) research, `JAX-AM <https://github.com/tianjuxue/jax-am>`_. 
+🚀 `JAX-FEM <https://github.com/deepmodeling/jax-fem>`_ is a differentiable finite element package based on `JAX <https://github.com/google/jax>`_.
 
 .. raw:: html
 
@@ -104,8 +104,7 @@ Welcome to JAX-FEM's documentation!
 
    Citations <more/citation>
 
+   Miscellaneous <more/project>
+
    Contact <more/contact>
-
-   About the project <more/project>
-
    

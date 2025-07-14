@@ -1,12 +1,18 @@
-A differentiable finite element package based on [JAX](https://github.com/google/jax).
-
 ![Github Star](https://img.shields.io/github/stars/deepmodeling/jax-fem)
 ![Github Fork](https://img.shields.io/github/forks/deepmodeling/jax-fem)
 ![License](https://img.shields.io/github/license/deepmodeling/jax-fem)
 
-## Finite Element Method (FEM)
+# JAX-FEM
 
-FEM is a powerful tool, where we support the following features.
+A differentiable finite element package based on [JAX](https://github.com/google/jax).
+
+## Documentation
+
+For installation and use of `jax_fem`, please visit our [documentation](https://deepmodeling.github.io/jax-fem/) for details.
+
+## Key features
+
+JAX-FEM is Automatic Differentiation (AD) + Finite Element Method (FEM), where the following features are supported:
 
 - 2D quadrilateral/triangle elements
 - 3D hexahedron/tetrahedron elements
@@ -17,14 +23,11 @@ FEM is a powerful tool, where we support the following features.
   - Linear elasticity
   - Hyperelasticity
   - Plasticity (macro and crystal plasticity)
-- Differentiable simulation for solving inverse/design problems __without__ deriving sensitivities by hand, e.g.,
+- Multi-physics problems
+- Integration with PETSc for solver options
+- Differentiable programming for solving inverse/design problems __without__ deriving sensitivities by hand, e.g.,
   - Topology optimization
   - Optimal thermal control
-- Integration with PETSc for solver choices
-
-## Documentation
-
-For installation and usage of `jax_fem`, please visit our [documentation](https://deepmodeling.github.io/jax-fem/) for details.
 
 <!-- **Updates** (Dec 11, 2023):
 - We now support multi-physics problems in the sense that multiple variables can be solved monolithically. For example, consider running  `python -m applications.stokes.example`
@@ -72,7 +75,7 @@ For installation and usage of `jax_fem`, please visit our [documentation](https:
 
 ## License
 
-This project is licensed under the GNU General Public License v3 - see the [LICENSE](https://www.gnu.org/licenses/) for details.
+This project is licensed under the GNU General Public License v3 - see the [LICENSE](https://www.gnu.org/licenses/) for details. For commercial use, contact [Tianju Xue](https://ce.hkust.edu.hk/people/tian-ju-xue-xuetianju).
 
 ## Citations
 

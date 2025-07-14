@@ -3,8 +3,12 @@
 
 Remarks
 --------
-The API reference is still under development, please wait for the stable release version.
 
+.. note::
+
+   The API reference is still under development, please wait for the stable release version.
+
+   
 Subpackages
 ------------
 

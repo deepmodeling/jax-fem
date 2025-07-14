@@ -1,6 +1,5 @@
 # Frequently asked questions (FAQ)
 
-## Categories
 
 ### Mesh
 

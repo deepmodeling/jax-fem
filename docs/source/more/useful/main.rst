@@ -6,13 +6,13 @@ Lectures
 
 * Finite Element Methods (FEM)
 
-  * `Course materials  <https://github.com/tianjuxue/CIVL5390>`_ for CIVL 5390 (Finite Element Methods) instructed by Tianju Xue at HKUST.
+  * `Course materials  <https://github.com/tianjuxue/CIVL5390/tree/main/lectures>`_ for CIVL 5390 (Finite Element Methods) instructed by Tianju Xue at HKUST.
 
 
 Notes
 -----
 
-For educational purpose, we will post notes on several topics. We have already implemented most of these methods with JAX.
+Here are some notes on topics that might be of interest.
 
 * Discrete Element Method (DEM)
 
@@ -26,7 +26,7 @@ For educational purpose, we will post notes on several topics. We have already i
 
   * :download:`A short note on phase-field method <notes/PF.pdf>`
 
-* Finite Element Method (FEM)
+* Crystal Plasticity Finite Element Method (FEM)
 
   * :download:`A note on crystal plasticity <notes/CPFEM.pdf>`
 

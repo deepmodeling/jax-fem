@@ -1,10 +1,11 @@
+# JAX-FEM
+
 ![Github Star](https://img.shields.io/github/stars/deepmodeling/jax-fem)
 ![Github Fork](https://img.shields.io/github/forks/deepmodeling/jax-fem)
 ![License](https://img.shields.io/github/license/deepmodeling/jax-fem)
 
-# JAX-FEM
 
-A differentiable finite element package based on [JAX](https://github.com/google/jax).
+JAX-FEM is a differentiable finite element package based on [JAX](https://github.com/google/jax).
 
 ## Documentation
 

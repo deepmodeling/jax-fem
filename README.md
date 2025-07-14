@@ -4,7 +4,6 @@
 ![Github Fork](https://img.shields.io/github/forks/deepmodeling/jax-fem)
 ![License](https://img.shields.io/github/license/deepmodeling/jax-fem)
 
-
 JAX-FEM is a differentiable finite element package based on [JAX](https://github.com/google/jax).
 
 ## Documentation
@@ -13,7 +12,7 @@ For installation and use of `jax_fem`, please visit our [documentation](https://
 
 ## Key features
 
-JAX-FEM is Automatic Differentiation (AD) + Finite Element Method (FEM), where the following features are supported:
+JAX-FEM is Automatic Differentiation (AD) + Finite Element Method (FEM), and we support the following features:
 
 - 2D quadrilateral/triangle elements
 - 3D hexahedron/tetrahedron elements

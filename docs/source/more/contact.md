@@ -4,7 +4,7 @@
 
 🔥 We warmly welcome contributions from the community (e.g., bug reports, feature requests, or code submissions).
 
-🤝 We are open to research collaborations and industry partnerships! If you're interested in working with us or have any inquiries, please feel free to contact us at cetxue@ust.hk.
+🤝 We are open to research collaborations and industry partnerships! If you're interested in working with us or have any inquiries, please feel free to contact us at [cetxue@ust.hk](mailto:cetxue@ust.hk).
 
 
 <!-- .. Contact

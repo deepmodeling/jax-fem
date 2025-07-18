@@ -5,7 +5,6 @@ import sys
 import time
 import functools
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, List, Union
 from jax_fem.generate_mesh import Mesh
 from jax_fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grads
 from jax_fem import logger
@@ -19,45 +18,56 @@ onp.set_printoptions(threshold=sys.maxsize,
 
 @dataclass
 class FiniteElement:
-    """
-    Defines finite element related to one variable (can be vector valued)
+    """Finite element class for one variable.
+    This variable can be:
+
+    - Scalar-valued (when :attr:`.vec` = 1)
+    - Vector-valued (when :attr:`.vec` > 1)
 
     Attributes
     ----------
-    mesh : Mesh object
-        The mesh object stores points (coordinates) and cells (connectivity).
+    mesh : Mesh
+        Stores points (coordinates) and cells (connectivity).
     vec : int
-        The number of vector variable components of the solution.
-        E.g., a 3D displacement field has u_x, u_y and u_z components, so vec=3
+        Number of vector components in solution (e.g., 3 for displacement in 3D, 1 for temperature).
     dim : int
-        The dimension of the problem.
+        Spatial dimension of the problem. Currently supports:
+
+        - 2 (2D problems)
+        - 3 (3D problems)
     ele_type : str
-        Element type
-    dirichlet_bc_info : [location_fns, vecs, value_fns]
-        location_fns : List[Callable]
-            Callable : a function that inputs a point and returns if the point satisfies the location condition
-        vecs: List[int]
-            integer value must be in the range of 0 to vec - 1,
-            specifying which component of the (vector) variable to apply Dirichlet condition to
-        value_fns : List[Callable]
-            Callable : a function that inputs a point and returns the Dirichlet value
-    periodic_bc_info : [location_fns_A, location_fns_B, mappings, vecs]
-        location_fns_A : List[Callable]
-            Callable : location function for boundary A
-        location_fns_B : List[Callable]
-            Callable : location function for boundary B
-        mappings : List[Callable]
-            Callable: function mapping a point from boundary A to boundary B
-        vecs: List[int]
-            which component of the (vector) variable to apply periodic condition to
+        Element type. Currently supports:
+
+        - 'QUAD4'
+        - 'QUAD8'
+        - 'TRI3'
+        - 'TRI6'
+        - 'HEX8'
+        - 'HEX20'
+        - 'HEX27'
+        - 'TET4'
+        - 'TET10'
+    gauss_order : int
+        Order of Gaussian quadrature. 
+
+    dirichlet_bc_info : list
+        A list for Dirichlet boundary condition information, whose elements are structured as:
+        
+        - **location_fns**: list of callables
+          Each callable takes a point (NumpyArray) and returns a boolean indicating 
+          if the point satisfies the location condition
+        - **vecs**: list of integers
+          Each integer must be in the range of 0 to vec - 1, specifying which 
+          component of the (vector) variable to apply Dirichlet condition to
+        - **value_fns**: list of callables
+          Each callable takes a point and returns the Dirichlet value
     """
     mesh: Mesh
     vec: int
     dim: int
     ele_type: str
     gauss_order: int
-    dirichlet_bc_info: Optional[List[Union[List[Callable], List[int], List[Callable]]]]
-    periodic_bc_info: Optional[List[Union[List[Callable], List[Callable], List[Callable], List[int]]]] = None
+    dirichlet_bc_info: list
 
     def __post_init__(self):
         self.points = self.mesh.points
@@ -78,8 +88,6 @@ class FiniteElement:
         self.shape_grads, self.JxW = self.get_shape_grads()
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(self.dirichlet_bc_info)
         
-        # self.p_node_inds_list_A, self.p_node_inds_list_B, self.p_vec_inds_list = self.periodic_boundary_conditions()
-
         # (num_cells, num_quads, num_nodes, 1, dim)
         self.v_grads_JxW = self.shape_grads[:, :, :, None, :] * self.JxW[:, :, None, None, None]
         self.num_face_quads = self.face_quad_weights.shape[1]
@@ -92,17 +100,20 @@ class FiniteElement:
         logger.info(f"Element type is {self.ele_type}, using {self.num_quads} quad points per element.")
 
     def get_shape_grads(self):
-        """Compute shape function gradient value
-        The gradient is w.r.t physical coordinates.
-        See Hughes, Thomas JR. The finite element method: linear static and dynamic finite element analysis. Courier Corporation, 2012.
+        """Compute shape function gradient value.
+
+        The gradient is w.r.t physical coordinates. 
+        Refer to 
+        Hughes, Thomas JR.
+        The finite element method: linear static and dynamic finite element analysis. Courier Corporation, 2012.
         Page 147, Eq. (3.9.3)
 
         Returns
         -------
-        shape_grads_physical : onp.ndarray
-            (num_cells, num_quads, num_nodes, dim)
-        JxW : onp.ndarray
-            (num_cells, num_quads)
+        shape_grads_physical : NumpyArray
+            Shape is (num_cells, num_quads, num_nodes, dim).
+        JxW : NumpyArray
+            Shape is (num_cells, num_quads).
         """
         assert self.shape_grads_ref.shape == (self.num_quads, self.num_nodes, self.dim)
         physical_coos = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
@@ -119,21 +130,23 @@ class FiniteElement:
         return shape_grads_physical, JxW
 
     def get_face_shape_grads(self, boundary_inds):
-        """Face shape function gradients and JxW (for surface integral)
-        Nanson's formula is used to map physical surface ingetral to reference domain
-        Reference: https://en.wikiversity.org/wiki/Continuum_mechanics/Volume_change_and_area_change
+        """Face shape function gradients and JxW (for surface integral).
+        Nanson's formula is used to map physical surface ingetral to reference domain.
+        Refer to 
+        `wikiversity <https://en.wikiversity.org/wiki/Continuum_mechanics/Volume_change_and_area_change>`_.
+
 
         Parameters
         ----------
-        boundary_inds : List[onp.ndarray]
-            (num_selected_faces, 2)
+        boundary_inds : list[NumpyArray]
+            Shape is (num_selected_faces, 2).
 
         Returns
         -------
-        face_shape_grads_physical : onp.ndarray
-            (num_selected_faces, num_face_quads, num_nodes, dim)
-        nanson_scale : onp.ndarray
-            (num_selected_faces, num_face_quads)
+        face_shape_grads_physical : NumpyArray
+            Shape is (num_selected_faces, num_face_quads, num_nodes, dim).
+        nanson_scale : NumpyArray
+            Shape is (num_selected_faces, num_face_quads).
         """
         physical_coos = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
         selected_coos = physical_coos[boundary_inds[:, 0]]  # (num_selected_faces, num_nodes, dim)
@@ -162,8 +175,8 @@ class FiniteElement:
 
         Returns
         -------
-        physical_quad_points : onp.ndarray
-            (num_cells, num_quads, dim)
+        physical_quad_points : NumpyArray
+            Shape is (num_cells, num_quads, dim).
         """
         physical_coos = onp.take(self.points, self.cells, axis=0)
         # (1, num_quads, num_nodes, 1) * (num_cells, 1, num_nodes, dim) -> (num_cells, num_quads, dim)
@@ -175,13 +188,13 @@ class FiniteElement:
 
         Parameters
         ----------
-        boundary_inds : List[onp.ndarray]
-            ndarray shape: (num_selected_faces, 2)
+        boundary_inds : list[NumpyArray]
+            Shape for NumpyArray is (num_selected_faces, 2).
 
         Returns
         -------
-        physical_surface_quad_points : ndarray
-            (num_selected_faces, num_face_quads, dim)
+        physical_surface_quad_points : NumpyArray
+            Shape for NumpyArray is (num_selected_faces, num_face_quads, dim).
         """
         physical_coos = onp.take(self.points, self.cells, axis=0)
         selected_coos = physical_coos[boundary_inds[:, 0]]  # (num_selected_faces, num_nodes, dim)
@@ -195,16 +208,17 @@ class FiniteElement:
 
         Parameters
         ----------
-        dirichlet_bc_info : [location_fns, vecs, value_fns]
+        dirichlet_bc_info : list
+            [location_fns, vecs, value_fns]
 
         Returns
         -------
-        node_inds_List : List[onp.ndarray]
-            The ndarray ranges from 0 to num_total_nodes - 1
-        vec_inds_List : List[onp.ndarray]
-            The ndarray ranges from 0 to to vec - 1
-        vals_List : List[ndarray]
-            Dirichlet values to be assigned
+        node_inds_list : list[NumpyArray]
+            The value of the NumpyArray ranges from 0 to num_total_nodes - 1.
+        vec_inds_list : list[NumpyArray]
+            The value of the NumpyArray ranges from 0 to to vec - 1.
+        vals_list : list[NumpyArray]
+            Dirichlet values to be assigned.
         """
         node_inds_list = []
         vec_inds_list = []
@@ -235,7 +249,8 @@ class FiniteElement:
 
         Parameters
         ----------
-        dirichlet_bc_info : [location_fns, vecs, value_fns]
+        dirichlet_bc_info : list
+            [location_fns, vecs, value_fns]
         """
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(dirichlet_bc_info)
 
@@ -244,19 +259,27 @@ class FiniteElement:
 
         Parameters
         ----------
-        location_fns : List[Callable]
-            Callable: a location function that inputs a point (ndarray) and returns if the point satisfies the location condition
-                      e.g., lambda x: np.isclose(x[0], 0.)
-                      If this location function takes 2 arguments, then the first is point and the second is index.
-                      e.g., lambda x, ind: np.isclose(x[0], 0.) & np.isin(ind, np.array([1, 3, 10]))
+        location_fns : list[callable]
+            The callable is a location function that inputs a point (NumpyArray) and returns if the point satisfies the location condition.
+            For example, ::
+
+                lambda x: np.isclose(x[0], 0.)
+
+            If this location function takes 2 arguments, then the first is point and the second is index.
+            For example, ::
+
+                lambda x, ind: np.isclose(x[0], 0.) & np.isin(ind, np.array([1, 3, 10]))
 
         Returns
         -------
-        boundary_inds_list : List[onp.ndarray]
-            (num_selected_faces, 2)
-            boundary_inds_list[k][i, 0] returns the global cell index of the ith selected face of boundary subset k
-            boundary_inds_list[k][i, 1] returns the local face index of the ith selected face of boundary subset k
+        boundary_inds_list : list[NumpyArray]
+            Shape of NumpyArray is (num_selected_faces, 2).
+
+            boundary_inds_list[k][i, 0] returns the global cell index of the ith selected face of boundary subset k.
+
+            boundary_inds_list[k][i, 1] returns the local face index of the ith selected face of boundary subset k.
         """
+
         # TODO: assume this works for all variables, and return the same result
         cell_points = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
         cell_face_points = onp.take(cell_points, self.face_inds, axis=1)  # (num_cells, num_faces, num_face_vertices, dim)
@@ -285,17 +308,17 @@ class FiniteElement:
         return boundary_inds_list
 
     def convert_from_dof_to_quad(self, sol):
-        """Obtain quad values from nodal solution
+        """Obtain quad values from nodal solution.
 
         Parameters
         ----------
-        sol : np.DeviceArray
-            (num_total_nodes, vec)
+        sol : JaxArray
+            Shape is (num_total_nodes, vec).
 
         Returns
         -------
-        u : np.DeviceArray
-            (num_cells, num_quads, vec)
+        u : JaxArray
+            Shape is (num_cells, num_quads, vec).
         """
         # (num_total_nodes, vec) -> (num_cells, num_nodes, vec)
         cells_sol = sol[self.cells]
@@ -308,14 +331,14 @@ class FiniteElement:
 
         Parameters
         ----------
-        sol : np.DeviceArray
-            (num_total_nodes, vec)
+        sol : JaxArray
+            Shape is (num_total_nodes, vec).
         boundary_inds : int
 
         Returns
         -------
-        u : np.DeviceArray
-            (num_selected_faces, num_face_quads, vec)
+        u : JaxArray
+            Shape is (num_selected_faces, num_face_quads, vec).
         """
         cells_old_sol = sol[self.cells]  # (num_cells, num_nodes, vec)
         selected_cell_sols = cells_old_sol[boundary_inds[:, 0]]  # (num_selected_faces, num_nodes, vec))
@@ -326,17 +349,17 @@ class FiniteElement:
         return u
 
     def sol_to_grad(self, sol):
-        """Obtain solution gradient from nodal solution
+        """Obtain solution gradient from nodal solution.
 
         Parameters
         ----------
-        sol : np.DeviceArray
-            (num_total_nodes, vec)
+        sol : JaxArray
+            Shape is (num_total_nodes, vec).
 
         Returns
         -------
-        u_grads : np.DeviceArray
-            (num_cells, num_quads, vec, dim)
+        u_grads : JaxArray
+            Shape is (num_cells, num_quads, vec, dim).
         """
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim)
         u_grads = np.take(sol, self.cells, axis=0)[:, None, :, :, None] * self.shape_grads[:, :, :, None, :]

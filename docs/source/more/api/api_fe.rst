@@ -1,7 +1,5 @@
 ``jax_fem.fe`` module
-==================
+=====================
 
-.. automodule:: jax_fem.fe
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. autoclass:: jax_fem.fe.FiniteElement
+   :exclude-members: mesh, vec, dim, ele_type, gauss_order, dirichlet_bc_info, print_BC_info

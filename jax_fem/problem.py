@@ -3,7 +3,6 @@ import jax
 import jax.numpy as np
 import jax.flatten_util
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, List, Union
 import functools
 
 from jax_fem.utils import timeit 
@@ -14,14 +13,37 @@ from jax_fem import logger
 
 @dataclass
 class Problem:
+    """Problem class to handle one FE variable or multiple coupled FE variables.
+
+    Attributes
+    ----------
+    mesh : Mesh
+        :attr:`~jax_fem.fe.FiniteElement.mesh`
+    vec : int
+        :attr:`~jax_fem.fe.FiniteElement.vec`
+    dim : int
+        :attr:`~jax_fem.fe.FiniteElement.dim`
+    ele_type : str
+        :attr:`~jax_fem.fe.FiniteElement.ele_type`
+    gauss_order : int
+        :attr:`~jax_fem.fe.FiniteElement.gauss_order`
+    dirichlet_bc_info : list
+        :attr:`~jax_fem.fe.FiniteElement.dirichlet_bc_info`
+    location_fns : list
+        A list of location functions useful for surface integrals in the weak form.
+        Such surface integral can be related to Neumann boundary condition, or an integral contributing to the stiffness matrix.
+        Each callable takes a point (NumpyArray) and returns a boolean indicating if the point satisfies the location condition
+    additional_info: tuple
+        Any other information that might be useful can be stored here. This is problem dependent.
+    """
     mesh: Mesh
     vec: int
     dim: int
     ele_type: str = 'HEX8'
     gauss_order: int = None
-    dirichlet_bc_info: Optional[List[Union[List[Callable], List[int], List[Callable]]]] = None
-    location_fns: Optional[List[Callable]] = None
-    additional_info: Any = ()
+    dirichlet_bc_info: list = None
+    location_fns: list = None
+    additional_info: tuple = ()
 
     def __post_init__(self):
 

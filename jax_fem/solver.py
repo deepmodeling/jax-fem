@@ -99,7 +99,7 @@ def linear_solver(A, b, x0, solver_options):
     elif 'umfpack_solver' in solver_options:
         x = umfpack_solve(A, b)
     elif 'petsc_solver' in solver_options:   
-        ksp_type = solver_options['petsc_solver']['ksp_type'] if 'ksp_type' in solver_options['petsc_solver'] else  'bcgsl' 
+        ksp_type = solver_options['petsc_solver']['ksp_type'] if 'ksp_type' in solver_options['petsc_solver'] else 'bcgsl' 
         pc_type = solver_options['petsc_solver']['pc_type'] if 'pc_type' in solver_options['petsc_solver'] else 'ilu'
         x = petsc_solve(A, b, ksp_type, pc_type)
     elif 'custom_solver' in solver_options:
@@ -307,64 +307,112 @@ def get_A(problem):
 # The "row elimination" solver
 
 def solver(problem, solver_options={}):
-    """
-    Specify exactly either 'jax_solver' or 'umfpack_solver' or 'petsc_solver'
+    r"""Solve the nonlinear problem using Newton's method with configurable linear solvers.
+
+    The solver imposes Dirichlet B.C. with "row elimination" method. Conceptually,
+
+    .. math::
+        r(u) = D \, r_{\text{unc}}(u) + (I - D)u - u_b \\
+        A = \frac{\text{d}r}{\text{d}u} = D \frac{\text{d}r}{\text{d}u} + (I - D)
+
+    where:
+
+    - :math:`r_{\text{unc}}: \mathbb{R}^N\rightarrow\mathbb{R}^N` is the residual function without considering Dirichlet boundary conditions.
+
+    - :math:`u\in\mathbb{R}^N` is the FE solution vector.
+
+    - :math:`u_b\in\mathbb{R}^N` is the vector for Dirichlet boundary conditions, e.g.,
+
+      .. math::
+            u_b = \begin{bmatrix}
+                  0 \\
+                  0 \\
+                  2 \\
+                  3
+                  \end{bmatrix}
     
-    Examples:
-    (1) solver_options = {'jax_solver': {}}
-    (2) solver_options = {'umfpack_solver': {}}
-    (3) solver_options = {'petsc_solver': {'ksp_type': 'bcgsl', 'pc_type': 'jacobi'}, 'initial_guess': some_guess}
+    - :math:`D\in\mathbb{R}^{N\times N}` is the auxiliary matrix for masking, e.g.,
 
-    Default parameters will be used if no instruction is found:
+      .. math::
+            D = \begin{bmatrix}
+                1 & 0 & 0 & 0 \\
+                0 & 1 & 0 & 0 \\
+                0 & 0 & 0 & 0 \\
+                0 & 0 & 0 & 0
+            \end{bmatrix}
+    
+    - :math:`I\in\mathbb{R}^{N\times N}` is the ientity matrix, e.g., 
 
-    solver_options = 
-    {
-        # If multiple solvers are specified or no solver is specified, 'jax_solver' will be used.
-        'jax_solver': 
-        {
-            # The JAX built-in linear solver 
-            # Reference: https://jax.readthedocs.io/en/latest/_autosummary/jax.scipy.sparse.linalg.bicgstab.html
-            'precond': True,
-        }
+      .. math::
+            I = \begin{bmatrix}
+                1 & 0 & 0 & 0 \\
+                0 & 1 & 0 & 0 \\
+                0 & 0 & 1 & 0 \\
+                0 & 0 & 0 & 1
+            \end{bmatrix}
 
-        'umfpack_solver': 
-        {   
-            # The scipy solver that calls UMFPACK
-            # Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html
-        }
+    - :math:`A\in\mathbb{R}^{N\times N}` is the tangent stiffness matrix (the global Jacobian matrix).
 
-        'petsc_solver':
-        {   
-            # PETSc solver
-            # For more ksp_type and pc_type: https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html
-            'ksp_type': 'bcgsl', # e.g., 'minres', 'gmres', 'tfqmr'
-            'pc_type': 'ilu', # e.g., 'jacobi'
-        }
+    Notes
+    -----
+    - TODO: Show some comments for linear multipoint constraint handling.
 
-        'line_search_flag': False, # Line search method
-        'initial_guess': initial_guess, # Same shape as sol_list
-        'tol': 1e-5, # Absolute tolerance for residual vector (l2 norm), used in Newton's method
-        'rel_tol': 1e-8, # Relative tolerance for residual vector (l2 norm), used in Newton's method
-    }
+    Parameters
+    ----------
+    problem : Problem
+        The nonlinear problem to solve
+    solver_options : dict
+        Configuration dictionary for solver parameters and algorithms.
+        Three solvers are currently available:
 
-    The solver imposes Dirichlet B.C. with "row elimination" method.
+        - `JAX solver <https://jax.readthedocs.io/en/latest/_autosummary/jax.scipy.sparse.linalg.bicgstab.html>`_
+        - `UMFPACK solver <https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html>`_
+        - `PETSc solver <https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html>`_
+    
+        The empty choice ::
 
-    Some memo:
+            solver_options = {}
 
-    res(u) = D*r(u) + (I - D)u - u_b
-    D = [[1 0 0 0]
-         [0 1 0 0]
-         [0 0 0 0]
-         [0 0 0 1]]
-    I = [[1 0 0 0]
-         [0 1 0 0]
-         [0 0 1 0]
-         [0 0 0 1]
-    A = d(res)/d(u) = D*dr/du + (I - D)
+        will default to JAX solver as ::
+        
+            solver_options = {'jax_solver': {}}
 
-    TODO: linear multipoint constraint
+        which will further default to ::
 
-    The function newton_update computes r(u) and dr/du
+            solver_options = {'jax_solver': {'precond': True}}
+
+        The UMFPACK solver can be specified as ::
+
+            solver_options = {'umfpack_solver': {}}
+
+        The PETSc solver can be specified as ::
+
+            solver_options = {
+                 'petsc_solver': {},
+            }        
+    
+        which will default to ::
+
+            solver_options = {
+                 'petsc_solver': {
+                     'ksp_type': 'bcgsl', # other choices can be, e.g., 'minres', 'gmres', 'tfqmr'
+                     'pc_type': 'ilu', # other choices can be, e.g., 'jacobi'
+                 }
+            }  
+    
+        Other available options are :: 
+
+            solver_options = {
+                'line_search_flag': False, # Line search method
+                'initial_guess': initial_guess, # Same shape as sol_list
+                'tol': 1e-5, # Absolute tolerance for residual vector (l2 norm), used in Newton's method
+                'rel_tol': 1e-8, # Relative tolerance for residual vector (l2 norm), used in Newton's method
+            }
+
+    Returns
+    -------
+    sol_list : list
+
     """
     logger.debug(f"Calling the row elimination solver for imposing Dirichlet B.C.")
     logger.debug("Start timing")
@@ -854,6 +902,18 @@ def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
 
 
 def ad_wrapper(problem, solver_options={}, adjoint_solver_options={}):
+    """Automatic differentiation wrapper for the forward problem.
+
+    Parameters
+    ----------
+    problem : Problem
+    solver_options : dictionary
+    adjoint_solver_options : dictionary
+
+    Returns
+    -------
+    fwd_pred : callable
+    """
     @jax.custom_vjp
     def fwd_pred(params):
         problem.set_params(params)

@@ -1,7 +1,4 @@
 ``jax_fem.mma`` module
-=========================
+======================
 
-.. automodule:: jax_fem.mma
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. autofunction:: jax_fem.mma.optimize

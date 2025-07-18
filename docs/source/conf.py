@@ -5,7 +5,8 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../jax_fem'))  
+sys.path.insert(0, os.path.abspath('../..')) 
+
 if '/docs' in str(sys.path):
     sys.path.remove('/docs')
 
@@ -57,6 +58,8 @@ autodoc_mock_imports = [
 ]
 
 autodoc_typehints = 'description'
+
+autodoc_member_order = 'bysource'
 
 # autodoc
 autodoc_docstring_signature = False

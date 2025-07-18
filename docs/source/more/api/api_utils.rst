@@ -1,7 +1,5 @@
 ``jax_fem.utils`` module
-=========================
+========================
 
 .. automodule:: jax_fem.utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   :exclude-members: wraps, logger, get_meshio_cell_type, modify_vtu_file

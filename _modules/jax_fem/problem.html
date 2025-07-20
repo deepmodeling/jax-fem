@@ -1,0 +1,929 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jax_fem.problem &#8212; JAX-FEM 0.0.9 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=972fa7a7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=39f6cbd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jax_fem/problem';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">JAX-FEM 0.0.9 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../learn/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/poisson.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/linear_elasticity.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/hyperelasticity.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/plasticity.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/compute_gradients.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/topology_optimization.html">Topology optimization</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../more/FAQ.html">Frequently asked questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/useful/main.html">Useful links</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">Miscellaneous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/contact.html">Contact</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jax_fem.problem</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">onp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.flatten_util</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">timeit</span> 
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.generate_mesh</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mesh</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.fe</span><span class="w"> </span><span class="kn">import</span> <span class="n">FiniteElement</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+
+
+<div class="viewcode-block" id="Problem">
+<a class="viewcode-back" href="../../more/api/api_problem.html#jax_fem.problem.Problem">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Problem</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Problem class to handle one FE variable or multiple coupled FE variables.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mesh : Mesh</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.mesh`</span>
+<span class="sd">    vec : int</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.vec`</span>
+<span class="sd">    dim : int</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.dim`</span>
+<span class="sd">    ele_type : str</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.ele_type`</span>
+<span class="sd">    gauss_order : int</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.gauss_order`</span>
+<span class="sd">    dirichlet_bc_info : list</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.dirichlet_bc_info`</span>
+<span class="sd">    location_fns : list</span>
+<span class="sd">        A list of location functions useful for surface integrals in the weak form.</span>
+<span class="sd">        Such surface integral can be related to Neumann boundary condition, or an integral contributing to the stiffness matrix.</span>
+<span class="sd">        Each callable takes a point (NumpyArray) and returns a boolean indicating if the point satisfies the location condition.</span>
+<span class="sd">        For example, ::</span>
+<span class="sd">        </span>
+<span class="sd">            [lambda point: np.isclose(point[0], 0., atol=1e-5)]</span>
+
+<span class="sd">    additional_info: tuple</span>
+<span class="sd">        Any other information that might be useful can be stored here. This is problem dependent.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span>
+    <span class="n">vec</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">ele_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;HEX8&#39;</span>
+    <span class="n">gauss_order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">dirichlet_bc_info</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">location_fns</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">additional_info</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">type</span><span class="p">([]):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vec</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">vec</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ele_type</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ele_type</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gauss_order</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">gauss_order</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dirichlet_bc_info</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dirichlet_bc_info</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_vars</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fes</span> <span class="o">=</span> <span class="p">[</span><span class="n">FiniteElement</span><span class="p">(</span><span class="n">mesh</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> 
+                                  <span class="n">vec</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">vec</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> 
+                                  <span class="n">dim</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> 
+                                  <span class="n">ele_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ele_type</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> 
+                                  <span class="n">gauss_order</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gauss_order</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gauss_order</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">([])</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">gauss_order</span><span class="p">,</span>
+                                  <span class="n">dirichlet_bc_info</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dirichlet_bc_info</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dirichlet_bc_info</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">([])</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">dirichlet_bc_info</span><span class="p">)</span> \
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_vars</span><span class="p">)]</span> 
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cells_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">fe</span><span class="o">.</span><span class="n">cells</span> <span class="k">for</span> <span class="n">fe</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">]</span>
+        <span class="c1"># Assume all fes have the same number of cells, same dimension</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_cells</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">num_cells</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boundary_inds_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_boundary_conditions_inds</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">location_fns</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> 
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">num_total_dofs</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">find_ind</span><span class="p">(</span><span class="o">*</span><span class="n">x</span><span class="p">):</span>
+            <span class="n">inds</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)):</span>
+                <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">crt_ind</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">vec</span> <span class="o">*</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">vec</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">inds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">crt_ind</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">inds</span><span class="p">)</span>
+
+        <span class="c1"># (num_cells, num_nodes*vec + ...)</span>
+        <span class="n">inds</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">find_ind</span><span class="p">)(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">cells_list</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">I</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">inds</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">inds</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">J</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">inds</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">inds</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cells_list_face_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">boundary_inds</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary_inds_list</span><span class="p">):</span>
+            <span class="n">cells_list_face</span> <span class="o">=</span> <span class="p">[</span><span class="n">cells</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]]</span> <span class="k">for</span> <span class="n">cells</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cells_list</span><span class="p">]</span> <span class="c1"># [(num_selected_faces, num_nodes), ...]</span>
+            <span class="n">inds_face</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">find_ind</span><span class="p">)(</span><span class="o">*</span><span class="n">cells_list_face</span><span class="p">))</span> <span class="c1"># (num_selected_faces, num_nodes*vec + ...)</span>
+            <span class="n">I_face</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">inds_face</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">inds_face</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">J_face</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">inds_face</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">inds_face</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">I</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">I</span><span class="p">,</span> <span class="n">I_face</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">J</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">J</span><span class="p">,</span> <span class="n">J_face</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cells_list_face_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cells_list_face</span><span class="p">)</span>
+     
+        <span class="bp">self</span><span class="o">.</span><span class="n">cells_flat</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="k">lambda</span> <span class="o">*</span><span class="n">x</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">])(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">cells_list</span><span class="p">)</span> <span class="c1"># (num_cells, num_nodes + ...)</span>
+
+        <span class="n">dumb_array_dof</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">fe</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">,</span> <span class="n">fe</span><span class="o">.</span><span class="n">vec</span><span class="p">))</span> <span class="k">for</span> <span class="n">fe</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">]</span>
+        <span class="c1"># TODO: dumb_array_dof is useless?</span>
+        <span class="n">dumb_array_node</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">)</span> <span class="k">for</span> <span class="n">fe</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">]</span>
+        <span class="c1"># _, unflatten_fn_node = jax.flatten_util.ravel_pytree(dumb_array_node)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">unflatten_fn_dof</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">dumb_array_dof</span><span class="p">)</span>
+        
+        <span class="n">dumb_sol_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">fe</span><span class="o">.</span><span class="n">num_total_nodes</span><span class="p">,</span> <span class="n">fe</span><span class="o">.</span><span class="n">vec</span><span class="p">))</span> <span class="k">for</span> <span class="n">fe</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">]</span>
+        <span class="n">dumb_dofs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">dumb_sol_list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_total_dofs_all_vars</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dumb_dofs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_nodes_cumsum</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">cumsum</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">fe</span><span class="o">.</span><span class="n">num_nodes</span> <span class="k">for</span> <span class="n">fe</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">])</span>
+        <span class="c1"># (num_cells, num_vars, num_quads)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">JxW</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">fe</span><span class="o">.</span><span class="n">JxW</span> <span class="k">for</span> <span class="n">fe</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">]),</span> <span class="n">axes</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span> 
+        <span class="c1"># (num_cells, num_quads, num_nodes +..., dim)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape_grads</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">fe</span><span class="o">.</span><span class="n">shape_grads</span> <span class="k">for</span> <span class="n">fe</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># (num_cells, num_quads, num_nodes + ..., 1, dim)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">v_grads_JxW</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">fe</span><span class="o">.</span><span class="n">v_grads_JxW</span> <span class="k">for</span> <span class="n">fe</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># TODO: assert all vars quad points be the same</span>
+        <span class="c1"># (num_cells, num_quads, dim)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">physical_quad_points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_physical_quad_points</span><span class="p">()</span>  
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_face_shape_grads</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nanson_scale</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_face_shape_vals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">physical_surface_quad_points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">boundary_inds</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_inds_list</span><span class="p">:</span>
+            <span class="n">s_shape_grads</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">n_scale</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">s_shape_vals</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">fe</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">:</span>
+                <span class="c1"># (num_selected_faces, num_face_quads, num_nodes, dim), (num_selected_faces, num_face_quads)</span>
+                <span class="n">face_shape_grads_physical</span><span class="p">,</span> <span class="n">nanson_scale</span> <span class="o">=</span> <span class="n">fe</span><span class="o">.</span><span class="n">get_face_shape_grads</span><span class="p">(</span><span class="n">boundary_inds</span><span class="p">)</span>  
+                <span class="n">selected_face_shape_vals</span> <span class="o">=</span> <span class="n">fe</span><span class="o">.</span><span class="n">face_shape_vals</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]]</span>  <span class="c1"># (num_selected_faces, num_face_quads, num_nodes)</span>
+                <span class="n">s_shape_grads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">face_shape_grads_physical</span><span class="p">)</span>
+                <span class="n">n_scale</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nanson_scale</span><span class="p">)</span>
+                <span class="n">s_shape_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">selected_face_shape_vals</span><span class="p">)</span>
+
+            <span class="c1"># (num_selected_faces, num_face_quads, num_nodes + ..., dim)</span>
+            <span class="n">s_shape_grads</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">s_shape_grads</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="c1"># (num_selected_faces, num_vars, num_face_quads)</span>
+            <span class="n">n_scale</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">n_scale</span><span class="p">),</span> <span class="n">axes</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>  
+            <span class="c1"># (num_selected_faces, num_face_quads, num_nodes + ...)</span>
+            <span class="n">s_shape_vals</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">s_shape_vals</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="c1"># (num_selected_faces, num_face_quads, dim)</span>
+            <span class="n">physical_surface_quad_points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_physical_surface_quad_points</span><span class="p">(</span><span class="n">boundary_inds</span><span class="p">)</span> 
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">selected_face_shape_grads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s_shape_grads</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nanson_scale</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n_scale</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">selected_face_shape_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s_shape_vals</span><span class="p">)</span>
+            <span class="c1"># TODO: assert all vars face quad points be the same</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">physical_surface_quad_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">physical_surface_quad_points</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_vars</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_vars_surfaces</span> <span class="o">=</span> <span class="p">[()</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary_inds_list</span><span class="p">))]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">custom_init</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">additional_info</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_jit_fns</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Problem.custom_init">
+<a class="viewcode-back" href="../../more/api/api_problem.html#jax_fem.problem.Problem.custom_init">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">custom_init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Child class should override if more things need to be done in initialization</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_laplace_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensor_map</span><span class="p">):</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">laplace_kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="n">cell_shape_grads</span><span class="p">,</span> <span class="n">cell_v_grads_JxW</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars</span><span class="p">):</span>
+            <span class="c1"># cell_sol_flat: (num_nodes*vec + ...,)</span>
+            <span class="c1"># cell_sol_list: [(num_nodes, vec), ...]</span>
+            <span class="c1"># cell_shape_grads: (num_quads, num_nodes + ..., dim)</span>
+            <span class="c1"># cell_v_grads_JxW: (num_quads, num_nodes + ..., 1, dim)</span>
+
+            <span class="n">cell_sol_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unflatten_fn_dof</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">)</span>
+            <span class="n">cell_shape_grads</span> <span class="o">=</span> <span class="n">cell_shape_grads</span><span class="p">[:,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">cell_sol</span> <span class="o">=</span> <span class="n">cell_sol_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">cell_v_grads_JxW</span> <span class="o">=</span> <span class="n">cell_v_grads_JxW</span><span class="p">[:,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+            <span class="n">vec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">vec</span>
+
+            <span class="c1"># (1, num_nodes, vec, 1) * (num_quads, num_nodes, 1, dim) -&gt; (num_quads, num_nodes, vec, dim)</span>
+            <span class="n">u_grads</span> <span class="o">=</span> <span class="n">cell_sol</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">cell_shape_grads</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">u_grads</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_grads</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (num_quads, vec, dim)</span>
+            <span class="n">u_grads_reshape</span> <span class="o">=</span> <span class="n">u_grads</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">vec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>  <span class="c1"># (num_quads, vec, dim)</span>
+            <span class="c1"># (num_quads, vec, dim)</span>
+            <span class="n">u_physics</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">tensor_map</span><span class="p">)(</span><span class="n">u_grads_reshape</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">u_grads</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="c1"># (num_quads, num_nodes, vec, dim) -&gt; (num_nodes, vec)</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_physics</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">cell_v_grads_JxW</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">val</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># (num_nodes*vec + ...,)</span>
+            <span class="k">return</span> <span class="n">val</span>
+
+        <span class="k">return</span> <span class="n">laplace_kernel</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_mass_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mass_map</span><span class="p">):</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">mass_kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cell_JxW</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars</span><span class="p">):</span>
+            <span class="c1"># cell_sol_flat: (num_nodes*vec + ...,)</span>
+            <span class="c1"># cell_sol_list: [(num_nodes, vec), ...]</span>
+            <span class="c1"># x: (num_quads, dim)</span>
+            <span class="c1"># cell_JxW: (num_vars, num_quads)</span>
+
+            <span class="n">cell_sol_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unflatten_fn_dof</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">)</span>
+            <span class="n">cell_sol</span> <span class="o">=</span> <span class="n">cell_sol_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">cell_JxW</span> <span class="o">=</span> <span class="n">cell_JxW</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">vec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">vec</span>
+            <span class="c1"># (1, num_nodes, vec) * (num_quads, num_nodes, 1) -&gt; (num_quads, num_nodes, vec) -&gt; (num_quads, vec)</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cell_sol</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape_vals</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">u_physics</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">mass_map</span><span class="p">)(</span><span class="n">u</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars</span><span class="p">)</span>  <span class="c1"># (num_quads, vec)</span>
+            <span class="c1"># (num_quads, 1, vec) * (num_quads, num_nodes, 1) * (num_quads, 1, 1) -&gt; (num_nodes, vec)</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_physics</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape_vals</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">cell_JxW</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">val</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># (num_nodes*vec + ...,)</span>
+            <span class="k">return</span> <span class="n">val</span>
+
+        <span class="k">return</span> <span class="n">mass_kernel</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_surface_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">surface_map</span><span class="p">):</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">surface_kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">face_shape_vals</span><span class="p">,</span> <span class="n">face_shape_grads</span><span class="p">,</span> <span class="n">face_nanson_scale</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars_surface</span><span class="p">):</span>
+            <span class="c1"># face_shape_vals: (num_face_quads, num_nodes + ...)</span>
+            <span class="c1"># face_shape_grads: (num_face_quads, num_nodes + ..., dim)</span>
+            <span class="c1"># x: (num_face_quads, dim)</span>
+            <span class="c1"># face_nanson_scale: (num_vars, num_face_quads)</span>
+
+            <span class="n">cell_sol_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unflatten_fn_dof</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">)</span>
+            <span class="n">cell_sol</span> <span class="o">=</span> <span class="n">cell_sol_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">face_shape_vals</span> <span class="o">=</span> <span class="n">face_shape_vals</span><span class="p">[:,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">]</span>
+            <span class="n">face_nanson_scale</span> <span class="o">=</span> <span class="n">face_nanson_scale</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># (1, num_nodes, vec) * (num_face_quads, num_nodes, 1) -&gt; (num_face_quads, vec)</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cell_sol</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">face_shape_vals</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">u_physics</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">surface_map</span><span class="p">)(</span><span class="n">u</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars_surface</span><span class="p">)</span>  <span class="c1"># (num_face_quads, vec)</span>
+            <span class="c1"># (num_face_quads, 1, vec) * (num_face_quads, num_nodes, 1) * (num_face_quads, 1, 1) -&gt; (num_nodes, vec)</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_physics</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">face_shape_vals</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">face_nanson_scale</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">val</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">surface_kernel</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">pre_jit_fns</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">value_and_jacfwd</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="n">pushfwd</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jvp</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">))</span>
+            <span class="n">basis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="n">y</span><span class="p">,</span> <span class="n">jac</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">pushfwd</span><span class="p">,</span> <span class="n">out_axes</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))((</span><span class="n">basis</span><span class="p">,</span> <span class="p">))</span>
+            <span class="k">return</span> <span class="n">y</span><span class="p">,</span> <span class="n">jac</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">get_kernel_fn_cell</span><span class="p">():</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="n">physical_quad_points</span><span class="p">,</span> <span class="n">cell_shape_grads</span><span class="p">,</span> <span class="n">cell_JxW</span><span class="p">,</span> <span class="n">cell_v_grads_JxW</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars</span><span class="p">):</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                universal_kernel should be able to cover all situations (including mass_kernel and laplace_kernel).</span>
+<span class="sd">                mass_kernel and laplace_kernel are from legacy JAX-FEM. They can still be used, but not mandatory.</span>
+<span class="sd">                &quot;&quot;&quot;</span>
+
+                <span class="c1"># TODO: If there is no kernel map, returning 0. is not a good choice. </span>
+                <span class="c1"># Return a zero array with proper shape will be better.</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;get_mass_map&#39;</span><span class="p">):</span>
+                    <span class="n">mass_kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_mass_kernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_mass_map</span><span class="p">())</span>
+                    <span class="n">mass_val</span> <span class="o">=</span> <span class="n">mass_kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="n">physical_quad_points</span><span class="p">,</span> <span class="n">cell_JxW</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">mass_val</span> <span class="o">=</span> <span class="mf">0.</span>
+
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;get_tensor_map&#39;</span><span class="p">):</span>
+                    <span class="n">laplace_kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_laplace_kernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_tensor_map</span><span class="p">())</span>
+                    <span class="n">laplace_val</span> <span class="o">=</span> <span class="n">laplace_kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="n">cell_shape_grads</span><span class="p">,</span> <span class="n">cell_v_grads_JxW</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">laplace_val</span> <span class="o">=</span> <span class="mf">0.</span>
+
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;get_universal_kernel&#39;</span><span class="p">):</span>
+                    <span class="n">universal_kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_universal_kernel</span><span class="p">()</span>
+                    <span class="n">universal_val</span> <span class="o">=</span> <span class="n">universal_kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="n">physical_quad_points</span><span class="p">,</span> <span class="n">cell_shape_grads</span><span class="p">,</span> <span class="n">cell_JxW</span><span class="p">,</span> 
+                        <span class="n">cell_v_grads_JxW</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">universal_val</span> <span class="o">=</span> <span class="mf">0.</span>
+
+                <span class="k">return</span> <span class="n">laplace_val</span> <span class="o">+</span> <span class="n">mass_val</span> <span class="o">+</span> <span class="n">universal_val</span>
+
+
+            <span class="k">def</span><span class="w"> </span><span class="nf">kernel_jac</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+                <span class="n">kernel_partial</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">cell_sol_flat</span><span class="p">:</span> <span class="n">kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">value_and_jacfwd</span><span class="p">(</span><span class="n">kernel_partial</span><span class="p">,</span> <span class="n">cell_sol_flat</span><span class="p">)</span>  <span class="c1"># kernel(cell_sol_flat, *args), jax.jacfwd(kernel)(cell_sol_flat, *args)</span>
+
+            <span class="k">return</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">kernel_jac</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">get_kernel_fn_face</span><span class="p">(</span><span class="n">ind</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="n">physical_surface_quad_points</span><span class="p">,</span> <span class="n">face_shape_vals</span><span class="p">,</span> <span class="n">face_shape_grads</span><span class="p">,</span> <span class="n">face_nanson_scale</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars_surface</span><span class="p">):</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                universal_kernel should be able to cover all situations (including surface_kernel).</span>
+<span class="sd">                surface_kernel is from legacy JAX-FEM. It can still be used, but not mandatory.</span>
+<span class="sd">                &quot;&quot;&quot;</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;get_surface_maps&#39;</span><span class="p">):</span>
+                    <span class="n">surface_kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_surface_kernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_surface_maps</span><span class="p">()[</span><span class="n">ind</span><span class="p">])</span>
+                    <span class="n">surface_val</span> <span class="o">=</span> <span class="n">surface_kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="n">physical_surface_quad_points</span><span class="p">,</span> <span class="n">face_shape_vals</span><span class="p">,</span>
+                        <span class="n">face_shape_grads</span><span class="p">,</span> <span class="n">face_nanson_scale</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars_surface</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">surface_val</span> <span class="o">=</span> <span class="mf">0.</span>
+
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;get_universal_kernels_surface&#39;</span><span class="p">):</span>
+                    <span class="n">universal_kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_universal_kernels_surface</span><span class="p">()[</span><span class="n">ind</span><span class="p">]</span>
+                    <span class="n">universal_val</span> <span class="o">=</span> <span class="n">universal_kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="n">physical_surface_quad_points</span><span class="p">,</span> <span class="n">face_shape_vals</span><span class="p">,</span>
+                        <span class="n">face_shape_grads</span><span class="p">,</span> <span class="n">face_nanson_scale</span><span class="p">,</span> <span class="o">*</span><span class="n">cell_internal_vars_surface</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">universal_val</span> <span class="o">=</span> <span class="mf">0.</span>
+
+                <span class="k">return</span> <span class="n">surface_val</span> <span class="o">+</span> <span class="n">universal_val</span>
+
+            <span class="k">def</span><span class="w"> </span><span class="nf">kernel_jac</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+                <span class="c1"># return jax.jacfwd(kernel)(cell_sol_flat, *args)</span>
+                <span class="n">kernel_partial</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">cell_sol_flat</span><span class="p">:</span> <span class="n">kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">value_and_jacfwd</span><span class="p">(</span><span class="n">kernel_partial</span><span class="p">,</span> <span class="n">cell_sol_flat</span><span class="p">)</span>  <span class="c1"># kernel(cell_sol_flat, *args), jax.jacfwd(kernel)(cell_sol_flat, *args)</span>
+
+            <span class="k">return</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">kernel_jac</span>
+
+        <span class="n">kernel</span><span class="p">,</span> <span class="n">kernel_jac</span> <span class="o">=</span> <span class="n">get_kernel_fn_cell</span><span class="p">()</span>
+        <span class="n">kernel</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">kernel</span><span class="p">))</span>
+        <span class="n">kernel_jac</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">kernel_jac</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">=</span> <span class="n">kernel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel_jac</span> <span class="o">=</span> <span class="n">kernel_jac</span>
+
+        <span class="n">num_surfaces</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary_inds_list</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;get_surface_maps&#39;</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="n">num_surfaces</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_surface_maps</span><span class="p">())</span>
+        <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;get_universal_kernels_surface&#39;</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="n">num_surfaces</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_universal_kernels_surface</span><span class="p">())</span> 
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">num_surfaces</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Missing definitions for surface integral&quot;</span>
+            
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel_face</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel_jac_face</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary_inds_list</span><span class="p">)):</span>
+            <span class="n">kernel_face</span><span class="p">,</span> <span class="n">kernel_jac_face</span> <span class="o">=</span> <span class="n">get_kernel_fn_face</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="n">kernel_face</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">kernel_face</span><span class="p">))</span>
+            <span class="n">kernel_jac_face</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">kernel_jac_face</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kernel_face</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">kernel_face</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kernel_jac_face</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">kernel_jac_face</span><span class="p">)</span>
+
+    <span class="nd">@timeit</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">split_and_compute_cell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cells_sol_flat</span><span class="p">,</span> <span class="n">np_version</span><span class="p">,</span> <span class="n">jac_flag</span><span class="p">,</span> <span class="n">internal_vars</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Volume integral in weak form</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">vmap_fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_jac</span> <span class="k">if</span> <span class="n">jac_flag</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span>
+        <span class="n">num_cuts</span> <span class="o">=</span> <span class="mi">20</span>
+        <span class="k">if</span> <span class="n">num_cuts</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_cells</span><span class="p">:</span>
+            <span class="n">num_cuts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_cells</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_cells</span> <span class="o">//</span> <span class="n">num_cuts</span>
+        <span class="n">input_collection</span> <span class="o">=</span> <span class="p">[</span><span class="n">cells_sol_flat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">physical_quad_points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_grads</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">JxW</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">v_grads_JxW</span><span class="p">,</span> <span class="o">*</span><span class="n">internal_vars</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">jac_flag</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">jacs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_cuts</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">num_cuts</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">input_col</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">tree_util</span><span class="o">.</span><span class="n">tree_map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">:(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">],</span> <span class="n">input_collection</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">input_col</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">tree_util</span><span class="o">.</span><span class="n">tree_map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">:],</span> <span class="n">input_collection</span><span class="p">)</span>
+
+                <span class="n">val</span><span class="p">,</span> <span class="n">jac</span> <span class="o">=</span> <span class="n">vmap_fn</span><span class="p">(</span><span class="o">*</span><span class="n">input_col</span><span class="p">)</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+                <span class="n">jacs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">jac</span><span class="p">)</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">np_version</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">jacs</span> <span class="o">=</span> <span class="n">np_version</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">jacs</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">values</span><span class="p">,</span> <span class="n">jacs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_cuts</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">num_cuts</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">input_col</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">tree_util</span><span class="o">.</span><span class="n">tree_map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">:(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">],</span> <span class="n">input_collection</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">input_col</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">tree_util</span><span class="o">.</span><span class="n">tree_map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">batch_size</span><span class="p">:],</span> <span class="n">input_collection</span><span class="p">)</span>
+
+                <span class="n">val</span> <span class="o">=</span> <span class="n">vmap_fn</span><span class="p">(</span><span class="o">*</span><span class="n">input_col</span><span class="p">)</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">np_version</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">values</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_face</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cells_sol_flat</span><span class="p">,</span> <span class="n">np_version</span><span class="p">,</span> <span class="n">jac_flag</span><span class="p">,</span> <span class="n">internal_vars_surfaces</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Surface integral in weak form</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">jac_flag</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">jacs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">boundary_inds</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary_inds_list</span><span class="p">):</span>
+                <span class="n">vmap_fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_jac_face</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">selected_cell_sols_flat</span> <span class="o">=</span> <span class="n">cells_sol_flat</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]]</span>  <span class="c1"># (num_selected_faces, num_nodes*vec + ...))</span>
+                <span class="n">input_collection</span> <span class="o">=</span> <span class="p">[</span><span class="n">selected_cell_sols_flat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">physical_surface_quad_points</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_face_shape_vals</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> 
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">selected_face_shape_grads</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">nanson_scale</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">*</span><span class="n">internal_vars_surfaces</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+
+                <span class="n">val</span><span class="p">,</span> <span class="n">jac</span> <span class="o">=</span> <span class="n">vmap_fn</span><span class="p">(</span><span class="o">*</span><span class="n">input_collection</span><span class="p">)</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+                <span class="n">jacs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">jac</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">values</span><span class="p">,</span> <span class="n">jacs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">boundary_inds</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundary_inds_list</span><span class="p">):</span>
+                <span class="n">vmap_fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_face</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">selected_cell_sols_flat</span> <span class="o">=</span> <span class="n">cells_sol_flat</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]]</span>  <span class="c1"># (num_selected_faces, num_nodes*vec + ...))</span>
+                <span class="c1"># TODO: duplicated code</span>
+                <span class="n">input_collection</span> <span class="o">=</span> <span class="p">[</span><span class="n">selected_cell_sols_flat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">physical_surface_quad_points</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_face_shape_vals</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> 
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">selected_face_shape_grads</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">nanson_scale</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">*</span><span class="n">internal_vars_surfaces</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="n">vmap_fn</span><span class="p">(</span><span class="o">*</span><span class="n">input_collection</span><span class="p">)</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">values</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_residual_vars_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weak_form_flat</span><span class="p">,</span> <span class="n">weak_form_face_flat</span><span class="p">):</span>
+        <span class="n">res_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">fe</span><span class="o">.</span><span class="n">num_total_nodes</span><span class="p">,</span> <span class="n">fe</span><span class="o">.</span><span class="n">vec</span><span class="p">))</span> <span class="k">for</span> <span class="n">fe</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">]</span>
+        <span class="n">weak_form_list</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">unflatten_fn_dof</span><span class="p">(</span><span class="n">x</span><span class="p">))(</span><span class="n">weak_form_flat</span><span class="p">)</span> <span class="c1"># [(num_cells, num_nodes, vec), ...]</span>
+        <span class="n">res_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">res_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cells_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">weak_form_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">vec</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_vars</span><span class="p">)]</span>
+
+        <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">cells_list_face</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cells_list_face_list</span><span class="p">):</span>
+            <span class="n">weak_form_face_list</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">unflatten_fn_dof</span><span class="p">(</span><span class="n">x</span><span class="p">))(</span><span class="n">weak_form_face_flat</span><span class="p">[</span><span class="n">ind</span><span class="p">])</span> <span class="c1"># [(num_selected_faces, num_nodes, vec), ...]</span>
+            <span class="n">res_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">res_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">cells_list_face</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">weak_form_face_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> 
+                <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">vec</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_vars</span><span class="p">)]</span>   
+
+        <span class="k">return</span> <span class="n">res_list</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_residual_vars</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">,</span> <span class="n">internal_vars</span><span class="p">,</span> <span class="n">internal_vars_surfaces</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Computing cell residual...&quot;</span><span class="p">)</span>
+        <span class="n">cells_sol_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">sol</span><span class="p">[</span><span class="n">cells</span><span class="p">]</span> <span class="k">for</span> <span class="n">cells</span><span class="p">,</span> <span class="n">sol</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cells_list</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">)]</span> <span class="c1"># [(num_cells, num_nodes, vec), ...]</span>
+        <span class="n">cells_sol_flat</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="k">lambda</span> <span class="o">*</span><span class="n">x</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">])(</span><span class="o">*</span><span class="n">cells_sol_list</span><span class="p">)</span> <span class="c1"># (num_cells, num_nodes*vec + ...)</span>
+        <span class="n">weak_form_flat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_and_compute_cell</span><span class="p">(</span><span class="n">cells_sol_flat</span><span class="p">,</span> <span class="n">np</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">internal_vars</span><span class="p">)</span>  <span class="c1"># (num_cells, num_nodes*vec + ...)</span>
+        <span class="n">weak_form_face_flat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_face</span><span class="p">(</span><span class="n">cells_sol_flat</span><span class="p">,</span> <span class="n">np</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">internal_vars_surfaces</span><span class="p">)</span>  <span class="c1"># [(num_selected_faces, num_nodes*vec + ...), ...]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_residual_vars_helper</span><span class="p">(</span><span class="n">weak_form_flat</span><span class="p">,</span> <span class="n">weak_form_face_flat</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_newton_vars</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">,</span> <span class="n">internal_vars</span><span class="p">,</span> <span class="n">internal_vars_surfaces</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Computing cell Jacobian and cell residual...&quot;</span><span class="p">)</span>
+        <span class="n">cells_sol_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">sol</span><span class="p">[</span><span class="n">cells</span><span class="p">]</span> <span class="k">for</span> <span class="n">cells</span><span class="p">,</span> <span class="n">sol</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cells_list</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">)]</span> <span class="c1"># [(num_cells, num_nodes, vec), ...]</span>
+        <span class="n">cells_sol_flat</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="k">lambda</span> <span class="o">*</span><span class="n">x</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">])(</span><span class="o">*</span><span class="n">cells_sol_list</span><span class="p">)</span> <span class="c1"># (num_cells, num_nodes*vec + ...)</span>
+        <span class="c1"># (num_cells, num_nodes*vec + ...),  (num_cells, num_nodes*vec + ..., num_nodes*vec + ...)</span>
+        <span class="n">weak_form_flat</span><span class="p">,</span> <span class="n">cells_jac_flat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_and_compute_cell</span><span class="p">(</span><span class="n">cells_sol_flat</span><span class="p">,</span> <span class="n">onp</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="n">internal_vars</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">V</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cells_jac_flat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+        <span class="c1"># [(num_selected_faces, num_nodes*vec + ...,), ...], [(num_selected_faces, num_nodes*vec + ..., num_nodes*vec + ...,), ...]</span>
+        <span class="n">weak_form_face_flat</span><span class="p">,</span> <span class="n">cells_jac_face_flat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_face</span><span class="p">(</span><span class="n">cells_sol_flat</span><span class="p">,</span> <span class="n">onp</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="n">internal_vars_surfaces</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">cells_jac_f_flat</span> <span class="ow">in</span> <span class="n">cells_jac_face_flat</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">V</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">V</span><span class="p">,</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cells_jac_f_flat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))))</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_residual_vars_helper</span><span class="p">(</span><span class="n">weak_form_flat</span><span class="p">,</span> <span class="n">weak_form_face_flat</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Problem.compute_residual">
+<a class="viewcode-back" href="../../more/api/api_problem.html#jax_fem.problem.Problem.compute_residual">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_residual</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Given FE solution list, compute the residual list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sol_list : list</span>
+<span class="sd">            A list of JaxArray with the shape being (num_total_nodes, vec).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        res_list : list</span>
+<span class="sd">            Same shape as sol_list.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_residual_vars</span><span class="p">(</span><span class="n">sol_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_vars</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_vars_surfaces</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Problem.newton_update">
+<a class="viewcode-back" href="../../more/api/api_problem.html#jax_fem.problem.Problem.newton_update">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">newton_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Given FE solution list, compute the tangent stiffness matrix, as well as the residual list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sol_list : list</span>
+<span class="sd">            A list of JaxArray with the shape being (num_total_nodes, vec).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        res_list : list</span>
+<span class="sd">            Same shape as sol_list.</span>
+<span class="sd">            The tangent stiffness matrix is stored internally as instance variables.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_newton_vars</span><span class="p">(</span><span class="n">sol_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_vars</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_vars_surfaces</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Problem.set_params">
+<a class="viewcode-back" href="../../more/api/api_problem.html#jax_fem.problem.Problem.set_params">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;This is the key method for solving differentiable inverse problems.</span>
+<span class="sd">        We MUST define (override) this method so that ``params`` become differentiable.</span>
+<span class="sd">        No need to define this method if only forward problem is solved.</span>
+
+<span class="sd">        For parameters defined on the element quadrature points, we may define ::</span>
+
+<span class="sd">            def set_params(self, params):</span>
+<span class="sd">                # Generally, [params1, params2, ...]</span>
+<span class="sd">                self.internal_vars = [params]</span>
+
+<span class="sd">        For parameters defined on the element surface quadrature points, we may define ::</span>
+
+<span class="sd">            def set_params(self, params):</span>
+<span class="sd">                surface_params = params</span>
+<span class="sd">                # Generally, [[surface1_params1, surface1_params2, ...], [surface2_params1, surface2_params2, ...], ...]</span>
+<span class="sd">                self.internal_vars_surfaces = [[surface_params]]</span>
+
+<span class="sd">        Note that ``params`` itself can be flexible, but ``self.internal_vars`` must accept a precribed input shape.</span>
+<span class="sd">        The following example inputs ``theta`` as ``params``, and convert it into a well defined ``self.internal_vars``. ::</span>
+
+<span class="sd">            def set_params(self, theta):</span>
+<span class="sd">                # theta is a scalar (float)</span>
+<span class="sd">                thetas = theta * np.ones((self.fes[0].num_cells, self.fes[0].num_quads))</span>
+<span class="sd">                # thetas must have the precribed shape to be (num_cells, num_quads, ...)</span>
+<span class="sd">                self.internal_vars = [thetas]</span>
+<span class="sd">    </span>
+<span class="sd">        Then, the following automatic differentiable wrapper must be applied to make ``fwd_pred`` a differentiable function. ::</span>
+
+<span class="sd">            fwd_pred = ad_wrapper(problem)</span>
+<span class="sd">            sol_list = fwd_pred(params)</span>
+<span class="sd">       </span>
+
+<span class="sd">        A similar argument holds for ``self.internal_vars_surfaces`` and ``get_surface_maps``.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The definition of ``self.internal_vars`` is bonded to ``get_tensor_map``. If ::</span>
+
+<span class="sd">            def set_params(self, params):</span>
+<span class="sd">                # params has shape (num_cells, num_quads, shape1, shape2)</span>
+<span class="sd">                self.internal_vars = [params]</span>
+<span class="sd">        </span>
+<span class="sd">        Then, we must have ::</span>
+
+<span class="sd">            class Elasticity(Problem):</span>
+<span class="sd">                def get_tensor_map(self):</span>
+<span class="sd">                    def stress_fn(u_grad, param):</span>
+<span class="sd">                        # param MUST have shape (shape1, shape2)</span>
+<span class="sd">                        # ...</span>
+<span class="sd">                        return stress</span>
+<span class="sd">                    return stress_fn</span>
+
+<span class="sd">                def get_mass_map(self):</span>
+<span class="sd">                    def mass_fn(u, x, param):</span>
+<span class="sd">                        # param MUST have shape (shape1, shape2)</span>
+<span class="sd">                        # ...</span>
+<span class="sd">                        return stress</span>
+<span class="sd">                    return mass_fn </span>
+
+<span class="sd">        params: `JaxPytree &lt;https://docs.jax.dev/en/latest/pytrees.html&gt;`_</span>
+<span class="sd">            The parameters to be differentiated. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Child class must implement this function!&quot;</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

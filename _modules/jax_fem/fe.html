@@ -1,0 +1,825 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jax_fem.fe &#8212; JAX-FEM 0.0.9 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=972fa7a7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=39f6cbd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jax_fem/fe';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">JAX-FEM 0.0.9 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../learn/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/poisson.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/linear_elasticity.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/hyperelasticity.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/plasticity.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/compute_gradients.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/topology_optimization.html">Topology optimization</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../more/FAQ.html">Frequently asked questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/useful/main.html">Useful links</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">Miscellaneous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/contact.html">Contact</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jax_fem.fe</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">onp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.generate_mesh</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mesh</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.basis</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_face_shape_vals_and_grads</span><span class="p">,</span> <span class="n">get_shape_vals_and_grads</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+
+
+<span class="n">onp</span><span class="o">.</span><span class="n">set_printoptions</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">maxsize</span><span class="p">,</span>
+                     <span class="n">linewidth</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+                     <span class="n">suppress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                     <span class="n">precision</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="FiniteElement">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.fe.FiniteElement">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">FiniteElement</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Finite element class for one variable.</span>
+<span class="sd">    This variable can be:</span>
+
+<span class="sd">    - Scalar-valued (when :attr:`.vec` = 1)</span>
+<span class="sd">    - Vector-valued (when :attr:`.vec` &gt; 1)</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mesh : Mesh</span>
+<span class="sd">        Stores points (coordinates) and cells (connectivity).</span>
+<span class="sd">    vec : int</span>
+<span class="sd">        Number of vector components in solution (e.g., 3 for displacement in 3D, 1 for temperature).</span>
+<span class="sd">    dim : int</span>
+<span class="sd">        Spatial dimension of the problem. Currently supports:</span>
+
+<span class="sd">        - 2 (2D problems)</span>
+<span class="sd">        - 3 (3D problems)</span>
+<span class="sd">    ele_type : str</span>
+<span class="sd">        Element type. Currently supports:</span>
+
+<span class="sd">        - &#39;QUAD4&#39;</span>
+<span class="sd">        - &#39;QUAD8&#39;</span>
+<span class="sd">        - &#39;TRI3&#39;</span>
+<span class="sd">        - &#39;TRI6&#39;</span>
+<span class="sd">        - &#39;HEX8&#39;</span>
+<span class="sd">        - &#39;HEX20&#39;</span>
+<span class="sd">        - &#39;HEX27&#39;</span>
+<span class="sd">        - &#39;TET4&#39;</span>
+<span class="sd">        - &#39;TET10&#39;</span>
+<span class="sd">    gauss_order : int</span>
+<span class="sd">        Order of Gaussian quadrature. </span>
+
+<span class="sd">    dirichlet_bc_info : list</span>
+<span class="sd">        A list for Dirichlet boundary condition information, whose elements are structured as:</span>
+<span class="sd">        </span>
+<span class="sd">        - **location_fns**: list of callables</span>
+<span class="sd">          Each callable takes a point (NumpyArray) and returns a boolean indicating </span>
+<span class="sd">          if the point satisfies the location condition</span>
+<span class="sd">        - **vecs**: list of integers</span>
+<span class="sd">          Each integer must be in the range of 0 to vec - 1, specifying which </span>
+<span class="sd">          component of the (vector) variable to apply Dirichlet condition to</span>
+<span class="sd">        - **value_fns**: list of callables</span>
+<span class="sd">          Each callable takes a point and returns the Dirichlet value</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span>
+    <span class="n">vec</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">ele_type</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">gauss_order</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">dirichlet_bc_info</span><span class="p">:</span> <span class="nb">list</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">points</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cells</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cells</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_cells</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cells</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_total_nodes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">points</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_total_dofs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_total_nodes</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">vec</span>
+
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Computing shape function values, gradients, etc.&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape_vals</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_grads_ref</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">quad_weights</span> <span class="o">=</span> <span class="n">get_shape_vals_and_grads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ele_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gauss_order</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">face_shape_vals</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_shape_grads_ref</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_quad_weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_normals</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_inds</span> \
+        <span class="o">=</span> <span class="n">get_face_shape_vals_and_grads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ele_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gauss_order</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_quads</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_vals</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_vals</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_faces</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_shape_vals</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape_grads</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">JxW</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_shape_grads</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vals_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Dirichlet_boundary_conditions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dirichlet_bc_info</span><span class="p">)</span>
+        
+        <span class="c1"># (num_cells, num_quads, num_nodes, 1, dim)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">v_grads_JxW</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_grads</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">JxW</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_face_quads</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_quad_weights</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">compute_time</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Done pre-computations, took </span><span class="si">{</span><span class="n">compute_time</span><span class="si">}</span><span class="s2"> [s]&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Solving a problem with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cells</span><span class="p">)</span><span class="si">}</span><span class="s2"> cells, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">num_total_nodes</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">vec</span><span class="si">}</span><span class="s2"> = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">num_total_dofs</span><span class="si">}</span><span class="s2"> dofs.&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Element type is </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ele_type</span><span class="si">}</span><span class="s2">, using </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">num_quads</span><span class="si">}</span><span class="s2"> quad points per element.&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FiniteElement.get_shape_grads">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.fe.FiniteElement.get_shape_grads">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_shape_grads</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute shape function gradient value.</span>
+
+<span class="sd">        The gradient is w.r.t physical coordinates. </span>
+<span class="sd">        Refer to </span>
+<span class="sd">        Hughes, Thomas JR.</span>
+<span class="sd">        The finite element method: linear static and dynamic finite element analysis. Courier Corporation, 2012.</span>
+<span class="sd">        Page 147, Eq. (3.9.3)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        shape_grads_physical : NumpyArray</span>
+<span class="sd">            Shape is (num_cells, num_quads, num_nodes, dim).</span>
+<span class="sd">        JxW : NumpyArray</span>
+<span class="sd">            Shape is (num_cells, num_quads).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_grads_ref</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_quads</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_nodes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+        <span class="n">physical_coos</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cells</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># (num_cells, num_nodes, dim)</span>
+        <span class="c1"># (num_cells, num_quads, num_nodes, dim, dim) -&gt; (num_cells, num_quads, 1, dim, dim)</span>
+        <span class="n">jacobian_dx_deta</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">physical_coos</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">shape_grads_ref</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">jacobian_det</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="n">jacobian_dx_deta</span><span class="p">)[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># (num_cells, num_quads)</span>
+        <span class="n">jacobian_deta_dx</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">jacobian_dx_deta</span><span class="p">)</span>
+        <span class="c1"># (1, num_quads, num_nodes, 1, dim) @ (num_cells, num_quads, 1, dim, dim)</span>
+        <span class="c1"># (num_cells, num_quads, num_nodes, 1, dim) -&gt; (num_cells, num_quads, num_nodes, dim)</span>
+        <span class="n">shape_grads_physical</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape_grads_ref</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+<div class="viewcode-block" id="FiniteElement.get_face_shape_grads">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.fe.FiniteElement.get_face_shape_grads">[docs]</a>
+                                <span class="o">@</span> <span class="n">jacobian_deta_dx</span><span class="p">)[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">JxW</span> <span class="o">=</span> <span class="n">jacobian_det</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">quad_weights</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">return</span> <span class="n">shape_grads_physical</span><span class="p">,</span> <span class="n">JxW</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_face_shape_grads</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary_inds</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Face shape function gradients and JxW (for surface integral).</span>
+<span class="sd">        Nanson&#39;s formula is used to map physical surface ingetral to reference domain.</span>
+<span class="sd">        Refer to </span>
+<span class="sd">        `wikiversity &lt;https://en.wikiversity.org/wiki/Continuum_mechanics/Volume_change_and_area_change&gt;`_.</span>
+
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        boundary_inds : list[NumpyArray]</span>
+<span class="sd">            Shape is (num_selected_faces, 2).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        face_shape_grads_physical : NumpyArray</span>
+<span class="sd">            Shape is (num_selected_faces, num_face_quads, num_nodes, dim).</span>
+<span class="sd">        nanson_scale : NumpyArray</span>
+<span class="sd">            Shape is (num_selected_faces, num_face_quads).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">physical_coos</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cells</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># (num_cells, num_nodes, dim)</span>
+        <span class="n">selected_coos</span> <span class="o">=</span> <span class="n">physical_coos</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]]</span>  <span class="c1"># (num_selected_faces, num_nodes, dim)</span>
+        <span class="n">selected_f_shape_grads_ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_shape_grads_ref</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]]</span>  <span class="c1"># (num_selected_faces, num_face_quads, num_nodes, dim)</span>
+        <span class="n">selected_f_normals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_normals</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]]</span>  <span class="c1"># (num_selected_faces, dim)</span>
+
+        <span class="c1"># (num_selected_faces, 1, num_nodes, dim, 1) * (num_selected_faces, num_face_quads, num_nodes, 1, dim)</span>
+        <span class="c1"># (num_selected_faces, num_face_quads, num_nodes, dim, dim) -&gt; (num_selected_faces, num_face_quads, dim, dim)</span>
+        <span class="n">jacobian_dx_deta</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">selected_coos</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">selected_f_shape_grads_ref</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">jacobian_det</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="n">jacobian_dx_deta</span><span class="p">)</span>  <span class="c1"># (num_selected_faces, num_face_quads)</span>
+        <span class="n">jacobian_deta_dx</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">jacobian_dx_deta</span><span class="p">)</span>  <span class="c1"># (num_selected_faces, num_face_quads, dim, dim)</span>
+
+        <span class="c1"># (1, num_face_quads, num_nodes, 1, dim) @ (num_selected_faces, num_face_quads, 1, dim, dim)</span>
+        <span class="c1"># (num_selected_faces, num_face_quads, num_nodes, 1, dim) -&gt; (num_selected_faces, num_face_quads, num_nodes, dim)</span>
+        <span class="n">face_shape_grads_physical</span> <span class="o">=</span> <span class="p">(</span><span class="n">selected_f_shape_grads_ref</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">@</span> <span class="n">jacobian_deta_dx</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="c1"># (num_selected_faces, 1, 1, dim) @ (num_selected_faces, num_face_quads, dim, dim)</span>
+        <span class="c1"># (num_selected_faces, num_face_quads, 1, dim) -&gt; (num_selected_faces, num_face_quads)</span>
+        <span class="n">nanson_scale</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">((</span><span class="n">selected_f_normals</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">@</span> <span class="n">jacobian_deta_dx</span><span class="p">)[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">selected_weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_quad_weights</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]]</span>  <span class="c1"># (num_selected_faces, num_face_quads)</span>
+        <span class="n">nanson_scale</span> <span class="o">=</span> <span class="n">nanson_scale</span> <span class="o">*</span> <span class="n">jacobian_det</span> <span class="o">*</span> <span class="n">selected_weights</span>
+        <span class="k">return</span> <span class="n">face_shape_grads_physical</span><span class="p">,</span> <span class="n">nanson_scale</span></div>
+
+
+<div class="viewcode-block" id="FiniteElement.get_physical_quad_points">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.fe.FiniteElement.get_physical_quad_points">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_physical_quad_points</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute physical quadrature points</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        physical_quad_points : NumpyArray</span>
+<span class="sd">            Shape is (num_cells, num_quads, dim).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">physical_coos</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cells</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># (1, num_quads, num_nodes, 1) * (num_cells, 1, num_nodes, dim) -&gt; (num_cells, num_quads, dim)</span>
+        <span class="n">physical_quad_points</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape_vals</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">physical_coos</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">physical_quad_points</span></div>
+
+
+<div class="viewcode-block" id="FiniteElement.get_physical_surface_quad_points">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.fe.FiniteElement.get_physical_surface_quad_points">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_physical_surface_quad_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundary_inds</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute physical quadrature points on the surface</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        boundary_inds : list[NumpyArray]</span>
+<span class="sd">            Shape for NumpyArray is (num_selected_faces, 2).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        physical_surface_quad_points : NumpyArray</span>
+<span class="sd">            Shape for NumpyArray is (num_selected_faces, num_face_quads, dim).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">physical_coos</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cells</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">selected_coos</span> <span class="o">=</span> <span class="n">physical_coos</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]]</span>  <span class="c1"># (num_selected_faces, num_nodes, dim)</span>
+        <span class="n">selected_face_shape_vals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_shape_vals</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]]</span>  <span class="c1"># (num_selected_faces, num_face_quads, num_nodes)</span>
+        <span class="c1"># (num_selected_faces, num_face_quads, num_nodes, 1) * (num_selected_faces, 1, num_nodes, dim) -&gt; (num_selected_faces, num_face_quads, dim)</span>
+        <span class="n">physical_surface_quad_points</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">selected_face_shape_vals</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">selected_coos</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">physical_surface_quad_points</span></div>
+
+
+<div class="viewcode-block" id="FiniteElement.Dirichlet_boundary_conditions">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.fe.FiniteElement.Dirichlet_boundary_conditions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">Dirichlet_boundary_conditions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirichlet_bc_info</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Indices and values for Dirichlet B.C.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dirichlet_bc_info : list</span>
+<span class="sd">            [location_fns, vecs, value_fns]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        node_inds_list : list[NumpyArray]</span>
+<span class="sd">            The value of the NumpyArray ranges from 0 to num_total_nodes - 1.</span>
+<span class="sd">        vec_inds_list : list[NumpyArray]</span>
+<span class="sd">            The value of the NumpyArray ranges from 0 to to vec - 1.</span>
+<span class="sd">        vals_list : list[NumpyArray]</span>
+<span class="sd">            Dirichlet values to be assigned.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">node_inds_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">vec_inds_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">vals_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">dirichlet_bc_info</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">location_fns</span><span class="p">,</span> <span class="n">vecs</span><span class="p">,</span> <span class="n">value_fns</span> <span class="o">=</span> <span class="n">dirichlet_bc_info</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">location_fns</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">value_fns</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">value_fns</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">vecs</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">location_fns</span><span class="p">)):</span>
+                <span class="n">num_args</span> <span class="o">=</span> <span class="n">location_fns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="vm">__code__</span><span class="o">.</span><span class="n">co_argcount</span>
+                <span class="k">if</span> <span class="n">num_args</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">location_fn</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">point</span><span class="p">,</span> <span class="n">ind</span><span class="p">:</span> <span class="n">location_fns</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">point</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">num_args</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">location_fn</span> <span class="o">=</span> <span class="n">location_fns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Wrong number of arguments for location_fn: must be 1 or 2, get </span><span class="si">{</span><span class="n">num_args</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                <span class="n">node_inds</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">location_fn</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_total_nodes</span><span class="p">)))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">vec_inds</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">node_inds</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">onp</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span> <span class="o">*</span> <span class="n">vecs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">value_fns</span><span class="p">[</span><span class="n">i</span><span class="p">])(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">node_inds</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">node_inds_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node_inds</span><span class="p">)</span>
+                <span class="n">vec_inds_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vec_inds</span><span class="p">)</span>
+                <span class="n">vals_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">node_inds_list</span><span class="p">,</span> <span class="n">vec_inds_list</span><span class="p">,</span> <span class="n">vals_list</span></div>
+
+
+<div class="viewcode-block" id="FiniteElement.update_Dirichlet_boundary_conditions">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.fe.FiniteElement.update_Dirichlet_boundary_conditions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_Dirichlet_boundary_conditions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirichlet_bc_info</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset Dirichlet boundary conditions.</span>
+<span class="sd">        Useful when a time-dependent problem is solved, and at each iteration the boundary condition needs to be updated.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dirichlet_bc_info : list</span>
+<span class="sd">            [location_fns, vecs, value_fns]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vals_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Dirichlet_boundary_conditions</span><span class="p">(</span><span class="n">dirichlet_bc_info</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FiniteElement.get_boundary_conditions_inds">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.fe.FiniteElement.get_boundary_conditions_inds">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_boundary_conditions_inds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location_fns</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Given location functions, compute which faces satisfy the condition.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        location_fns : list[callable]</span>
+<span class="sd">            The callable is a location function that inputs a point (NumpyArray) and returns if the point satisfies the location condition.</span>
+<span class="sd">            For example, ::</span>
+
+<span class="sd">                lambda x: np.isclose(x[0], 0.)</span>
+
+<span class="sd">            If this location function takes 2 arguments, then the first is point and the second is index.</span>
+<span class="sd">            For example, ::</span>
+
+<span class="sd">                lambda x, ind: np.isclose(x[0], 0.) &amp; np.isin(ind, np.array([1, 3, 10]))</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        boundary_inds_list : list[NumpyArray]</span>
+<span class="sd">            Shape of NumpyArray is (num_selected_faces, 2).</span>
+
+<span class="sd">            boundary_inds_list[k][i, 0] returns the global cell index of the ith selected face of boundary subset k.</span>
+
+<span class="sd">            boundary_inds_list[k][i, 1] returns the local face index of the ith selected face of boundary subset k.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># TODO: assume this works for all variables, and return the same result</span>
+        <span class="n">cell_points</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cells</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># (num_cells, num_nodes, dim)</span>
+        <span class="n">cell_face_points</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">cell_points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_inds</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (num_cells, num_faces, num_face_vertices, dim)</span>
+        <span class="n">cell_face_inds</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cells</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_inds</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># (num_cells, num_faces, num_face_vertices)</span>
+        <span class="n">boundary_inds_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">location_fns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">location_fns</span><span class="p">)):</span>
+                <span class="n">num_args</span> <span class="o">=</span> <span class="n">location_fns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="vm">__code__</span><span class="o">.</span><span class="n">co_argcount</span>
+                <span class="k">if</span> <span class="n">num_args</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">location_fn</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">point</span><span class="p">,</span> <span class="n">ind</span><span class="p">:</span> <span class="n">location_fns</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">point</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">num_args</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">location_fn</span> <span class="o">=</span> <span class="n">location_fns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Wrong number of arguments for location_fn: must be 1 or 2, get </span><span class="si">{</span><span class="n">num_args</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                <span class="n">vmap_location_fn</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">location_fn</span><span class="p">)</span>
+                <span class="k">def</span><span class="w"> </span><span class="nf">on_boundary</span><span class="p">(</span><span class="n">cell_points</span><span class="p">,</span> <span class="n">cell_inds</span><span class="p">):</span>
+                    <span class="n">boundary_flag</span> <span class="o">=</span> <span class="n">vmap_location_fn</span><span class="p">(</span><span class="n">cell_points</span><span class="p">,</span> <span class="n">cell_inds</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">onp</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">boundary_flag</span><span class="p">)</span>
+
+                <span class="n">vvmap_on_boundary</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">on_boundary</span><span class="p">))</span>
+                <span class="n">boundary_flags</span> <span class="o">=</span> <span class="n">vvmap_on_boundary</span><span class="p">(</span><span class="n">cell_face_points</span><span class="p">,</span> <span class="n">cell_face_inds</span><span class="p">)</span>
+                <span class="n">boundary_inds</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">boundary_flags</span><span class="p">)</span>  <span class="c1"># (num_selected_faces, 2)</span>
+                <span class="n">boundary_inds_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">boundary_inds</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">boundary_inds_list</span></div>
+
+
+<div class="viewcode-block" id="FiniteElement.convert_from_dof_to_quad">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.fe.FiniteElement.convert_from_dof_to_quad">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">convert_from_dof_to_quad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sol</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Obtain quad values from nodal solution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sol : JaxArray</span>
+<span class="sd">            Shape is (num_total_nodes, vec).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        u : JaxArray</span>
+<span class="sd">            Shape is (num_cells, num_quads, vec).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># (num_total_nodes, vec) -&gt; (num_cells, num_nodes, vec)</span>
+        <span class="n">cells_sol</span> <span class="o">=</span> <span class="n">sol</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cells</span><span class="p">]</span>
+        <span class="c1"># (num_cells, 1, num_nodes, vec) * (1, num_quads, num_nodes, 1) -&gt; (num_cells, num_quads, num_nodes, vec) -&gt; (num_cells, num_quads, vec)</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cells_sol</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_vals</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">u</span></div>
+
+
+<div class="viewcode-block" id="FiniteElement.convert_from_dof_to_face_quad">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.fe.FiniteElement.convert_from_dof_to_face_quad">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">convert_from_dof_to_face_quad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sol</span><span class="p">,</span> <span class="n">boundary_inds</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Obtain surface solution from nodal solution</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sol : JaxArray</span>
+<span class="sd">            Shape is (num_total_nodes, vec).</span>
+<span class="sd">        boundary_inds : int</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        u : JaxArray</span>
+<span class="sd">            Shape is (num_selected_faces, num_face_quads, vec).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cells_old_sol</span> <span class="o">=</span> <span class="n">sol</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cells</span><span class="p">]</span>  <span class="c1"># (num_cells, num_nodes, vec)</span>
+        <span class="n">selected_cell_sols</span> <span class="o">=</span> <span class="n">cells_old_sol</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]]</span>  <span class="c1"># (num_selected_faces, num_nodes, vec))</span>
+        <span class="n">selected_face_shape_vals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_shape_vals</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]]</span>  <span class="c1"># (num_selected_faces, num_face_quads, num_nodes)</span>
+        <span class="c1"># (num_selected_faces, 1, num_nodes, vec) * (num_selected_faces, num_face_quads, num_nodes, 1) </span>
+        <span class="c1"># -&gt; (num_selected_faces, num_face_quads, vec)</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">selected_cell_sols</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">selected_face_shape_vals</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">u</span></div>
+
+
+<div class="viewcode-block" id="FiniteElement.sol_to_grad">
+<a class="viewcode-back" href="../../more/api/api_fe.html#jax_fem.fe.FiniteElement.sol_to_grad">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sol_to_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sol</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Obtain solution gradient from nodal solution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sol : JaxArray</span>
+<span class="sd">            Shape is (num_total_nodes, vec).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        u_grads : JaxArray</span>
+<span class="sd">            Shape is (num_cells, num_quads, vec, dim).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -&gt; (num_cells, num_quads, num_nodes, vec, dim)</span>
+        <span class="n">u_grads</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">sol</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cells</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_grads</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">u_grads</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_grads</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># (num_cells, num_quads, vec, dim)</span>
+        <span class="k">return</span> <span class="n">u_grads</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">print_BC_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Print boundary condition information for debugging purposes.</span>
+
+<span class="sd">        TODO: Not working</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;neumann_boundary_inds_list&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">### Neumann B.C. is specified&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">neumann_boundary_inds_list</span><span class="p">)):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Neumann Boundary part </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> information:&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">neumann_boundary_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Array.shape = (num_selected_faces, 2) = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">neumann_boundary_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Interpretation:&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;    Array[i, 0] returns the global cell index of the ith selected face&quot;</span>
+                <span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;    Array[i, 1] returns the local face index of the ith selected face&quot;</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">### No Neumann B.C. found.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">### Dirichlet B.C. is specified&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">)):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Dirichlet Boundary part </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> information:&quot;</span><span class="p">)</span>
+                <span class="n">bc_array</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">vals_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="p">])</span><span class="o">.</span><span class="n">T</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">bc_array</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Array.shape = (num_selected_dofs, 3) = </span><span class="si">{</span><span class="n">bc_array</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Interpretation:&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;    Array[i, 0] returns the node index of the ith selected dof&quot;</span>
+                <span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;    Array[i, 1] returns the vec index of the ith selected dof&quot;</span>
+                <span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;    Array[i, 2] returns the value assigned to ith selected dof&quot;</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">### No Dirichlet B.C. found.&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

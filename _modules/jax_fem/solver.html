@@ -1,0 +1,1318 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jax_fem.solver &#8212; JAX-FEM 0.0.9 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=972fa7a7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=39f6cbd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jax_fem/solver';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">JAX-FEM 0.0.9 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../learn/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/poisson.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/linear_elasticity.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/hyperelasticity.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/plasticity.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/compute_gradients.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/topology_optimization.html">Topology optimization</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../more/FAQ.html">Frequently asked questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/useful/main.html">Useful links</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">Miscellaneous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/contact.html">Contact</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jax_fem.solver</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.flatten_util</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">onp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax.experimental.sparse</span><span class="w"> </span><span class="kn">import</span> <span class="n">BCOO</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">petsc4py</span><span class="w"> </span><span class="kn">import</span> <span class="n">PETSc</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax</span><span class="w"> </span><span class="kn">import</span> <span class="n">config</span>
+<span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;jax_enable_x64&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+
+<span class="c1">################################################################################</span>
+<span class="c1"># JAX solver or scipy solver or PETSc solver</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">jax_solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">precond</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Solves the equilibrium equation using a JAX solver.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    precond</span>
+<span class="sd">        Whether to calculate the preconditioner or not</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;JAX Solver - Solving linear system&quot;</span><span class="p">)</span>
+    <span class="n">indptr</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">getValuesCSR</span><span class="p">()</span>
+    <span class="n">A_sp_scipy</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">csr_array</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">indptr</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="n">A</span><span class="o">.</span><span class="n">getSize</span><span class="p">())</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">BCOO</span><span class="o">.</span><span class="n">from_scipy_sparse</span><span class="p">(</span><span class="n">A_sp_scipy</span><span class="p">)</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
+    <span class="n">jacobi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">A_sp_scipy</span><span class="o">.</span><span class="n">diagonal</span><span class="p">())</span>
+    <span class="n">pc</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="n">jacobi</span><span class="p">)</span> <span class="k">if</span> <span class="n">precond</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">bicgstab</span><span class="p">(</span><span class="n">A</span><span class="p">,</span>
+                                               <span class="n">b</span><span class="p">,</span>
+                                               <span class="n">x0</span><span class="o">=</span><span class="n">x0</span><span class="p">,</span>
+                                               <span class="n">M</span><span class="o">=</span><span class="n">pc</span><span class="p">,</span>
+                                               <span class="n">tol</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span>
+                                               <span class="n">atol</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span>
+                                               <span class="n">maxiter</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span>
+
+    <span class="c1"># Verify convergence</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">A</span> <span class="o">@</span> <span class="n">x</span> <span class="o">-</span> <span class="n">b</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;JAX Solver - Finshed solving, res = </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">err</span> <span class="o">&lt;</span> <span class="mf">0.1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;JAX linear solver failed to converge with err = </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">err</span> <span class="o">&lt;</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span> <span class="c1"># For assert purpose, some how this also affects bicgstab.</span>
+
+    <span class="k">return</span> <span class="n">x</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">umfpack_solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Scipy Solver - Solving linear system with UMFPACK&quot;</span><span class="p">)</span>
+    <span class="n">indptr</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">getValuesCSR</span><span class="p">()</span>
+    <span class="n">Asp</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">indptr</span><span class="p">))</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">spsolve</span><span class="p">(</span><span class="n">Asp</span><span class="p">,</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+
+    <span class="c1"># TODO: try https://jax.readthedocs.io/en/latest/_autosummary/jax.experimental.sparse.linalg.spsolve.html</span>
+    <span class="c1"># x = jax.experimental.sparse.linalg.spsolve(av, aj, ai, b)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Scipy Solver - Finished solving, linear solve res = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">Asp</span><span class="w"> </span><span class="o">@</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">petsc_solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">ksp_type</span><span class="p">,</span> <span class="n">pc_type</span><span class="p">):</span>
+    <span class="n">rhs</span> <span class="o">=</span> <span class="n">PETSc</span><span class="o">.</span><span class="n">Vec</span><span class="p">()</span><span class="o">.</span><span class="n">createSeq</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+    <span class="n">rhs</span><span class="o">.</span><span class="n">setValues</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)),</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+    <span class="n">ksp</span> <span class="o">=</span> <span class="n">PETSc</span><span class="o">.</span><span class="n">KSP</span><span class="p">()</span><span class="o">.</span><span class="n">create</span><span class="p">()</span>
+    <span class="n">ksp</span><span class="o">.</span><span class="n">setOperators</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+    <span class="n">ksp</span><span class="o">.</span><span class="n">setFromOptions</span><span class="p">()</span>
+    <span class="n">ksp</span><span class="o">.</span><span class="n">setType</span><span class="p">(</span><span class="n">ksp_type</span><span class="p">)</span>
+    <span class="n">ksp</span><span class="o">.</span><span class="n">pc</span><span class="o">.</span><span class="n">setType</span><span class="p">(</span><span class="n">pc_type</span><span class="p">)</span>
+
+    <span class="c1"># TODO: This works better. Do we need to generalize the code a little bit?</span>
+    <span class="k">if</span> <span class="n">ksp_type</span> <span class="o">==</span> <span class="s1">&#39;tfqmr&#39;</span><span class="p">:</span>
+        <span class="n">ksp</span><span class="o">.</span><span class="n">pc</span><span class="o">.</span><span class="n">setFactorSolverType</span><span class="p">(</span><span class="s1">&#39;mumps&#39;</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;PETSc Solver - Solving linear system with ksp_type = </span><span class="si">{</span><span class="n">ksp</span><span class="o">.</span><span class="n">getType</span><span class="p">()</span><span class="si">}</span><span class="s1">, pc = </span><span class="si">{</span><span class="n">ksp</span><span class="o">.</span><span class="n">pc</span><span class="o">.</span><span class="n">getType</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">PETSc</span><span class="o">.</span><span class="n">Vec</span><span class="p">()</span><span class="o">.</span><span class="n">createSeq</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+    <span class="n">ksp</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">rhs</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+
+    <span class="c1"># Verify convergence</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">PETSc</span><span class="o">.</span><span class="n">Vec</span><span class="p">()</span><span class="o">.</span><span class="n">createSeq</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+    <span class="n">A</span><span class="o">.</span><span class="n">mult</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">getArray</span><span class="p">()</span> <span class="o">-</span> <span class="n">rhs</span><span class="o">.</span><span class="n">getArray</span><span class="p">())</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PETSc Solver - Finished solving, linear solve res = </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">err</span> <span class="o">&lt;</span> <span class="mf">0.1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;PETSc linear solver failed to converge, err = </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">getArray</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">linear_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">solver_options</span><span class="p">):</span>
+
+    <span class="c1"># If user does not specify any solver, set jax_solver as the default one.</span>
+    <span class="k">if</span>  <span class="nb">len</span><span class="p">(</span><span class="n">solver_options</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">&amp;</span> <span class="p">{</span><span class="s1">&#39;jax_solver&#39;</span><span class="p">,</span> <span class="s1">&#39;umfpack_solver&#39;</span><span class="p">,</span> <span class="s1">&#39;petsc_solver&#39;</span><span class="p">,</span> <span class="s1">&#39;custom_solver&#39;</span><span class="p">})</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> 
+        <span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;jax_solver&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="s1">&#39;jax_solver&#39;</span> <span class="ow">in</span> <span class="n">solver_options</span><span class="p">:</span>      
+        <span class="n">precond</span> <span class="o">=</span> <span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;jax_solver&#39;</span><span class="p">][</span><span class="s1">&#39;precond&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;precond&#39;</span> <span class="ow">in</span> <span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;jax_solver&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="kc">True</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">jax_solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">precond</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="s1">&#39;umfpack_solver&#39;</span> <span class="ow">in</span> <span class="n">solver_options</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">umfpack_solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="s1">&#39;petsc_solver&#39;</span> <span class="ow">in</span> <span class="n">solver_options</span><span class="p">:</span>   
+        <span class="n">ksp_type</span> <span class="o">=</span> <span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;petsc_solver&#39;</span><span class="p">][</span><span class="s1">&#39;ksp_type&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;ksp_type&#39;</span> <span class="ow">in</span> <span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;petsc_solver&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="s1">&#39;bcgsl&#39;</span> 
+        <span class="n">pc_type</span> <span class="o">=</span> <span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;petsc_solver&#39;</span><span class="p">][</span><span class="s1">&#39;pc_type&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;pc_type&#39;</span> <span class="ow">in</span> <span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;petsc_solver&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="s1">&#39;ilu&#39;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">petsc_solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">ksp_type</span><span class="p">,</span> <span class="n">pc_type</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="s1">&#39;custom_solver&#39;</span> <span class="ow">in</span> <span class="n">solver_options</span><span class="p">:</span>
+        <span class="c1"># Users can define their own solver</span>
+        <span class="n">custom_solver</span> <span class="o">=</span> <span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;custom_solver&#39;</span><span class="p">]</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">custom_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">solver_options</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown linear solver.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">x</span>
+
+
+<span class="c1">################################################################################</span>
+<span class="c1"># &quot;row elimination&quot; solver</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_bc_vec</span><span class="p">(</span><span class="n">res_vec</span><span class="p">,</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+    <span class="n">res_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">res_vec</span><span class="p">)</span>
+    <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">fe</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">res_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        <span class="n">sol</span> <span class="o">=</span> <span class="n">sol_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">)):</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">fe</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+                <span class="n">sol</span><span class="p">[</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">fe</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">unique_indices</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">fe</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">-</span><span class="n">fe</span><span class="o">.</span><span class="n">vals_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">scale</span><span class="p">)</span>
+
+        <span class="n">res_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span>
+
+    <span class="k">return</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">res_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_bc</span><span class="p">(</span><span class="n">res_fn</span><span class="p">,</span> <span class="n">problem</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">res_fn_bc</span><span class="p">(</span><span class="n">dofs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply Dirichlet boundary conditions</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">res_fn</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">apply_bc_vec</span><span class="p">(</span><span class="n">res_vec</span><span class="p">,</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res_fn_bc</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">assign_bc</span><span class="p">(</span><span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">):</span>
+    <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">fe</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">):</span>
+        <span class="n">sol</span> <span class="o">=</span> <span class="n">sol_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">)):</span>
+            <span class="n">sol</span> <span class="o">=</span> <span class="n">sol</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                         <span class="n">fe</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">vals_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">sol_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">sol</span>
+    <span class="k">return</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">assign_ones_bc</span><span class="p">(</span><span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">):</span>
+    <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">fe</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">):</span>
+        <span class="n">sol</span> <span class="o">=</span> <span class="n">sol_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">)):</span>
+            <span class="n">sol</span> <span class="o">=</span> <span class="n">sol</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                         <span class="n">fe</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mf">1.</span><span class="p">)</span>
+        <span class="n">sol_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">sol</span>
+    <span class="k">return</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">assign_zeros_bc</span><span class="p">(</span><span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">):</span>
+    <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">fe</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">):</span>
+        <span class="n">sol</span> <span class="o">=</span> <span class="n">sol_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">)):</span>
+            <span class="n">sol</span> <span class="o">=</span> <span class="n">sol</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                         <span class="n">fe</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mf">0.</span><span class="p">)</span>
+        <span class="n">sol_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">sol</span>
+    <span class="k">return</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">copy_bc</span><span class="p">(</span><span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">):</span>
+    <span class="n">new_dofs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+    <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+    <span class="n">new_sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">new_dofs</span><span class="p">)</span>
+  
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">fe</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">):</span>
+        <span class="n">sol</span> <span class="o">=</span> <span class="n">sol_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        <span class="n">new_sol</span> <span class="o">=</span> <span class="n">new_sol_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">)):</span>
+            <span class="n">new_sol</span> <span class="o">=</span> <span class="p">(</span><span class="n">new_sol</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                  <span class="n">fe</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">sol</span><span class="p">[</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                          <span class="n">fe</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]]))</span>
+        <span class="n">new_sol_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_sol</span>
+
+    <span class="k">return</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">new_sol_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_flatten_fn</span><span class="p">(</span><span class="n">fn_sol_list</span><span class="p">,</span> <span class="n">problem</span><span class="p">):</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">fn_dofs</span><span class="p">(</span><span class="n">dofs</span><span class="p">):</span>
+        <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+        <span class="n">val_list</span> <span class="o">=</span> <span class="n">fn_sol_list</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">val_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">fn_dofs</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">operator_to_matrix</span><span class="p">(</span><span class="n">operator_fn</span><span class="p">,</span> <span class="n">problem</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Only used for when debugging.</span>
+<span class="sd">    Can be used to print the matrix, check the conditional number, etc.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">jacfwd</span><span class="p">(</span><span class="n">operator_fn</span><span class="p">)(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">num_total_dofs_all_vars</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">J</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">linear_incremental_solver</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">solver_options</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Linear solver at each Newton&#39;s iteration</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Solving linear system...&quot;</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="o">-</span><span class="n">res_vec</span>
+
+    <span class="c1"># x0 will always be correct at boundary locations</span>
+    <span class="n">x0_1</span> <span class="o">=</span> <span class="n">assign_bc</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">num_total_dofs_all_vars</span><span class="p">),</span> <span class="n">problem</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="s1">&#39;P_mat&#39;</span><span class="p">):</span>
+        <span class="n">x0_2</span> <span class="o">=</span> <span class="n">copy_bc</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span> <span class="o">@</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+        <span class="n">x0</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="p">(</span><span class="n">x0_1</span> <span class="o">-</span> <span class="n">x0_2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">x0_2</span> <span class="o">=</span> <span class="n">copy_bc</span><span class="p">(</span><span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+        <span class="n">x0</span> <span class="o">=</span> <span class="n">x0_1</span> <span class="o">-</span> <span class="n">x0_2</span>
+
+    <span class="n">inc</span> <span class="o">=</span> <span class="n">linear_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">solver_options</span><span class="p">)</span>
+
+    <span class="n">line_search_flag</span> <span class="o">=</span> <span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;line_search_flag&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;line_search_flag&#39;</span> <span class="ow">in</span> <span class="n">solver_options</span> <span class="k">else</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">line_search_flag</span><span class="p">:</span>
+        <span class="n">dofs</span> <span class="o">=</span> <span class="n">line_search</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">inc</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">dofs</span> <span class="o">=</span> <span class="n">dofs</span> <span class="o">+</span> <span class="n">inc</span>
+
+    <span class="k">return</span> <span class="n">dofs</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">line_search</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">inc</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    TODO: This is useful for finite deformation plasticity.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">res_fn</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">compute_residual</span>
+    <span class="n">res_fn</span> <span class="o">=</span> <span class="n">get_flatten_fn</span><span class="p">(</span><span class="n">res_fn</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+    <span class="n">res_fn</span> <span class="o">=</span> <span class="n">apply_bc</span><span class="p">(</span><span class="n">res_fn</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">res_norm_fn</span><span class="p">(</span><span class="n">alpha</span><span class="p">):</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">res_fn</span><span class="p">(</span><span class="n">dofs</span> <span class="o">+</span> <span class="n">alpha</span><span class="o">*</span><span class="n">inc</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">res_vec</span><span class="p">)</span>
+
+    <span class="c1"># grad_res_norm_fn = jax.grad(res_norm_fn)</span>
+    <span class="c1"># hess_res_norm_fn = jax.hessian(res_norm_fn)</span>
+
+    <span class="c1"># tol = 1e-3</span>
+    <span class="c1"># alpha = 1.</span>
+    <span class="c1"># lr = 1.</span>
+    <span class="c1"># grad_alpha = 1.</span>
+    <span class="c1"># while np.abs(grad_alpha) &gt; tol:</span>
+    <span class="c1">#     grad_alpha = grad_res_norm_fn(alpha)</span>
+    <span class="c1">#     hess_alpha = hess_res_norm_fn(alpha)</span>
+    <span class="c1">#     alpha = alpha - 1./hess_alpha*grad_alpha</span>
+    <span class="c1">#     print(f&quot;alpha = {alpha}, grad_alpha = {grad_alpha}, hess_alpha = {hess_alpha}&quot;)</span>
+
+    <span class="n">alpha</span> <span class="o">=</span> <span class="mf">1.</span>
+    <span class="n">res_norm</span> <span class="o">=</span> <span class="n">res_norm_fn</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+        <span class="n">alpha</span> <span class="o">*=</span> <span class="mf">0.5</span>
+        <span class="n">res_norm_half</span> <span class="o">=</span> <span class="n">res_norm_fn</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;i = </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">, res_norm = </span><span class="si">{</span><span class="n">res_norm</span><span class="si">}</span><span class="s2">, res_norm_half = </span><span class="si">{</span><span class="n">res_norm_half</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">res_norm_half</span> <span class="o">&gt;</span> <span class="n">res_norm</span><span class="p">:</span>
+            <span class="n">alpha</span> <span class="o">*=</span> <span class="mf">2.</span>
+            <span class="k">break</span>
+        <span class="n">res_norm</span> <span class="o">=</span> <span class="n">res_norm_half</span>
+
+    <span class="k">return</span> <span class="n">dofs</span> <span class="o">+</span> <span class="n">alpha</span><span class="o">*</span><span class="n">inc</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_A</span><span class="p">(</span><span class="n">problem</span><span class="p">):</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Creating sparse matrix with scipy...&quot;</span><span class="p">)</span>
+    <span class="n">A_sp_scipy</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">csr_array</span><span class="p">((</span><span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">V</span><span class="p">),</span> <span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">I</span><span class="p">,</span> <span class="n">problem</span><span class="o">.</span><span class="n">J</span><span class="p">)),</span>
+        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">num_total_dofs_all_vars</span><span class="p">,</span> <span class="n">problem</span><span class="o">.</span><span class="n">num_total_dofs_all_vars</span><span class="p">))</span>
+    <span class="c1"># logger.info(f&quot;Global sparse matrix takes about {A_sp_scipy.data.shape[0]*8*3/2**30} G memory to store.&quot;)</span>
+
+    <span class="n">A</span> <span class="o">=</span> <span class="n">PETSc</span><span class="o">.</span><span class="n">Mat</span><span class="p">()</span><span class="o">.</span><span class="n">createAIJ</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">A_sp_scipy</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> 
+                              <span class="n">csr</span><span class="o">=</span><span class="p">(</span><span class="n">A_sp_scipy</span><span class="o">.</span><span class="n">indptr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">PETSc</span><span class="o">.</span><span class="n">IntType</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                                   <span class="n">A_sp_scipy</span><span class="o">.</span><span class="n">indices</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">PETSc</span><span class="o">.</span><span class="n">IntType</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> 
+                                   <span class="n">A_sp_scipy</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">fe</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">)):</span>
+            <span class="n">row_inds</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">fe</span><span class="o">.</span><span class="n">vec</span> <span class="o">+</span> <span class="n">fe</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">problem</span><span class="o">.</span><span class="n">offset</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">onp</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+            <span class="n">A</span><span class="o">.</span><span class="n">zeroRows</span><span class="p">(</span><span class="n">row_inds</span><span class="p">)</span>
+
+    <span class="c1"># Linear multipoint constraints</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="s1">&#39;P_mat&#39;</span><span class="p">):</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">PETSc</span><span class="o">.</span><span class="n">Mat</span><span class="p">()</span><span class="o">.</span><span class="n">createAIJ</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">csr</span><span class="o">=</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span><span class="o">.</span><span class="n">indptr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">PETSc</span><span class="o">.</span><span class="n">IntType</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                                                   <span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span><span class="o">.</span><span class="n">indices</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">PETSc</span><span class="o">.</span><span class="n">IntType</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">matMult</span><span class="p">(</span><span class="n">P</span><span class="p">)</span>
+        <span class="n">P_T</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">P_T</span><span class="o">.</span><span class="n">matMult</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">A</span>
+
+
+<span class="c1">################################################################################</span>
+<span class="c1"># The &quot;row elimination&quot; solver</span>
+
+<div class="viewcode-block" id="solver">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.solver">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">solver</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">solver_options</span><span class="o">=</span><span class="p">{}):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Solve the nonlinear problem using Newton&#39;s method with configurable linear solvers.</span>
+
+<span class="sd">    The solver imposes Dirichlet B.C. with &quot;row elimination&quot; method. Conceptually,</span>
+
+<span class="sd">    .. math::</span>
+<span class="sd">        r(u) = D \, r_{\text{unc}}(u) + (I - D)u - u_b \\</span>
+<span class="sd">        A = \frac{\text{d}r}{\text{d}u} = D \frac{\text{d}r}{\text{d}u} + (I - D)</span>
+
+<span class="sd">    where:</span>
+
+<span class="sd">    - :math:`r_{\text{unc}}: \mathbb{R}^N\rightarrow\mathbb{R}^N` is the residual function without considering Dirichlet boundary conditions.</span>
+
+<span class="sd">    - :math:`u\in\mathbb{R}^N` is the FE solution vector.</span>
+
+<span class="sd">    - :math:`u_b\in\mathbb{R}^N` is the vector for Dirichlet boundary conditions, e.g.,</span>
+
+<span class="sd">      .. math::</span>
+<span class="sd">            u_b = \begin{bmatrix}</span>
+<span class="sd">                  0 \\</span>
+<span class="sd">                  0 \\</span>
+<span class="sd">                  2 \\</span>
+<span class="sd">                  3</span>
+<span class="sd">                  \end{bmatrix}</span>
+<span class="sd">    </span>
+<span class="sd">    - :math:`D\in\mathbb{R}^{N\times N}` is the auxiliary matrix for masking, e.g.,</span>
+
+<span class="sd">      .. math::</span>
+<span class="sd">            D = \begin{bmatrix}</span>
+<span class="sd">                1 &amp; 0 &amp; 0 &amp; 0 \\</span>
+<span class="sd">                0 &amp; 1 &amp; 0 &amp; 0 \\</span>
+<span class="sd">                0 &amp; 0 &amp; 0 &amp; 0 \\</span>
+<span class="sd">                0 &amp; 0 &amp; 0 &amp; 0</span>
+<span class="sd">            \end{bmatrix}</span>
+<span class="sd">    </span>
+<span class="sd">    - :math:`I\in\mathbb{R}^{N\times N}` is the ientity matrix, e.g., </span>
+
+<span class="sd">      .. math::</span>
+<span class="sd">            I = \begin{bmatrix}</span>
+<span class="sd">                1 &amp; 0 &amp; 0 &amp; 0 \\</span>
+<span class="sd">                0 &amp; 1 &amp; 0 &amp; 0 \\</span>
+<span class="sd">                0 &amp; 0 &amp; 1 &amp; 0 \\</span>
+<span class="sd">                0 &amp; 0 &amp; 0 &amp; 1</span>
+<span class="sd">            \end{bmatrix}</span>
+
+<span class="sd">    - :math:`A\in\mathbb{R}^{N\times N}` is the tangent stiffness matrix (the global Jacobian matrix).</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - TODO: Show some comments for linear multipoint constraint handling.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    problem : Problem</span>
+<span class="sd">        The nonlinear problem to solve</span>
+<span class="sd">    solver_options : dict</span>
+<span class="sd">        Configuration dictionary for solver parameters and algorithms.</span>
+<span class="sd">        Three solvers are currently available:</span>
+
+<span class="sd">        - `JAX solver &lt;https://jax.readthedocs.io/en/latest/_autosummary/jax.scipy.sparse.linalg.bicgstab.html&gt;`_</span>
+<span class="sd">        - `UMFPACK solver &lt;https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html&gt;`_</span>
+<span class="sd">        - `PETSc solver &lt;https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html&gt;`_</span>
+<span class="sd">    </span>
+<span class="sd">        The empty choice ::</span>
+
+<span class="sd">            solver_options = {}</span>
+
+<span class="sd">        will default to JAX solver as ::</span>
+<span class="sd">        </span>
+<span class="sd">            solver_options = {&#39;jax_solver&#39;: {}}</span>
+
+<span class="sd">        which will further default to ::</span>
+
+<span class="sd">            solver_options = {&#39;jax_solver&#39;: {&#39;precond&#39;: True}}</span>
+
+<span class="sd">        The UMFPACK solver can be specified as ::</span>
+
+<span class="sd">            solver_options = {&#39;umfpack_solver&#39;: {}}</span>
+
+<span class="sd">        The PETSc solver can be specified as ::</span>
+
+<span class="sd">            solver_options = {</span>
+<span class="sd">                 &#39;petsc_solver&#39;: {},</span>
+<span class="sd">            }        </span>
+<span class="sd">    </span>
+<span class="sd">        which will default to ::</span>
+
+<span class="sd">            solver_options = {</span>
+<span class="sd">                 &#39;petsc_solver&#39;: {</span>
+<span class="sd">                     &#39;ksp_type&#39;: &#39;bcgsl&#39;, # other choices can be, e.g., &#39;minres&#39;, &#39;gmres&#39;, &#39;tfqmr&#39;</span>
+<span class="sd">                     &#39;pc_type&#39;: &#39;ilu&#39;, # other choices can be, e.g., &#39;jacobi&#39;</span>
+<span class="sd">                 }</span>
+<span class="sd">            }  </span>
+<span class="sd">    </span>
+<span class="sd">        Other available options are :: </span>
+
+<span class="sd">            solver_options = {</span>
+<span class="sd">                &#39;line_search_flag&#39;: False, # Line search method</span>
+<span class="sd">                &#39;initial_guess&#39;: initial_guess, # Same shape as sol_list</span>
+<span class="sd">                &#39;tol&#39;: 1e-5, # Absolute tolerance for residual vector (l2 norm), used in Newton&#39;s method</span>
+<span class="sd">                &#39;rel_tol&#39;: 1e-8, # Relative tolerance for residual vector (l2 norm), used in Newton&#39;s method</span>
+<span class="sd">            }</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sol_list : list</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Calling the row elimination solver for imposing Dirichlet B.C.&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Start timing&quot;</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="s1">&#39;initial_guess&#39;</span> <span class="ow">in</span> <span class="n">solver_options</span><span class="p">:</span>
+        <span class="c1"># We dont&#39;t want inititual guess to play a role in the differentiation chain.</span>
+        <span class="n">initial_guess</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">lax</span><span class="o">.</span><span class="n">stop_gradient</span><span class="p">(</span><span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;initial_guess&#39;</span><span class="p">])</span>
+        <span class="n">dofs</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">initial_guess</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="s1">&#39;P_mat&#39;</span><span class="p">):</span>
+            <span class="n">dofs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="c1"># reduced dofs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dofs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">num_total_dofs_all_vars</span><span class="p">)</span>
+
+    <span class="n">rel_tol</span> <span class="o">=</span> <span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;rel_tol&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;rel_tol&#39;</span> <span class="ow">in</span> <span class="n">solver_options</span> <span class="k">else</span> <span class="mf">1e-8</span>
+    <span class="n">tol</span> <span class="o">=</span> <span class="n">solver_options</span><span class="p">[</span><span class="s1">&#39;tol&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;tol&#39;</span> <span class="ow">in</span> <span class="n">solver_options</span> <span class="k">else</span> <span class="mf">1e-6</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">newton_update_helper</span><span class="p">(</span><span class="n">dofs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="s1">&#39;P_mat&#39;</span><span class="p">):</span>
+            <span class="n">dofs</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span> <span class="o">@</span> <span class="n">dofs</span>
+
+        <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+        <span class="n">res_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">newton_update</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">res_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">apply_bc_vec</span><span class="p">(</span><span class="n">res_vec</span><span class="p">,</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="s1">&#39;P_mat&#39;</span><span class="p">):</span>
+            <span class="n">res_vec</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">res_vec</span>
+
+        <span class="n">A</span> <span class="o">=</span> <span class="n">get_A</span><span class="p">(</span><span class="n">problem</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span>
+
+    <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span> <span class="o">=</span> <span class="n">newton_update_helper</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+    <span class="n">res_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">res_vec</span><span class="p">)</span>
+    <span class="n">res_val_initial</span> <span class="o">=</span> <span class="n">res_val</span>
+    <span class="n">rel_res_val</span> <span class="o">=</span> <span class="n">res_val</span><span class="o">/</span><span class="n">res_val_initial</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Before, l_2 res = </span><span class="si">{</span><span class="n">res_val</span><span class="si">}</span><span class="s2">, relative l_2 res = </span><span class="si">{</span><span class="n">rel_res_val</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">rel_res_val</span> <span class="o">&gt;</span> <span class="n">rel_tol</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">res_val</span> <span class="o">&gt;</span> <span class="n">tol</span><span class="p">):</span>
+        <span class="n">dofs</span> <span class="o">=</span> <span class="n">linear_incremental_solver</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">solver_options</span><span class="p">)</span>
+        <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span> <span class="o">=</span> <span class="n">newton_update_helper</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+        <span class="c1"># logger.debug(f&quot;DEBUG: l_2 res = {np.linalg.norm(apply_bc_vec(A @ dofs, dofs, problem))}&quot;)</span>
+        <span class="n">res_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">res_vec</span><span class="p">)</span>
+        <span class="n">rel_res_val</span> <span class="o">=</span> <span class="n">res_val</span><span class="o">/</span><span class="n">res_val_initial</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;l_2 res = </span><span class="si">{</span><span class="n">res_val</span><span class="si">}</span><span class="s2">, relative l_2 res = </span><span class="si">{</span><span class="n">rel_res_val</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">res_val</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;res_val contains NaN, stop the program!&quot;</span>
+    <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">dofs</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;dofs contains NaN, stop the program!&quot;</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="s1">&#39;P_mat&#39;</span><span class="p">):</span>
+        <span class="n">dofs</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span> <span class="o">@</span> <span class="n">dofs</span>
+
+    <span class="c1"># If sol_list = [[[u1x, u1y], </span>
+    <span class="c1">#                 [u2x, u2y], </span>
+    <span class="c1">#                 [u3x, u3y], </span>
+    <span class="c1">#                 [u4x, u4y]], </span>
+    <span class="c1">#                [[p1], </span>
+    <span class="c1">#                 [p2]]],</span>
+    <span class="c1"># the flattend DOF vector will be [u1x, u1y, u2x, u2y, u3x, u3y, u4x, u4y, p1, p2]</span>
+    <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+
+    <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">solve_time</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Solve took </span><span class="si">{</span><span class="n">solve_time</span><span class="si">}</span><span class="s2"> [s]&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;max of dofs = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;min of dofs = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">sol_list</span></div>
+
+
+
+<span class="c1">################################################################################</span>
+<span class="c1"># The &quot;arc length&quot; solver</span>
+<span class="c1"># Reference: Vasios, Nikolaos. &quot;Nonlinear analysis of structures.&quot; The Arc-Length method. Harvard (2015).</span>
+<span class="c1"># Our implementation follows the Crisfeld&#39;s formulation</span>
+
+<span class="c1"># TODO: Do we want to merge displacement-control and force-control codes?</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">arc_length_solver_disp_driven</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">prev_u_vec</span><span class="p">,</span> <span class="n">prev_lamda</span><span class="p">,</span> <span class="n">prev_Delta_u_vec</span><span class="p">,</span> <span class="n">prev_Delta_lamda</span><span class="p">,</span> <span class="n">Delta_l</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">psi</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    TODO: Does not support periodic B.C., need some work here.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">newton_update_helper</span><span class="p">(</span><span class="n">dofs</span><span class="p">):</span>
+        <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+        <span class="n">res_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">newton_update</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">res_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">apply_bc_vec</span><span class="p">(</span><span class="n">res_vec</span><span class="p">,</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">,</span> <span class="n">lamda</span><span class="p">)</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">get_A</span><span class="p">(</span><span class="n">problem</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">u_lamda_dot_product</span><span class="p">(</span><span class="n">Delta_u_vec1</span><span class="p">,</span> <span class="n">Delta_lamda1</span><span class="p">,</span> <span class="n">Delta_u_vec2</span><span class="p">,</span> <span class="n">Delta_lamda2</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Delta_u_vec1</span><span class="o">*</span><span class="n">Delta_u_vec2</span><span class="p">)</span> <span class="o">+</span> <span class="n">psi</span><span class="o">**</span><span class="mf">2.</span><span class="o">*</span><span class="n">Delta_lamda1</span><span class="o">*</span><span class="n">Delta_lamda2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_b</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span>
+ 
+    <span class="n">u_vec</span> <span class="o">=</span> <span class="n">prev_u_vec</span>
+    <span class="n">lamda</span> <span class="o">=</span> <span class="n">prev_lamda</span>
+
+    <span class="n">u_b</span> <span class="o">=</span> <span class="n">assign_bc</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">prev_u_vec</span><span class="p">),</span> <span class="n">problem</span><span class="p">)</span>
+
+    <span class="n">Delta_u_vec_dir</span> <span class="o">=</span> <span class="n">prev_Delta_u_vec</span>
+    <span class="n">Delta_lamda_dir</span> <span class="o">=</span> <span class="n">prev_Delta_lamda</span>
+
+    <span class="n">tol</span> <span class="o">=</span> <span class="mf">1e-6</span>
+    <span class="n">res_val</span> <span class="o">=</span> <span class="mf">1.</span>
+    <span class="k">while</span> <span class="n">res_val</span> <span class="o">&gt;</span> <span class="n">tol</span><span class="p">:</span>
+
+        <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span> <span class="o">=</span> <span class="n">newton_update_helper</span><span class="p">(</span><span class="n">u_vec</span><span class="p">)</span>
+        <span class="n">res_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">res_vec</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Arc length solver: res_val = </span><span class="si">{</span><span class="n">res_val</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+  
+        <span class="n">delta_u_bar</span> <span class="o">=</span> <span class="n">umfpack_solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="o">-</span><span class="n">res_vec</span><span class="p">)</span>
+        <span class="n">delta_u_t</span> <span class="o">=</span> <span class="n">umfpack_solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">u_b</span><span class="p">)</span>
+
+        <span class="n">Delta_u_vec</span> <span class="o">=</span> <span class="n">u_vec</span> <span class="o">-</span> <span class="n">prev_u_vec</span>
+        <span class="n">Delta_lamda</span> <span class="o">=</span> <span class="n">lamda</span> <span class="o">-</span> <span class="n">prev_lamda</span>
+        <span class="n">a1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">delta_u_t</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span> <span class="o">+</span> <span class="n">psi</span><span class="o">**</span><span class="mf">2.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_b</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span>
+        <span class="n">a2</span> <span class="o">=</span> <span class="mf">2.</span><span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">Delta_u_vec</span> <span class="o">+</span> <span class="n">delta_u_bar</span><span class="p">)</span><span class="o">*</span><span class="n">delta_u_t</span><span class="p">)</span> <span class="o">+</span> <span class="mf">2.</span><span class="o">*</span><span class="n">psi</span><span class="o">**</span><span class="mf">2.</span><span class="o">*</span><span class="n">Delta_lamda</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_b</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span>
+        <span class="n">a3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">Delta_u_vec</span> <span class="o">+</span> <span class="n">delta_u_bar</span><span class="p">)</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span> <span class="o">+</span> <span class="n">psi</span><span class="o">**</span><span class="mf">2.</span><span class="o">*</span><span class="n">Delta_lamda</span><span class="o">**</span><span class="mf">2.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_b</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span> <span class="o">-</span> <span class="n">Delta_l</span><span class="o">**</span><span class="mf">2.</span>
+
+        <span class="n">delta_lamda1</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">a2</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">a2</span><span class="o">**</span><span class="mf">2.</span> <span class="o">-</span> <span class="mf">4.</span><span class="o">*</span><span class="n">a1</span><span class="o">*</span><span class="n">a3</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">a1</span><span class="p">)</span>
+        <span class="n">delta_lamda2</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">a2</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">a2</span><span class="o">**</span><span class="mf">2.</span> <span class="o">-</span> <span class="mf">4.</span><span class="o">*</span><span class="n">a1</span><span class="o">*</span><span class="n">a3</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">a1</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Arc length solver: delta_lamda1 = </span><span class="si">{</span><span class="n">delta_lamda1</span><span class="si">}</span><span class="s2">, delta_lamda2 = </span><span class="si">{</span><span class="n">delta_lamda2</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">delta_lamda1</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">delta_lamda2</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;No valid solutions for delta lambda, a1 = </span><span class="si">{</span><span class="n">a1</span><span class="si">}</span><span class="s2">, a2 = </span><span class="si">{</span><span class="n">a2</span><span class="si">}</span><span class="s2">, a3 = </span><span class="si">{</span><span class="n">a3</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="n">delta_u_vec1</span> <span class="o">=</span> <span class="n">delta_u_bar</span> <span class="o">+</span> <span class="n">delta_lamda1</span> <span class="o">*</span> <span class="n">delta_u_t</span>
+        <span class="n">delta_u_vec2</span> <span class="o">=</span> <span class="n">delta_u_bar</span> <span class="o">+</span> <span class="n">delta_lamda2</span> <span class="o">*</span> <span class="n">delta_u_t</span>
+
+        <span class="n">Delta_u_vec_dir1</span> <span class="o">=</span> <span class="n">u_vec</span> <span class="o">+</span> <span class="n">delta_u_vec1</span> <span class="o">-</span> <span class="n">prev_u_vec</span>
+        <span class="n">Delta_lamda_dir1</span> <span class="o">=</span> <span class="n">lamda</span> <span class="o">+</span> <span class="n">delta_lamda1</span> <span class="o">-</span> <span class="n">prev_lamda</span>
+        <span class="n">dot_prod1</span> <span class="o">=</span> <span class="n">u_lamda_dot_product</span><span class="p">(</span><span class="n">Delta_u_vec_dir</span><span class="p">,</span> <span class="n">Delta_lamda_dir</span><span class="p">,</span> <span class="n">Delta_u_vec_dir1</span><span class="p">,</span> <span class="n">Delta_lamda_dir1</span><span class="p">)</span>
+
+        <span class="n">Delta_u_vec_dir2</span> <span class="o">=</span> <span class="n">u_vec</span> <span class="o">+</span> <span class="n">delta_u_vec2</span> <span class="o">-</span> <span class="n">prev_u_vec</span>
+        <span class="n">Delta_lamda_dir2</span> <span class="o">=</span> <span class="n">lamda</span> <span class="o">+</span> <span class="n">delta_lamda2</span> <span class="o">-</span> <span class="n">prev_lamda</span>
+        <span class="n">dot_prod2</span> <span class="o">=</span> <span class="n">u_lamda_dot_product</span><span class="p">(</span><span class="n">Delta_u_vec_dir</span><span class="p">,</span> <span class="n">Delta_lamda_dir</span><span class="p">,</span> <span class="n">Delta_u_vec_dir2</span><span class="p">,</span> <span class="n">Delta_lamda_dir2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dot_prod1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-10</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dot_prod2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-10</span><span class="p">:</span>
+            <span class="c1"># At initial step, (Delta_u_vec_dir, Delta_lamda_dir) is zero, so both dot_prod1 and dot_prod2 are zero.</span>
+            <span class="c1"># We simply select the larger value for delta_lamda.</span>
+            <span class="n">delta_lamda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">delta_lamda1</span><span class="p">,</span> <span class="n">delta_lamda2</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">dot_prod1</span> <span class="o">&gt;</span> <span class="n">dot_prod2</span><span class="p">:</span>
+            <span class="n">delta_lamda</span> <span class="o">=</span> <span class="n">delta_lamda1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">delta_lamda</span> <span class="o">=</span> <span class="n">delta_lamda2</span>
+
+        <span class="n">lamda</span> <span class="o">=</span> <span class="n">lamda</span> <span class="o">+</span> <span class="n">delta_lamda</span>
+        <span class="n">delta_u</span> <span class="o">=</span> <span class="n">delta_u_bar</span> <span class="o">+</span> <span class="n">delta_lamda</span> <span class="o">*</span> <span class="n">delta_u_t</span>
+        <span class="n">u_vec</span> <span class="o">=</span> <span class="n">u_vec</span> <span class="o">+</span> <span class="n">delta_u</span>
+
+        <span class="n">Delta_u_vec_dir</span> <span class="o">=</span> <span class="n">u_vec</span> <span class="o">-</span> <span class="n">prev_u_vec</span>
+        <span class="n">Delta_lamda_dir</span> <span class="o">=</span> <span class="n">lamda</span> <span class="o">-</span> <span class="n">prev_lamda</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Arc length solver: finished for one step, with Delta lambda = </span><span class="si">{</span><span class="n">lamda</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">prev_lamda</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+ 
+    <span class="k">return</span> <span class="n">u_vec</span><span class="p">,</span> <span class="n">lamda</span><span class="p">,</span> <span class="n">Delta_u_vec_dir</span><span class="p">,</span> <span class="n">Delta_lamda_dir</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">arc_length_solver_force_driven</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">prev_u_vec</span><span class="p">,</span> <span class="n">prev_lamda</span><span class="p">,</span> <span class="n">prev_Delta_u_vec</span><span class="p">,</span> <span class="n">prev_Delta_lamda</span><span class="p">,</span> <span class="n">q_vec</span><span class="p">,</span> <span class="n">Delta_l</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">psi</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    TODO: Does not support periodic B.C., need some work here.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">newton_update_helper</span><span class="p">(</span><span class="n">dofs</span><span class="p">):</span>
+        <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+        <span class="n">res_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">newton_update</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">res_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">apply_bc_vec</span><span class="p">(</span><span class="n">res_vec</span><span class="p">,</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">get_A</span><span class="p">(</span><span class="n">problem</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">u_lamda_dot_product</span><span class="p">(</span><span class="n">Delta_u_vec1</span><span class="p">,</span> <span class="n">Delta_lamda1</span><span class="p">,</span> <span class="n">Delta_u_vec2</span><span class="p">,</span> <span class="n">Delta_lamda2</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Delta_u_vec1</span><span class="o">*</span><span class="n">Delta_u_vec2</span><span class="p">)</span> <span class="o">+</span> <span class="n">psi</span><span class="o">**</span><span class="mf">2.</span><span class="o">*</span><span class="n">Delta_lamda1</span><span class="o">*</span><span class="n">Delta_lamda2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">q_vec_mapped</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span>
+ 
+    <span class="n">u_vec</span> <span class="o">=</span> <span class="n">prev_u_vec</span>
+    <span class="n">lamda</span> <span class="o">=</span> <span class="n">prev_lamda</span>
+    <span class="n">q_vec_mapped</span> <span class="o">=</span> <span class="n">assign_zeros_bc</span><span class="p">(</span><span class="n">q_vec</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+
+    <span class="n">Delta_u_vec_dir</span> <span class="o">=</span> <span class="n">prev_Delta_u_vec</span>
+    <span class="n">Delta_lamda_dir</span> <span class="o">=</span> <span class="n">prev_Delta_lamda</span>
+
+    <span class="n">tol</span> <span class="o">=</span> <span class="mf">1e-6</span>
+    <span class="n">res_val</span> <span class="o">=</span> <span class="mf">1.</span>
+    <span class="k">while</span> <span class="n">res_val</span> <span class="o">&gt;</span> <span class="n">tol</span><span class="p">:</span>
+        <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span> <span class="o">=</span> <span class="n">newton_update_helper</span><span class="p">(</span><span class="n">u_vec</span><span class="p">)</span>
+        <span class="n">res_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">res_vec</span> <span class="o">+</span> <span class="n">lamda</span><span class="o">*</span><span class="n">q_vec_mapped</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Arc length solver: res_val = </span><span class="si">{</span><span class="n">res_val</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># TODO: the scipy umfpack solver seems to be far better than the jax linear solver, so we use umfpack solver here.</span>
+        <span class="c1"># x0_1 = assign_bc(np.zeros_like(u_vec), problem)</span>
+        <span class="c1"># x0_2 = copy_bc(u_vec, problem)</span>
+        <span class="c1"># delta_u_bar = jax_solve(problem, A, -(res_vec + lamda*q_vec_mapped), x0=x0_1 - x0_2, precond=True)   </span>
+        <span class="c1"># delta_u_t = jax_solve(problem, A, -q_vec_mapped, x0=np.zeros_like(u_vec), precond=True)   </span>
+
+        <span class="n">delta_u_bar</span> <span class="o">=</span> <span class="n">umfpack_solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="o">-</span><span class="p">(</span><span class="n">res_vec</span> <span class="o">+</span> <span class="n">lamda</span><span class="o">*</span><span class="n">q_vec_mapped</span><span class="p">))</span>
+        <span class="n">delta_u_t</span> <span class="o">=</span> <span class="n">umfpack_solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="o">-</span><span class="n">q_vec_mapped</span><span class="p">)</span>
+
+        <span class="n">Delta_u_vec</span> <span class="o">=</span> <span class="n">u_vec</span> <span class="o">-</span> <span class="n">prev_u_vec</span>
+        <span class="n">Delta_lamda</span> <span class="o">=</span> <span class="n">lamda</span> <span class="o">-</span> <span class="n">prev_lamda</span>
+        <span class="n">a1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">delta_u_t</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span> <span class="o">+</span> <span class="n">psi</span><span class="o">**</span><span class="mf">2.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">q_vec_mapped</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span>
+        <span class="n">a2</span> <span class="o">=</span> <span class="mf">2.</span><span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">Delta_u_vec</span> <span class="o">+</span> <span class="n">delta_u_bar</span><span class="p">)</span><span class="o">*</span><span class="n">delta_u_t</span><span class="p">)</span> <span class="o">+</span> <span class="mf">2.</span><span class="o">*</span><span class="n">psi</span><span class="o">**</span><span class="mf">2.</span><span class="o">*</span><span class="n">Delta_lamda</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">q_vec_mapped</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span>
+        <span class="n">a3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">Delta_u_vec</span> <span class="o">+</span> <span class="n">delta_u_bar</span><span class="p">)</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span> <span class="o">+</span> <span class="n">psi</span><span class="o">**</span><span class="mf">2.</span><span class="o">*</span><span class="n">Delta_lamda</span><span class="o">**</span><span class="mf">2.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">q_vec_mapped</span><span class="o">**</span><span class="mf">2.</span><span class="p">)</span> <span class="o">-</span> <span class="n">Delta_l</span><span class="o">**</span><span class="mf">2.</span>
+
+        <span class="n">delta_lamda1</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">a2</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">a2</span><span class="o">**</span><span class="mf">2.</span> <span class="o">-</span> <span class="mf">4.</span><span class="o">*</span><span class="n">a1</span><span class="o">*</span><span class="n">a3</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">a1</span><span class="p">)</span>
+        <span class="n">delta_lamda2</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">a2</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">a2</span><span class="o">**</span><span class="mf">2.</span> <span class="o">-</span> <span class="mf">4.</span><span class="o">*</span><span class="n">a1</span><span class="o">*</span><span class="n">a3</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">a1</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Arc length solver: delta_lamda1 = </span><span class="si">{</span><span class="n">delta_lamda1</span><span class="si">}</span><span class="s2">, delta_lamda2 = </span><span class="si">{</span><span class="n">delta_lamda2</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">delta_lamda1</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">delta_lamda2</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;No valid solutions for delta lambda, a1 = </span><span class="si">{</span><span class="n">a1</span><span class="si">}</span><span class="s2">, a2 = </span><span class="si">{</span><span class="n">a2</span><span class="si">}</span><span class="s2">, a3 = </span><span class="si">{</span><span class="n">a3</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="n">delta_u_vec1</span> <span class="o">=</span> <span class="n">delta_u_bar</span> <span class="o">+</span> <span class="n">delta_lamda1</span> <span class="o">*</span> <span class="n">delta_u_t</span>
+        <span class="n">delta_u_vec2</span> <span class="o">=</span> <span class="n">delta_u_bar</span> <span class="o">+</span> <span class="n">delta_lamda2</span> <span class="o">*</span> <span class="n">delta_u_t</span>
+
+        <span class="n">Delta_u_vec_dir1</span> <span class="o">=</span> <span class="n">u_vec</span> <span class="o">+</span> <span class="n">delta_u_vec1</span> <span class="o">-</span> <span class="n">prev_u_vec</span>
+        <span class="n">Delta_lamda_dir1</span> <span class="o">=</span> <span class="n">lamda</span> <span class="o">+</span> <span class="n">delta_lamda1</span> <span class="o">-</span> <span class="n">prev_lamda</span>
+        <span class="n">dot_prod1</span> <span class="o">=</span> <span class="n">u_lamda_dot_product</span><span class="p">(</span><span class="n">Delta_u_vec_dir</span><span class="p">,</span> <span class="n">Delta_lamda_dir</span><span class="p">,</span> <span class="n">Delta_u_vec_dir1</span><span class="p">,</span> <span class="n">Delta_lamda_dir1</span><span class="p">)</span>
+
+        <span class="n">Delta_u_vec_dir2</span> <span class="o">=</span> <span class="n">u_vec</span> <span class="o">+</span> <span class="n">delta_u_vec2</span> <span class="o">-</span> <span class="n">prev_u_vec</span>
+        <span class="n">Delta_lamda_dir2</span> <span class="o">=</span> <span class="n">lamda</span> <span class="o">+</span> <span class="n">delta_lamda2</span> <span class="o">-</span> <span class="n">prev_lamda</span>
+        <span class="n">dot_prod2</span> <span class="o">=</span> <span class="n">u_lamda_dot_product</span><span class="p">(</span><span class="n">Delta_u_vec_dir</span><span class="p">,</span> <span class="n">Delta_lamda_dir</span><span class="p">,</span> <span class="n">Delta_u_vec_dir2</span><span class="p">,</span> <span class="n">Delta_lamda_dir2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dot_prod1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-10</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dot_prod2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-10</span><span class="p">:</span>
+            <span class="c1"># At initial step, (Delta_u_vec_dir, Delta_lamda_dir) is zero, so both dot_prod1 and dot_prod2 are zero.</span>
+            <span class="c1"># We simply select the larger value for delta_lamda.</span>
+            <span class="n">delta_lamda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">delta_lamda1</span><span class="p">,</span> <span class="n">delta_lamda2</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">dot_prod1</span> <span class="o">&gt;</span> <span class="n">dot_prod2</span><span class="p">:</span>
+            <span class="n">delta_lamda</span> <span class="o">=</span> <span class="n">delta_lamda1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">delta_lamda</span> <span class="o">=</span> <span class="n">delta_lamda2</span>
+
+        <span class="n">lamda</span> <span class="o">=</span> <span class="n">lamda</span> <span class="o">+</span> <span class="n">delta_lamda</span>
+        <span class="n">delta_u</span> <span class="o">=</span> <span class="n">delta_u_bar</span> <span class="o">+</span> <span class="n">delta_lamda</span> <span class="o">*</span> <span class="n">delta_u_t</span>
+        <span class="n">u_vec</span> <span class="o">=</span> <span class="n">u_vec</span> <span class="o">+</span> <span class="n">delta_u</span>
+
+        <span class="n">Delta_u_vec_dir</span> <span class="o">=</span> <span class="n">u_vec</span> <span class="o">-</span> <span class="n">prev_u_vec</span>
+        <span class="n">Delta_lamda_dir</span> <span class="o">=</span> <span class="n">lamda</span> <span class="o">-</span> <span class="n">prev_lamda</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Arc length solver: finished for one step, with Delta lambda = </span><span class="si">{</span><span class="n">lamda</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">prev_lamda</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+ 
+    <span class="k">return</span> <span class="n">u_vec</span><span class="p">,</span> <span class="n">lamda</span><span class="p">,</span> <span class="n">Delta_u_vec_dir</span><span class="p">,</span> <span class="n">Delta_lamda_dir</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_q_vec</span><span class="p">(</span><span class="n">problem</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Used in the arc length method only, to get the external force vector q_vec</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dofs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">num_total_dofs_all_vars</span><span class="p">)</span>
+    <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+    <span class="n">res_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">newton_update</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)</span>
+    <span class="n">q_vec</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">res_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">q_vec</span>
+
+
+<span class="c1">################################################################################</span>
+<span class="c1"># Dynamic relaxation solver</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">assembleCSR</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">dofs</span><span class="p">):</span>
+    <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+    <span class="n">problem</span><span class="o">.</span><span class="n">newton_update</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)</span>
+    <span class="n">A_sp_scipy</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">csr_array</span><span class="p">((</span><span class="n">problem</span><span class="o">.</span><span class="n">V</span><span class="p">,</span> <span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">I</span><span class="p">,</span> <span class="n">problem</span><span class="o">.</span><span class="n">J</span><span class="p">)),</span>
+        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">num_total_dofs</span><span class="p">,</span> <span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">num_total_dofs</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">fe</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">)):</span>
+            <span class="n">row_inds</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">fe</span><span class="o">.</span><span class="n">vec</span> <span class="o">+</span> <span class="n">fe</span><span class="o">.</span><span class="n">vec_inds_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">problem</span><span class="o">.</span><span class="n">offset</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">onp</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">row_ind</span> <span class="ow">in</span> <span class="n">row_inds</span><span class="p">:</span>
+                <span class="n">A_sp_scipy</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">A_sp_scipy</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">row_ind</span><span class="p">]:</span> <span class="n">A_sp_scipy</span><span class="o">.</span><span class="n">indptr</span><span class="p">[</span><span class="n">row_ind</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">0.</span>
+                <span class="n">A_sp_scipy</span><span class="p">[</span><span class="n">row_ind</span><span class="p">,</span> <span class="n">row_ind</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+
+    <span class="k">return</span> <span class="n">A_sp_scipy</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">calC</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">cmin</span><span class="p">,</span> <span class="n">cmax</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="mf">0.</span><span class="p">:</span> <span class="n">t</span> <span class="o">=</span> <span class="mf">0.</span>
+
+    <span class="n">c</span> <span class="o">=</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">onp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">c</span> <span class="o">&lt;</span> <span class="n">cmin</span><span class="p">):</span> <span class="n">c</span> <span class="o">=</span> <span class="n">cmin</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">c</span> <span class="o">&gt;</span> <span class="n">cmax</span><span class="p">):</span> <span class="n">c</span> <span class="o">=</span> <span class="n">cmax</span>
+
+    <span class="k">return</span> <span class="n">c</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">printInfo</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="n">qdot</span><span class="p">,</span> <span class="n">qdotdot</span><span class="p">,</span> <span class="n">nIters</span><span class="p">,</span> <span class="n">nPrint</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">info_force</span><span class="p">):</span>
+
+    <span class="c1">## printing control</span>
+    <span class="k">if</span> <span class="n">nIters</span> <span class="o">%</span> <span class="n">nPrint</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1">#logger.info(&#39;\t------------------------------------&#39;)</span>
+        <span class="k">if</span> <span class="n">info_force</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">((</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">DR Iteration </span><span class="si">%d</span><span class="s1">: Max force (residual error) = </span><span class="si">%g</span><span class="s1"> (tol = </span><span class="si">%g</span><span class="s1">)&#39;</span> <span class="o">+</span>
+                   <span class="s1">&#39;Max velocity = </span><span class="si">%g</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="n">nIters</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span>
+                                            <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">qdot</span><span class="p">))))</span>
+        <span class="k">if</span> <span class="n">info</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Damping t: &#39;</span><span class="p">,</span><span class="n">t</span><span class="p">,</span> <span class="p">);</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Damping coefficient: &#39;</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max epsilon: &#39;</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">eps</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max acceleration: &#39;</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">qdotdot</span><span class="p">)))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">dynamic_relax_solve</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">nKMat</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">nPrint</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">info_force</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">initial_guess</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Implementation of</span>
+
+<span class="sd">    Luet, David Joseph. Bounding volume hierarchy and non-uniform rational B-splines for contact enforcement</span>
+<span class="sd">    in large deformation finite element analysis of sheet metal forming. Diss. Princeton University, 2016.</span>
+<span class="sd">    Chapter 4.3 Nonlinear System Solution</span>
+
+<span class="sd">    Particularly good for handling buckling behavior.</span>
+<span class="sd">    There is a FEniCS version of this dynamic relaxation algorithm.</span>
+<span class="sd">    The code below is a direct translation from the FEniCS version.</span>
+
+<span class="sd"> </span>
+<span class="sd">    TODO: Does not support periodic B.C., need some work here.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">solver_options</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;umfpack_solver&#39;</span><span class="p">:</span> <span class="p">{}}</span>
+
+    <span class="c1"># TODO: consider these in initial guess</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">newton_update_helper</span><span class="p">(</span><span class="n">dofs</span><span class="p">):</span>
+        <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+        <span class="n">res_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">newton_update</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">res_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">apply_bc_vec</span><span class="p">(</span><span class="n">res_vec</span><span class="p">,</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">get_A</span><span class="p">(</span><span class="n">problem</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span>
+ 
+    <span class="n">dofs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">num_total_dofs_all_vars</span><span class="p">)</span>
+    <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span> <span class="o">=</span> <span class="n">newton_update_helper</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+    <span class="n">dofs</span> <span class="o">=</span> <span class="n">linear_incremental_solver</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">res_vec</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">dofs</span><span class="p">,</span> <span class="n">solver_options</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">initial_guess</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dofs</span> <span class="o">=</span> <span class="n">initial_guess</span>
+        <span class="n">dofs</span> <span class="o">=</span> <span class="n">assign_bc</span><span class="p">(</span><span class="n">dofs</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+
+    <span class="c1"># parameters not to change</span>
+    <span class="n">cmin</span> <span class="o">=</span> <span class="mf">1e-3</span>
+    <span class="n">cmax</span> <span class="o">=</span> <span class="mf">3.9</span>
+    <span class="n">h_tilde</span> <span class="o">=</span> <span class="mf">1.1</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="mf">1.</span>
+
+    <span class="c1"># initialize all arrays</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>  <span class="c1">#print(&quot;--------num of DOF&#39;s: %d-----------&quot; % N)</span>
+    <span class="c1">#initialize displacements, velocities and accelerations</span>
+    <span class="n">q</span><span class="p">,</span> <span class="n">qdot</span><span class="p">,</span> <span class="n">qdotdot</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">),</span> <span class="n">onp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">),</span> <span class="n">onp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="c1">#initialize displacements, velocities and accelerations from a previous time step</span>
+    <span class="n">q_old</span><span class="p">,</span> <span class="n">qdot_old</span><span class="p">,</span> <span class="n">qdotdot_old</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">),</span> <span class="n">onp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">),</span> <span class="n">onp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="c1">#initialize the M, eps, R_old arrays</span>
+    <span class="n">eps</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">R_old</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">),</span> <span class="n">onp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">),</span> <span class="n">onp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">),</span> <span class="n">onp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+
+    <span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">assembleVec</span><span class="p">(</span><span class="n">dofs</span><span class="p">):</span>
+        <span class="n">res_fn</span> <span class="o">=</span> <span class="n">get_flatten_fn</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">compute_residual</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">res_fn</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+        <span class="n">res_vec</span> <span class="o">=</span> <span class="n">assign_zeros_bc</span><span class="p">(</span><span class="n">res_vec</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res_vec</span>
+
+    <span class="n">R</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">assembleVec</span><span class="p">(</span><span class="n">dofs</span><span class="p">))</span>
+    <span class="n">KCSR</span> <span class="o">=</span> <span class="n">assembleCSR</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">dofs</span><span class="p">)</span>
+
+    <span class="n">M</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">h_tilde</span> <span class="o">*</span> <span class="n">h_tilde</span> <span class="o">/</span> <span class="mf">4.</span> <span class="o">*</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="n">onp</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">KCSR</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+    <span class="n">q</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">dofs</span>
+    <span class="n">qdot</span><span class="p">[:]</span> <span class="o">=</span> <span class="o">-</span><span class="n">h</span> <span class="o">/</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">R</span> <span class="o">/</span> <span class="n">M</span>
+    <span class="c1"># set the counters for iterations and</span>
+    <span class="n">nIters</span><span class="p">,</span> <span class="n">iKMat</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="n">timeZ</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="c1">#Measurement of loop time.</span>
+
+    <span class="k">assert</span> <span class="n">onp</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">M</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;M not finite&quot;</span>
+    <span class="k">assert</span> <span class="n">onp</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">q</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;q not finite&quot;</span>
+    <span class="k">assert</span> <span class="n">onp</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">qdot</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;qdot not finite&quot;</span>
+
+    <span class="n">error</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">R</span><span class="p">))</span>
+
+    <span class="k">while</span> <span class="n">error</span> <span class="o">&gt;</span> <span class="n">tol</span><span class="p">:</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;error = </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># marching forward</span>
+        <span class="n">q_old</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">q</span><span class="p">[:];</span> <span class="n">R_old</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">R</span><span class="p">[:]</span>
+        <span class="n">q</span><span class="p">[:]</span> <span class="o">+=</span> <span class="n">h</span><span class="o">*</span><span class="n">qdot</span><span class="p">;</span> <span class="n">dofs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+
+        <span class="n">R</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">assembleVec</span><span class="p">(</span><span class="n">dofs</span><span class="p">))</span>
+
+        <span class="n">nIters</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">iKMat</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">R</span><span class="p">))</span>
+
+        <span class="c1"># damping calculation</span>
+        <span class="n">S0</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">dot</span><span class="p">((</span><span class="n">R</span> <span class="o">-</span> <span class="n">R_old</span><span class="p">)</span> <span class="o">/</span> <span class="n">h</span><span class="p">,</span> <span class="n">qdot</span><span class="p">)</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">S0</span> <span class="o">/</span> <span class="n">onp</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;i,i,i&#39;</span><span class="p">,</span> <span class="n">qdot</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">qdot</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">calC</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">cmin</span><span class="p">,</span> <span class="n">cmax</span><span class="p">)</span>
+
+        <span class="c1"># determine whether to recal KMat</span>
+        <span class="n">eps</span> <span class="o">=</span> <span class="n">h_tilde</span> <span class="o">*</span> <span class="n">h_tilde</span> <span class="o">/</span> <span class="mf">4.</span> <span class="o">*</span> <span class="n">onp</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span>
+            <span class="n">onp</span><span class="o">.</span><span class="n">divide</span><span class="p">((</span><span class="n">qdotdot</span> <span class="o">-</span> <span class="n">qdotdot_old</span><span class="p">),</span> <span class="p">(</span><span class="n">q</span> <span class="o">-</span> <span class="n">q_old</span><span class="p">),</span>
+                       <span class="n">out</span><span class="o">=</span><span class="n">onp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">((</span><span class="n">qdotdot</span> <span class="o">-</span> <span class="n">qdotdot_old</span><span class="p">)),</span>
+                       <span class="n">where</span><span class="o">=</span><span class="p">(</span><span class="n">q</span> <span class="o">-</span> <span class="n">q_old</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">))</span>
+
+        <span class="c1"># calculating the jacobian matrix</span>
+        <span class="k">if</span> <span class="p">((</span><span class="n">onp</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">eps</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">iKMat</span> <span class="o">&gt;</span> <span class="n">nKMat</span><span class="p">)):</span> <span class="c1">#SPR JAN max --&gt; min</span>
+            <span class="k">if</span> <span class="n">info</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Recalculating the tangent matrix: &#39;</span><span class="p">,</span> <span class="n">nIters</span><span class="p">)</span>
+
+            <span class="n">iKMat</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">KCSR</span> <span class="o">=</span> <span class="n">assembleCSR</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">dofs</span><span class="p">)</span>
+            <span class="n">M</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">h_tilde</span> <span class="o">*</span> <span class="n">h_tilde</span> <span class="o">/</span> <span class="mf">4.</span> <span class="o">*</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="n">onp</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">KCSR</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+
+        <span class="c1"># compute new velocities and accelerations</span>
+        <span class="n">qdot_old</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">qdot</span><span class="p">[:];</span> <span class="n">qdotdot_old</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">qdotdot</span><span class="p">[:];</span>
+        <span class="n">qdot</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2.</span><span class="o">-</span> <span class="n">c</span><span class="o">*</span><span class="n">h</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span> <span class="o">+</span> <span class="n">c</span><span class="o">*</span><span class="n">h</span><span class="p">)</span> <span class="o">*</span> <span class="n">qdot_old</span> <span class="o">-</span> <span class="mf">2.</span><span class="o">*</span><span class="n">h</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">+</span><span class="n">c</span><span class="o">*</span><span class="n">h</span><span class="p">)</span><span class="o">*</span> <span class="n">R</span> <span class="o">/</span> <span class="n">M</span>
+        <span class="n">qdot_old</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">qdot</span><span class="p">[:]</span>
+        <span class="n">qdotdot</span> <span class="o">=</span> <span class="n">qdot</span> <span class="o">-</span> <span class="n">qdot_old</span>
+
+        <span class="c1"># output on screen</span>
+        <span class="n">printInfo</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="n">qdot</span><span class="p">,</span> <span class="n">qdotdot</span><span class="p">,</span> <span class="n">nIters</span><span class="p">,</span> <span class="n">nPrint</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">info_force</span><span class="p">)</span>
+
+    <span class="c1"># check if converged</span>
+    <span class="n">convergence</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="n">onp</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">R</span><span class="p">))):</span>
+        <span class="n">convergence</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># print final info</span>
+    <span class="k">if</span> <span class="n">convergence</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DRSolve finished in </span><span class="si">%d</span><span class="s2"> iterations and </span><span class="si">%f</span><span class="s2">s&quot;</span> <span class="o">%</span> \
+              <span class="p">(</span><span class="n">nIters</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">timeZ</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FAILED to converged&quot;</span><span class="p">)</span>
+
+    <span class="n">sol_list</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">sol_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="c1">################################################################################</span>
+<span class="c1"># Implicit differentiation with the adjoint method</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">implicit_vjp</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">v_list</span><span class="p">,</span> <span class="n">adjoint_solver_options</span><span class="p">):</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">constraint_fn</span><span class="p">(</span><span class="n">dofs</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;c(u, p)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">problem</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">res_fn</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">compute_residual</span>
+        <span class="n">res_fn</span> <span class="o">=</span> <span class="n">get_flatten_fn</span><span class="p">(</span><span class="n">res_fn</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+        <span class="n">res_fn</span> <span class="o">=</span> <span class="n">apply_bc</span><span class="p">(</span><span class="n">res_fn</span><span class="p">,</span> <span class="n">problem</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res_fn</span><span class="p">(</span><span class="n">dofs</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">constraint_fn_sol_to_sol</span><span class="p">(</span><span class="n">sol_list</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="n">dofs</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">con_vec</span> <span class="o">=</span> <span class="n">constraint_fn</span><span class="p">(</span><span class="n">dofs</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">con_vec</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_partial_params_c_fn</span><span class="p">(</span><span class="n">sol_list</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;c(u=u, p)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">partial_params_c_fn</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">constraint_fn_sol_to_sol</span><span class="p">(</span><span class="n">sol_list</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">partial_params_c_fn</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_vjp_contraint_fn_params</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;v*(partial dc/dp)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">partial_c_fn</span> <span class="o">=</span> <span class="n">get_partial_params_c_fn</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">vjp_linear_fn</span><span class="p">(</span><span class="n">v_list</span><span class="p">):</span>
+            <span class="n">primals_output</span><span class="p">,</span> <span class="n">f_vjp</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vjp</span><span class="p">(</span><span class="n">partial_c_fn</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+            <span class="n">val</span><span class="p">,</span> <span class="o">=</span> <span class="n">f_vjp</span><span class="p">(</span><span class="n">v_list</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">val</span>
+        <span class="k">return</span> <span class="n">vjp_linear_fn</span>
+
+    <span class="n">problem</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">problem</span><span class="o">.</span><span class="n">newton_update</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)</span>
+
+    <span class="n">A</span> <span class="o">=</span> <span class="n">get_A</span><span class="p">(</span><span class="n">problem</span><span class="p">)</span>
+    <span class="n">v_vec</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">v_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="s1">&#39;P_mat&#39;</span><span class="p">):</span>
+        <span class="n">v_vec</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">v_vec</span>
+
+    <span class="c1"># Be careful that A.transpose() does in-place change to A</span>
+    <span class="n">adjoint_vec</span> <span class="o">=</span> <span class="n">linear_solver</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span> <span class="n">v_vec</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">adjoint_solver_options</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="s1">&#39;P_mat&#39;</span><span class="p">):</span>
+        <span class="n">adjoint_vec</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">P_mat</span> <span class="o">@</span> <span class="n">adjoint_vec</span>
+
+    <span class="n">vjp_linear_fn</span> <span class="o">=</span> <span class="n">get_vjp_contraint_fn_params</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">)</span>
+    <span class="n">vjp_result</span> <span class="o">=</span> <span class="n">vjp_linear_fn</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">unflatten_fn_sol_list</span><span class="p">(</span><span class="n">adjoint_vec</span><span class="p">))</span>
+    <span class="n">vjp_result</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">tree_util</span><span class="o">.</span><span class="n">tree_map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">x</span><span class="p">,</span> <span class="n">vjp_result</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">vjp_result</span>
+
+
+<div class="viewcode-block" id="ad_wrapper">
+<a class="viewcode-back" href="../../more/api/api_solver.html#jax_fem.solver.ad_wrapper">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ad_wrapper</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">solver_options</span><span class="o">=</span><span class="p">{},</span> <span class="n">adjoint_solver_options</span><span class="o">=</span><span class="p">{}):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Automatic differentiation wrapper for the forward problem.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    problem : Problem</span>
+<span class="sd">    solver_options : dictionary</span>
+<span class="sd">    adjoint_solver_options : dictionary</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    fwd_pred : callable</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nd">@jax</span><span class="o">.</span><span class="n">custom_vjp</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fwd_pred</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="n">problem</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">sol_list</span> <span class="o">=</span> <span class="n">solver</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">solver_options</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sol_list</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">f_fwd</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="n">sol_list</span> <span class="o">=</span> <span class="n">fwd_pred</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sol_list</span><span class="p">,</span> <span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">f_bwd</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Running backward and solving the adjoint problem...&quot;</span><span class="p">)</span>
+        <span class="n">params</span><span class="p">,</span> <span class="n">sol_list</span> <span class="o">=</span> <span class="n">res</span>
+        <span class="n">vjp_result</span> <span class="o">=</span> <span class="n">implicit_vjp</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">adjoint_solver_options</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">vjp_result</span><span class="p">,</span> <span class="p">)</span>
+
+    <span class="n">fwd_pred</span><span class="o">.</span><span class="n">defvjp</span><span class="p">(</span><span class="n">f_fwd</span><span class="p">,</span> <span class="n">f_bwd</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fwd_pred</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,752 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Compute gradients &#8212; JAX-FEM 0.0.9 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=972fa7a7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=39f6cbd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'learn/compute_gradients';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Topology optimization" href="topology_optimization.html" />
+    <link rel="prev" title="Plasticity" href="plasticity.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">JAX-FEM 0.0.9 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="poisson.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="linear_elasticity.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hyperelasticity.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plasticity.html">Plasticity</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="topology_optimization.html">Topology optimization</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../more/FAQ.html">Frequently asked questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../more/useful/main.html">Useful links</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../more/citation.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../more/project.html">Miscellaneous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../more/contact.html">Contact</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/learn/compute_gradients.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Compute gradients</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem-definition">Problem definition</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Implementation">Implementation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Weak-form">Weak form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Mesh">Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Boundary-conditions">Boundary conditions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem">Problem</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Solver">Solver</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Postprocessing">Postprocessing</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadLinks = document.querySelectorAll('a.reference.download.internal');
+    downloadLinks.forEach(link => {
+        link.setAttribute('download', '');
+        link.href = '../_sources/' + link.getAttribute('href');
+    });
+});
+</script><section id="Compute-gradients">
+<h1>Compute gradients<a class="headerlink" href="#Compute-gradients" title="Link to this heading">#</a></h1>
+<section id="Problem-definition">
+<h2>Problem definition<a class="headerlink" href="#Problem-definition" title="Link to this heading">#</a></h2>
+<p>In this example, we focus on inverse problems that aim to infer unknown model parameters or loading conditions from observed deformation data, often requiring efficient and accurate gradient computation under large strains. We demostrate the process to compute the derivative by automatic differentiation and validate the results by the finite difference method. The same hyperelastic body as in the <a class="reference external" href="https://xwpken.github.io/jax-fem-docs-dev/learn/hyperelasticity.html">hyperelasticity example</a>
+is considered, i.e., a unit cube with a neo-Hookean solid model. In addition, we have the following definitions:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(\Omega = (0,1) \times (0,1) \times (0,1)\)</span> (a unit cube)</p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{b} = [0, 0, 0]\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\Gamma_D = (0,1) \times (0,1) \times \{0\}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{u}_D = [0, 0, \beta]\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\Gamma_{N_1} = (0,1) \times (0,1) \times \{1\}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{t}_{N_1} = [0, 0, -1000]\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\Gamma_{N_2} = \partial \Omega \setminus (\Gamma_D \cup \Gamma_{N_1})\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{t}_{N_2} = [0, 0, 0]\)</span></p></li>
+</ul>
+<p>To solve the inverse problem, we formulate an objective function that measures the discrepancy between the computed displacement and the target one, and compute its derivatives with respect to model parameters. The objective function is defined as:</p>
+<div class="math notranslate nohighlight">
+\[J = \sum_{i=1}^{N_d} \left( \boldsymbol{u}[i] \right)^2\]</div>
+<p>where <span class="math notranslate nohighlight">\(N_d\)</span> is the total number of degrees of freedom. <span class="math notranslate nohighlight">\(u[i]\)</span> is the <span class="math notranslate nohighlight">\(i\)</span>-th component of the displacement vector <span class="math notranslate nohighlight">\(\boldsymbol{u}\)</span>, which is obtained by solving the following discretized governing PDE:</p>
+<div class="math notranslate nohighlight">
+\[\mathcal{C}(\boldsymbol{u}, \boldsymbol{\alpha}) = 0\]</div>
+<p>where <span class="math notranslate nohighlight">\(\boldsymbol{\alpha}\)</span> is the parameter vector. Here, we set up three parameters, <span class="math notranslate nohighlight">\(\boldsymbol{\alpha}_1 = E\)</span> the elasticity modulus, <span class="math notranslate nohighlight">\(\boldsymbol{\alpha}_2 = \rho\)</span> the material density, and <span class="math notranslate nohighlight">\(\boldsymbol{\alpha}_3 = \beta\)</span> the scale factor of the Dirichlet boundary conditions. We can see that <span class="math notranslate nohighlight">\(\boldsymbol{u}(\boldsymbol{\alpha})\)</span> is the implicit function of the parameter vector <span class="math notranslate nohighlight">\(\boldsymbol{\alpha}\)</span>.</p>
+</section>
+<section id="Implementation">
+<h2>Implementation<a class="headerlink" href="#Implementation" title="Link to this heading">#</a></h2>
+<p>First, we need to import some useful modules and JAX-FEM specific modules：</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import some useful modules.</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">onp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">glob</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+
+<span class="c1"># Import JAX-FEM specific modules.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.problem</span><span class="w"> </span><span class="kn">import</span> <span class="n">Problem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.solver</span><span class="w"> </span><span class="kn">import</span> <span class="n">solver</span><span class="p">,</span> <span class="n">ad_wrapper</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_sol</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.generate_mesh</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_meshio_cell_type</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">box_mesh_gmsh</span>
+<br/></pre></div>
+</div>
+</div>
+<section id="Weak-form">
+<h3>Weak form<a class="headerlink" href="#Weak-form" title="Link to this heading">#</a></h3>
+<p>Similarly, we use the <strong>Laplace Kernel</strong> to implement hyperelastic constitutive relations by overriding the <code class="docutils literal notranslate"><span class="pre">get_tensor_map</span></code> method, and utilize <strong>Surface Kernel</strong> for boundary condition implementation. The <code class="docutils literal notranslate"><span class="pre">get_surface_maps</span></code> method defines boundary loading through the surface mapping function <code class="docutils literal notranslate"><span class="pre">surface_map</span></code>, where the returned traction vector is integrated over boundary faces via the <strong>Surface Kernel</strong>.</p>
+<p>For inverse problems, the <code class="docutils literal notranslate"><span class="pre">set_params(params)</span></code> method provides the interface for dynamic model parameter updates, decomposing parameters into material properties (<span class="math notranslate nohighlight">\(E\)</span>, <span class="math notranslate nohighlight">\(\rho\)</span>) and boundary condition scales (<span class="math notranslate nohighlight">\(\beta\)</span>). This method assigns material density as internal variable <code class="docutils literal notranslate"><span class="pre">self.internal_vars</span> <span class="pre">=</span> <span class="pre">[rho]</span></code> and modifies Dirichlet boundary conditions through <code class="docutils literal notranslate"><span class="pre">self.fe.dirichlet_bc_info</span></code> updates.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">HyperElasticity</span><span class="p">(</span><span class="n">Problem</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">custom_init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fe</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_tensor_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">psi</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">rho</span><span class="p">):</span>
+            <span class="n">E</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">E</span> <span class="o">*</span> <span class="n">rho</span>
+            <span class="n">nu</span> <span class="o">=</span> <span class="mf">0.3</span>
+            <span class="n">mu</span> <span class="o">=</span> <span class="n">E</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="p">(</span><span class="mf">1.</span> <span class="o">+</span> <span class="n">nu</span><span class="p">))</span>
+            <span class="n">kappa</span> <span class="o">=</span> <span class="n">E</span><span class="o">/</span><span class="p">(</span><span class="mf">3.</span><span class="o">*</span><span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="mf">2.</span><span class="o">*</span><span class="n">nu</span><span class="p">))</span>
+            <span class="n">J</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="n">F</span><span class="p">)</span>
+            <span class="n">Jinv</span> <span class="o">=</span> <span class="n">J</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">2.</span><span class="o">/</span><span class="mf">3.</span><span class="p">)</span>
+            <span class="n">I1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">F</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">=</span> <span class="p">(</span><span class="n">mu</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">Jinv</span><span class="o">*</span><span class="n">I1</span> <span class="o">-</span> <span class="mf">3.</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">kappa</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">J</span> <span class="o">-</span> <span class="mf">1.</span><span class="p">)</span><span class="o">**</span><span class="mf">2.</span>
+            <span class="k">return</span> <span class="n">energy</span>
+        <span class="n">P_fn</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">first_PK_stress</span><span class="p">(</span><span class="n">u_grad</span><span class="p">,</span> <span class="n">rho</span><span class="p">):</span>
+            <span class="n">I</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+            <span class="n">F</span> <span class="o">=</span> <span class="n">u_grad</span> <span class="o">+</span> <span class="n">I</span>
+            <span class="n">P</span> <span class="o">=</span> <span class="n">P_fn</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">rho</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">P</span>
+        <span class="k">return</span> <span class="n">first_PK_stress</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_surface_maps</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">surface_map</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1e3</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">surface_map</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="n">E</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">scale_d</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">E</span> <span class="o">=</span> <span class="n">E</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_vars</span> <span class="o">=</span> <span class="p">[</span><span class="n">rho</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">dirichlet_bc_info</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_dirichlet_bottom</span><span class="p">(</span><span class="n">scale_d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">update_Dirichlet_boundary_conditions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">dirichlet_bc_info</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="Mesh">
+<h3>Mesh<a class="headerlink" href="#Mesh" title="Link to this heading">#</a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Specify mesh-related information (first-order hexahedron element).</span>
+<span class="n">ele_type</span> <span class="o">=</span> <span class="s1">&#39;HEX8&#39;</span>
+<span class="n">cell_type</span> <span class="o">=</span> <span class="n">get_meshio_cell_type</span><span class="p">(</span><span class="n">ele_type</span><span class="p">)</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;data&#39;</span><span class="p">)</span>
+<span class="n">Lx</span><span class="p">,</span> <span class="n">Ly</span><span class="p">,</span> <span class="n">Lz</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span>
+<span class="n">meshio_mesh</span> <span class="o">=</span> <span class="n">box_mesh_gmsh</span><span class="p">(</span><span class="n">Nx</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">Ny</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">Nz</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">Lx</span><span class="o">=</span><span class="n">Lx</span><span class="p">,</span> <span class="n">Ly</span><span class="o">=</span><span class="n">Ly</span><span class="p">,</span> <span class="n">Lz</span><span class="o">=</span><span class="n">Lz</span><span class="p">,</span> <span class="n">data_dir</span><span class="o">=</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">ele_type</span><span class="o">=</span><span class="n">ele_type</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">meshio_mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">meshio_mesh</span><span class="o">.</span><span class="n">cells_dict</span><span class="p">[</span><span class="n">cell_type</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Boundary-conditions">
+<h3>Boundary conditions<a class="headerlink" href="#Boundary-conditions" title="Link to this heading">#</a></h3>
+<p>Dirichlet boundary condition is applied on the bottom surface (<span class="math notranslate nohighlight">\(z = 0\)</span>):</p>
+<ul class="simple">
+<li><p>Displacement in the <span class="math notranslate nohighlight">\(x\)</span> and <span class="math notranslate nohighlight">\(y\)</span> directions is fixed to zero.</p></li>
+<li><p>Displacement in the <span class="math notranslate nohighlight">\(z\)</span> direction is set to <span class="math notranslate nohighlight">\(\beta L_z\)</span>, where <span class="math notranslate nohighlight">\(\beta\)</span> is a scaling parameter.</p></li>
+</ul>
+<p>Neumann boundary condition (surface traction) is applied on the top surface (<span class="math notranslate nohighlight">\(z = L_z\)</span>).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define Dirichlet boundary values.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_dirichlet_bottom</span><span class="p">(</span><span class="n">scale</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dirichlet_bottom</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+        <span class="n">z_disp</span> <span class="o">=</span> <span class="n">scale</span><span class="o">*</span><span class="n">Lz</span>
+        <span class="k">return</span> <span class="n">z_disp</span>
+    <span class="k">return</span> <span class="n">dirichlet_bottom</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">zero_dirichlet_val</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.</span>
+
+<span class="c1"># Define boundary locations.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">bottom</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">top</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">Lz</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+
+<span class="n">dirichlet_bc_info</span> <span class="o">=</span> <span class="p">[[</span><span class="n">bottom</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="n">zero_dirichlet_val</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span> <span class="o">+</span> <span class="p">[</span><span class="n">get_dirichlet_bottom</span><span class="p">(</span><span class="mf">1.</span><span class="p">)]]</span>
+<span class="n">location_fns</span> <span class="o">=</span> <span class="p">[</span><span class="n">top</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Problem">
+<h3>Problem<a class="headerlink" href="#Problem" title="Link to this heading">#</a></h3>
+<p>we can proceed to define the problem in JAX-FEM</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create an instance of the problem.</span>
+<span class="n">problem</span> <span class="o">=</span> <span class="n">HyperElasticity</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">vec</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">ele_type</span><span class="o">=</span><span class="n">ele_type</span><span class="p">,</span> <span class="n">dirichlet_bc_info</span><span class="o">=</span><span class="n">dirichlet_bc_info</span><span class="p">,</span> <span class="n">location_fns</span><span class="o">=</span><span class="n">location_fns</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>and define the parameter values:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rho</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">problem</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">num_cells</span><span class="p">,</span> <span class="n">problem</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">num_quads</span><span class="p">))</span>
+<span class="n">E</span> <span class="o">=</span> <span class="mf">1.e6</span>
+<span class="n">scale_d</span> <span class="o">=</span> <span class="mf">1.</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="n">E</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">scale_d</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Solver">
+<h3>Solver<a class="headerlink" href="#Solver" title="Link to this heading">#</a></h3>
+<p>In <code class="docutils literal notranslate"><span class="pre">jax_fem</span></code>, users can easily compute the derivative of the objective function with respect to these parameters through automatic differentiation. We first wrap the forward problem with the function <code class="docutils literal notranslate"><span class="pre">jax_fem.solver.ad_wrapper</span></code>, which defines the implicit differentiation through <code class="docutils literal notranslate"><span class="pre">&#64;jax.custom_vjp</span></code>. The wrapper defines custom forward and backward passes: the forward pass <code class="docutils literal notranslate"><span class="pre">f_fwd</span></code> calls the nonlinear solver to obtain the displacement field, while the backward pass <code class="docutils literal notranslate"><span class="pre">f_bwd</span></code> implements the
+adjoint method through <code class="docutils literal notranslate"><span class="pre">implicit_vjp</span></code>, computing parameter sensitivities via the adjoint method. This enables efficient gradient computation for inverse problems using standard <code class="docutils literal notranslate"><span class="pre">jax</span></code> operations like <code class="docutils literal notranslate"><span class="pre">jax.grad</span></code> on the composed objective function <span class="math notranslate nohighlight">\(J\)</span>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Implicit differentiation wrapper</span>
+<span class="n">fwd_pred</span> <span class="o">=</span> <span class="n">ad_wrapper</span><span class="p">(</span><span class="n">problem</span><span class="p">)</span>
+<span class="n">sol_list</span> <span class="o">=</span> <span class="n">fwd_pred</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">test_fn</span><span class="p">(</span><span class="n">sol_list</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">sol_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">composed_fn</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">test_fn</span><span class="p">(</span><span class="n">fwd_pred</span><span class="p">(</span><span class="n">params</span><span class="p">))</span>
+
+<span class="n">val</span> <span class="o">=</span> <span class="n">test_fn</span><span class="p">(</span><span class="n">sol_list</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We also use the finte difference method to validate the results.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">h</span> <span class="o">=</span> <span class="mf">1e-3</span> <span class="c1"># small perturbation</span>
+
+<span class="c1"># Forward difference</span>
+<span class="n">E_plus</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">h</span><span class="p">)</span><span class="o">*</span><span class="n">E</span>
+<span class="n">params_E</span> <span class="o">=</span> <span class="p">[</span><span class="n">E_plus</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">scale_d</span><span class="p">]</span>
+<span class="n">dE_fd</span> <span class="o">=</span> <span class="p">(</span><span class="n">composed_fn</span><span class="p">(</span><span class="n">params_E</span><span class="p">)</span> <span class="o">-</span> <span class="n">val</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">h</span><span class="o">*</span><span class="n">E</span><span class="p">)</span>
+
+<span class="n">rho_plus</span> <span class="o">=</span> <span class="n">rho</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="n">h</span><span class="p">)</span><span class="o">*</span><span class="n">rho</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="n">params_rho</span> <span class="o">=</span> <span class="p">[</span><span class="n">E</span><span class="p">,</span> <span class="n">rho_plus</span><span class="p">,</span> <span class="n">scale_d</span><span class="p">]</span>
+<span class="n">drho_fd_00</span> <span class="o">=</span> <span class="p">(</span><span class="n">composed_fn</span><span class="p">(</span><span class="n">params_rho</span><span class="p">)</span> <span class="o">-</span> <span class="n">val</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">h</span><span class="o">*</span><span class="n">rho</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+<span class="n">scale_d_plus</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">h</span><span class="p">)</span><span class="o">*</span><span class="n">scale_d</span>
+<span class="n">params_scale_d</span> <span class="o">=</span> <span class="p">[</span><span class="n">E</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">scale_d_plus</span><span class="p">]</span>
+<span class="n">dscale_d_fd</span> <span class="o">=</span> <span class="p">(</span><span class="n">composed_fn</span><span class="p">(</span><span class="n">params_scale_d</span><span class="p">)</span> <span class="o">-</span> <span class="n">val</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">h</span><span class="o">*</span><span class="n">scale_d</span><span class="p">)</span>
+
+<span class="c1"># Derivative obtained by automatic differentiation</span>
+<span class="n">dE</span><span class="p">,</span> <span class="n">drho</span><span class="p">,</span> <span class="n">dscale_d</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">composed_fn</span><span class="p">)(</span><span class="n">params</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Postprocessing">
+<h3>Postprocessing<a class="headerlink" href="#Postprocessing" title="Link to this heading">#</a></h3>
+<p>We then compare the computation results:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Comparison</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Derivative comparison between automatic differentiation (AD) and finite difference (FD)&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">drho[0, 0] = </span><span class="si">{</span><span class="n">drho</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, drho_fd_00 = </span><span class="si">{</span><span class="n">drho_fd_00</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">dscale_d = </span><span class="si">{</span><span class="n">dscale_d</span><span class="si">}</span><span class="s2">, dscale_d_fd = </span><span class="si">{</span><span class="n">dscale_d_fd</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">dE = </span><span class="si">{</span><span class="n">dE</span><span class="si">}</span><span class="s2">, dE_fd = </span><span class="si">{</span><span class="n">dE_fd</span><span class="si">}</span><span class="s2">, WRONG results! Please avoid gradients w.r.t self.E&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;This is due to the use of global variable self.E, inside a jax jitted function.&quot;</span><span class="p">)</span>
+
+<span class="n">vtk_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;vtk/u.vtu&#39;</span><span class="p">)</span>
+<span class="n">save_sol</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fe</span><span class="p">,</span> <span class="n">sol_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vtk_path</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>which are shown as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>Derivative<span class="w"> </span>comparison<span class="w"> </span>between<span class="w"> </span>automatic<span class="w"> </span>differentiation<span class="w"> </span><span class="o">(</span>AD<span class="o">)</span><span class="w"> </span>and<span class="w"> </span>finite<span class="w"> </span>difference<span class="w"> </span><span class="o">(</span>FD<span class="o">)</span>
+<span class="nv">dE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">4</span>.0641751938577116e-07,<span class="w"> </span><span class="nv">dE_fd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0</span>.0,<span class="w"> </span>WRONG<span class="w"> </span>results!<span class="w"> </span>Please<span class="w"> </span>avoid<span class="w"> </span>gradients<span class="w"> </span>w.r.t<span class="w"> </span>self.E
+drho<span class="o">[</span><span class="m">0</span>,<span class="w"> </span><span class="m">0</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0</span>.002266954599447443,<span class="w"> </span><span class="nv">drho_fd_00</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0</span>.0022666187078357325
+<span class="nv">dscale_d</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">431</span>.59223609853564,<span class="w"> </span><span class="nv">dscale_d_fd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">431</span>.80823609844765
+</pre></div>
+</div>
+<blockquote>
+<div><p>Please refer to this <a class="reference external" href="https://github.com/deepmodeling/jax-fem/blob/main/docs/source/learn/compute_gradients.ipynb">link</a> to download the source file.</p>
+</div></blockquote>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="plasticity.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Plasticity</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="topology_optimization.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Topology optimization</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem-definition">Problem definition</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Implementation">Implementation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Weak-form">Weak form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Mesh">Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Boundary-conditions">Boundary conditions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem">Problem</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Solver">Solver</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Postprocessing">Postprocessing</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

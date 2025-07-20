@@ -1,12 +1,12 @@
 ``jax_fem`` package
 ===================
 
-Remarks
---------
+.. Remarks
+.. --------
 
-.. note::
+.. .. note::
 
-   The API reference is still under development, please wait for the stable release version.
+..    The API reference is still under development, please wait for the stable release version.
 
    
 Subpackages
@@ -23,4 +23,4 @@ Subpackages
    jax_fem.mma <api_mma>
    jax_fem.generate_mesh <api_generate_mesh>
    jax_fem.utils <api_utils>
-   jax_fem.logger_setup <api_logger_setup>
+

@@ -896,7 +896,7 @@ def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
 
     vjp_linear_fn = get_vjp_contraint_fn_params(params, sol_list)
     vjp_result = vjp_linear_fn(problem.unflatten_fn_sol_list(adjoint_vec))
-    vjp_result = jax.tree_map(lambda x: -x, vjp_result)
+    vjp_result = jax.tree_util.tree_map(lambda x: -x, vjp_result)
 
     return vjp_result
 

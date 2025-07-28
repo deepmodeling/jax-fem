@@ -101,7 +101,7 @@ Before we move to the implementation section, caveats on computing the derivativ
 
 One workaround is to add a small random noise to the matrix so that it always has distinct eigenvalues. This approach proves to be effective in our implementation of the phase field method. 
 
-The second approach is to define [custom derivative rules](https://jax.readthedocs.io/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html) with knowledge to handle repeated eigenvalues. In our example, _JAX-FEM_ needs to computes $\frac{\partial \boldsymbol{\sigma}}{\partial \boldsymbol{\varepsilon}}$, which further requires to compute $\frac{\partial \boldsymbol{\varepsilon}^+}{\partial \boldsymbol{\varepsilon}}$ and $\frac{\partial \boldsymbol{\varepsilon}^-}{\partial \boldsymbol{\varepsilon}}$. More generally, if a second order tensor $\boldsymbol{A}$ decompose as $`\boldsymbol{A} =\Sigma_{a=1}^n \lambda_a  \boldsymbol{n}_a \otimes \boldsymbol{n}_a`$ and we define tensor map  $`\boldsymbol{F}(\boldsymbol{A}):=\Sigma_{a=1}^n f(\lambda_a)  \boldsymbol{n}_a \otimes \boldsymbol{n}_a`$, then we are interested in computing $\frac{\partial \boldsymbol{F}}{\partial \boldsymbol{A}}$. The procedures are well presented in Miehe's paper [3], in particular, Eq. (19) is what we are concerned about. We implemented the algorithms in the file  [`eigen.py`](https://github.com/tianjuxue/jax-fem/blob/main/demos/phase_field_fracture/eigen.py). In this file, you will see how native AD of _JAX_ fails on repeated eigenvalues, but once custom derivative rules are specified, the issues is resolved.
+The second approach is to define [custom derivative rules](https://jax.readthedocs.io/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html) with knowledge to handle repeated eigenvalues. In our example, _JAX-FEM_ needs to computes $\frac{\partial \boldsymbol{\sigma}}{\partial \boldsymbol{\varepsilon}}$, which further requires to compute $\frac{\partial \boldsymbol{\varepsilon}^+}{\partial \boldsymbol{\varepsilon}}$ and $\frac{\partial \boldsymbol{\varepsilon}^-}{\partial \boldsymbol{\varepsilon}}$. More generally, if a second order tensor $\boldsymbol{A}$ decompose as $`\boldsymbol{A} =\Sigma_{a=1}^n \lambda_a  \boldsymbol{n}_a \otimes \boldsymbol{n}_a`$ and we define tensor map  $`\boldsymbol{F}(\boldsymbol{A}):=\Sigma_{a=1}^n f(\lambda_a)  \boldsymbol{n}_a \otimes \boldsymbol{n}_a`$, then we are interested in computing $\frac{\partial \boldsymbol{F}}{\partial \boldsymbol{A}}$. The procedures are well presented in Miehe's paper [3], in particular, Eq. (19) is what we are concerned about. We implemented the algorithms in the file  [`eigen.py`](https://github.com/deepmodeling/jax-fem/blob/main/applications/phase_field_fracture/eigen.py). In this file, you will see how native AD of _JAX_ fails on repeated eigenvalues, but once custom derivative rules are specified, the issues is resolved.
 
 Finally, make sure your _JAX_ version is up-to-date, since we have observed some possible unexpected behavior of the function `np.linalg.eigh` in older versions of _JAX_, e.g., 0.3.x version.
 
@@ -109,7 +109,7 @@ Finally, make sure your _JAX_ version is up-to-date, since we have observed some
 ## Execution
 Run
 ```bash
-python -m demos.phase_field_fracture.example
+python -m applications.phase_field_fracture.example
 ```
 from the `jax-fem/` directory.
 

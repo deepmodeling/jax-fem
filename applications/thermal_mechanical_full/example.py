@@ -1,7 +1,7 @@
 """This example refers to
 https://comet-fenics.readthedocs.io/en/latest/demo/thermoelasticity/thermoelasticity_transient.html
 
-Also, see jax-fem/demos/thermal_mechanical_full/fenics.py
+Also, see jax-fem/applications/thermal_mechanical_full/fenics.py
 """
 
 # Import some useful modules.
@@ -174,7 +174,7 @@ def main_fns():
     input_dir = os.path.join(os.path.dirname(__file__), 'input')
     output_dir = os.path.join(os.path.dirname(__file__), 'output')
     
-    # First run `python -m demos.thermal_mechanical_full.fenics` to generate these numpy files
+    # First run `python -m applications.thermal_mechanical_full.fenics` to generate these numpy files
     ele_type = 'TRI3'
     points = onp.load(os.path.join(input_dir, f'numpy/points.npy'))
     cells = onp.load(os.path.join(input_dir, f'numpy/cells.npy'))

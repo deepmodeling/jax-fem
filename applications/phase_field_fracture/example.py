@@ -15,7 +15,7 @@ from jax_fem.solver import solver
 from jax_fem.problem import Problem
 from jax_fem.utils import save_sol
 
-from demos.phase_field_fracture.eigen import get_eigen_f_custom
+from applications.phase_field_fracture.eigen import get_eigen_f_custom
 
 
 # If you have multiple GPUs, set the one to use.

@@ -8,7 +8,7 @@ version = "0.0.9"
 requires-python = ">=3.9"
 authors = [
   {name = "Tianju Xue", email = "cetxue@ust.hk"},
-  {name = "Weipeng Xu", email = "xwpscut@outlook.com"}
+  {name = "Weipeng Xu", email = "wxuby@connect.ust.hk"}
 ]
 description = "A GPU accelerated Finite element analysis package in JAX."
 readme = "README.md"

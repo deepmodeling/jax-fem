@@ -3,7 +3,7 @@ Overview
 
 | Example                                                      | Highlight                                                    |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| [Arc length methods](https://github.com/xwpken/jax-fem-docs-dev/tree/main/applications/arc_length) | ${\color{green}Advanced\ solver:}$ The arc-length control method for solving nonlinear structural mechanics problems with buckling behaviors. |
+| [Arc length methods](https://github.com/xwpken/jax-fem-docs-dev/tree/main/applications/arc_length) | ${\color{green}Advanced\ solvers:}$ The arc-length control method for solving nonlinear structural mechanics problems with buckling behaviors. |
 | [Dynamic relaxation solver](https://github.com/deepmodeling/jax-fem/tree/main/applications/dynamic_relaxation) | ${\color{green}Advanced\ solvers:}$ The dynamic relaxation solver for solving nonlinear structural mechanics problems  with buckling behaviors. |
 | [Periodic B.C.](https://github.com/deepmodeling/jax-fem/tree/main/applications/periodic_bc) | ${\color{brown}Boundary\ conditions:}$ Linear multipoint constraint for periodci B.C.. |
 | [Robin B.C.](https://github.com/deepmodeling/jax-fem/tree/main/applications/robin_bc) | ${\color{brown}Boundary\ conditions:}$ Robin/mixed boundary condition implementation. |

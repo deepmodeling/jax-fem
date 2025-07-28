@@ -39,7 +39,7 @@ for f in files:
 ele_type = 'HEX8'
 cell_type = get_meshio_cell_type(ele_type)
 Lx, Ly, Lz = 20., 1., 1.
-meshio_mesh = box_mesh_gmsh(Nx=100, Ny=5, Nz=5, Lx=Lx, Ly=Ly, Lz=Lz, data_dir=data_dir, ele_type=ele_type)
+meshio_mesh = box_mesh_gmsh(Nx=100, Ny=5, Nz=5, domain_x=Lx, domain_y=Ly, domain_z=Lz, data_dir=data_dir, ele_type=ele_type)
 mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
 def left(point):

@@ -81,7 +81,7 @@ For each time step, we simultaneously solving $T^n$ and $\boldsymbol{u}^n$, henc
 ## Execution
 Run
 ```bash
-python -m demos.thermal_mechanical_full.example
+python -m applications.thermal_mechanical_full.example
 ```
 from the `jax-fem/` directory.
 

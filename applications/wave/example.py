@@ -1,6 +1,6 @@
 """
 This example deals with scalar wave equations.
-Also, see jax-fem/demos/wave/fenics.py
+Also, see jax-fem/applications/wave/fenics.py
 """
 
 # Import some useful modules.
@@ -138,7 +138,7 @@ def main_fns():
     input_dir = os.path.join(os.path.dirname(__file__), 'input')
     output_dir = os.path.join(os.path.dirname(__file__), 'output')
     
-    # First run `python -m demos.wave.fenics` to generate these numpy files
+    # First run `python -m applications.wave.fenics` to generate these numpy files
     ele_type = 'TRI3'
     Lx, Ly = 1.0, 1.0
     points = onp.load(os.path.join(input_dir, f'numpy/points.npy'))

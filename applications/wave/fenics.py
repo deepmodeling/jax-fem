@@ -1,7 +1,7 @@
 import os
 
 from dolfin import *
-from mshr import *
+# from mshr import *
 import matplotlib.pyplot as plt
 import numpy as onp
 

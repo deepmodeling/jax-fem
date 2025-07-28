@@ -41,7 +41,7 @@ $$\int_{\Omega}(c^2\Delta t^2\nabla u^n\cdot\nabla \delta u+u^n\delta u)dx-\int_
 ## Execution
 Run
 ```bash
-python -m demos.wave.example
+python -m applications.wave.example
 ```
 from the `jax-fem/` directory.
 

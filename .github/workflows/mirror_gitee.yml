@@ -1,0 +1,13 @@
+name: Mirror to Gitee Repository
+
+on: [ push, delete, create ]
+
+# Ensures that only one mirror task will run at a time.
+concurrency:
+  group: git-mirror
+
+jobs:
+  git-mirror:
+    uses: deepmodeling/workflows/.github/workflows/mirror_gitee.yml@main
+    secrets:
+      SYNC_GITEE_PRIVATE_KEY: ${{ secrets.SYNC_GITEE_PRIVATE_KEY }}

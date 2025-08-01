@@ -1,0 +1,809 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>jax_fem.fe module &#8212; JAX-FEM 0.0.9 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=972fa7a7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=39f6cbd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'more/api/api_fe';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="jax_fem.problem module" href="api_problem.html" />
+    <link rel="prev" title="jax_fem package" href="api_main.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">JAX-FEM 0.0.9 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../learn/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/poisson.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/linear_elasticity.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/hyperelasticity.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/plasticity.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/compute_gradients.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/topology_optimization.html">Topology optimization</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../FAQ.html">Frequently asked questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../useful/main.html">Useful links</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="api_main.html">API reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../citation.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../project.html">Miscellaneous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contact.html">Contact</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/more/api/api_fe.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>jax_fem.fe module</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement"><code class="docutils literal notranslate"><span class="pre">FiniteElement</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.mesh"><code class="docutils literal notranslate"><span class="pre">FiniteElement.mesh</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.vec"><code class="docutils literal notranslate"><span class="pre">FiniteElement.vec</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.dim"><code class="docutils literal notranslate"><span class="pre">FiniteElement.dim</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.ele_type"><code class="docutils literal notranslate"><span class="pre">FiniteElement.ele_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.gauss_order"><code class="docutils literal notranslate"><span class="pre">FiniteElement.gauss_order</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.dirichlet_bc_info"><code class="docutils literal notranslate"><span class="pre">FiniteElement.dirichlet_bc_info</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.get_shape_grads"><code class="docutils literal notranslate"><span class="pre">FiniteElement.get_shape_grads()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.get_face_shape_grads"><code class="docutils literal notranslate"><span class="pre">FiniteElement.get_face_shape_grads()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.get_physical_quad_points"><code class="docutils literal notranslate"><span class="pre">FiniteElement.get_physical_quad_points()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.get_physical_surface_quad_points"><code class="docutils literal notranslate"><span class="pre">FiniteElement.get_physical_surface_quad_points()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.Dirichlet_boundary_conditions"><code class="docutils literal notranslate"><span class="pre">FiniteElement.Dirichlet_boundary_conditions()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.update_Dirichlet_boundary_conditions"><code class="docutils literal notranslate"><span class="pre">FiniteElement.update_Dirichlet_boundary_conditions()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.get_boundary_conditions_inds"><code class="docutils literal notranslate"><span class="pre">FiniteElement.get_boundary_conditions_inds()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.convert_from_dof_to_quad"><code class="docutils literal notranslate"><span class="pre">FiniteElement.convert_from_dof_to_quad()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.convert_from_dof_to_face_quad"><code class="docutils literal notranslate"><span class="pre">FiniteElement.convert_from_dof_to_face_quad()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.sol_to_grad"><code class="docutils literal notranslate"><span class="pre">FiniteElement.sol_to_grad()</span></code></a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="jax-fem-fe-module">
+<h1><code class="docutils literal notranslate"><span class="pre">jax_fem.fe</span></code> module<a class="headerlink" href="#jax-fem-fe-module" title="Link to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">jax_fem.fe.</span></span><span class="sig-name descname"><span class="pre">FiniteElement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ele_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gauss_order</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirichlet_bc_info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jax_fem/fe.html#FiniteElement"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jax_fem.fe.FiniteElement" title="Link to this definition">#</a></dt>
+<dd><p>Finite element class for one variable.
+This variable can be:</p>
+<ul class="simple">
+<li><p>Scalar-valued (when <a class="reference internal" href="#jax_fem.fe.FiniteElement.vec" title="jax_fem.fe.FiniteElement.vec"><code class="xref py py-attr docutils literal notranslate"><span class="pre">vec</span></code></a> = 1)</p></li>
+<li><p>Vector-valued (when <a class="reference internal" href="#jax_fem.fe.FiniteElement.vec" title="jax_fem.fe.FiniteElement.vec"><code class="xref py py-attr docutils literal notranslate"><span class="pre">vec</span></code></a> &gt; 1)</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mesh</strong> (<a class="reference internal" href="api_generate_mesh.html#jax_fem.generate_mesh.Mesh" title="jax_fem.generate_mesh.Mesh"><em>Mesh</em></a>)</p></li>
+<li><p><strong>vec</strong> (<em>int</em>)</p></li>
+<li><p><strong>dim</strong> (<em>int</em>)</p></li>
+<li><p><strong>ele_type</strong> (<em>str</em>)</p></li>
+<li><p><strong>gauss_order</strong> (<em>int</em>)</p></li>
+<li><p><strong>dirichlet_bc_info</strong> (<em>list</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.mesh">
+<span class="sig-name descname"><span class="pre">mesh</span></span><a class="headerlink" href="#jax_fem.fe.FiniteElement.mesh" title="Link to this definition">#</a></dt>
+<dd><p>Stores points (coordinates) and cells (connectivity).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="api_generate_mesh.html#jax_fem.generate_mesh.Mesh" title="jax_fem.generate_mesh.Mesh"><em>Mesh</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.vec">
+<span class="sig-name descname"><span class="pre">vec</span></span><a class="headerlink" href="#jax_fem.fe.FiniteElement.vec" title="Link to this definition">#</a></dt>
+<dd><p>Number of vector components in solution (e.g., 3 for displacement in 3D, 1 for temperature).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>int</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.dim">
+<span class="sig-name descname"><span class="pre">dim</span></span><a class="headerlink" href="#jax_fem.fe.FiniteElement.dim" title="Link to this definition">#</a></dt>
+<dd><p>Spatial dimension of the problem. Currently supports:</p>
+<ul class="simple">
+<li><p>2 (2D problems)</p></li>
+<li><p>3 (3D problems)</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>int</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.ele_type">
+<span class="sig-name descname"><span class="pre">ele_type</span></span><a class="headerlink" href="#jax_fem.fe.FiniteElement.ele_type" title="Link to this definition">#</a></dt>
+<dd><p>Element type. Currently supports:</p>
+<ul class="simple">
+<li><p>‘QUAD4’</p></li>
+<li><p>‘QUAD8’</p></li>
+<li><p>‘TRI3’</p></li>
+<li><p>‘TRI6’</p></li>
+<li><p>‘HEX8’</p></li>
+<li><p>‘HEX20’</p></li>
+<li><p>‘HEX27’</p></li>
+<li><p>‘TET4’</p></li>
+<li><p>‘TET10’</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>str</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.gauss_order">
+<span class="sig-name descname"><span class="pre">gauss_order</span></span><a class="headerlink" href="#jax_fem.fe.FiniteElement.gauss_order" title="Link to this definition">#</a></dt>
+<dd><p>Order of Gaussian quadrature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>int</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.dirichlet_bc_info">
+<span class="sig-name descname"><span class="pre">dirichlet_bc_info</span></span><a class="headerlink" href="#jax_fem.fe.FiniteElement.dirichlet_bc_info" title="Link to this definition">#</a></dt>
+<dd><p>A list for Dirichlet boundary condition information, whose elements are structured as:</p>
+<ul class="simple">
+<li><p><strong>location_fns</strong>: list of callables
+Each callable takes a point (NumpyArray) and returns a boolean indicating
+if the point satisfies the location condition</p></li>
+<li><p><strong>vecs</strong>: list of integers
+Each integer must be in the range of 0 to vec - 1, specifying which
+component of the (vector) variable to apply Dirichlet condition to</p></li>
+<li><p><strong>value_fns</strong>: list of callables
+Each callable takes a point and returns the Dirichlet value</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>list</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.get_shape_grads">
+<span class="sig-name descname"><span class="pre">get_shape_grads</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jax_fem/fe.html#FiniteElement.get_shape_grads"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jax_fem.fe.FiniteElement.get_shape_grads" title="Link to this definition">#</a></dt>
+<dd><p>Compute shape function gradient value.</p>
+<p>The gradient is w.r.t physical coordinates.
+Refer to
+Hughes, Thomas JR.
+The finite element method: linear static and dynamic finite element analysis. Courier Corporation, 2012.
+Page 147, Eq. (3.9.3)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>shape_grads_physical</strong> (<em>NumpyArray</em>) – Shape is (num_cells, num_quads, num_nodes, dim).</p></li>
+<li><p><strong>JxW</strong> (<em>NumpyArray</em>) – Shape is (num_cells, num_quads).</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.get_face_shape_grads">
+<span class="sig-name descname"><span class="pre">get_face_shape_grads</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">boundary_inds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jax_fem/fe.html#FiniteElement.get_face_shape_grads"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jax_fem.fe.FiniteElement.get_face_shape_grads" title="Link to this definition">#</a></dt>
+<dd><p>Face shape function gradients and JxW (for surface integral).
+Nanson’s formula is used to map physical surface ingetral to reference domain.
+Refer to
+<a class="reference external" href="https://en.wikiversity.org/wiki/Continuum_mechanics/Volume_change_and_area_change">wikiversity</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>boundary_inds</strong> (<em>list</em><em>[</em><em>NumpyArray</em><em>]</em>) – Shape is (num_selected_faces, 2).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>face_shape_grads_physical</strong> (<em>NumpyArray</em>) – Shape is (num_selected_faces, num_face_quads, num_nodes, dim).</p></li>
+<li><p><strong>nanson_scale</strong> (<em>NumpyArray</em>) – Shape is (num_selected_faces, num_face_quads).</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.get_physical_quad_points">
+<span class="sig-name descname"><span class="pre">get_physical_quad_points</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jax_fem/fe.html#FiniteElement.get_physical_quad_points"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jax_fem.fe.FiniteElement.get_physical_quad_points" title="Link to this definition">#</a></dt>
+<dd><p>Compute physical quadrature points</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>physical_quad_points</strong> – Shape is (num_cells, num_quads, dim).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>NumpyArray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.get_physical_surface_quad_points">
+<span class="sig-name descname"><span class="pre">get_physical_surface_quad_points</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">boundary_inds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jax_fem/fe.html#FiniteElement.get_physical_surface_quad_points"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jax_fem.fe.FiniteElement.get_physical_surface_quad_points" title="Link to this definition">#</a></dt>
+<dd><p>Compute physical quadrature points on the surface</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>boundary_inds</strong> (<em>list</em><em>[</em><em>NumpyArray</em><em>]</em>) – Shape for NumpyArray is (num_selected_faces, 2).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>physical_surface_quad_points</strong> – Shape for NumpyArray is (num_selected_faces, num_face_quads, dim).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NumpyArray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.Dirichlet_boundary_conditions">
+<span class="sig-name descname"><span class="pre">Dirichlet_boundary_conditions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dirichlet_bc_info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jax_fem/fe.html#FiniteElement.Dirichlet_boundary_conditions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jax_fem.fe.FiniteElement.Dirichlet_boundary_conditions" title="Link to this definition">#</a></dt>
+<dd><p>Indices and values for Dirichlet B.C.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dirichlet_bc_info</strong> (<em>list</em>) – [location_fns, vecs, value_fns]</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>node_inds_list</strong> (<em>list[NumpyArray]</em>) – The value of the NumpyArray ranges from 0 to num_total_nodes - 1.</p></li>
+<li><p><strong>vec_inds_list</strong> (<em>list[NumpyArray]</em>) – The value of the NumpyArray ranges from 0 to to vec - 1.</p></li>
+<li><p><strong>vals_list</strong> (<em>list[NumpyArray]</em>) – Dirichlet values to be assigned.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.update_Dirichlet_boundary_conditions">
+<span class="sig-name descname"><span class="pre">update_Dirichlet_boundary_conditions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dirichlet_bc_info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jax_fem/fe.html#FiniteElement.update_Dirichlet_boundary_conditions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jax_fem.fe.FiniteElement.update_Dirichlet_boundary_conditions" title="Link to this definition">#</a></dt>
+<dd><p>Reset Dirichlet boundary conditions.
+Useful when a time-dependent problem is solved, and at each iteration the boundary condition needs to be updated.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dirichlet_bc_info</strong> (<em>list</em>) – [location_fns, vecs, value_fns]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.get_boundary_conditions_inds">
+<span class="sig-name descname"><span class="pre">get_boundary_conditions_inds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location_fns</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jax_fem/fe.html#FiniteElement.get_boundary_conditions_inds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jax_fem.fe.FiniteElement.get_boundary_conditions_inds" title="Link to this definition">#</a></dt>
+<dd><p>Given location functions, compute which faces satisfy the condition.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>location_fns</strong> (<em>list</em><em>[</em><em>callable</em><em>]</em>) – <p>The callable is a location function that inputs a point (NumpyArray) and returns if the point satisfies the location condition.
+For example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If this location function takes 2 arguments, then the first is point and the second is index.
+For example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">ind</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">ind</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">10</span><span class="p">]))</span>
+</pre></div>
+</div>
+</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p><strong>boundary_inds_list</strong> – Shape of NumpyArray is (num_selected_faces, 2).</p>
+<p>boundary_inds_list[k][i, 0] returns the global cell index of the ith selected face of boundary subset k.</p>
+<p>boundary_inds_list[k][i, 1] returns the local face index of the ith selected face of boundary subset k.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>list</em>[NumpyArray]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.convert_from_dof_to_quad">
+<span class="sig-name descname"><span class="pre">convert_from_dof_to_quad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sol</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jax_fem/fe.html#FiniteElement.convert_from_dof_to_quad"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jax_fem.fe.FiniteElement.convert_from_dof_to_quad" title="Link to this definition">#</a></dt>
+<dd><p>Obtain quad values from nodal solution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sol</strong> (<em>JaxArray</em>) – Shape is (num_total_nodes, vec).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>u</strong> – Shape is (num_cells, num_quads, vec).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>JaxArray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.convert_from_dof_to_face_quad">
+<span class="sig-name descname"><span class="pre">convert_from_dof_to_face_quad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary_inds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jax_fem/fe.html#FiniteElement.convert_from_dof_to_face_quad"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jax_fem.fe.FiniteElement.convert_from_dof_to_face_quad" title="Link to this definition">#</a></dt>
+<dd><p>Obtain surface solution from nodal solution</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sol</strong> (<em>JaxArray</em>) – Shape is (num_total_nodes, vec).</p></li>
+<li><p><strong>boundary_inds</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>u</strong> – Shape is (num_selected_faces, num_face_quads, vec).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>JaxArray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="jax_fem.fe.FiniteElement.sol_to_grad">
+<span class="sig-name descname"><span class="pre">sol_to_grad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sol</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/jax_fem/fe.html#FiniteElement.sol_to_grad"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#jax_fem.fe.FiniteElement.sol_to_grad" title="Link to this definition">#</a></dt>
+<dd><p>Obtain solution gradient from nodal solution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sol</strong> (<em>JaxArray</em>) – Shape is (num_total_nodes, vec).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>u_grads</strong> – Shape is (num_cells, num_quads, vec, dim).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>JaxArray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="api_main.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title"><code class="docutils literal notranslate"><span class="pre">jax_fem</span></code> package</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="api_problem.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title"><code class="docutils literal notranslate"><span class="pre">jax_fem.problem</span></code> module</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement"><code class="docutils literal notranslate"><span class="pre">FiniteElement</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.mesh"><code class="docutils literal notranslate"><span class="pre">FiniteElement.mesh</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.vec"><code class="docutils literal notranslate"><span class="pre">FiniteElement.vec</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.dim"><code class="docutils literal notranslate"><span class="pre">FiniteElement.dim</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.ele_type"><code class="docutils literal notranslate"><span class="pre">FiniteElement.ele_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.gauss_order"><code class="docutils literal notranslate"><span class="pre">FiniteElement.gauss_order</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.dirichlet_bc_info"><code class="docutils literal notranslate"><span class="pre">FiniteElement.dirichlet_bc_info</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.get_shape_grads"><code class="docutils literal notranslate"><span class="pre">FiniteElement.get_shape_grads()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.get_face_shape_grads"><code class="docutils literal notranslate"><span class="pre">FiniteElement.get_face_shape_grads()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.get_physical_quad_points"><code class="docutils literal notranslate"><span class="pre">FiniteElement.get_physical_quad_points()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.get_physical_surface_quad_points"><code class="docutils literal notranslate"><span class="pre">FiniteElement.get_physical_surface_quad_points()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.Dirichlet_boundary_conditions"><code class="docutils literal notranslate"><span class="pre">FiniteElement.Dirichlet_boundary_conditions()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.update_Dirichlet_boundary_conditions"><code class="docutils literal notranslate"><span class="pre">FiniteElement.update_Dirichlet_boundary_conditions()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.get_boundary_conditions_inds"><code class="docutils literal notranslate"><span class="pre">FiniteElement.get_boundary_conditions_inds()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.convert_from_dof_to_quad"><code class="docutils literal notranslate"><span class="pre">FiniteElement.convert_from_dof_to_quad()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.convert_from_dof_to_face_quad"><code class="docutils literal notranslate"><span class="pre">FiniteElement.convert_from_dof_to_face_quad()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#jax_fem.fe.FiniteElement.sol_to_grad"><code class="docutils literal notranslate"><span class="pre">FiniteElement.sol_to_grad()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

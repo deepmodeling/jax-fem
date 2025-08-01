@@ -1,0 +1,619 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jax_fem.basis &#8212; JAX-FEM 0.0.9 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=972fa7a7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=39f6cbd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jax_fem/basis';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">JAX-FEM 0.0.9 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../learn/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/poisson.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/linear_elasticity.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/hyperelasticity.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/plasticity.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/compute_gradients.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/topology_optimization.html">Topology optimization</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../more/FAQ.html">Frequently asked questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/useful/main.html">Useful links</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">Miscellaneous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/contact.html">Contact</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jax_fem.basis</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">basix</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">onp</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+
+
+<span class="c1"># def get_full_integration_poly_degree(ele_type, lag_order, dim):</span>
+<span class="c1">#     &quot;&quot;&quot;Only works for weak forms of (grad_u, grad_v).</span>
+<span class="c1">#     TODO: Is this correct?</span>
+<span class="c1">#     Reference:</span>
+<span class="c1">#     https://zhuanlan.zhihu.com/p/521630645</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     if ele_type == &#39;hexahedron&#39; or ele_type == &#39;quadrilateral&#39;:</span>
+<span class="c1">#         return 2 * (dim*lag_order - 1)</span>
+
+<span class="c1">#     if ele_type == &#39;tetrahedron&#39; or ele_type == &#39;triangle&#39;:</span>
+<span class="c1">#         return 2 * (dim*(lag_order - 1) - 1)</span>
+
+<div class="viewcode-block" id="get_elements">
+<a class="viewcode-back" href="../../more/api/api_basis.html#jax_fem.basis.get_elements">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_elements</span><span class="p">(</span><span class="n">ele_type</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Obtain element information useful for `basix &lt;https://github.com/FEniCS/basix&gt;`_ to handle. </span>
+
+<span class="sd">    Note that mesh node ordering is important.</span>
+<span class="sd">    If the input mesh file is Gmsh .msh or Abaqus .inp, meshio would convert it to its own ordering.</span>
+<span class="sd">    Our experience shows that meshio ordering is the same as Abaqus.</span>
+<span class="sd">    For example, for a 10-node tetrahedron element, the ordering of meshio follows this </span>
+<span class="sd">    `instruction &lt;https://web.mit.edu/calculix_v2.7/CalculiX/ccx_2.7/doc/ccx/node33.html&gt;`_.</span>
+<span class="sd">    The troublesome thing is that basix has `a different ordering &lt;https://defelement.com/elements/lagrange.html&gt;`_. </span>
+<span class="sd">    The consequence is that we need to define the  **re_order** variable to make sure the ordering is correct.</span>
+
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ele_type: str</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.ele_type`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    element_family : BasixObject</span>
+<span class="sd">        `ElementFamily &lt;https://docs.fenicsproject.org/basix/main/python/_autosummary/basix.html#basix.ElementFamily&gt;`_</span>
+<span class="sd">    basix_ele : BasixObject</span>
+<span class="sd">        For element: `CellType &lt;https://docs.fenicsproject.org/basix/main/python/_autosummary/basix.html#basix.CellType&gt;`_</span>
+<span class="sd">    basix_face_ele : BasixObject</span>
+<span class="sd">        For element face: `CellType &lt;https://docs.fenicsproject.org/basix/main/python/_autosummary/basix.html#basix.CellType&gt;`_</span>
+<span class="sd">    gauss_order : int</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.gauss_order`</span>
+<span class="sd">    degree : int</span>
+<span class="sd">        Element degree, used in basix</span>
+<span class="sd">    re_order : list</span>
+<span class="sd">        Specifieds node re-ordering transformation. For example, [0, 1, 3, 2, 4, 5, 7, 6] for HEX8 element.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">element_family</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">ElementFamily</span><span class="o">.</span><span class="n">P</span>
+    <span class="k">if</span> <span class="n">ele_type</span> <span class="o">==</span> <span class="s1">&#39;HEX8&#39;</span><span class="p">:</span>
+        <span class="n">re_order</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">6</span><span class="p">]</span>
+        <span class="n">basix_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">hexahedron</span>
+        <span class="n">basix_face_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">quadrilateral</span>
+        <span class="n">gauss_order</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># 2x2x2, TODO: is this full integration?</span>
+        <span class="n">degree</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">elif</span> <span class="n">ele_type</span> <span class="o">==</span> <span class="s1">&#39;HEX27&#39;</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: 27-node hexahedron is rarely used in practice and not recommended.&quot;</span><span class="p">)</span>
+        <span class="n">re_order</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span>
+                    <span class="mi">17</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">22</span><span class="p">,</span> <span class="mi">23</span><span class="p">,</span> <span class="mi">21</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">26</span><span class="p">]</span>
+        <span class="n">basix_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">hexahedron</span>
+        <span class="n">basix_face_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">quadrilateral</span>
+        <span class="n">gauss_order</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># 6x6x6, full integration</span>
+        <span class="n">degree</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="k">elif</span> <span class="n">ele_type</span> <span class="o">==</span> <span class="s1">&#39;HEX20&#39;</span><span class="p">:</span>
+        <span class="n">re_order</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mi">17</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">14</span><span class="p">]</span>
+        <span class="n">element_family</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">ElementFamily</span><span class="o">.</span><span class="n">serendipity</span>
+        <span class="n">basix_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">hexahedron</span>
+        <span class="n">basix_face_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">quadrilateral</span>
+        <span class="n">gauss_order</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># 6x6x6, full integration</span>
+        <span class="n">degree</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="k">elif</span> <span class="n">ele_type</span> <span class="o">==</span> <span class="s1">&#39;TET4&#39;</span><span class="p">:</span>
+        <span class="n">re_order</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+        <span class="n">basix_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">tetrahedron</span>
+        <span class="n">basix_face_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">triangle</span>
+        <span class="n">gauss_order</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># 1, full integration</span>
+        <span class="n">degree</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">elif</span> <span class="n">ele_type</span> <span class="o">==</span> <span class="s1">&#39;TET10&#39;</span><span class="p">:</span>
+        <span class="n">re_order</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+        <span class="n">basix_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">tetrahedron</span>
+        <span class="n">basix_face_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">triangle</span>
+        <span class="n">gauss_order</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># 4, full integration</span>
+        <span class="n">degree</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="c1"># TODO: Check if this is correct.</span>
+    <span class="k">elif</span> <span class="n">ele_type</span> <span class="o">==</span> <span class="s1">&#39;QUAD4&#39;</span><span class="p">:</span>
+        <span class="n">re_order</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="n">basix_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">quadrilateral</span>
+        <span class="n">basix_face_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">interval</span>
+        <span class="n">gauss_order</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="n">degree</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">elif</span> <span class="n">ele_type</span> <span class="o">==</span> <span class="s1">&#39;QUAD8&#39;</span><span class="p">:</span>
+        <span class="n">re_order</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+        <span class="n">element_family</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">ElementFamily</span><span class="o">.</span><span class="n">serendipity</span>
+        <span class="n">basix_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">quadrilateral</span>
+        <span class="n">basix_face_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">interval</span>
+        <span class="n">gauss_order</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="n">degree</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="k">elif</span> <span class="n">ele_type</span> <span class="o">==</span> <span class="s1">&#39;TRI3&#39;</span><span class="p">:</span>
+        <span class="n">re_order</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="n">basix_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">triangle</span>
+        <span class="n">basix_face_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">interval</span>
+        <span class="n">gauss_order</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># 1, full integration</span>
+        <span class="n">degree</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">elif</span> <span class="n">ele_type</span> <span class="o">==</span> <span class="s1">&#39;TRI6&#39;</span><span class="p">:</span>
+        <span class="n">re_order</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+        <span class="n">basix_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">triangle</span>
+        <span class="n">basix_face_ele</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">CellType</span><span class="o">.</span><span class="n">interval</span>
+        <span class="n">gauss_order</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># 3, full integration</span>
+        <span class="n">degree</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="k">return</span> <span class="n">element_family</span><span class="p">,</span> <span class="n">basix_ele</span><span class="p">,</span> <span class="n">basix_face_ele</span><span class="p">,</span> <span class="n">gauss_order</span><span class="p">,</span> <span class="n">degree</span><span class="p">,</span> <span class="n">re_order</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">reorder_inds</span><span class="p">(</span><span class="n">inds</span><span class="p">,</span> <span class="n">re_order</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply re-ordering transformation for node indices.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">new_inds</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">inds</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">new_inds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">re_order</span> <span class="o">==</span> <span class="n">ind</span><span class="p">))</span>
+    <span class="n">new_inds</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">new_inds</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">inds</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">new_inds</span>
+
+
+<div class="viewcode-block" id="get_shape_vals_and_grads">
+<a class="viewcode-back" href="../../more/api/api_basis.html#jax_fem.basis.get_shape_vals_and_grads">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_shape_vals_and_grads</span><span class="p">(</span><span class="n">ele_type</span><span class="p">,</span> <span class="n">gauss_order</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Use `basix &lt;https://github.com/FEniCS/basix&gt;`_ to get shape function values and gradients for elements.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ele_type : str</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.ele_type`</span>
+<span class="sd">    gauss_order : int</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.gauss_order`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    shape_values: NumpyArray</span>
+<span class="sd">        Shape is (num_quads, num_nodes), e.g, (8, 8) for HEX8 element.</span>
+<span class="sd">    shape_grads_ref: NumpyArray</span>
+<span class="sd">        Shape is (num_quads, num_nodes, dim), e.g, (8, 8, 3) for HEX8 element.</span>
+<span class="sd">    weights: NumpyArray</span>
+<span class="sd">        Shape is (num_quads,), e.g, (8,) for HEX8 element.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">element_family</span><span class="p">,</span> <span class="n">basix_ele</span><span class="p">,</span> <span class="n">basix_face_ele</span><span class="p">,</span> <span class="n">gauss_order_default</span><span class="p">,</span> <span class="n">degree</span><span class="p">,</span> <span class="n">re_order</span> <span class="o">=</span> <span class="n">get_elements</span><span class="p">(</span><span class="n">ele_type</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">gauss_order</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">gauss_order</span> <span class="o">=</span> <span class="n">gauss_order_default</span>
+
+    <span class="n">quad_points</span><span class="p">,</span> <span class="n">weights</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">make_quadrature</span><span class="p">(</span><span class="n">basix_ele</span><span class="p">,</span> <span class="n">gauss_order</span><span class="p">)</span>
+    <span class="n">element</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="n">element_family</span><span class="p">,</span> <span class="n">basix_ele</span><span class="p">,</span> <span class="n">degree</span><span class="p">)</span>
+    <span class="n">vals_and_grads</span> <span class="o">=</span> <span class="n">element</span><span class="o">.</span><span class="n">tabulate</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">quad_points</span><span class="p">)[:,</span> <span class="p">:,</span> <span class="n">re_order</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">shape_values</span> <span class="o">=</span> <span class="n">vals_and_grads</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">shape_grads_ref</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">vals_and_grads</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">axes</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ele_type = </span><span class="si">{</span><span class="n">ele_type</span><span class="si">}</span><span class="s2">, quad_points.shape = (num_quads, dim) = </span><span class="si">{</span><span class="n">quad_points</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">shape_values</span><span class="p">,</span> <span class="n">shape_grads_ref</span><span class="p">,</span> <span class="n">weights</span></div>
+
+
+
+<div class="viewcode-block" id="get_face_shape_vals_and_grads">
+<a class="viewcode-back" href="../../more/api/api_basis.html#jax_fem.basis.get_face_shape_vals_and_grads">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_face_shape_vals_and_grads</span><span class="p">(</span><span class="n">ele_type</span><span class="p">,</span> <span class="n">gauss_order</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Use `basix &lt;https://github.com/FEniCS/basix&gt;`_ to get shape function values and gradients for element faces.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ele_type : str</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.ele_type`</span>
+<span class="sd">    gauss_order : int</span>
+<span class="sd">        :attr:`~jax_fem.fe.FiniteElement.gauss_order`</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    face_shape_vals: NumpyArray</span>
+<span class="sd">        Shape is (num_faces, num_face_quads, num_nodes), e.g, (6, 4, 8) for HEX8 element.</span>
+<span class="sd">    face_shape_grads_ref: NumpyArray</span>
+<span class="sd">        Shape is(num_faces, num_face_quads, num_nodes, dim), e.g, (6, 4, 3) for HEX8 element.</span>
+<span class="sd">    face_weights: NumpyArray</span>
+<span class="sd">        Shape is (num_faces, num_face_quads), e.g, (6, 4) for HEX8 element.</span>
+<span class="sd">    face_normals:NumpyArray</span>
+<span class="sd">        Shape is (num_faces, dim), e.g, (6, 3) for HEX8 element.</span>
+<span class="sd">    face_inds: NumpyArray</span>
+<span class="sd">        Shape is (num_faces, num_face_vertices), e.g, (6, 4) for HEX8 element.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">element_family</span><span class="p">,</span> <span class="n">basix_ele</span><span class="p">,</span> <span class="n">basix_face_ele</span><span class="p">,</span> <span class="n">gauss_order_default</span><span class="p">,</span> <span class="n">degree</span><span class="p">,</span> <span class="n">re_order</span> <span class="o">=</span> <span class="n">get_elements</span><span class="p">(</span><span class="n">ele_type</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">gauss_order</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">gauss_order</span> <span class="o">=</span> <span class="n">gauss_order_default</span>
+
+    <span class="c1"># TODO: Check if this is correct.</span>
+    <span class="c1"># We should provide freedom for seperate gauss_order for volume integral and surface integral</span>
+    <span class="c1"># Currently, they&#39;re using the same gauss_order!</span>
+    <span class="n">points</span><span class="p">,</span> <span class="n">weights</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">make_quadrature</span><span class="p">(</span><span class="n">basix_face_ele</span><span class="p">,</span> <span class="n">gauss_order</span><span class="p">)</span>
+
+    <span class="n">map_degree</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">lagrange_map</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="n">basix</span><span class="o">.</span><span class="n">ElementFamily</span><span class="o">.</span><span class="n">P</span><span class="p">,</span> <span class="n">basix_face_ele</span><span class="p">,</span> <span class="n">map_degree</span><span class="p">)</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="n">lagrange_map</span><span class="o">.</span><span class="n">tabulate</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">points</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">vertices</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="n">basix_ele</span><span class="p">)</span>
+    <span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">facets</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">sub_entity_connectivity</span><span class="p">(</span><span class="n">basix_ele</span><span class="p">)[</span><span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="c1"># Map face points</span>
+    <span class="c1"># Reference: https://docs.fenicsproject.org/basix/main/python/demo/demo_facet_integral.py.html</span>
+    <span class="n">face_quad_points</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">face_inds</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">face_weights</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">facet</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">facets</span><span class="p">):</span>
+        <span class="n">mapped_points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)):</span>
+            <span class="n">vals</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">mapped_point</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">vertices</span><span class="p">[</span><span class="n">facet</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">*</span> <span class="n">vals</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">mapped_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mapped_point</span><span class="p">)</span>
+        <span class="n">face_quad_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mapped_points</span><span class="p">)</span>
+        <span class="n">face_inds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">facet</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">jacobian</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">facet_jacobians</span><span class="p">(</span><span class="n">basix_ele</span><span class="p">)[</span><span class="n">f</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">size_jacobian</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">jacobian</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">size_jacobian</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">jacobian</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">jacobian</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]))</span>
+        <span class="n">face_weights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">weights</span><span class="o">*</span><span class="n">size_jacobian</span><span class="p">)</span>
+    <span class="n">face_quad_points</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">face_quad_points</span><span class="p">)</span>
+    <span class="n">face_weights</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">face_weights</span><span class="p">)</span>
+
+    <span class="n">face_normals</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">cell</span><span class="o">.</span><span class="n">facet_outward_normals</span><span class="p">(</span><span class="n">basix_ele</span><span class="p">)</span>
+    <span class="n">face_inds</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">face_inds</span><span class="p">)</span>
+    <span class="n">face_inds</span> <span class="o">=</span> <span class="n">reorder_inds</span><span class="p">(</span><span class="n">face_inds</span><span class="p">,</span> <span class="n">re_order</span><span class="p">)</span>
+    <span class="n">num_faces</span><span class="p">,</span> <span class="n">num_face_quads</span><span class="p">,</span> <span class="n">dim</span> <span class="o">=</span> <span class="n">face_quad_points</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">element</span> <span class="o">=</span> <span class="n">basix</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="n">element_family</span><span class="p">,</span> <span class="n">basix_ele</span><span class="p">,</span> <span class="n">degree</span><span class="p">)</span>
+    <span class="n">vals_and_grads</span> <span class="o">=</span> <span class="n">element</span><span class="o">.</span><span class="n">tabulate</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">face_quad_points</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim</span><span class="p">))[:,</span> <span class="p">:,</span> <span class="n">re_order</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">face_shape_vals</span> <span class="o">=</span> <span class="n">vals_and_grads</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">num_faces</span><span class="p">,</span> <span class="n">num_face_quads</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">face_shape_grads_ref</span> <span class="o">=</span> <span class="n">vals_and_grads</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">num_faces</span><span class="p">,</span> <span class="n">num_face_quads</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">face_shape_grads_ref</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">face_shape_grads_ref</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;face_quad_points.shape = (num_faces, num_face_quads, dim) = </span><span class="si">{</span><span class="n">face_quad_points</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">face_shape_vals</span><span class="p">,</span> <span class="n">face_shape_grads_ref</span><span class="p">,</span> <span class="n">face_weights</span><span class="p">,</span> <span class="n">face_normals</span><span class="p">,</span> <span class="n">face_inds</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

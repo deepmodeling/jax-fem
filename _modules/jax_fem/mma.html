@@ -1,0 +1,917 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jax_fem.mma &#8212; JAX-FEM 0.0.9 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=972fa7a7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=39f6cbd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/jax_fem/mma';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">JAX-FEM 0.0.9 documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../learn/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/poisson.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/linear_elasticity.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/hyperelasticity.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/plasticity.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/compute_gradients.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../learn/topology_optimization.html">Topology optimization</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../more/FAQ.html">Frequently asked questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/useful/main.html">Useful links</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">Miscellaneous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/contact.html">Contact</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for jax_fem.mma</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Copied and modified from https://github.com/UW-ERSL/AuTO</span>
+<span class="sd">Under GNU General Public License v3.0</span>
+
+<span class="sd">Original copy from https://github.com/arjendeetman/GCMMA-MMA-Python/blob/master/Code/MMA.py</span>
+
+<span class="sd">Improvement is made to avoid N^2 memory operation so that the MMA solver is more scalable.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">diag</span> <span class="k">as</span> <span class="n">diags</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">solve</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax</span><span class="w"> </span><span class="kn">import</span> <span class="n">jit</span><span class="p">,</span> <span class="n">grad</span><span class="p">,</span> <span class="n">random</span><span class="p">,</span> <span class="n">jacfwd</span><span class="p">,</span> <span class="n">value_and_grad</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax.experimental.sparse</span><span class="w"> </span><span class="kn">import</span> <span class="n">BCOO</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax</span><span class="w"> </span><span class="kn">import</span> <span class="n">config</span>
+<span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;jax_enable_x64&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="n">density_filtering</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">sensitivity_filtering</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_filter_kd_tree</span><span class="p">(</span><span class="n">fe</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;This function is created by Tianju. Not from the original code.</span>
+<span class="sd">    We use k-d tree algorithm to compute the filter.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cell_centroids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">fe</span><span class="o">.</span><span class="n">cells</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">flex_num_cells</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">flex_inds</span><span class="p">)</span>
+    <span class="n">flex_cell_centroids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">cell_centroids</span><span class="p">,</span> <span class="n">fe</span><span class="o">.</span><span class="n">flex_inds</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">V</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">fe</span><span class="o">.</span><span class="n">JxW</span><span class="p">)</span>
+    <span class="n">avg_elem_V</span> <span class="o">=</span> <span class="n">V</span><span class="o">/</span><span class="n">fe</span><span class="o">.</span><span class="n">num_cells</span>
+
+    <span class="n">avg_elem_size</span> <span class="o">=</span> <span class="n">avg_elem_V</span><span class="o">**</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">fe</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+    <span class="n">rmin</span> <span class="o">=</span> <span class="mf">1.5</span><span class="o">*</span><span class="n">avg_elem_size</span>
+
+    <span class="n">kd_tree</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">KDTree</span><span class="p">(</span><span class="n">flex_cell_centroids</span><span class="p">)</span>
+    <span class="n">I</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">V</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">flex_num_cells</span><span class="p">):</span>
+        <span class="n">num_nbs</span> <span class="o">=</span> <span class="mi">20</span>
+        <span class="n">dd</span><span class="p">,</span> <span class="n">ii</span> <span class="o">=</span> <span class="n">kd_tree</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">flex_cell_centroids</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">num_nbs</span><span class="p">)</span>
+        <span class="n">neighbors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">flex_cell_centroids</span><span class="p">,</span> <span class="n">ii</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">rmin</span> <span class="o">-</span> <span class="n">dd</span> <span class="o">&gt;</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">rmin</span> <span class="o">-</span> <span class="n">dd</span><span class="p">,</span> <span class="mf">0.</span><span class="p">)</span>
+        <span class="n">I</span> <span class="o">+=</span> <span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">num_nbs</span>
+        <span class="n">J</span> <span class="o">+=</span> <span class="n">ii</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">V</span> <span class="o">+=</span> <span class="n">vals</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">H_sp</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">csc_array</span><span class="p">((</span><span class="n">V</span><span class="p">,</span> <span class="p">(</span><span class="n">I</span><span class="p">,</span> <span class="n">J</span><span class="p">)),</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">flex_num_cells</span><span class="p">,</span> <span class="n">flex_num_cells</span><span class="p">))</span>
+
+    <span class="n">H</span> <span class="o">=</span> <span class="n">BCOO</span><span class="o">.</span><span class="n">from_scipy_sparse</span><span class="p">(</span><span class="n">H_sp</span><span class="p">)</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">()</span>
+    <span class="n">Hs</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">H</span><span class="p">,</span> <span class="n">Hs</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">applySensitivityFilter</span><span class="p">(</span><span class="n">ft</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">dJ</span><span class="p">,</span> <span class="n">dvc</span><span class="p">):</span>
+    <span class="n">dJ</span> <span class="o">=</span> <span class="n">ft</span><span class="p">[</span><span class="s1">&#39;H&#39;</span><span class="p">]</span> <span class="o">@</span> <span class="p">(</span><span class="n">rho</span><span class="o">*</span><span class="n">dJ</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">rho</span><span class="p">)</span><span class="o">/</span><span class="n">ft</span><span class="p">[</span><span class="s1">&#39;Hs&#39;</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">])</span>
+    <span class="n">dvc</span> <span class="o">=</span> <span class="n">ft</span><span class="p">[</span><span class="s1">&#39;H&#39;</span><span class="p">][</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">@</span> <span class="p">(</span><span class="n">rho</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span><span class="o">*</span><span class="n">dvc</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">rho</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span><span class="o">/</span><span class="n">ft</span><span class="p">[</span><span class="s1">&#39;Hs&#39;</span><span class="p">][</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">dJ</span><span class="p">,</span> <span class="n">dvc</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">applyDensityFilter</span><span class="p">(</span><span class="n">ft</span><span class="p">,</span> <span class="n">rho</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">ft</span><span class="p">[</span><span class="s1">&#39;H&#39;</span><span class="p">]</span> <span class="o">@</span> <span class="n">rho</span> <span class="o">/</span> <span class="n">ft</span><span class="p">[</span><span class="s1">&#39;Hs&#39;</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">]</span>
+
+<span class="c1">#%% Optimizer</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MMA</span><span class="p">:</span>
+    <span class="c1"># The code was modified from [MMA Svanberg 1987]. Please cite the paper if</span>
+    <span class="c1"># you end up using this code.</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">resetMMACounter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">registerMMAIter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xval</span><span class="p">,</span> <span class="n">xold1</span><span class="p">,</span> <span class="n">xold2</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">+=</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xval</span> <span class="o">=</span> <span class="n">xval</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xold1</span> <span class="o">=</span> <span class="n">xold1</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xold2</span> <span class="o">=</span> <span class="n">xold2</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setNumConstraints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numConstraints</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">numConstraints</span> <span class="o">=</span> <span class="n">numConstraints</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setNumDesignVariables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">numDesVar</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">numDesignVariables</span> <span class="o">=</span> <span class="n">numDesVar</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setMinandMaxBoundsForDesignVariables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span> <span class="o">=</span> <span class="n">xmin</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">=</span> <span class="n">xmax</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setObjectiveWithGradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">objGrad</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objective</span> <span class="o">=</span> <span class="n">obj</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objectiveGradient</span> <span class="o">=</span> <span class="n">objGrad</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setConstraintWithGradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cons</span><span class="p">,</span> <span class="n">consGrad</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraint</span> <span class="o">=</span> <span class="n">cons</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">consGrad</span> <span class="o">=</span> <span class="n">consGrad</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setScalingParams</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zconst</span><span class="p">,</span> <span class="n">zscale</span><span class="p">,</span> <span class="n">ylinscale</span><span class="p">,</span> <span class="n">yquadscale</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zconst</span> <span class="o">=</span> <span class="n">zconst</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zscale</span> <span class="o">=</span> <span class="n">zscale</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ylinscale</span> <span class="o">=</span> <span class="n">ylinscale</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yquadscale</span> <span class="o">=</span> <span class="n">yquadscale</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setMoveLimit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">movelim</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">moveLimit</span> <span class="o">=</span> <span class="n">movelim</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setLowerAndUpperAsymptotes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">low</span><span class="p">,</span> <span class="n">upp</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lowAsymp</span> <span class="o">=</span> <span class="n">low</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">upAsymp</span> <span class="o">=</span> <span class="n">upp</span><span class="p">;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">getOptimalValues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zmma</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getLagrangeMultipliers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lam</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xsi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zet</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getSlackValue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">slack</span><span class="p">;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getAsymptoteValues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lowAsymp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">upAsymp</span><span class="p">;</span>
+
+    <span class="c1"># Function for the MMA sub problem</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mmasub</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xval</span><span class="p">):</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">numConstraints</span><span class="p">;</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">numDesignVariables</span><span class="p">;</span>
+        <span class="nb">iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span><span class="p">;</span>
+        <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">;</span>
+        <span class="n">xold1</span><span class="p">,</span> <span class="n">xold2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xold1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xold2</span><span class="p">;</span>
+        <span class="n">f0val</span><span class="p">,</span> <span class="n">df0dx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">objectiveGradient</span><span class="p">;</span>
+        <span class="n">fval</span><span class="p">,</span> <span class="n">dfdx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">consGrad</span><span class="p">;</span>
+        <span class="n">low</span><span class="p">,</span> <span class="n">upp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lowAsymp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">upAsymp</span><span class="p">;</span>
+        <span class="n">a0</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zconst</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zscale</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ylinscale</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yquadscale</span><span class="p">;</span>
+        <span class="n">move</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">moveLimit</span><span class="p">;</span>
+
+        <span class="n">epsimin</span> <span class="o">=</span> <span class="mf">0.0000001</span>
+        <span class="n">raa0</span> <span class="o">=</span> <span class="mf">0.00001</span>
+        <span class="n">albefa</span> <span class="o">=</span> <span class="mf">0.1</span>
+        <span class="n">asyinit</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="n">asyincr</span> <span class="o">=</span> <span class="mf">1.2</span>
+        <span class="n">asydecr</span> <span class="o">=</span> <span class="mf">0.7</span>
+        <span class="n">eeen</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">eeem</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">zeron</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="c1"># Calculation of the asymptotes low and upp</span>
+        <span class="k">if</span> <span class="nb">iter</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">low</span> <span class="o">=</span> <span class="n">xval</span><span class="o">-</span><span class="n">asyinit</span><span class="o">*</span><span class="p">(</span><span class="n">xmax</span><span class="o">-</span><span class="n">xmin</span><span class="p">)</span>
+            <span class="n">upp</span> <span class="o">=</span> <span class="n">xval</span><span class="o">+</span><span class="n">asyinit</span><span class="o">*</span><span class="p">(</span><span class="n">xmax</span><span class="o">-</span><span class="n">xmin</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">zzz</span> <span class="o">=</span> <span class="p">(</span><span class="n">xval</span><span class="o">-</span><span class="n">xold1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">xold1</span><span class="o">-</span><span class="n">xold2</span><span class="p">)</span>
+            <span class="n">factor</span> <span class="o">=</span> <span class="n">eeen</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">factor</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">zzz</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">)]</span> <span class="o">=</span> <span class="n">asyincr</span>
+            <span class="n">factor</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">zzz</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">)]</span> <span class="o">=</span> <span class="n">asydecr</span>
+            <span class="n">low</span> <span class="o">=</span> <span class="n">xval</span><span class="o">-</span><span class="n">factor</span><span class="o">*</span><span class="p">(</span><span class="n">xold1</span><span class="o">-</span><span class="n">low</span><span class="p">)</span>
+            <span class="n">upp</span> <span class="o">=</span> <span class="n">xval</span><span class="o">+</span><span class="n">factor</span><span class="o">*</span><span class="p">(</span><span class="n">upp</span><span class="o">-</span><span class="n">xold1</span><span class="p">)</span>
+            <span class="n">lowmin</span> <span class="o">=</span> <span class="n">xval</span><span class="o">-</span><span class="mi">10</span><span class="o">*</span><span class="p">(</span><span class="n">xmax</span><span class="o">-</span><span class="n">xmin</span><span class="p">)</span>
+            <span class="n">lowmax</span> <span class="o">=</span> <span class="n">xval</span><span class="o">-</span><span class="mf">0.01</span><span class="o">*</span><span class="p">(</span><span class="n">xmax</span><span class="o">-</span><span class="n">xmin</span><span class="p">)</span>
+            <span class="n">uppmin</span> <span class="o">=</span> <span class="n">xval</span><span class="o">+</span><span class="mf">0.01</span><span class="o">*</span><span class="p">(</span><span class="n">xmax</span><span class="o">-</span><span class="n">xmin</span><span class="p">)</span>
+            <span class="n">uppmax</span> <span class="o">=</span> <span class="n">xval</span><span class="o">+</span><span class="mi">10</span><span class="o">*</span><span class="p">(</span><span class="n">xmax</span><span class="o">-</span><span class="n">xmin</span><span class="p">)</span>
+            <span class="n">low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">low</span><span class="p">,</span><span class="n">lowmin</span><span class="p">)</span>
+            <span class="n">low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">low</span><span class="p">,</span><span class="n">lowmax</span><span class="p">)</span>
+            <span class="n">upp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">upp</span><span class="p">,</span><span class="n">uppmax</span><span class="p">)</span>
+            <span class="n">upp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">upp</span><span class="p">,</span><span class="n">uppmin</span><span class="p">)</span>
+        <span class="c1"># Calculation of the bounds alfa and beta</span>
+        <span class="n">zzz1</span> <span class="o">=</span> <span class="n">low</span><span class="o">+</span><span class="n">albefa</span><span class="o">*</span><span class="p">(</span><span class="n">xval</span><span class="o">-</span><span class="n">low</span><span class="p">)</span>
+        <span class="n">zzz2</span> <span class="o">=</span> <span class="n">xval</span><span class="o">-</span><span class="n">move</span><span class="o">*</span><span class="p">(</span><span class="n">xmax</span><span class="o">-</span><span class="n">xmin</span><span class="p">)</span>
+        <span class="n">zzz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">zzz1</span><span class="p">,</span><span class="n">zzz2</span><span class="p">)</span>
+        <span class="n">alfa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">zzz</span><span class="p">,</span><span class="n">xmin</span><span class="p">)</span>
+        <span class="n">zzz1</span> <span class="o">=</span> <span class="n">upp</span><span class="o">-</span><span class="n">albefa</span><span class="o">*</span><span class="p">(</span><span class="n">upp</span><span class="o">-</span><span class="n">xval</span><span class="p">)</span>
+        <span class="n">zzz2</span> <span class="o">=</span> <span class="n">xval</span><span class="o">+</span><span class="n">move</span><span class="o">*</span><span class="p">(</span><span class="n">xmax</span><span class="o">-</span><span class="n">xmin</span><span class="p">)</span>
+        <span class="n">zzz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">zzz1</span><span class="p">,</span><span class="n">zzz2</span><span class="p">)</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">zzz</span><span class="p">,</span><span class="n">xmax</span><span class="p">)</span>
+        <span class="c1"># Calculations of p0, q0, P, Q and b</span>
+        <span class="n">xmami</span> <span class="o">=</span> <span class="n">xmax</span><span class="o">-</span><span class="n">xmin</span>
+        <span class="n">xmamieps</span> <span class="o">=</span> <span class="mf">0.00001</span><span class="o">*</span><span class="n">eeen</span>
+        <span class="n">xmami</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">xmami</span><span class="p">,</span><span class="n">xmamieps</span><span class="p">)</span>
+        <span class="n">xmamiinv</span> <span class="o">=</span> <span class="n">eeen</span><span class="o">/</span><span class="n">xmami</span>
+        <span class="n">ux1</span> <span class="o">=</span> <span class="n">upp</span><span class="o">-</span><span class="n">xval</span>
+        <span class="n">ux2</span> <span class="o">=</span> <span class="n">ux1</span><span class="o">*</span><span class="n">ux1</span>
+        <span class="n">xl1</span> <span class="o">=</span> <span class="n">xval</span><span class="o">-</span><span class="n">low</span>
+        <span class="n">xl2</span> <span class="o">=</span> <span class="n">xl1</span><span class="o">*</span><span class="n">xl1</span>
+        <span class="n">uxinv</span> <span class="o">=</span> <span class="n">eeen</span><span class="o">/</span><span class="n">ux1</span>
+        <span class="n">xlinv</span> <span class="o">=</span> <span class="n">eeen</span><span class="o">/</span><span class="n">xl1</span>
+        <span class="n">p0</span> <span class="o">=</span> <span class="n">zeron</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">q0</span> <span class="o">=</span> <span class="n">zeron</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">p0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">df0dx</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">q0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="o">-</span><span class="n">df0dx</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">pq0</span> <span class="o">=</span> <span class="mf">0.001</span><span class="o">*</span><span class="p">(</span><span class="n">p0</span><span class="o">+</span><span class="n">q0</span><span class="p">)</span><span class="o">+</span><span class="n">raa0</span><span class="o">*</span><span class="n">xmamiinv</span>
+        <span class="n">p0</span> <span class="o">=</span> <span class="n">p0</span><span class="o">+</span><span class="n">pq0</span>
+        <span class="n">q0</span> <span class="o">=</span> <span class="n">q0</span><span class="o">+</span><span class="n">pq0</span>
+        <span class="n">p0</span> <span class="o">=</span> <span class="n">p0</span><span class="o">*</span><span class="n">ux2</span>
+        <span class="n">q0</span> <span class="o">=</span> <span class="n">q0</span><span class="o">*</span><span class="n">xl2</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span><span class="n">n</span><span class="p">))</span> <span class="c1">## @@ make sparse with scipy?</span>
+        <span class="n">Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span><span class="n">n</span><span class="p">))</span> <span class="c1">## @@ make sparse with scipy?</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">dfdx</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="o">-</span><span class="n">dfdx</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">PQ</span> <span class="o">=</span> <span class="mf">0.001</span><span class="o">*</span><span class="p">(</span><span class="n">P</span><span class="o">+</span><span class="n">Q</span><span class="p">)</span><span class="o">+</span><span class="n">raa0</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">eeem</span><span class="p">,</span><span class="n">xmamiinv</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">P</span><span class="o">+</span><span class="n">PQ</span>
+        <span class="n">Q</span> <span class="o">=</span> <span class="n">Q</span><span class="o">+</span><span class="n">PQ</span>
+
+        <span class="c1"># P = (diags(ux2.flatten(),0).dot(P.T)).T</span>
+        <span class="c1"># Q = (diags(xl2.flatten(),0).dot(Q.T)).T</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">ux2</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">P</span>
+        <span class="n">Q</span> <span class="o">=</span> <span class="n">xl2</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">Q</span>
+
+        <span class="n">b</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="n">uxinv</span><span class="p">)</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span><span class="n">xlinv</span><span class="p">)</span><span class="o">-</span><span class="n">fval</span><span class="p">)</span>
+        <span class="c1"># Solving the subproblem by a primal-dual Newton method</span>
+        <span class="n">xmma</span><span class="p">,</span><span class="n">ymma</span><span class="p">,</span><span class="n">zmma</span><span class="p">,</span><span class="n">lam</span><span class="p">,</span><span class="n">xsi</span><span class="p">,</span><span class="n">eta</span><span class="p">,</span><span class="n">mu</span><span class="p">,</span><span class="n">zet</span><span class="p">,</span><span class="n">s</span> <span class="o">=</span> <span class="n">subsolv</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">epsimin</span><span class="p">,</span><span class="n">low</span><span class="p">,</span><span class="n">upp</span><span class="p">,</span><span class="n">alfa</span><span class="p">,</span>\
+                                                      <span class="n">beta</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">q0</span><span class="p">,</span><span class="n">P</span><span class="p">,</span><span class="n">Q</span><span class="p">,</span><span class="n">a0</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">,</span><span class="n">d</span><span class="p">)</span>
+        <span class="c1"># Return values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xmma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zmma</span> <span class="o">=</span> <span class="n">xmma</span><span class="p">,</span> <span class="n">ymma</span><span class="p">,</span> <span class="n">zmma</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lam</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xsi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zet</span> <span class="o">=</span> <span class="n">lam</span><span class="p">,</span><span class="n">xsi</span><span class="p">,</span><span class="n">eta</span><span class="p">,</span><span class="n">mu</span><span class="p">,</span><span class="n">zet</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slack</span> <span class="o">=</span> <span class="n">s</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lowAsymp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">upAsymp</span> <span class="o">=</span> <span class="n">low</span><span class="p">,</span> <span class="n">upp</span><span class="p">;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">subsolv</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">epsimin</span><span class="p">,</span><span class="n">low</span><span class="p">,</span><span class="n">upp</span><span class="p">,</span><span class="n">alfa</span><span class="p">,</span><span class="n">beta</span><span class="p">,</span><span class="n">p0</span><span class="p">,</span><span class="n">q0</span><span class="p">,</span><span class="n">P</span><span class="p">,</span><span class="n">Q</span><span class="p">,</span><span class="n">a0</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">,</span><span class="n">d</span><span class="p">):</span>
+    <span class="n">een</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">eem</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">m</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">epsi</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">epsvecn</span> <span class="o">=</span> <span class="n">epsi</span><span class="o">*</span><span class="n">een</span>
+    <span class="n">epsvecm</span> <span class="o">=</span> <span class="n">epsi</span><span class="o">*</span><span class="n">eem</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">alfa</span><span class="o">+</span><span class="n">beta</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">eem</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
+    <span class="n">lam</span> <span class="o">=</span> <span class="n">eem</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">xsi</span> <span class="o">=</span> <span class="n">een</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">alfa</span><span class="p">)</span>
+    <span class="n">xsi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">xsi</span><span class="p">,</span><span class="n">een</span><span class="p">)</span>
+    <span class="n">eta</span> <span class="o">=</span> <span class="n">een</span><span class="o">/</span><span class="p">(</span><span class="n">beta</span><span class="o">-</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">eta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">eta</span><span class="p">,</span><span class="n">een</span><span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">eem</span><span class="p">,</span><span class="mf">0.5</span><span class="o">*</span><span class="n">c</span><span class="p">)</span>
+    <span class="n">zet</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">]])</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">eem</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">itera</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c1"># Start while epsi&gt;epsimin</span>
+    <span class="k">while</span> <span class="n">epsi</span> <span class="o">&gt;</span> <span class="n">epsimin</span><span class="p">:</span>
+        <span class="n">epsvecn</span> <span class="o">=</span> <span class="n">epsi</span><span class="o">*</span><span class="n">een</span>
+        <span class="n">epsvecm</span> <span class="o">=</span> <span class="n">epsi</span><span class="o">*</span><span class="n">eem</span>
+        <span class="n">ux1</span> <span class="o">=</span> <span class="n">upp</span><span class="o">-</span><span class="n">x</span>
+        <span class="n">xl1</span> <span class="o">=</span> <span class="n">x</span><span class="o">-</span><span class="n">low</span>
+        <span class="n">ux2</span> <span class="o">=</span> <span class="n">ux1</span><span class="o">*</span><span class="n">ux1</span>
+        <span class="n">xl2</span> <span class="o">=</span> <span class="n">xl1</span><span class="o">*</span><span class="n">xl1</span>
+        <span class="n">uxinv1</span> <span class="o">=</span> <span class="n">een</span><span class="o">/</span><span class="n">ux1</span>
+        <span class="n">xlinv1</span> <span class="o">=</span> <span class="n">een</span><span class="o">/</span><span class="n">xl1</span>
+        <span class="n">plam</span> <span class="o">=</span> <span class="n">p0</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">lam</span><span class="p">)</span>
+        <span class="n">qlam</span> <span class="o">=</span> <span class="n">q0</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">lam</span><span class="p">)</span>
+        <span class="n">gvec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="n">uxinv1</span><span class="p">)</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span><span class="n">xlinv1</span><span class="p">)</span>
+        <span class="n">dpsidx</span> <span class="o">=</span> <span class="n">plam</span><span class="o">/</span><span class="n">ux2</span><span class="o">-</span><span class="n">qlam</span><span class="o">/</span><span class="n">xl2</span>
+        <span class="n">rex</span> <span class="o">=</span> <span class="n">dpsidx</span><span class="o">-</span><span class="n">xsi</span><span class="o">+</span><span class="n">eta</span>
+        <span class="n">rey</span> <span class="o">=</span> <span class="n">c</span><span class="o">+</span><span class="n">d</span><span class="o">*</span><span class="n">y</span><span class="o">-</span><span class="n">mu</span><span class="o">-</span><span class="n">lam</span>
+        <span class="n">rez</span> <span class="o">=</span> <span class="n">a0</span><span class="o">-</span><span class="n">zet</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">lam</span><span class="p">)</span>
+        <span class="n">relam</span> <span class="o">=</span> <span class="n">gvec</span><span class="o">-</span><span class="n">a</span><span class="o">*</span><span class="n">z</span><span class="o">-</span><span class="n">y</span><span class="o">+</span><span class="n">s</span><span class="o">-</span><span class="n">b</span>
+        <span class="n">rexsi</span> <span class="o">=</span> <span class="n">xsi</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">alfa</span><span class="p">)</span><span class="o">-</span><span class="n">epsvecn</span>
+        <span class="n">reeta</span> <span class="o">=</span> <span class="n">eta</span><span class="o">*</span><span class="p">(</span><span class="n">beta</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="n">epsvecn</span>
+        <span class="n">remu</span> <span class="o">=</span> <span class="n">mu</span><span class="o">*</span><span class="n">y</span><span class="o">-</span><span class="n">epsvecm</span>
+        <span class="n">rezet</span> <span class="o">=</span> <span class="n">zet</span><span class="o">*</span><span class="n">z</span><span class="o">-</span><span class="n">epsi</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">lam</span><span class="o">*</span><span class="n">s</span><span class="o">-</span><span class="n">epsvecm</span>
+        <span class="n">residu1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">rex</span><span class="p">,</span> <span class="n">rey</span><span class="p">,</span> <span class="n">rez</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">residu2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">relam</span><span class="p">,</span> <span class="n">rexsi</span><span class="p">,</span> <span class="n">reeta</span><span class="p">,</span> <span class="n">remu</span><span class="p">,</span> <span class="n">rezet</span><span class="p">,</span> <span class="n">res</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">residu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">residu1</span><span class="p">,</span> <span class="n">residu2</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">residunorm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">residu</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">residu</span><span class="p">))</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+        <span class="n">residumax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">residu</span><span class="p">))</span>
+        <span class="n">ittt</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># Start while (residumax&gt;0.9*epsi) and (ittt&lt;200)</span>
+        <span class="k">while</span> <span class="p">(</span><span class="n">residumax</span> <span class="o">&gt;</span> <span class="mf">0.9</span><span class="o">*</span><span class="n">epsi</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">ittt</span> <span class="o">&lt;</span> <span class="mi">200</span><span class="p">):</span>
+            <span class="n">ittt</span> <span class="o">=</span> <span class="n">ittt</span><span class="o">+</span><span class="mi">1</span>
+            <span class="n">itera</span> <span class="o">=</span> <span class="n">itera</span><span class="o">+</span><span class="mi">1</span>
+            <span class="n">ux1</span> <span class="o">=</span> <span class="n">upp</span><span class="o">-</span><span class="n">x</span>
+            <span class="n">xl1</span> <span class="o">=</span> <span class="n">x</span><span class="o">-</span><span class="n">low</span>
+            <span class="n">ux2</span> <span class="o">=</span> <span class="n">ux1</span><span class="o">*</span><span class="n">ux1</span>
+            <span class="n">xl2</span> <span class="o">=</span> <span class="n">xl1</span><span class="o">*</span><span class="n">xl1</span>
+            <span class="n">ux3</span> <span class="o">=</span> <span class="n">ux1</span><span class="o">*</span><span class="n">ux2</span>
+            <span class="n">xl3</span> <span class="o">=</span> <span class="n">xl1</span><span class="o">*</span><span class="n">xl2</span>
+            <span class="n">uxinv1</span> <span class="o">=</span> <span class="n">een</span><span class="o">/</span><span class="n">ux1</span>
+            <span class="n">xlinv1</span> <span class="o">=</span> <span class="n">een</span><span class="o">/</span><span class="n">xl1</span>
+            <span class="n">uxinv2</span> <span class="o">=</span> <span class="n">een</span><span class="o">/</span><span class="n">ux2</span>
+            <span class="n">xlinv2</span> <span class="o">=</span> <span class="n">een</span><span class="o">/</span><span class="n">xl2</span>
+            <span class="n">plam</span> <span class="o">=</span> <span class="n">p0</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">lam</span><span class="p">)</span>
+            <span class="n">qlam</span> <span class="o">=</span> <span class="n">q0</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">lam</span><span class="p">)</span>
+            <span class="n">gvec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="n">uxinv1</span><span class="p">)</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span><span class="n">xlinv1</span><span class="p">)</span>
+
+            <span class="c1"># GG = (diags(uxinv2.flatten(),0).dot(P.T)).T-(diags\</span>
+            <span class="c1">#                          (xlinv2.flatten(),0).dot(Q.T)).T</span>
+            <span class="n">GG</span> <span class="o">=</span> <span class="n">uxinv2</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">P</span> <span class="o">-</span> <span class="n">xlinv2</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">Q</span>
+
+            <span class="n">dpsidx</span> <span class="o">=</span> <span class="n">plam</span><span class="o">/</span><span class="n">ux2</span><span class="o">-</span><span class="n">qlam</span><span class="o">/</span><span class="n">xl2</span>
+            <span class="n">delx</span> <span class="o">=</span> <span class="n">dpsidx</span><span class="o">-</span><span class="n">epsvecn</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">alfa</span><span class="p">)</span><span class="o">+</span><span class="n">epsvecn</span><span class="o">/</span><span class="p">(</span><span class="n">beta</span><span class="o">-</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">dely</span> <span class="o">=</span> <span class="n">c</span><span class="o">+</span><span class="n">d</span><span class="o">*</span><span class="n">y</span><span class="o">-</span><span class="n">lam</span><span class="o">-</span><span class="n">epsvecm</span><span class="o">/</span><span class="n">y</span>
+            <span class="n">delz</span> <span class="o">=</span> <span class="n">a0</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">lam</span><span class="p">)</span><span class="o">-</span><span class="n">epsi</span><span class="o">/</span><span class="n">z</span>
+            <span class="n">dellam</span> <span class="o">=</span> <span class="n">gvec</span><span class="o">-</span><span class="n">a</span><span class="o">*</span><span class="n">z</span><span class="o">-</span><span class="n">y</span><span class="o">-</span><span class="n">b</span><span class="o">+</span><span class="n">epsvecm</span><span class="o">/</span><span class="n">lam</span>
+            <span class="n">diagx</span> <span class="o">=</span> <span class="n">plam</span><span class="o">/</span><span class="n">ux3</span><span class="o">+</span><span class="n">qlam</span><span class="o">/</span><span class="n">xl3</span>
+            <span class="n">diagx</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">diagx</span><span class="o">+</span><span class="n">xsi</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">alfa</span><span class="p">)</span><span class="o">+</span><span class="n">eta</span><span class="o">/</span><span class="p">(</span><span class="n">beta</span><span class="o">-</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">diagxinv</span> <span class="o">=</span> <span class="n">een</span><span class="o">/</span><span class="n">diagx</span>
+            <span class="n">diagy</span> <span class="o">=</span> <span class="n">d</span><span class="o">+</span><span class="n">mu</span><span class="o">/</span><span class="n">y</span>
+            <span class="n">diagyinv</span> <span class="o">=</span> <span class="n">eem</span><span class="o">/</span><span class="n">diagy</span>
+            <span class="n">diaglam</span> <span class="o">=</span> <span class="n">s</span><span class="o">/</span><span class="n">lam</span>
+            <span class="n">diaglamyi</span> <span class="o">=</span> <span class="n">diaglam</span><span class="o">+</span><span class="n">diagyinv</span>
+            <span class="c1"># Start if m&lt;n</span>
+            <span class="k">if</span> <span class="n">m</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">:</span>
+                <span class="n">blam</span> <span class="o">=</span> <span class="n">dellam</span><span class="o">+</span><span class="n">dely</span><span class="o">/</span><span class="n">diagy</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">GG</span><span class="p">,(</span><span class="n">delx</span><span class="o">/</span><span class="n">diagx</span><span class="p">))</span>
+                <span class="n">bb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">blam</span><span class="p">,</span><span class="n">delz</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+                
+                <span class="c1"># Alam = np.asarray(diags(diaglamyi.flatten(),0) \</span>
+                <span class="c1">#     +(diags(diagxinv.flatten(),0).dot(GG.T).T).dot(GG.T))</span>
+                <span class="n">Alam</span> <span class="o">=</span> <span class="n">diags</span><span class="p">(</span><span class="n">diaglamyi</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">diagxinv</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">GG</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">GG</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+                <span class="n">AAr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">Alam</span><span class="p">,</span><span class="n">a</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">AAr2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">a</span><span class="p">,</span><span class="o">-</span><span class="n">zet</span><span class="o">/</span><span class="n">z</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+                <span class="n">AA</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">AAr1</span><span class="p">,</span><span class="n">AAr2</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">solut</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">AA</span><span class="p">,</span><span class="n">bb</span><span class="p">)</span>
+                <span class="n">dlam</span> <span class="o">=</span> <span class="n">solut</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">m</span><span class="p">]</span>
+                <span class="n">dz</span> <span class="o">=</span> <span class="n">solut</span><span class="p">[</span><span class="n">m</span><span class="p">:</span><span class="n">m</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">dx</span> <span class="o">=</span> <span class="o">-</span><span class="n">delx</span><span class="o">/</span><span class="n">diagx</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">GG</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">dlam</span><span class="p">)</span><span class="o">/</span><span class="n">diagx</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">diaglamyiinv</span> <span class="o">=</span> <span class="n">eem</span><span class="o">/</span><span class="n">diaglamyi</span>
+                <span class="n">dellamyi</span> <span class="o">=</span> <span class="n">dellam</span><span class="o">+</span><span class="n">dely</span><span class="o">/</span><span class="n">diagy</span>
+                <span class="n">Axx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">diags</span><span class="p">(</span><span class="n">diagx</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span><span class="mi">0</span><span class="p">)</span> \
+                    <span class="o">+</span><span class="p">(</span><span class="n">diags</span><span class="p">(</span><span class="n">diaglamyiinv</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">GG</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">GG</span><span class="p">))</span>
+                <span class="n">azz</span> <span class="o">=</span> <span class="n">zet</span><span class="o">/</span><span class="n">z</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">T</span><span class="p">,(</span><span class="n">a</span><span class="o">/</span><span class="n">diaglamyi</span><span class="p">))</span>
+                <span class="n">axz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="o">-</span><span class="n">GG</span><span class="o">.</span><span class="n">T</span><span class="p">,(</span><span class="n">a</span><span class="o">/</span><span class="n">diaglamyi</span><span class="p">))</span>
+                <span class="n">bx</span> <span class="o">=</span> <span class="n">delx</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">GG</span><span class="o">.</span><span class="n">T</span><span class="p">,(</span><span class="n">dellamyi</span><span class="o">/</span><span class="n">diaglamyi</span><span class="p">))</span>
+                <span class="n">bz</span> <span class="o">=</span> <span class="n">delz</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">T</span><span class="p">,(</span><span class="n">dellamyi</span><span class="o">/</span><span class="n">diaglamyi</span><span class="p">))</span>
+                <span class="n">AAr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">Axx</span><span class="p">,</span><span class="n">axz</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">AAr2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">axz</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">azz</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">AA</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">AAr1</span><span class="p">,</span><span class="n">AAr2</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">bb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="o">-</span><span class="n">bx</span><span class="p">,</span><span class="o">-</span><span class="n">bz</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">solut</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">AA</span><span class="p">,</span><span class="n">bb</span><span class="p">)</span>
+                <span class="n">dx</span> <span class="o">=</span> <span class="n">solut</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">n</span><span class="p">]</span>
+                <span class="n">dz</span> <span class="o">=</span> <span class="n">solut</span><span class="p">[</span><span class="n">n</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">dlam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">GG</span><span class="p">,</span><span class="n">dx</span><span class="p">)</span><span class="o">/</span><span class="n">diaglamyi</span><span class="o">-</span><span class="n">dz</span><span class="o">*</span><span class="p">(</span><span class="n">a</span><span class="o">/</span><span class="n">diaglamyi</span><span class="p">)</span>\
+                    <span class="o">+</span><span class="n">dellamyi</span><span class="o">/</span><span class="n">diaglamyi</span>
+                <span class="c1"># End if m&lt;n</span>
+            <span class="n">dy</span> <span class="o">=</span> <span class="o">-</span><span class="n">dely</span><span class="o">/</span><span class="n">diagy</span><span class="o">+</span><span class="n">dlam</span><span class="o">/</span><span class="n">diagy</span>
+            <span class="n">dxsi</span> <span class="o">=</span> <span class="o">-</span><span class="n">xsi</span><span class="o">+</span><span class="n">epsvecn</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">alfa</span><span class="p">)</span><span class="o">-</span><span class="p">(</span><span class="n">xsi</span><span class="o">*</span><span class="n">dx</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">alfa</span><span class="p">)</span>
+            <span class="n">deta</span> <span class="o">=</span> <span class="o">-</span><span class="n">eta</span><span class="o">+</span><span class="n">epsvecn</span><span class="o">/</span><span class="p">(</span><span class="n">beta</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">+</span><span class="p">(</span><span class="n">eta</span><span class="o">*</span><span class="n">dx</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">beta</span><span class="o">-</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">dmu</span> <span class="o">=</span> <span class="o">-</span><span class="n">mu</span><span class="o">+</span><span class="n">epsvecm</span><span class="o">/</span><span class="n">y</span><span class="o">-</span><span class="p">(</span><span class="n">mu</span><span class="o">*</span><span class="n">dy</span><span class="p">)</span><span class="o">/</span><span class="n">y</span>
+            <span class="n">dzet</span> <span class="o">=</span> <span class="o">-</span><span class="n">zet</span><span class="o">+</span><span class="n">epsi</span><span class="o">/</span><span class="n">z</span><span class="o">-</span><span class="n">zet</span><span class="o">*</span><span class="n">dz</span><span class="o">/</span><span class="n">z</span>
+            <span class="n">ds</span> <span class="o">=</span> <span class="o">-</span><span class="n">s</span><span class="o">+</span><span class="n">epsvecm</span><span class="o">/</span><span class="n">lam</span><span class="o">-</span><span class="p">(</span><span class="n">s</span><span class="o">*</span><span class="n">dlam</span><span class="p">)</span><span class="o">/</span><span class="n">lam</span>
+            <span class="n">xx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">,</span><span class="n">lam</span><span class="p">,</span><span class="n">xsi</span><span class="p">,</span><span class="n">eta</span><span class="p">,</span><span class="n">mu</span><span class="p">,</span><span class="n">zet</span><span class="p">,</span><span class="n">s</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">dxx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">dy</span><span class="p">,</span><span class="n">dz</span><span class="p">,</span><span class="n">dlam</span><span class="p">,</span><span class="n">dxsi</span><span class="p">,</span><span class="n">deta</span><span class="p">,</span><span class="n">dmu</span><span class="p">,</span><span class="n">dzet</span><span class="p">,</span><span class="n">ds</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="c1">#</span>
+            <span class="n">stepxx</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.01</span><span class="o">*</span><span class="n">dxx</span><span class="o">/</span><span class="n">xx</span>
+            <span class="n">stmxx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">stepxx</span><span class="p">)</span>
+            <span class="n">stepalfa</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.01</span><span class="o">*</span><span class="n">dx</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">alfa</span><span class="p">)</span>
+            <span class="n">stmalfa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">stepalfa</span><span class="p">)</span>
+            <span class="n">stepbeta</span> <span class="o">=</span> <span class="mf">1.01</span><span class="o">*</span><span class="n">dx</span><span class="o">/</span><span class="p">(</span><span class="n">beta</span><span class="o">-</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">stmbeta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">stepbeta</span><span class="p">)</span>
+            <span class="n">stmalbe</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">stmalfa</span><span class="p">,</span><span class="n">stmbeta</span><span class="p">)</span>
+            <span class="n">stmalbexx</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">stmalbe</span><span class="p">,</span><span class="n">stmxx</span><span class="p">)</span>
+            <span class="n">stminv</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">stmalbexx</span><span class="p">,</span><span class="mf">1.0</span><span class="p">)</span>
+            <span class="n">steg</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">stminv</span>
+            <span class="c1">#</span>
+            <span class="n">xold</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">yold</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">zold</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">lamold</span> <span class="o">=</span> <span class="n">lam</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">xsiold</span> <span class="o">=</span> <span class="n">xsi</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">etaold</span> <span class="o">=</span> <span class="n">eta</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">muold</span> <span class="o">=</span> <span class="n">mu</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">zetold</span> <span class="o">=</span> <span class="n">zet</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">sold</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="c1">#</span>
+            <span class="n">itto</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">resinew</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">residunorm</span>
+
+            <span class="c1"># Start: while (resinew&gt;residunorm) and (itto&lt;50)</span>
+            <span class="k">while</span> <span class="p">(</span><span class="n">resinew</span> <span class="o">&gt;</span> <span class="n">residunorm</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">itto</span> <span class="o">&lt;</span> <span class="mi">50</span><span class="p">):</span>
+                <span class="n">itto</span> <span class="o">=</span> <span class="n">itto</span><span class="o">+</span><span class="mi">1</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">xold</span><span class="o">+</span><span class="n">steg</span><span class="o">*</span><span class="n">dx</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">yold</span><span class="o">+</span><span class="n">steg</span><span class="o">*</span><span class="n">dy</span>
+                <span class="n">z</span> <span class="o">=</span> <span class="n">zold</span><span class="o">+</span><span class="n">steg</span><span class="o">*</span><span class="n">dz</span>
+                <span class="n">lam</span> <span class="o">=</span> <span class="n">lamold</span><span class="o">+</span><span class="n">steg</span><span class="o">*</span><span class="n">dlam</span>
+                <span class="n">xsi</span> <span class="o">=</span> <span class="n">xsiold</span><span class="o">+</span><span class="n">steg</span><span class="o">*</span><span class="n">dxsi</span>
+                <span class="n">eta</span> <span class="o">=</span> <span class="n">etaold</span><span class="o">+</span><span class="n">steg</span><span class="o">*</span><span class="n">deta</span>
+                <span class="n">mu</span> <span class="o">=</span> <span class="n">muold</span><span class="o">+</span><span class="n">steg</span><span class="o">*</span><span class="n">dmu</span>
+                <span class="n">zet</span> <span class="o">=</span> <span class="n">zetold</span><span class="o">+</span><span class="n">steg</span><span class="o">*</span><span class="n">dzet</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">sold</span><span class="o">+</span><span class="n">steg</span><span class="o">*</span><span class="n">ds</span>
+                <span class="n">ux1</span> <span class="o">=</span> <span class="n">upp</span><span class="o">-</span><span class="n">x</span>
+                <span class="n">xl1</span> <span class="o">=</span> <span class="n">x</span><span class="o">-</span><span class="n">low</span>
+                <span class="n">ux2</span> <span class="o">=</span> <span class="n">ux1</span><span class="o">*</span><span class="n">ux1</span>
+                <span class="n">xl2</span> <span class="o">=</span> <span class="n">xl1</span><span class="o">*</span><span class="n">xl1</span>
+                <span class="n">uxinv1</span> <span class="o">=</span> <span class="n">een</span><span class="o">/</span><span class="n">ux1</span>
+                <span class="n">xlinv1</span> <span class="o">=</span> <span class="n">een</span><span class="o">/</span><span class="n">xl1</span>
+                <span class="n">plam</span> <span class="o">=</span> <span class="n">p0</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">lam</span><span class="p">)</span>
+                <span class="n">qlam</span> <span class="o">=</span> <span class="n">q0</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">lam</span><span class="p">)</span>
+                <span class="n">gvec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="n">uxinv1</span><span class="p">)</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span><span class="n">xlinv1</span><span class="p">)</span>
+                <span class="n">dpsidx</span> <span class="o">=</span> <span class="n">plam</span><span class="o">/</span><span class="n">ux2</span><span class="o">-</span><span class="n">qlam</span><span class="o">/</span><span class="n">xl2</span>
+                <span class="n">rex</span> <span class="o">=</span> <span class="n">dpsidx</span><span class="o">-</span><span class="n">xsi</span><span class="o">+</span><span class="n">eta</span>
+                <span class="n">rey</span> <span class="o">=</span> <span class="n">c</span><span class="o">+</span><span class="n">d</span><span class="o">*</span><span class="n">y</span><span class="o">-</span><span class="n">mu</span><span class="o">-</span><span class="n">lam</span>
+                <span class="n">rez</span> <span class="o">=</span> <span class="n">a0</span><span class="o">-</span><span class="n">zet</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">lam</span><span class="p">)</span>
+                <span class="n">relam</span> <span class="o">=</span> <span class="n">gvec</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">z</span><span class="p">)</span><span class="o">-</span><span class="n">y</span><span class="o">+</span><span class="n">s</span><span class="o">-</span><span class="n">b</span>
+                <span class="n">rexsi</span> <span class="o">=</span> <span class="n">xsi</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">alfa</span><span class="p">)</span><span class="o">-</span><span class="n">epsvecn</span>
+                <span class="n">reeta</span> <span class="o">=</span> <span class="n">eta</span><span class="o">*</span><span class="p">(</span><span class="n">beta</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="n">epsvecn</span>
+                <span class="n">remu</span> <span class="o">=</span> <span class="n">mu</span><span class="o">*</span><span class="n">y</span><span class="o">-</span><span class="n">epsvecm</span>
+                <span class="n">rezet</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">zet</span><span class="p">,</span><span class="n">z</span><span class="p">)</span><span class="o">-</span><span class="n">epsi</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">lam</span><span class="o">*</span><span class="n">s</span><span class="o">-</span><span class="n">epsvecm</span>
+                <span class="n">residu1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">rex</span><span class="p">,</span><span class="n">rey</span><span class="p">,</span><span class="n">rez</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">residu2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">relam</span><span class="p">,</span><span class="n">rexsi</span><span class="p">,</span><span class="n">reeta</span><span class="p">,</span><span class="n">remu</span><span class="p">,</span><span class="n">rezet</span><span class="p">,</span><span class="n">res</span><span class="p">),</span> \
+                                         <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">residu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">residu1</span><span class="p">,</span><span class="n">residu2</span><span class="p">),</span><span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">resinew</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">residu</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">residu</span><span class="p">))</span>
+                <span class="n">steg</span> <span class="o">=</span> <span class="n">steg</span><span class="o">/</span><span class="mi">2</span>
+                <span class="c1"># End: while (resinew&gt;residunorm) and (itto&lt;50)</span>
+
+            <span class="n">residunorm</span> <span class="o">=</span> <span class="n">resinew</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">residumax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">residu</span><span class="p">))</span>
+            <span class="n">steg</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">steg</span>
+            <span class="c1"># End: while (residumax&gt;0.9*epsi) and (ittt&lt;200)</span>
+        <span class="n">epsi</span> <span class="o">=</span> <span class="mf">0.1</span><span class="o">*</span><span class="n">epsi</span>
+        <span class="c1"># End: while epsi&gt;epsimin</span>
+
+    <span class="n">xmma</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">ymma</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">zmma</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">lamma</span> <span class="o">=</span> <span class="n">lam</span>
+    <span class="n">xsimma</span> <span class="o">=</span> <span class="n">xsi</span>
+    <span class="n">etamma</span> <span class="o">=</span> <span class="n">eta</span>
+    <span class="n">mumma</span> <span class="o">=</span> <span class="n">mu</span>
+    <span class="n">zetmma</span> <span class="o">=</span> <span class="n">zet</span>
+    <span class="n">smma</span> <span class="o">=</span> <span class="n">s</span>
+
+    <span class="k">return</span> <span class="n">xmma</span><span class="p">,</span><span class="n">ymma</span><span class="p">,</span><span class="n">zmma</span><span class="p">,</span><span class="n">lamma</span><span class="p">,</span><span class="n">xsimma</span><span class="p">,</span><span class="n">etamma</span><span class="p">,</span><span class="n">mumma</span><span class="p">,</span><span class="n">zetmma</span><span class="p">,</span><span class="n">smma</span>
+
+
+<div class="viewcode-block" id="optimize">
+<a class="viewcode-back" href="../../more/api/api_mma.html#jax_fem.mma.optimize">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">optimize</span><span class="p">(</span><span class="n">fe</span><span class="p">,</span> <span class="n">rho_ini</span><span class="p">,</span> <span class="n">optimizationParams</span><span class="p">,</span> <span class="n">objectiveHandle</span><span class="p">,</span> <span class="n">consHandle</span><span class="p">,</span> <span class="n">numConstraints</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs topology optimization using the Method of Moving Asymptotes (MMA).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fe : FiniteElement</span>
+<span class="sd">        Finite element object.</span>
+<span class="sd">    rho_ini : NumpyArray</span>
+<span class="sd">        Initial density distribution.</span>
+<span class="sd">        Shape is (num_rho_vars, 1).</span>
+<span class="sd">    optimizationParams : dict</span>
+<span class="sd">        Dictionary containing optimization parameters:</span>
+
+<span class="sd">        - &#39;movelimit&#39;: Move limit for design variables (float)</span>
+<span class="sd">        - &#39;maxIters&#39;: Maximum number of iterations (int)</span>
+<span class="sd">    objectiveHandle : callable</span>
+<span class="sd">        Function that computes the objective value and its gradient.</span>
+<span class="sd">        Signature: ``J, dJ = objectiveHandle(rho_physical)``</span>
+
+<span class="sd">        - ``rho_physical``: Physical density field (filtered if enabled). Same shape as ``rho_ini``.</span>
+<span class="sd">        - ``J``: Objective value (scalar).</span>
+<span class="sd">        - ``dJ``: Objective gradient (NumpyArray, same shape as ``rho_ini``).</span>
+<span class="sd">    consHandle : callable</span>
+<span class="sd">        Function that computes constraint values and their gradients.</span>
+<span class="sd">        Signature: ``vc, dvc = consHandle(rho_physical, iter)``</span>
+
+<span class="sd">        - ``rho_physical``: Physical density field (filtered if enabled). Same shape as ``rho_ini``.</span>
+<span class="sd">        - ``iter``: Current optimization iteration (int).</span>
+<span class="sd">        - ``vc``: Constraint values. Shape is (num_constraints,).</span>
+<span class="sd">        - ``dvc``: Constraint gradients. Shape is (num_constraints, ...), where ... shares the same shape with ``rho_ini``.</span>
+<span class="sd">    numConstraints : int</span>
+<span class="sd">        Number of constraints in the optimization problem.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    rho : NumpyArray</span>
+<span class="sd">        Optimized density distribution after completing all iterations.</span>
+<span class="sd">        Same shape as ``rho_ini``.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    TODO: Scale objective function value to be always within 1-100</span>
+<span class="sd">    (`ref &lt;https://doi.org/10.1016/j.compstruc.2018.01.008&gt;`_).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">H</span><span class="p">,</span> <span class="n">Hs</span> <span class="o">=</span> <span class="n">compute_filter_kd_tree</span><span class="p">(</span><span class="n">fe</span><span class="p">)</span>
+    <span class="n">ft</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;H&#39;</span><span class="p">:</span><span class="n">H</span><span class="p">,</span> <span class="s1">&#39;Hs&#39;</span><span class="p">:</span><span class="n">Hs</span><span class="p">}</span>
+
+    <span class="n">rho</span> <span class="o">=</span> <span class="n">rho_ini</span>
+
+    <span class="n">loop</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">numConstraints</span> <span class="c1"># num constraints</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rho</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="c1"># num params</span>
+
+    <span class="n">mma</span> <span class="o">=</span> <span class="n">MMA</span><span class="p">()</span>
+    <span class="n">mma</span><span class="o">.</span><span class="n">setNumConstraints</span><span class="p">(</span><span class="n">numConstraints</span><span class="p">)</span>
+    <span class="n">mma</span><span class="o">.</span><span class="n">setNumDesignVariables</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">mma</span><span class="o">.</span><span class="n">setMinandMaxBoundsForDesignVariables</span>\
+        <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+
+    <span class="n">xval</span> <span class="o">=</span> <span class="n">rho</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span> 
+    <span class="n">xold1</span><span class="p">,</span> <span class="n">xold2</span> <span class="o">=</span> <span class="n">xval</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">xval</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">mma</span><span class="o">.</span><span class="n">registerMMAIter</span><span class="p">(</span><span class="n">xval</span><span class="p">,</span> <span class="n">xold1</span><span class="p">,</span> <span class="n">xold2</span><span class="p">)</span>
+    <span class="n">mma</span><span class="o">.</span><span class="n">setLowerAndUpperAsymptotes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+    <span class="n">mma</span><span class="o">.</span><span class="n">setScalingParams</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> \
+                         <span class="mi">10000</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">m</span><span class="p">,</span><span class="mi">1</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+    <span class="c1"># Move limit is an important parameter that affects TO result; default can be 0.2</span>
+    <span class="n">mma</span><span class="o">.</span><span class="n">setMoveLimit</span><span class="p">(</span><span class="n">optimizationParams</span><span class="p">[</span><span class="s1">&#39;movelimit&#39;</span><span class="p">])</span> 
+
+    <span class="k">while</span> <span class="n">loop</span> <span class="o">&lt;</span> <span class="n">optimizationParams</span><span class="p">[</span><span class="s1">&#39;maxIters&#39;</span><span class="p">]:</span>
+        <span class="n">loop</span> <span class="o">=</span> <span class="n">loop</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MMA solver...&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">density_filtering</span><span class="p">:</span>
+            <span class="n">rho_physical</span> <span class="o">=</span> <span class="n">applyDensityFilter</span><span class="p">(</span><span class="n">ft</span><span class="p">,</span> <span class="n">rho</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rho_physical</span> <span class="o">=</span> <span class="n">rho</span>
+            
+        <span class="n">J</span><span class="p">,</span> <span class="n">dJ</span> <span class="o">=</span> <span class="n">objectiveHandle</span><span class="p">(</span><span class="n">rho_physical</span><span class="p">)</span>
+        <span class="n">vc</span><span class="p">,</span> <span class="n">dvc</span> <span class="o">=</span> <span class="n">consHandle</span><span class="p">(</span><span class="n">rho_physical</span><span class="p">,</span> <span class="n">loop</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">sensitivity_filtering</span><span class="p">:</span>
+            <span class="n">dJ</span><span class="p">,</span> <span class="n">dvc</span> <span class="o">=</span> <span class="n">applySensitivityFilter</span><span class="p">(</span><span class="n">ft</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">dJ</span><span class="p">,</span> <span class="n">dvc</span><span class="p">)</span>
+
+        <span class="n">J</span><span class="p">,</span> <span class="n">dJ</span> <span class="o">=</span> <span class="n">J</span><span class="p">,</span> <span class="n">dJ</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">vc</span><span class="p">,</span> <span class="n">dvc</span> <span class="o">=</span> <span class="n">vc</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">dvc</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dvc</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;J.shape = </span><span class="si">{</span><span class="n">J</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;dJ.shape = </span><span class="si">{</span><span class="n">dJ</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;vc.shape = </span><span class="si">{</span><span class="n">vc</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;dvc.shape = </span><span class="si">{</span><span class="n">dvc</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;rho_ini.shape = </span><span class="si">{</span><span class="n">rho_ini</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;rho_physical.shape = </span><span class="si">{</span><span class="n">rho_physical</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">exit</span><span class="p">()</span>
+
+        <span class="n">J</span><span class="p">,</span> <span class="n">dJ</span><span class="p">,</span> <span class="n">vc</span><span class="p">,</span> <span class="n">dvc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">J</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dJ</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">vc</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dvc</span><span class="p">)</span>
+
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="n">mma</span><span class="o">.</span><span class="n">setObjectiveWithGradient</span><span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="n">dJ</span><span class="p">)</span>
+        <span class="n">mma</span><span class="o">.</span><span class="n">setConstraintWithGradient</span><span class="p">(</span><span class="n">vc</span><span class="p">,</span> <span class="n">dvc</span><span class="p">)</span>
+        <span class="n">mma</span><span class="o">.</span><span class="n">mmasub</span><span class="p">(</span><span class="n">xval</span><span class="p">)</span>
+        <span class="n">xmma</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">mma</span><span class="o">.</span><span class="n">getOptimalValues</span><span class="p">()</span>
+
+        <span class="n">xold2</span> <span class="o">=</span> <span class="n">xold1</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">xold1</span> <span class="o">=</span> <span class="n">xval</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">xval</span> <span class="o">=</span> <span class="n">xmma</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="n">mma</span><span class="o">.</span><span class="n">registerMMAIter</span><span class="p">(</span><span class="n">xval</span><span class="p">,</span> <span class="n">xold1</span><span class="p">,</span> <span class="n">xold2</span><span class="p">)</span>
+        <span class="n">rho</span> <span class="o">=</span> <span class="n">xval</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">rho</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+        <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="n">time_elapsed</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MMA took </span><span class="si">{</span><span class="n">time_elapsed</span><span class="si">}</span><span class="s2"> [s]&quot;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Iter </span><span class="si">{</span><span class="n">loop</span><span class="si">:</span><span class="s1">d</span><span class="si">}</span><span class="s1">; J </span><span class="si">{</span><span class="n">J</span><span class="si">:</span><span class="s1">.5f</span><span class="si">}</span><span class="s1">; constraint </span><span class="si">{</span><span class="n">vc</span><span class="si">}</span><span class="se">\n\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">rho</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

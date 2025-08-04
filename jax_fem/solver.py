@@ -6,7 +6,7 @@ from jax.experimental.sparse import BCOO
 import scipy
 import time
 from petsc4py import PETSc
-
+import pyamgx
 from jax_fem import logger
 
 from jax import config
@@ -86,16 +86,87 @@ def petsc_solve(A, b, ksp_type, pc_type):
 
     return x.getArray()
 
+# "AMGX" solver
+def AMGX_solve_host(A, x, b):
+    dtype, shape = b.dtype, b.shape
+    A = scipy.sparse.csr_matrix((A.data, (A.indices[:, 0], A.indices[:, 1])), shape=A.shape)
+    b = onp.array(b)
+    x_guess = onp.array(x)
+    # setup AmgX solver
+    # Initialize PyAMGX
+    pyamgx.initialize()
+    ## For solver options: https://github.com/NVIDIA/AMGX/tree/main/src/configs
+    # Create resources
+    cfg = pyamgx.Config().create_from_dict({
+         "config_version": 2,
+        "determinism_flag": 1,
+        "exception_handling": 1,
+        "solver": {
+            "solver": "BICGSTAB",  # "CG", BICGSTAB
+            #change to PBICGSTAB to use preconditioners
+            "use_scalar_norm": 1,
+            "norm": "L2",
+            "tolerance": 1e-10,
+            "monitor_residual": 1,
+            "max_iters": 10000,
+            "convergence": "ABSOLUTE",  # RELATIVE_INI_CORE
+            "monitor_residual": 1,
+            # "print_solve_stats": 1,
+            "preconditioner": { 
+                "scope": "amg",
+                "solver": "AMG",
+                "algorithm": "CLASSICAL",
+                "smoother": "JACOBI",
+                "cycle": "V",
+                "max_levels": 10,
+                "max_iters": 2
+            }
+        }
+    })
+
+    resources = pyamgx.Resources().create_simple(cfg)
+    solver = pyamgx.Solver().create(resources, cfg)
+    # Create matrix and vector objects
+    A_amg = pyamgx.Matrix().create(resources)
+    b_amg = pyamgx.Vector().create(resources)
+    x_amg = pyamgx.Vector().create(resources)
+    # ======
+    # Upload data to PyAMGX objects
+    A_amg.upload_CSR(A)
+    b_amg.upload(b)
+    x_amg.upload(x_guess)
+    # logger.debug(f"Setting up the AMGx solver...")
+    solver.setup(A_amg)
+    solver.solve(b_amg, x_amg)
+    # Download the result
+    result = x_amg.download()
+    # Cleanup
+    x_amg.destroy()
+    b_amg.destroy()
+    A_amg.destroy()
+    solver.destroy()
+    cfg.destroy()
+    resources.destroy()
+    # Finalize PyAMGX
+    pyamgx.finalize()
+    logger.info(f'AMGX Solver - Finished solving, linear solve res = {np.linalg.norm(A @ result - b)}')
+    return result.astype(dtype).reshape(shape)
+
+def AMGX_solve(A, b, x0):
+    result_shape = jax.ShapeDtypeStruct(b.shape, b.dtype)
+    return jax.pure_callback(AMGX_solve_host, result_shape, A,x0,b)
 
 def linear_solver(A, b, x0, solver_options):
 
     # If user does not specify any solver, set jax_solver as the default one.
-    if  len(solver_options.keys() & {'jax_solver', 'umfpack_solver', 'petsc_solver', 'custom_solver'}) == 0: 
+    if  len(solver_options.keys() & {'jax_solver','amgx_solver', 'umfpack_solver', 'petsc_solver', 'custom_solver'}) == 0: 
         solver_options['jax_solver'] = {}
 
     if 'jax_solver' in solver_options:      
         precond = solver_options['jax_solver']['precond'] if 'precond' in solver_options['jax_solver'] else True
         x = jax_solve(A, b, x0, precond)
+    elif 'amgx_solver' in solver_options:
+        x = AMGX_solve(A, b, x0)
     elif 'umfpack_solver' in solver_options:
         x = umfpack_solve(A, b)
     elif 'petsc_solver' in solver_options:   

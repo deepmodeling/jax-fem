@@ -6,11 +6,17 @@ from jax.experimental.sparse import BCOO
 import scipy
 import time
 from petsc4py import PETSc
-import pyamgx
 from jax_fem import logger
-
 from jax import config
 config.update("jax_enable_x64", True)
+
+
+try:
+    import pyamgx
+    PYAMGX_AVAILABLE = True
+except ImportError:
+    PYAMGX_AVAILABLE = False
+    logger.info("pyamgx not installed. AMGX solver disabled.")
 
 
 ################################################################################
@@ -58,7 +64,6 @@ def umfpack_solve(A, b):
     logger.debug(f'Scipy Solver - Finished solving, linear solve res = {np.linalg.norm(Asp @ x - b)}')
     return x
 
-
 def petsc_solve(A, b, ksp_type, pc_type):
     rhs = PETSc.Vec().createSeq(len(b))
     rhs.setValues(range(len(b)), onp.array(b))
@@ -86,7 +91,7 @@ def petsc_solve(A, b, ksp_type, pc_type):
 
     return x.getArray()
 
-# "AMGX" solver
+
 def AMGX_solve_host(A, x, b):
     dtype, shape = b.dtype, b.shape
     A = scipy.sparse.csr_matrix((A.data, (A.indices[:, 0], A.indices[:, 1])), shape=A.shape)
@@ -153,11 +158,14 @@ def AMGX_solve_host(A, x, b):
     return result.astype(dtype).reshape(shape)
 
 def AMGX_solve(A, b, x0):
+    if not PYAMGX_AVAILABLE:
+        raise RuntimeError("AMGX disabled: 'pyamgx' not installed")
+
     result_shape = jax.ShapeDtypeStruct(b.shape, b.dtype)
     return jax.pure_callback(AMGX_solve_host, result_shape, A,x0,b)
 
-def linear_solver(A, b, x0, solver_options):
 
+def linear_solver(A, b, x0, solver_options):
     # If user does not specify any solver, set jax_solver as the default one.
     if  len(solver_options.keys() & {'jax_solver','amgx_solver', 'umfpack_solver', 'petsc_solver', 'custom_solver'}) == 0: 
         solver_options['jax_solver'] = {}

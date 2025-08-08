@@ -17,7 +17,7 @@ if '/docs' in str(sys.path):
 project = 'JAX-FEM'
 copyright = '2025, JAX-FEM team'
 author = 'JAX-FEM team'
-release = '0.0.9'
+release = '0.0.10'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -111,8 +111,11 @@ html_theme_options = {
     "show_navbar_depth": 1,  
     "navigation_depth": 5,   
     "collapse_navigation": True,  
-    "globaltoc_includehidden": True,                  
+    "globaltoc_includehidden": True,       
 }
+
+# Path to your logo (relative to source directory)
+html_logo = "_static/images/logo.png"
 
 
 html_static_path = ['_static'] 

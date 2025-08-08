@@ -1,3 +1,7 @@
+<p align="middle">
+  <img src="docs/source/_static/images/logo.png" width="200" />
+</p>
+
 # JAX-FEM
 
 ![Github Star](https://img.shields.io/github/stars/deepmodeling/jax-fem)

@@ -16,6 +16,7 @@ from functools import partial
 import time
 import scipy
 from jax.experimental.sparse import BCOO
+from jax_fem import logger
 
 from jax import config
 config.update("jax_enable_x64", True)
@@ -484,7 +485,7 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
     while loop < optimizationParams['maxIters']:
         loop = loop + 1
 
-        print(f"MMA solver...")
+        logger.info(f"MMA solver...")
         
         if density_filtering:
             rho_physical = applyDensityFilter(ft, rho)
@@ -499,15 +500,6 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
 
         J, dJ = J, dJ.reshape(-1)[:, None]
         vc, dvc = vc[:, None], dvc.reshape(dvc.shape[0], -1)
-
-        print(f"J.shape = {J.shape}")
-        print(f"dJ.shape = {dJ.shape}")
-        print(f"vc.shape = {vc.shape}")
-        print(f"dvc.shape = {dvc.shape}")
-
-        print(f"rho_ini.shape = {rho_ini.shape}")
-        print(f"rho_physical.shape = {rho_physical.shape}")
-        exit()
 
         J, dJ, vc, dvc = np.array(J), np.array(dJ), np.array(vc), np.array(dvc)
 
@@ -529,8 +521,8 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
 
         time_elapsed = end - start
 
-        print(f"MMA took {time_elapsed} [s]")
+        logger.info(f"MMA took {time_elapsed} [s]")
 
-        print(f'Iter {loop:d}; J {J:.5f}; constraint {vc}\n\n\n')
+        logger.info(f'Iter {loop:d}; J {J:.5f}; constraint {vc}\n\n\n')
 
     return rho

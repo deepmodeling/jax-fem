@@ -115,8 +115,23 @@ class FiniteElement:
         JxW : NumpyArray
             Shape is (num_cells, num_quads).
         """
+        # Debugging output
+        print(f"Debug: self.points type = {type(self.points)}, shape = {getattr(self.points, 'shape', None)}")
+        print(f"Debug: self.cells type = {type(self.cells)}, shape = {getattr(self.cells, 'shape', None)}")
+    
+        # Check if self.cells is a dictionary
+        if isinstance(self.cells, dict):
+            print("Error: self.cells is a dictionary. Keys:", self.cells.keys())
+            raise TypeError("self.cells should be a NumPy array, not a dictionary.")
         assert self.shape_grads_ref.shape == (self.num_quads, self.num_nodes, self.dim)
-        physical_coos = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
+
+        # Explicitly convert to NumPy arrays if needed
+        points_array = onp.array(self.points)
+        cells_array = onp.array(self.cells)
+
+        # Perform the operation
+        physical_coos = onp.take(points_array, cells_array, axis=0)  # (num_cells, num_nodes, dim)
+        # physical_coos = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
         # (num_cells, num_quads, num_nodes, dim, dim) -> (num_cells, num_quads, 1, dim, dim)
         jacobian_dx_deta = onp.sum(physical_coos[:, None, :, :, None] *
                                    self.shape_grads_ref[None, :, :, None, :], axis=2, keepdims=True)

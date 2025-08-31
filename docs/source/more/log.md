@@ -1,6 +1,11 @@
 # Change log
 
 
+## JAX-FEM 0.0.11 (Aug 31, 2025)
+* Major updates
+  * Fixed a [bug](https://github.com/deepmodeling/jax-fem/issues/69) in MMA solver.
+
+
 ## JAX-FEM 0.0.10 (Aug 08, 2025)
 * Major updates
   * Use `jax.tree_util.tree_map()` to replace the deprecated `jax.tree_map()`. See JAX updates [jax 0.4.26 (April 3, 2024)](https://docs.jax.dev/en/latest/changelog.html).

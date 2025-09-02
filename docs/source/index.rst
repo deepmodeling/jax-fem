@@ -81,6 +81,14 @@ Welcome to JAX-FEM's documentation!
 
    Topology optimization <learn/topology_optimization>
 
+   Source field identification <learn/source_field_identification/source_field_identification>
+
+   Traction force identification <learn/traction_force_identification/traction_force_identification>
+
+   Thermal mechanical control <learn/thermal_mechanical_control/thermal_mechanical_control>
+
+   Shape optimization <learn/shape_optimization/shape_optimization>
+
 .. toctree::
    :maxdepth: 1
    :caption: Advanced topics

@@ -69,25 +69,25 @@ Welcome to JAX-FEM's documentation!
 
    Overview <learn/overview>
 
-   Poisson equation <learn/poisson>
+   Poisson equation <learn/poisson/example>
 
-   Linear elasticity <learn/linear_elasticity>
+   Linear elasticity <learn/linear_elasticity/example>
 
-   Hyperelasticity <learn/hyperelasticity>
+   Hyperelasticity <learn/hyperelasticity/example>
 
-   Plasticity <learn/plasticity>
+   Plasticity <learn/plasticity/example>
 
-   Compute gradients <learn/compute_gradients>
+   Compute gradients <learn/compute_gradients/example>
 
-   Topology optimization <learn/topology_optimization>
+   Topology optimization <learn/topology_optimization/example>
 
-   Source field identification <learn/source_field_identification/source_field_identification>
+   Source field identification <learn/source_field_identification/example>
 
-   Traction force identification <learn/traction_force_identification/traction_force_identification>
+   Traction force identification <learn/traction_force_identification/example>
 
-   Thermal mechanical control <learn/thermal_mechanical_control/thermal_mechanical_control>
+   Thermal mechanical control <learn/thermal_mechanical_control/example>
 
-   Shape optimization <learn/shape_optimization/shape_optimization>
+   Shape optimization <learn/shape_optimization/example>
 
 .. toctree::
    :maxdepth: 1

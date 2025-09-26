@@ -1,0 +1,846 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Thermal mechanical control &#8212; JAX-FEM 0.0.10 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nbsphinx-code-cells.css?v=2aa19091" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=972fa7a7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=94452c26"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'learn/thermal_mechanical_control/example';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Shape optimization" href="../shape_optimization/example.html" />
+    <link rel="prev" title="Traction force identification" href="../traction_force_identification/example.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="JAX-FEM 0.0.10 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="JAX-FEM 0.0.10 documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../poisson/example.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../linear_elasticity/example.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hyperelasticity/example.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../plasticity/example.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../compute_gradients/example.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../topology_optimization/example.html">Topology optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../source_field_identification/example.html">Source field identification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../traction_force_identification/example.html">Traction force identification</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Thermal mechanical control</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../shape_optimization/example.html">Shape optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../structure_material_co_design/example.html">Structure/material co-design</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../more/FAQ.html">Frequently asked questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/useful/main.html">Useful links</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">Miscellaneous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/contact.html">Contact</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/learn/thermal_mechanical_control/example.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Thermal mechanical control</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem-definition">Problem definition</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Governing-equations">Governing equations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Weak-form">Weak form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Optimization-problem">Optimization problem</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Implementation">Implementation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Weak form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Mesh">Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Boundary-conditions">Boundary conditions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem">Problem</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Solver">Solver</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadLinks = document.querySelectorAll('a.reference.download.internal');
+    downloadLinks.forEach(link => {
+        link.setAttribute('download', '');
+        link.href = '../_sources/' + link.getAttribute('href');
+    });
+});
+</script><section id="Thermal-mechanical-control">
+<h1>Thermal mechanical control<a class="headerlink" href="#Thermal-mechanical-control" title="Link to this heading">#</a></h1>
+<section id="Problem-definition">
+<h2>Problem definition<a class="headerlink" href="#Problem-definition" title="Link to this heading">#</a></h2>
+<p>In this example, an inverse problem is considered. The design parameter is the Dirichlet boundary condition. The target of this tutorial is to use JAX-FEM to automatically find the gradient of the objective function with respect to this design variable.</p>
+<p>This inverse control problem is to consider thermo-elasticity where a temperature field <span class="math notranslate nohighlight">\(T_{\textrm{curve}}\)</span> applied to a curved boundary is optimized to achieve a desired mechanical deformation. Specifically, the objective is to make the <strong>top right corner</strong> of a 2D square plate with a circular hole undergo thermal deformation that reaches a prescribed target point.</p>
+<img alt="Thermal Mechanical Control" src="../../_images/thermal_mechanical_control.png" />
+<section id="Governing-equations">
+<h3>Governing equations<a class="headerlink" href="#Governing-equations" title="Link to this heading">#</a></h3>
+<p>The forward thermo-mechanical coupling problem consists of two physics:</p>
+<p><strong>1. Steady-state heat conduction</strong>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+   -\nabla \cdot (k \nabla T) &amp;= 0 &amp;\text{in}  \quad \Omega, \\
+   T &amp;= T_{\textrm{curve}} &amp;\text{on} \quad \Gamma_{D_1, T},  \\
+   T &amp;= 0 &amp;\text{on} \quad \Gamma_{D_2, T},  \\
+   k \nabla T \cdot \boldsymbol{n} &amp;= 0 &amp;\text{on} \quad \Gamma_{N, T},
+\end{align*}\end{split}\]</div>
+<p>where:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(k\)</span>: Thermal conductivity</p></li>
+<li><p><span class="math notranslate nohighlight">\(\Omega\)</span>: Quarter of a square plate with circular hole (2D)</p></li>
+<li><p><span class="math notranslate nohighlight">\(\Gamma_{D_1, T}\)</span>: Curved boundary with adjustable temperature</p></li>
+<li><p><span class="math notranslate nohighlight">\(\Gamma_{D_2, T}\)</span>: Fixed-temperature (<span class="math notranslate nohighlight">\(T=0\)</span>) boundary</p></li>
+<li><p><span class="math notranslate nohighlight">\(\Gamma_{N, T}\)</span>: Thermally insulated boundary</p></li>
+</ul>
+<p><strong>2. Mechanical equilibrium</strong>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+   -\nabla \cdot \boldsymbol{\sigma} &amp;= \boldsymbol{0} \quad \text{in}  \quad \Omega, \\
+   \boldsymbol{u} &amp;= \boldsymbol{0} \quad \text{on} \quad \Gamma_{D,\boldsymbol{u}},  \\
+   \boldsymbol{\sigma} \cdot \boldsymbol{n} &amp;= \boldsymbol{0} \quad \text{on} \quad \Gamma_{N,\boldsymbol{u}},
+\end{align*}\end{split}\]</div>
+<p>with the <strong>thermo-elastic constitutive relation</strong>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+   \boldsymbol{\sigma} &amp;= \lambda \operatorname{tr}(\boldsymbol{\varepsilon}) \boldsymbol{I} + 2\mu \boldsymbol{\varepsilon} - \kappa T \boldsymbol{I}, \\
+   \boldsymbol{\varepsilon} &amp;= \frac{1}{2} \left( \nabla \boldsymbol{u} + (\nabla \boldsymbol{u})^T \right),
+\end{align*}\end{split}\]</div>
+<p>where:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(\boldsymbol{\varepsilon}\)</span>: Strain tensor</p></li>
+<li><p><span class="math notranslate nohighlight">\(\lambda, \mu\)</span>: Lamé parameters (isotropic aluminum)</p></li>
+<li><p><span class="math notranslate nohighlight">\(\kappa\)</span>: Thermal expansion coefficient</p></li>
+<li><p><span class="math notranslate nohighlight">\(T\)</span>: Relative temperature change from ambient</p></li>
+</ul>
+</section>
+<section id="Weak-form">
+<h3>Weak form<a class="headerlink" href="#Weak-form" title="Link to this heading">#</a></h3>
+<p>Find <span class="math notranslate nohighlight">\(T\)</span> and <span class="math notranslate nohighlight">\(\boldsymbol{u}\)</span> such that for any test functions <span class="math notranslate nohighlight">\(\delta T\)</span> and <span class="math notranslate nohighlight">\(\delta \boldsymbol{u}\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{align*}
+    r(T, \boldsymbol{u};  \delta T, \delta \boldsymbol{u}) = \int_{\Omega} k \nabla T \cdot \nabla \delta T \, \textrm{d}\Omega + \int_{\Omega} \boldsymbol{\sigma} : \nabla \delta\boldsymbol{u}  \, \textrm{d}\Omega   = 0.
+\end{align*}\]</div>
+<p>This is a <strong>one-way coupled system</strong> – temperature influences deformation, but deformation does not affect temperature.</p>
+</section>
+<section id="Optimization-problem">
+<h3>Optimization problem<a class="headerlink" href="#Optimization-problem" title="Link to this heading">#</a></h3>
+<p>The inverse control problem is formulated as the following PDE-constrained optimization:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align}
+    \nonumber &amp;\min_{T_\textrm{curve}}  \Vert\boldsymbol{u}_{\textrm{corner}} - \boldsymbol{u}_{\textrm{target}}\Vert^2 \\
+    &amp; \textrm{s.t.} \quad r(T, \boldsymbol{u};  \delta T, \delta \boldsymbol{u})=0,
+\end{align}\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\boldsymbol{u}_{\textrm{corner}}\)</span> is the displacement at the top-right corner induced by boundary temperature <span class="math notranslate nohighlight">\(T_{\textrm{curve}}\)</span>, and <span class="math notranslate nohighlight">\(\boldsymbol{u}_{\textrm{target}}=[0.001, -0.001]\)</span> is the prescribed target displacement.</p>
+</section>
+</section>
+<section id="Implementation">
+<h2>Implementation<a class="headerlink" href="#Implementation" title="Link to this heading">#</a></h2>
+<p>For the implementation, we first import some necessary modules.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">onp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">meshio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">glob</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="c1"># Import JAX-FEM specific modules.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.problem</span><span class="w"> </span><span class="kn">import</span> <span class="n">Problem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.solver</span><span class="w"> </span><span class="kn">import</span> <span class="n">ad_wrapper</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.generate_mesh</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_meshio_cell_type</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">box_mesh_gmsh</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="id1">
+<h3>Weak form<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
+<p>These global parameters define the fundamental mechanical and thermal properties of the material, which remain constant during the coupled calculation.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define global parameters (Never to be changed)</span>
+<span class="n">T0</span> <span class="o">=</span> <span class="mf">293.</span> <span class="c1"># ambient temperature</span>
+<span class="n">E</span> <span class="o">=</span> <span class="mf">70e3</span>
+<span class="n">nu</span> <span class="o">=</span> <span class="mf">0.3</span>
+<span class="n">mu</span> <span class="o">=</span> <span class="n">E</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="p">(</span><span class="mf">1.</span> <span class="o">+</span> <span class="n">nu</span><span class="p">))</span>
+<span class="n">lmbda</span> <span class="o">=</span> <span class="n">E</span><span class="o">*</span><span class="n">nu</span><span class="o">/</span><span class="p">((</span><span class="mi">1</span><span class="o">+</span><span class="n">nu</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">nu</span><span class="p">))</span> <span class="c1"># plane strain</span>
+<span class="n">rho</span> <span class="o">=</span> <span class="mf">2700.</span> <span class="c1"># density</span>
+<span class="n">alpha</span> <span class="o">=</span> <span class="mf">2.31e-5</span> <span class="c1"># thermal expansion coefficient</span>
+<span class="n">kappa</span> <span class="o">=</span> <span class="n">alpha</span><span class="o">*</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">mu</span> <span class="o">+</span> <span class="mi">3</span><span class="o">*</span><span class="n">lmbda</span><span class="p">)</span>
+<span class="n">k</span> <span class="o">=</span> <span class="mf">237e-6</span> <span class="c1"># thermal conductivity</span>
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">custom_init</span></code> method initializes two finite element spaces: one for the displacement field (<span class="math notranslate nohighlight">\(\boldsymbol{u}\)</span>) and one for the temperature field (<span class="math notranslate nohighlight">\(T\)</span>).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define the coupling problems.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ThermalMechanical</span><span class="p">(</span><span class="n">Problem</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">custom_init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fe_u</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fe_T</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">get_universal_kernel</span></code> method returns a universal kernel function for computing the weak form. It internally defines strain and stress functions, where the stress calculation considers thermal expansion effects.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">def</span><span class="w"> </span><span class="nf">get_universal_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">strain</span><span class="p">(</span><span class="n">u_grad</span><span class="p">):</span>
+            <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">u_grad</span> <span class="o">+</span> <span class="n">u_grad</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">stress</span><span class="p">(</span><span class="n">u_grad</span><span class="p">,</span> <span class="n">T</span><span class="p">):</span>
+            <span class="n">epsilon</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">u_grad</span> <span class="o">+</span> <span class="n">u_grad</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="n">sigma</span> <span class="o">=</span> <span class="n">lmbda</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">epsilon</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">epsilon</span> <span class="o">-</span> <span class="n">kappa</span> <span class="o">*</span> <span class="n">T</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">sigma</span>
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">universal_kernel</span></code> function is the core of the weak form, handling element-level computations. Parameters include the flattened cell solution, coordinates, shape function gradients, Jacobian determinant weights, and test function gradients.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span>        <span class="k">def</span><span class="w"> </span><span class="nf">universal_kernel</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cell_shape_grads</span><span class="p">,</span> <span class="n">cell_JxW</span><span class="p">,</span> <span class="n">cell_v_grads_JxW</span><span class="p">):</span>
+            <span class="c1"># cell_sol_flat: (num_nodes*vec + ...,)</span>
+            <span class="c1"># x: (num_quads, dim)</span>
+            <span class="c1"># cell_shape_grads: (num_quads, num_nodes + ..., dim)</span>
+            <span class="c1"># cell_JxW: (num_vars, num_quads)</span>
+            <span class="c1"># cell_v_grads_JxW: (num_quads, num_nodes + ..., 1, dim)</span>
+
+            <span class="c1">## Split</span>
+            <span class="c1"># [(num_nodes, vec), ...]</span>
+            <span class="n">cell_sol_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unflatten_fn_dof</span><span class="p">(</span><span class="n">cell_sol_flat</span><span class="p">)</span>
+            <span class="n">cell_sol_u</span><span class="p">,</span> <span class="n">cell_sol_T</span> <span class="o">=</span> <span class="n">cell_sol_list</span>
+            <span class="n">cell_shape_grads_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">cell_shape_grads</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_nodes_cumsum</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_nodes_cumsum</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="p">:]</span>
+                                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_vars</span><span class="p">)]</span>
+            <span class="n">cell_shape_grads_u</span><span class="p">,</span> <span class="n">cell_shape_grads_T</span> <span class="o">=</span> <span class="n">cell_shape_grads_list</span>
+            <span class="n">cell_v_grads_JxW_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">cell_v_grads_JxW</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_nodes_cumsum</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_nodes_cumsum</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="p">:,</span> <span class="p">:]</span>
+                                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_vars</span><span class="p">)]</span>
+            <span class="n">cell_v_grads_JxW_u</span><span class="p">,</span> <span class="n">cell_v_grads_JxW_T</span> <span class="o">=</span> <span class="n">cell_v_grads_JxW_list</span>
+            <span class="n">cell_JxW_u</span><span class="p">,</span> <span class="n">cell_JxW_T</span> <span class="o">=</span> <span class="n">cell_JxW</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cell_JxW</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="c1"># (1, num_nodes, vec) * (num_quads, num_nodes, 1) -&gt; (num_quads, vec)</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cell_sol_T</span><span class="p">[</span><span class="kc">None</span><span class="p">,:,:]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fe_T</span><span class="o">.</span><span class="n">shape_vals</span><span class="p">[:,:,</span><span class="kc">None</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># (num_quads, vec, dim)</span>
+            <span class="n">u_grads</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cell_sol_u</span><span class="p">[</span><span class="kc">None</span><span class="p">,:,:,</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">cell_shape_grads_u</span><span class="p">[:,:,</span><span class="kc">None</span><span class="p">,:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1">## Handles the term &#39;k * inner(grad(T_crt), grad(Q)) * dx&#39;</span>
+            <span class="c1"># (1, num_nodes, vec, 1) * (num_quads, num_nodes, 1, dim) -&gt; (num_quads, num_nodes, vec, dim)</span>
+            <span class="c1"># -&gt; (num_quads, vec, dim)</span>
+            <span class="n">T_grads</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cell_sol_T</span><span class="p">[</span><span class="kc">None</span><span class="p">,:,:,</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">cell_shape_grads_T</span><span class="p">[:,:,</span><span class="kc">None</span><span class="p">,:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># (num_quads, 1, vec, dim) * (num_quads, num_nodes, 1, dim) -&gt;  (num_nodes, vec)</span>
+            <span class="n">val3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">k</span> <span class="o">*</span> <span class="n">T_grads</span><span class="p">[:,</span><span class="kc">None</span><span class="p">,:,:]</span> <span class="o">*</span> <span class="n">cell_v_grads_JxW_T</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+            <span class="c1">## Handles the term &#39;inner(sigma, grad(v)) * dx&#39;</span>
+            <span class="n">u_physics</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">stress</span><span class="p">)(</span><span class="n">u_grads</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>
+            <span class="c1"># (num_quads, 1, vec, dim) * (num_quads, num_nodes, 1, dim) -&gt;  (num_nodes, vec)</span>
+            <span class="n">val4</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_physics</span><span class="p">[:,</span><span class="kc">None</span><span class="p">,:,:]</span> <span class="o">*</span> <span class="n">cell_v_grads_JxW_u</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+            <span class="n">weak_form</span> <span class="o">=</span> <span class="p">[</span><span class="n">val4</span><span class="p">,</span> <span class="n">val3</span><span class="p">]</span>
+
+            <span class="k">return</span> <span class="n">jax</span><span class="o">.</span><span class="n">flatten_util</span><span class="o">.</span><span class="n">ravel_pytree</span><span class="p">(</span><span class="n">weak_form</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">universal_kernel</span>
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">set_params</span></code> method allows assigning parameters for the temperature field on the Dirichlet boundary with <code class="docutils literal notranslate"><span class="pre">vals_list</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span>    <span class="k">def</span><span class="w"> </span><span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fe_T</span><span class="o">.</span><span class="n">vals_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Mesh">
+<h3>Mesh<a class="headerlink" href="#Mesh" title="Link to this heading">#</a></h3>
+<p>Here we read a mesh input from a local file and use the <code class="docutils literal notranslate"><span class="pre">TRI3</span></code> element to discretize the computational domain.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">meshio_mesh</span> <span class="o">=</span> <span class="n">meshio</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;u.vtu&#39;</span><span class="p">))</span>
+<span class="n">ele_type</span> <span class="o">=</span> <span class="s1">&#39;TRI3&#39;</span>
+<span class="n">cell_type</span> <span class="o">=</span> <span class="n">get_meshio_cell_type</span><span class="p">(</span><span class="n">ele_type</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">meshio_mesh</span><span class="o">.</span><span class="n">points</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">],</span> <span class="n">meshio_mesh</span><span class="o">.</span><span class="n">cells_dict</span><span class="p">[</span><span class="n">cell_type</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Boundary-conditions">
+<h3>Boundary conditions<a class="headerlink" href="#Boundary-conditions" title="Link to this heading">#</a></h3>
+<p>Then we can define the Dirichlet boundary condition. The actual value of <span class="math notranslate nohighlight">\(T\)</span> on the curved boundary will be updated later by the parameter <span class="math notranslate nohighlight">\(\theta\)</span> with the method <code class="docutils literal notranslate"><span class="pre">set_params</span></code> in the weak form definition above.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">right</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">top</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">hole</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="mf">0.1</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">R</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">zero_dirichlet</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.</span>
+
+<span class="c1"># The actual hole boundary T will always be updated by the parameters θ, not by this function.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">T_hole</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">T_top</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">T_right</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.</span>
+
+<span class="n">dirichlet_bc_info_u</span> <span class="o">=</span> <span class="p">[[</span><span class="n">hole</span><span class="p">,</span> <span class="n">hole</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="n">zero_dirichlet</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">dirichlet_bc_info_T</span> <span class="o">=</span> <span class="p">[[</span><span class="n">hole</span><span class="p">,</span> <span class="n">top</span><span class="p">,</span> <span class="n">right</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">T_hole</span><span class="p">,</span> <span class="n">T_top</span><span class="p">,</span> <span class="n">T_right</span><span class="p">]]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Problem">
+<h3>Problem<a class="headerlink" href="#Problem" title="Link to this heading">#</a></h3>
+<p>We have completed all the preliminary preparations for the problem. So, we can proceed to create an instance of our problem.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">problem</span> <span class="o">=</span> <span class="n">ThermalMechanical</span><span class="p">([</span><span class="n">mesh</span><span class="p">,</span> <span class="n">mesh</span><span class="p">],</span> <span class="n">vec</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ele_type</span><span class="o">=</span><span class="p">[</span><span class="n">ele_type</span><span class="p">,</span> <span class="n">ele_type</span><span class="p">],</span> <span class="n">gauss_order</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+                                  <span class="n">dirichlet_bc_info</span><span class="o">=</span><span class="p">[</span><span class="n">dirichlet_bc_info_u</span><span class="p">,</span> <span class="n">dirichlet_bc_info_T</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Solver">
+<h3>Solver<a class="headerlink" href="#Solver" title="Link to this heading">#</a></h3>
+<p>Then we can wrap the forward problem with the function <code class="docutils literal notranslate"><span class="pre">ad_wrapper</span></code>, which enables efficient gradient computation for our inverse problem.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fwd_pred</span> <span class="o">=</span> <span class="n">ad_wrapper</span><span class="p">(</span><span class="n">problem</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Then follows the definition of our objective funtion.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">corner_node_id</span> <span class="o">=</span> <span class="mi">3456</span> <span class="c1"># Top right corner nodal index, obtained from visualization in Paraview</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">J</span><span class="p">(</span><span class="n">θ</span><span class="p">):</span>
+    <span class="n">u_pred</span> <span class="o">=</span> <span class="n">fwd_pred</span><span class="p">(</span><span class="n">θ</span><span class="p">)</span>
+    <span class="n">corner_disp_pred</span> <span class="o">=</span> <span class="n">u_pred</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">corner_node_id</span><span class="p">]</span>
+    <span class="n">corner_disp_goal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.001</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.001</span><span class="p">])</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(((</span><span class="n">corner_disp_pred</span> <span class="o">-</span> <span class="n">corner_disp_goal</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">error</span>
+</pre></div>
+</div>
+</div>
+<p>To verify the accuracy of gradients computed using <code class="docutils literal notranslate"><span class="pre">jax.grad</span></code>, we employ the finite difference method.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">hole_boundary_node_inds</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">node_inds_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">hole_boundary_nodes</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">hole_boundary_node_inds</span><span class="p">]</span>
+<span class="n">num_hole_boundary_nodes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">hole_boundary_node_inds</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;num_hole_boundary_nodes = </span><span class="si">{</span><span class="n">num_hole_boundary_nodes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="n">θ_ini</span> <span class="o">=</span> <span class="mf">1e3</span> <span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_hole_boundary_nodes</span><span class="p">)</span>
+<span class="n">grad_value</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">J</span><span class="p">)(</span><span class="n">θ_ini</span><span class="p">)</span>
+
+<span class="n">h</span> <span class="o">=</span> <span class="mf">1e-1</span>
+<span class="n">θ_plus</span> <span class="o">=</span> <span class="n">θ_ini</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">((</span><span class="mi">1</span><span class="o">+</span><span class="n">h</span><span class="p">)</span><span class="o">*</span><span class="n">θ_ini</span><span class="p">[</span><span class="mi">10</span><span class="p">])</span>
+<span class="n">θ_minus</span> <span class="o">=</span> <span class="n">θ_ini</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">((</span><span class="mi">1</span><span class="o">-</span><span class="n">h</span><span class="p">)</span><span class="o">*</span><span class="n">θ_ini</span><span class="p">[</span><span class="mi">10</span><span class="p">])</span>
+<span class="n">dx_fd_10</span> <span class="o">=</span> <span class="p">(</span><span class="n">J</span><span class="p">(</span><span class="n">θ_plus</span><span class="p">)</span> <span class="o">-</span> <span class="n">J</span><span class="p">(</span><span class="n">θ_minus</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">h</span><span class="o">*</span><span class="n">θ_ini</span><span class="p">[</span><span class="mi">10</span><span class="p">])</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> grad_value[10] = </span><span class="si">{</span><span class="n">grad_value</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span><span class="si">}</span><span class="s2">, dx_fd_10 = </span><span class="si">{</span><span class="n">dx_fd_10</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The computation results are shown as follows:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">grad_value</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span> <span class="o">=</span> <span class="mf">6.960273952781062e-09</span><span class="p">,</span> <span class="n">dx_fd_10</span> <span class="o">=</span> <span class="mf">6.960013287569166e-09</span>
+</pre></div>
+</div>
+</div>
+<blockquote>
+<div><p>Please refer to this <a class="reference external" href="https://github.com/deepmodeling/jax-fem/blob/main/docs/source/learn/thermal_mechanical_control/example.ipynb">link</a> to download the source file.</p>
+</div></blockquote>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../traction_force_identification/example.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Traction force identification</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../shape_optimization/example.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Shape optimization</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem-definition">Problem definition</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Governing-equations">Governing equations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Weak-form">Weak form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Optimization-problem">Optimization problem</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Implementation">Implementation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Weak form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Mesh">Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Boundary-conditions">Boundary conditions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem">Problem</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Solver">Solver</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -89,7 +89,7 @@ Welcome to JAX-FEM's documentation!
 
    Shape optimization <learn/shape_optimization/example>
 
-   Material/structure co-design <learn/material_structure_co_design/example>
+   Structure/material co-design <learn/structure_material_co_design/example>
 
 .. toctree::
    :maxdepth: 1

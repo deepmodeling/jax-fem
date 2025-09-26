@@ -12,4 +12,4 @@
 | [Traction force identification](traction_force_identification/example) | ${\color{red}Inverse \space Problem:}$ Gradient of the objective function with respect to the Neumann boundary condition. |
 | [Thermal mechanical control](thermal_mechanical_control/example) | ${\color{red}Inverse \space Problem:}$ Gradient of the objective function with respect to the Dirichlet boundary condition. |
 | [Shape optimization](shape_optimization/example) | ${\color{red}Inverse \space Problem:}$ Gradient of the objective function with respect to a stiffness related term. |
-| [Structure/material co-design](material_structure_co_design/example) | ${\color{red}Inverse \space Problem:}$ Co-design of structure and material in a plasticity problem. |
+| [Structure/material co-design](structure_material_co_design/example) | ${\color{red}Inverse \space Problem:}$ Co-design of structure and material in a plasticity problem. |

@@ -36,6 +36,13 @@ def jax_solve(A, b, x0, precond):
     A = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
     jacobi = np.array(A_sp_scipy.diagonal())
     pc = lambda x: x * (1. / jacobi) if precond else None
+    
+    if issubclass(PETSc.ScalarType, np.complexfloating):
+        logger.debug("JAX Solver - Using PETSc with complex number support")
+        A = A.astype(complex)
+        b = b.astype(complex)
+        x0 = x0.astype(complex)
+
     x, info = jax.scipy.sparse.linalg.bicgstab(A,
                                                b,
                                                x0=x0,

@@ -404,7 +404,7 @@ class Problem:
             return values
 
     def compute_residual_vars_helper(self, weak_form_flat, weak_form_face_flat):
-        res_list = [np.zeros((fe.num_total_nodes, fe.vec)) for fe in self.fes]
+        res_list = [np.zeros((fe.num_total_nodes, fe.vec), dtype=weak_form_flat.dtype) for fe in self.fes]
         weak_form_list = jax.vmap(lambda x: self.unflatten_fn_dof(x))(weak_form_flat) # [(num_cells, num_nodes, vec), ...]
         res_list = [res_list[i].at[self.cells_list[i].reshape(-1)].add(weak_form_list[i].reshape(-1, 
             self.fes[i].vec)) for i in range(self.num_vars)]

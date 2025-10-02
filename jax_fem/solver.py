@@ -41,7 +41,8 @@ def jax_solve(A, b, x0, precond):
         logger.debug("JAX Solver - Using PETSc with complex number support")
         A = A.astype(complex)
         b = b.astype(complex)
-        x0 = x0.astype(complex)
+        if x0 is not None:
+            x0 = x0.astype(complex)
 
     x, info = jax.scipy.sparse.linalg.bicgstab(A,
                                                b,

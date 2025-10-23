@@ -61,15 +61,16 @@ def jax_solve(A, b, x0, precond):
     return x
 
 def umfpack_solve(A, b):
-    logger.debug(f"Scipy Solver - Solving linear system with UMFPACK")
+    # logger.debug(f"Scipy Solver - Solving linear system with UMFPACK")
     indptr, indices, data = A.getValuesCSR()
-    Asp = scipy.sparse.csr_matrix((data, indices, indptr))
-    x = scipy.sparse.linalg.spsolve(Asp, onp.array(b))
+    # Asp = scipy.sparse.csr_matrix((data, indices, indptr))
+    # x = scipy.sparse.linalg.spsolve(Asp, onp.array(b))
 
+    logger.debug(f"Scipy Solver - Solving linear system with jax spsolve")
     # TODO: try https://jax.readthedocs.io/en/latest/_autosummary/jax.experimental.sparse.linalg.spsolve.html
-    # x = jax.experimental.sparse.linalg.spsolve(av, aj, ai, b)
+    x = jax.experimental.sparse.linalg.spsolve(data, indices, indptr, b)
 
-    logger.debug(f'Scipy Solver - Finished solving, linear solve res = {np.linalg.norm(Asp @ x - b)}')
+    # logger.debug(f'Scipy Solver - Finished solving, linear solve res = {np.linalg.norm(Asp @ x - b)}')
     return x
 
 def petsc_solve(A, b, ksp_type, pc_type):

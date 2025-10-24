@@ -68,7 +68,7 @@ def umfpack_solve(A, b):
 
     logger.debug(f"Scipy Solver - Solving linear system with jax spsolve")
     # TODO: try https://jax.readthedocs.io/en/latest/_autosummary/jax.experimental.sparse.linalg.spsolve.html
-    x = jax.experimental.sparse.linalg.spsolve(data, indices, indptr, b)
+    x = jax.experimental.sparse.linalg.spsolve(data, indices, indptr, b, tol=1e-3)
 
     # logger.debug(f'Scipy Solver - Finished solving, linear solve res = {np.linalg.norm(Asp @ x - b)}')
     return x

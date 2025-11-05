@@ -1,6 +1,6 @@
 # Citations
 
-If you found this library useful in academic or industry work, we appreciate your support if you consider 1) starring the project on [Github](https://github.com/tianjuxue/jax-fem), and 2) citing relevant papers:
+If you found this library useful in academic or industry work, we appreciate your support if you consider 1) starring the project on [GitHub](https://github.com/tianjuxue/jax-fem), and 2) citing relevant papers:
 
 ```bibtex
 @article{xue2023jax,

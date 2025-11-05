@@ -80,7 +80,6 @@ class Problem:
         def find_ind(*x):
             inds = []
             for i in range(len(x)):
-                x[i].reshape(-1)
                 crt_ind = self.fes[i].vec * x[i][:, None] + np.arange(self.fes[i].vec)[None, :] + self.offset[i]
                 inds.append(crt_ind.reshape(-1))
 

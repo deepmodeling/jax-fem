@@ -56,7 +56,7 @@ def jax_solve(A, b, x0, precond):
     err = np.linalg.norm(A @ x - b)
     logger.debug(f"JAX Solver - Finshed solving, res = {err}")
     assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
-    x = np.where(err < 0.1, x, np.nan) # For assert purpose, some how this also affects bicgstab.
+    x = np.where(err < 0.1, x, np.nan) # For assert purpose, somehow this also affects bicgstab.
 
     return x
 

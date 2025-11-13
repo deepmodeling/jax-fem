@@ -51,7 +51,7 @@ $$\begin{align*}
     k\nabla T^n \cdot \boldsymbol{n} &= q_0 &&  \textrm{on} \nobreakspace \nobreakspace \Gamma_{square}.
 \end{align*}$$
 
-where $T^n$ and $\boldsymbol{\varepsilon}^n$ the unknown variable field to be solved, $T^{n-1}$ and $\boldsymbol{\varepsilon}^{n-1}$ are known from previous time step. We have imposed Dirichlet boundary condition on the circular hole boudary with $T_{inc}$ being the assigned temperature. On the other boundaries, the zero Neumann boundary conditions $q_0 = 0$ is considered. It should be noted that in this example, the temperature variation $\Theta = T-T_0$ is treated as the unknown variable field, which also appears in the stress constitutive relation.
+where $T^n$ and $\boldsymbol{\varepsilon}^n$ the unknown variable field to be solved, $T^{n-1}$ and $\boldsymbol{\varepsilon}^{n-1}$ are known from previous time step. We have imposed Dirichlet boundary condition on the circular hole boudary with $T_{inc}$ being the assigned temperature. On the other boundaries, the zero Neumann boundary conditions $q_0 = 0$ is considered. 
 
 With the stress constitutive relation defined above, the displacemnet field $\boldsymbol{u}^n$ at the current time step satisfies that:
 
@@ -77,6 +77,7 @@ $$R=R_T+R_{\boldsymbol{u}}=0$$
 
 For each time step, we simultaneously solving $T^n$ and $\boldsymbol{u}^n$, hence forming the full coupling mechanism.
 
+It should be noted that in this example, the temperature variation $dT^n = T^n-T_0$ is treated as the unknown variable field instead of the absolute temperature $T^n$, which also appears in the weak form for $\boldsymbol{u}^n$.
 
 ## Execution
 Run

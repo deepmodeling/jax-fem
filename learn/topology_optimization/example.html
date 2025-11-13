@@ -1,0 +1,833 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Topology optimization &#8212; JAX-FEM 0.0.10 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nbsphinx-code-cells.css?v=2aa19091" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=972fa7a7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=94452c26"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'learn/topology_optimization/example';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Source field identification" href="../source_field_identification/example.html" />
+    <link rel="prev" title="Compute gradients" href="../compute_gradients/example.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="JAX-FEM 0.0.10 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="JAX-FEM 0.0.10 documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../poisson/example.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../linear_elasticity/example.html">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hyperelasticity/example.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../plasticity/example.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../compute_gradients/example.html">Compute gradients</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Topology optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../source_field_identification/example.html">Source field identification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../traction_force_identification/example.html">Traction force identification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../thermal_mechanical_control/example.html">Thermal mechanical control</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../shape_optimization/example.html">Shape optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../structure_material_co_design/example.html">Structure/material co-design</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../more/FAQ.html">Frequently asked questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/useful/main.html">Useful links</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">Miscellaneous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/contact.html">Contact</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/learn/topology_optimization/example.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Topology optimization</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem-definition">Problem definition</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Implementation">Implementation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Weak-form">Weak form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Mesh">Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Boundary-conditions">Boundary conditions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem">Problem</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Solver">Solver</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Optimization">Optimization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Postprocessing">Postprocessing</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#References">References</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadLinks = document.querySelectorAll('a.reference.download.internal');
+    downloadLinks.forEach(link => {
+        link.setAttribute('download', '');
+        link.href = '../_sources/' + link.getAttribute('href');
+    });
+});
+</script><section id="Topology-optimization">
+<h1>Topology optimization<a class="headerlink" href="#Topology-optimization" title="Link to this heading">#</a></h1>
+<section id="Problem-definition">
+<h2>Problem definition<a class="headerlink" href="#Problem-definition" title="Link to this heading">#</a></h2>
+<p>We study compliance minimization of a 2D cantilever beam made of a linear elastic material. Following the classic Solid Isotropic Material with Penalization (SIMP) [1] method, the governing PDE is</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+    -\nabla \cdot (\boldsymbol{\sigma}(\nabla \boldsymbol{u}, \theta)) = \boldsymbol{0} &amp; \quad \textrm{in}  \, \, \Omega, \nonumber \\
+    \boldsymbol{u} = \boldsymbol{0} &amp;  \quad\textrm{on} \, \, \Gamma_D,  \nonumber \\
+    \boldsymbol{\sigma} \cdot \boldsymbol{n} =  \boldsymbol{t} &amp; \quad \textrm{on} \, \, \Gamma_N,
+\end{align*}\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\boldsymbol{\sigma}\)</span> is parametrized with <span class="math notranslate nohighlight">\(\theta(\boldsymbol{x}) \in [0, 1]\)</span>, which is the spatially varying design density field. Specifically, we set the Young’s modulus <span class="math notranslate nohighlight">\(E=E_{\textrm{min}} + \theta^p (E_{\textrm{max}} - E_{\textrm{min}})\)</span> with <span class="math notranslate nohighlight">\(p\)</span> being the penalty exponent.</p>
+<p>The weak form corresponding to the governing PDE states that for any test function <span class="math notranslate nohighlight">\(\boldsymbol{v}\)</span>, the following equation must hold:</p>
+<div class="math notranslate nohighlight">
+\[\begin{align*}
+\int_{\Omega}  \boldsymbol{\sigma} :  \nabla \boldsymbol{v} \textrm{ d} \Omega - \int_{\Gamma_N} \boldsymbol{t} \cdot  \boldsymbol{v} \textrm{ d} \Gamma = 0.
+\end{align*}\]</div>
+<p>The compliance minimization problem states that</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+    \min_{\boldsymbol{U}\in\mathbb{R}^{N}, \boldsymbol{\Theta}\in\mathbb{R}^{M}} J(\boldsymbol{U},\boldsymbol{\Theta}) =  \int_{\Gamma_N} \boldsymbol{u}^h \cdot \boldsymbol{t}  \\
+    \textrm{s.t.} \quad \boldsymbol{C}(\boldsymbol{U}, \boldsymbol{\Theta}) = \textbf{0},
+\end{align*}\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\boldsymbol{u}^h(\boldsymbol{x}) = \sum_k \boldsymbol{U}[k] \boldsymbol{\phi}_k(\boldsymbol{x})\)</span> is the finite element solution field constructed with the solution vector <span class="math notranslate nohighlight">\(\boldsymbol{U}\)</span>. The design vector <span class="math notranslate nohighlight">\(\boldsymbol{\Theta}\)</span> is the discretized version of <span class="math notranslate nohighlight">\(\theta\)</span>, and the constraint equation <span class="math notranslate nohighlight">\(\boldsymbol{C}(\boldsymbol{U}, \boldsymbol{\Theta}) = \textbf{0}\)</span> corresponds to the discretized weak form. The topology optimization problem is therefore a typical
+<strong>PDE-constrained optimization</strong> problem.</p>
+</section>
+<section id="Implementation">
+<h2>Implementation<a class="headerlink" href="#Implementation" title="Link to this heading">#</a></h2>
+<p>As one of its salient features, JAX-FEM allows users to solve such problems in a handy way. In this example, the external <code class="docutils literal notranslate"><span class="pre">MMA</span></code> optimizer [2] is adopted. The original optimization problem is reformulated in the following reduced form:</p>
+<div class="math notranslate nohighlight">
+\[\begin{align*}
+\nonumber \min_{\boldsymbol{\Theta}\in\mathbb{R}^{M}} \widehat{J}(\boldsymbol{\Theta}) = J(\boldsymbol{U}(\boldsymbol{\Theta}),\boldsymbol{\Theta}).
+\end{align*}\]</div>
+<p>Note that <span class="math notranslate nohighlight">\(\boldsymbol{U}\)</span> is implicitly a function of <span class="math notranslate nohighlight">\(\boldsymbol{\Theta}\)</span>. To call the <code class="docutils literal notranslate"><span class="pre">MMA</span></code> optimizer, we need to provide the total derivative <span class="math notranslate nohighlight">\(\frac{\textrm{d}\widehat{J}}{\textrm{d}\boldsymbol{\Theta}}\)</span>, which is computed automatically with JAX-FEM. The adjoint method is used under the hood.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">MMA</span></code> optimizer accepts constraints. For example, we may want to pose the volume constraint such that the material used for topology optimization cannot exceed a threshold value. Then the previous optimization problem is modified as the following</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+\min_{\boldsymbol{\Theta}\in\mathbb{R}^{M}} \widehat{J}(\boldsymbol{\Theta}) = J(\boldsymbol{U}(\boldsymbol{\Theta}),\boldsymbol{\Theta}) \\
+\textrm{s.t.} \quad g(\boldsymbol{\Theta}) = \frac{\int_{\Omega} \theta \textrm{d}\Omega}{\int_{\Omega} \textrm{d}\Omega }- \bar{v}  \leq 0,
+\end{align*}\end{split}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\bar{v}\)</span> is the upper bound of volume ratio. In this case, we need to pass <span class="math notranslate nohighlight">\(\frac{\textrm{d}g}{\textrm{d}\boldsymbol{\Theta}}\)</span> to the <code class="docutils literal notranslate"><span class="pre">MMA</span></code> solver as the necessary information to handle such constraint.</p>
+<blockquote>
+<div><p>In certain scenario, constraint function may depend not only on the design variable, but also on the state variable, i.e., <span class="math notranslate nohighlight">\(g(\boldsymbol{U},\boldsymbol{\Theta})\)</span>. For example, limiting the maximum von Mises stress globally over the domain could be such a constraint. This will be handled just fine with JAX-FEM. You may check our paper [3] for more details or the more advanced application examples in our repo.</p>
+</div></blockquote>
+<p>We also want to point to an excellent educational paper on using <strong>JAX</strong> for topology optimization for your further information [4].</p>
+<p>For the implementation, we first import some necessary modules and do some cleaning work：</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import some useful modules.</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">onp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">glob</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="c1"># Import JAX-FEM specific modules.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.problem</span><span class="w"> </span><span class="kn">import</span> <span class="n">Problem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.solver</span><span class="w"> </span><span class="kn">import</span> <span class="n">solver</span><span class="p">,</span> <span class="n">ad_wrapper</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_sol</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.generate_mesh</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_meshio_cell_type</span><span class="p">,</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">rectangle_mesh</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.mma</span><span class="w"> </span><span class="kn">import</span> <span class="n">optimize</span>
+
+<span class="c1"># Do some cleaning work. Remove old solution files.</span>
+<span class="n">data_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;data&#39;</span><span class="p">)</span>
+<span class="n">files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;vtk/*&#39;</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Weak-form">
+<h3>Weak form<a class="headerlink" href="#Weak-form" title="Link to this heading">#</a></h3>
+<p>The definition of the plane stress problem is shown as follows:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define constitutive relationship.</span>
+<span class="c1"># Generally, JAX-FEM solves -div.(f(u_grad,alpha_1,alpha_2,...,alpha_N)) = b.</span>
+<span class="c1"># Here, we have f(u_grad,alpha_1,alpha_2,...,alpha_N) = sigma(u_grad, theta),</span>
+<span class="c1"># reflected by the function &#39;stress&#39;. The functions &#39;custom_init&#39;and &#39;set_params&#39;</span>
+<span class="c1"># override base class methods. In particular, set_params sets the design variable theta.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Elasticity</span><span class="p">(</span><span class="n">Problem</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">custom_init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Override base class method.</span>
+        <span class="c1"># Set up &#39;self.fe.flex_inds&#39; so that location-specific TO can be realized.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fe</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">flex_inds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">cells</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_tensor_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">stress</span><span class="p">(</span><span class="n">u_grad</span><span class="p">,</span> <span class="n">theta</span><span class="p">):</span>
+            <span class="c1"># Plane stress assumption</span>
+            <span class="c1"># Reference: https://en.wikipedia.org/wiki/Hooke%27s_law</span>
+            <span class="n">Emax</span> <span class="o">=</span> <span class="mf">70.e3</span>
+            <span class="n">Emin</span> <span class="o">=</span> <span class="mf">1e-3</span><span class="o">*</span><span class="n">Emax</span>
+            <span class="n">nu</span> <span class="o">=</span> <span class="mf">0.3</span>
+            <span class="n">penal</span> <span class="o">=</span> <span class="mf">3.</span>
+            <span class="n">E</span> <span class="o">=</span> <span class="n">Emin</span> <span class="o">+</span> <span class="p">(</span><span class="n">Emax</span> <span class="o">-</span> <span class="n">Emin</span><span class="p">)</span><span class="o">*</span><span class="n">theta</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="n">penal</span>
+            <span class="n">epsilon</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">u_grad</span> <span class="o">+</span> <span class="n">u_grad</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="n">eps11</span> <span class="o">=</span> <span class="n">epsilon</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">eps22</span> <span class="o">=</span> <span class="n">epsilon</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">eps12</span> <span class="o">=</span> <span class="n">epsilon</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">sig11</span> <span class="o">=</span> <span class="n">E</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">nu</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">nu</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">eps11</span> <span class="o">+</span> <span class="n">nu</span><span class="o">*</span><span class="n">eps22</span><span class="p">)</span>
+            <span class="n">sig22</span> <span class="o">=</span> <span class="n">E</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">nu</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">nu</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">nu</span><span class="o">*</span><span class="n">eps11</span> <span class="o">+</span> <span class="n">eps22</span><span class="p">)</span>
+            <span class="n">sig12</span> <span class="o">=</span> <span class="n">E</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">nu</span><span class="p">)</span><span class="o">*</span><span class="n">eps12</span>
+            <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">sig11</span><span class="p">,</span> <span class="n">sig12</span><span class="p">],</span> <span class="p">[</span><span class="n">sig12</span><span class="p">,</span> <span class="n">sig22</span><span class="p">]])</span>
+            <span class="k">return</span> <span class="n">sigma</span>
+        <span class="k">return</span> <span class="n">stress</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_surface_maps</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">surface_map</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">100.</span><span class="p">])</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">surface_map</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="c1"># Override base class method.</span>
+        <span class="n">full_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">num_cells</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">full_params</span> <span class="o">=</span> <span class="n">full_params</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">flex_inds</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">thetas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">full_params</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">num_quads</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">full_params</span> <span class="o">=</span> <span class="n">full_params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_vars</span> <span class="o">=</span> <span class="p">[</span><span class="n">thetas</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_compliance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sol</span><span class="p">):</span>
+        <span class="c1"># Surface integral</span>
+        <span class="n">boundary_inds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_inds_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">nanson_scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">get_face_shape_grads</span><span class="p">(</span><span class="n">boundary_inds</span><span class="p">)</span>
+        <span class="c1"># (num_selected_faces, 1, num_nodes, vec) * # (num_selected_faces, num_face_quads, num_nodes, 1)</span>
+        <span class="n">u_face</span> <span class="o">=</span> <span class="n">sol</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">cells</span><span class="p">][</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]][:,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">face_shape_vals</span><span class="p">[</span><span class="n">boundary_inds</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]][:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">u_face</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">u_face</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># (num_selected_faces, num_face_quads, vec)</span>
+        <span class="c1"># (num_selected_faces, num_face_quads, dim)</span>
+        <span class="n">subset_quad_points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">physical_surface_quad_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">neumann_fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_surface_maps</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">traction</span> <span class="o">=</span> <span class="o">-</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">neumann_fn</span><span class="p">))(</span><span class="n">u_face</span><span class="p">,</span> <span class="n">subset_quad_points</span><span class="p">)</span> <span class="c1"># (num_selected_faces, num_face_quads, vec)</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">traction</span> <span class="o">*</span> <span class="n">u_face</span> <span class="o">*</span> <span class="n">nanson_scale</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">val</span>
+</pre></div>
+</div>
+</div>
+<p>where the function <code class="docutils literal notranslate"><span class="pre">set_params</span></code> and <code class="docutils literal notranslate"><span class="pre">compute_compliance</span></code> are used to input design parameters and compute the objective function, respectively.</p>
+</section>
+<section id="Mesh">
+<h3>Mesh<a class="headerlink" href="#Mesh" title="Link to this heading">#</a></h3>
+<p>Here we use the <code class="docutils literal notranslate"><span class="pre">QUAD4</span></code> element to discretize the computational domain:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Specify mesh-related information. We use first-order quadrilateral element.</span>
+<span class="n">ele_type</span> <span class="o">=</span> <span class="s1">&#39;QUAD4&#39;</span>
+<span class="n">cell_type</span> <span class="o">=</span> <span class="n">get_meshio_cell_type</span><span class="p">(</span><span class="n">ele_type</span><span class="p">)</span>
+<span class="n">Lx</span><span class="p">,</span> <span class="n">Ly</span> <span class="o">=</span> <span class="mf">60.</span><span class="p">,</span> <span class="mf">30.</span>
+<span class="n">meshio_mesh</span> <span class="o">=</span> <span class="n">rectangle_mesh</span><span class="p">(</span><span class="n">Nx</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">Ny</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">domain_x</span><span class="o">=</span><span class="n">Lx</span><span class="p">,</span> <span class="n">domain_y</span><span class="o">=</span><span class="n">Ly</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">meshio_mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">meshio_mesh</span><span class="o">.</span><span class="n">cells_dict</span><span class="p">[</span><span class="n">cell_type</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Boundary-conditions">
+<h3>Boundary conditions<a class="headerlink" href="#Boundary-conditions" title="Link to this heading">#</a></h3>
+<p>Then we can define the boundary conditions, where the left-side (<span class="math notranslate nohighlight">\(x=0\)</span>) is fixed and the bottom part of the right-side (<span class="math notranslate nohighlight">\(x=L_x\)</span>) is applied with tractions.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define boundary conditions and values.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">fixed_location</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">load_location</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Lx</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">0.1</span><span class="o">*</span><span class="n">Ly</span> <span class="o">+</span> <span class="mf">1e-5</span><span class="p">))</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">dirichlet_val</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.</span>
+
+<span class="n">dirichlet_bc_info</span> <span class="o">=</span> <span class="p">[[</span><span class="n">fixed_location</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="n">dirichlet_val</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">]</span>
+
+<span class="n">location_fns</span> <span class="o">=</span> <span class="p">[</span><span class="n">load_location</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Problem">
+<h3>Problem<a class="headerlink" href="#Problem" title="Link to this heading">#</a></h3>
+<p>We have completed all the preliminary preparations for the problem. Then we can proceed to create an instance of our BVP:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define forward problem.</span>
+<span class="n">problem</span> <span class="o">=</span> <span class="n">Elasticity</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">vec</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ele_type</span><span class="o">=</span><span class="n">ele_type</span><span class="p">,</span> <span class="n">dirichlet_bc_info</span><span class="o">=</span><span class="n">dirichlet_bc_info</span><span class="p">,</span> <span class="n">location_fns</span><span class="o">=</span><span class="n">location_fns</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Solver">
+<h3>Solver<a class="headerlink" href="#Solver" title="Link to this heading">#</a></h3>
+<p>Similarly, we use the <code class="docutils literal notranslate"><span class="pre">ad_wrapper</span></code> to enable the differentiability of the solver and use the <code class="docutils literal notranslate"><span class="pre">UMFPACK</span></code> solver wrapped in <code class="docutils literal notranslate"><span class="pre">scipy</span></code> to solve the linear system involved in both the forward and inverse propagation.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Apply the automatic differentiation wrapper.</span>
+<span class="c1"># This is a critical step that makes the problem solver differentiable.</span>
+<span class="n">fwd_pred</span> <span class="o">=</span> <span class="n">ad_wrapper</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">solver_options</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;umfpack_solver&#39;</span><span class="p">:</span> <span class="p">{}},</span> <span class="n">adjoint_solver_options</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;umfpack_solver&#39;</span><span class="p">:</span> <span class="p">{}})</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Optimization">
+<h3>Optimization<a class="headerlink" href="#Optimization" title="Link to this heading">#</a></h3>
+<p>For the optimization task, we first define the objective function and create handle functions for the <code class="docutils literal notranslate"><span class="pre">MMA</span></code> solver:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define the objective function &#39;J_total(theta)&#39;.</span>
+<span class="c1"># In the following, &#39;sol = fwd_pred(params)&#39; basically says U = U(theta).</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">J_total</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+    <span class="c1"># J(u(theta), theta)</span>
+    <span class="n">sol_list</span> <span class="o">=</span> <span class="n">fwd_pred</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">compliance</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">compute_compliance</span><span class="p">(</span><span class="n">sol_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">compliance</span>
+
+
+<span class="c1"># Output solution files to local disk</span>
+<span class="n">outputs</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">output_sol</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">obj_val</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Output solution - need to solve the forward problem again...&quot;</span><span class="p">)</span>
+    <span class="n">sol_list</span> <span class="o">=</span> <span class="n">fwd_pred</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">sol</span> <span class="o">=</span> <span class="n">sol_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">vtu_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;vtk/sol_</span><span class="si">{</span><span class="n">output_sol</span><span class="o">.</span><span class="n">counter</span><span class="si">:</span><span class="s1">03d</span><span class="si">}</span><span class="s1">.vtu&#39;</span><span class="p">)</span>
+    <span class="n">save_sol</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fe</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">sol</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">sol</span><span class="p">),</span> <span class="mi">1</span><span class="p">)))),</span> <span class="n">vtu_path</span><span class="p">,</span> <span class="n">cell_infos</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;theta&#39;</span><span class="p">,</span> <span class="n">problem</span><span class="o">.</span><span class="n">full_params</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;compliance = </span><span class="si">{</span><span class="n">obj_val</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj_val</span><span class="p">)</span>
+    <span class="n">output_sol</span><span class="o">.</span><span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="n">output_sol</span><span class="o">.</span><span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+
+
+<span class="c1"># Prepare J_total and dJ/d(theta) that are required by the MMA optimizer.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">objectiveHandle</span><span class="p">(</span><span class="n">rho</span><span class="p">):</span>
+    <span class="c1"># MMA solver requires (J, dJ) as inputs</span>
+    <span class="c1"># J has shape ()</span>
+    <span class="c1"># dJ has shape (...) = rho.shape</span>
+    <span class="n">J</span><span class="p">,</span> <span class="n">dJ</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">value_and_grad</span><span class="p">(</span><span class="n">J_total</span><span class="p">)(</span><span class="n">rho</span><span class="p">)</span>
+    <span class="n">output_sol</span><span class="p">(</span><span class="n">rho</span><span class="p">,</span> <span class="n">J</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">J</span><span class="p">,</span> <span class="n">dJ</span>
+
+
+<span class="c1"># Prepare g and dg/d(theta) that are required by the MMA optimizer.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">consHandle</span><span class="p">(</span><span class="n">rho</span><span class="p">,</span> <span class="n">epoch</span><span class="p">):</span>
+    <span class="c1"># MMA solver requires (c, dc) as inputs</span>
+    <span class="c1"># c should have shape (numConstraints,)</span>
+    <span class="c1"># dc should have shape (numConstraints, ...)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">computeGlobalVolumeConstraint</span><span class="p">(</span><span class="n">rho</span><span class="p">):</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">rho</span><span class="p">)</span><span class="o">/</span><span class="n">vf</span> <span class="o">-</span> <span class="mf">1.</span>
+        <span class="k">return</span> <span class="n">g</span>
+    <span class="n">c</span><span class="p">,</span> <span class="n">gradc</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">value_and_grad</span><span class="p">(</span><span class="n">computeGlobalVolumeConstraint</span><span class="p">)(</span><span class="n">rho</span><span class="p">)</span>
+    <span class="n">c</span><span class="p">,</span> <span class="n">gradc</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,)),</span> <span class="n">gradc</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">c</span><span class="p">,</span> <span class="n">gradc</span>
+</pre></div>
+</div>
+</div>
+<p>Then we can call the <code class="docutils literal notranslate"><span class="pre">jax_fem.mma.optimize</span></code> to solve the defined optimization problem:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Finalize the details of the MMA optimizer, and solve the TO problem.</span>
+<span class="n">vf</span> <span class="o">=</span> <span class="mf">0.5</span>
+<span class="n">optimizationParams</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;maxIters&#39;</span><span class="p">:</span><span class="mi">51</span><span class="p">,</span> <span class="s1">&#39;movelimit&#39;</span><span class="p">:</span><span class="mf">0.1</span><span class="p">}</span>
+<span class="n">rho_ini</span> <span class="o">=</span> <span class="n">vf</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">flex_inds</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">numConstraints</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">optimize</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fe</span><span class="p">,</span> <span class="n">rho_ini</span><span class="p">,</span> <span class="n">optimizationParams</span><span class="p">,</span> <span class="n">objectiveHandle</span><span class="p">,</span> <span class="n">consHandle</span><span class="p">,</span> <span class="n">numConstraints</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;As a reminder, compliance = </span><span class="si">{</span><span class="n">J_total</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fe</span><span class="o">.</span><span class="n">flex_inds</span><span class="p">),</span><span class="w"> </span><span class="mi">1</span><span class="p">)))</span><span class="si">}</span><span class="s2"> for full material&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Postprocessing">
+<h3>Postprocessing<a class="headerlink" href="#Postprocessing" title="Link to this heading">#</a></h3>
+<p>We then plot the objective function value in the optimization:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Plot the optimization results.</span>
+<span class="n">obj</span> <span class="o">=</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">outputs</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">onp</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">obj</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Optimization step&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Objective value&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">labelsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">labelsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>The change of the cell density can also be visualized by checking the generated VTK files (See the previous defined <code class="docutils literal notranslate"><span class="pre">output_sol</span></code>) using ParaView</p>
+<center><p><img alt="74bfa2e63c934a0db8ae15ebf19af499" class="no-scaled-link" src="../../_images/topo_rho.gif" style="width: 400px;" /></p>
+<p><p>Topology optimization iterations.</p>
+</p></center><center><p><img alt="24d852c228f347929b25f9c11a65e8d0" class="no-scaled-link" src="../../_images/topo_curve.png" style="width: 400px;" /></p>
+<p><p>Objective funtion values.</p>
+</p></center><blockquote>
+<div><p>Please refer to this <a class="reference external" href="https://github.com/deepmodeling/jax-fem/blob/main/docs/source/learn/topology_optimization/example.ipynb">link</a> to download the source file.</p>
+</div></blockquote>
+</section>
+</section>
+<section id="References">
+<h2>References<a class="headerlink" href="#References" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p>Bendsoe, Martin Philip, and Ole Sigmund. <em>Topology optimization: theory, methods, and applications</em>. Springer Science &amp; Business Media, 2003.</p></li>
+<li><p>Svanberg, Krister. “The method of moving asymptotes—a new method for structural optimization.” <em>International journal for numerical methods in engineering</em> 24.2 (1987): 359-373.</p></li>
+<li><p>Xue, Tianju, et al. “JAX-FEM: A differentiable GPU-accelerated 3D finite element solver for automatic inverse design and mechanistic data science.” <em>Computer Physics Communications</em> (2023): 108802.</p></li>
+<li><p>Chandrasekhar, Aaditya, Saketh Sridhara, and Krishnan Suresh. “Auto: a framework for automatic differentiation in topology optimization.” <em>Structural and Multidisciplinary Optimization</em> 64.6 (2021): 4355-4365.</p></li>
+</ol>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../compute_gradients/example.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Compute gradients</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../source_field_identification/example.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Source field identification</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem-definition">Problem definition</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Implementation">Implementation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Weak-form">Weak form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Mesh">Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Boundary-conditions">Boundary conditions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem">Problem</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Solver">Solver</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Optimization">Optimization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Postprocessing">Postprocessing</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#References">References</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

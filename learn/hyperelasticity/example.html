@@ -1,0 +1,746 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Hyperelasticity &#8212; JAX-FEM 0.0.10 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nbsphinx-code-cells.css?v=2aa19091" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=972fa7a7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=94452c26"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'learn/hyperelasticity/example';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Plasticity" href="../plasticity/example.html" />
+    <link rel="prev" title="Linear elasticity" href="../linear_elasticity/example.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="JAX-FEM 0.0.10 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="JAX-FEM 0.0.10 documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../poisson/example.html">Poisson equation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../linear_elasticity/example.html">Linear elasticity</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../plasticity/example.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../compute_gradients/example.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../topology_optimization/example.html">Topology optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../source_field_identification/example.html">Source field identification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../traction_force_identification/example.html">Traction force identification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../thermal_mechanical_control/example.html">Thermal mechanical control</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../shape_optimization/example.html">Shape optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../structure_material_co_design/example.html">Structure/material co-design</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../more/FAQ.html">Frequently asked questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/useful/main.html">Useful links</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">Miscellaneous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/contact.html">Contact</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/learn/hyperelasticity/example.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Hyperelasticity</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem-definition">Problem definition</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Implementation">Implementation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Weak-form">Weak form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Mesh">Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Boundary-conditions">Boundary conditions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem">Problem</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Solver">Solver</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Postprocessing">Postprocessing</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#References">References</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadLinks = document.querySelectorAll('a.reference.download.internal');
+    downloadLinks.forEach(link => {
+        link.setAttribute('download', '');
+        link.href = '../_sources/' + link.getAttribute('href');
+    });
+});
+</script><section id="Hyperelasticity">
+<h1>Hyperelasticity<a class="headerlink" href="#Hyperelasticity" title="Link to this heading">#</a></h1>
+<section id="Problem-definition">
+<h2>Problem definition<a class="headerlink" href="#Problem-definition" title="Link to this heading">#</a></h2>
+<p>Hyperelastic materials, such as elastomers and biological soft tissues, demonstrate characteristic nonlinear stress-strain behavior governed by strain energy density functions under finite deformations. This example demostrate how to solve the boundary value problem (BVP) of Neo-Hookean hyperelasticity using JAX-FEM, with particular focus on the finite deformation regime induced by prescribed displacement constraints.</p>
+<p>The governing equations for the BVP of hyperelastic materials can be expressed as:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+- \nabla \cdot \boldsymbol{P} &amp;= \boldsymbol{b} &amp;&amp;\text{in } \Omega, \\
+\boldsymbol{u} &amp;= \boldsymbol{u}_D &amp;&amp;\text{on } \Gamma_D, \\
+\boldsymbol{P} \cdot \boldsymbol{n} &amp;= \boldsymbol{t} &amp;&amp;\text{on } \Gamma_N.
+\end{aligned}\end{split}\]</div>
+<p>where the computational domain is a unit cube: <span class="math notranslate nohighlight">\(\Omega = (0,1) \times (0,1) \times (0,1)\)</span>. A fixed displacement boundary condition <span class="math notranslate nohighlight">\(u_{D_1} = 0\)</span> is applied on the right surface <span class="math notranslate nohighlight">\(\Gamma_{D_1}\)</span> (<span class="math notranslate nohighlight">\(x = 1\)</span>), while a prescribed displacement field is imposed on the left surface <span class="math notranslate nohighlight">\(\Gamma_{D_2}\)</span> (<span class="math notranslate nohighlight">\(x = 0\)</span>), which is defined as follows:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}u_{D_2} = \left[
+\begin{array}{c}
+0 \\
+\dfrac{0.5 + (x_2 - 0.5)\cos\left(\frac{\pi}{3}\right) - (x_3 - 0.5)\sin\left(\frac{\pi}{3}\right) - x_2}{2} \\
+\dfrac{0.5 + (x_2 - 0.5)\sin\left(\frac{\pi}{3}\right) + (x_3 - 0.5)\cos\left(\frac{\pi}{3}\right) - x_3}{2}
+\end{array}
+\right]\end{split}\]</div>
+<p>The traction in the Neumann boundary condition is specified as <span class="math notranslate nohighlight">\(\boldsymbol{t} = \begin{bmatrix}0 &amp; 0 &amp; 0\end{bmatrix}^{\textrm{T}}\)</span>, and the body force is defined as <span class="math notranslate nohighlight">\(\boldsymbol{b} = \begin{bmatrix}0 &amp; 0 &amp; 0\end{bmatrix}^{\textrm{T}}\)</span>.</p>
+<p>To define the BVP to be solved, we need to derive the weak form. We multiply the momentum equation <span class="math notranslate nohighlight">\(- \nabla \cdot \boldsymbol{P} = \boldsymbol{b}\)</span> by a test function <span class="math notranslate nohighlight">\(\boldsymbol{v} \in \mathcal{V}_0\)</span> (where <span class="math notranslate nohighlight">\(\mathcal{V}_0 = \{\boldsymbol{v} \in H^1(\Omega) | \boldsymbol{v} = \boldsymbol{0} \text{ on } \Gamma_D\}\)</span>) and integrate over the domain:</p>
+<div class="math notranslate nohighlight">
+\[-\int_\Omega (\nabla \cdot \boldsymbol{P}) \cdot \boldsymbol{v} \, dV = \int_\Omega \boldsymbol{b} \cdot \boldsymbol{v} \, dV\]</div>
+<p>then，we can obtain the following formulation by applying the divergence theorem:</p>
+<div class="math notranslate nohighlight">
+\[\int_\Omega \boldsymbol{P} : \nabla \boldsymbol{v} \, dV
+- \int_{\partial \Omega} (\boldsymbol{P} \boldsymbol{n}) \cdot \boldsymbol{v} \, dS
+= \int_\Omega \boldsymbol{b} \cdot \boldsymbol{v} \, dV\]</div>
+<p>We can use the defined boudnary conditions to obtain:</p>
+<div class="math notranslate nohighlight">
+\[\int_\Omega \boldsymbol{P}(\nabla\boldsymbol{u}):\nabla\boldsymbol{v} \, dV - \int_\Omega \boldsymbol{b} \cdot \boldsymbol{v} \, dV - \int_{\Gamma_N} \boldsymbol{t} \cdot \boldsymbol{v} \, dS  = 0 \quad \forall \boldsymbol{v} \in \mathcal{V}_0\]</div>
+<p>The first Piola-Kirchhoff stress <span class="math notranslate nohighlight">\(\boldsymbol{P}\)</span> is given by:</p>
+<div class="math notranslate nohighlight">
+\[\boldsymbol{P} = \frac{\partial W}{\partial \boldsymbol{F}}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\boldsymbol{F}\)</span> is the deformation gradient given by:</p>
+<div class="math notranslate nohighlight">
+\[\boldsymbol{F} = \nabla \boldsymbol{u} + \boldsymbol{I}\]</div>
+<p>The strain energy density function <span class="math notranslate nohighlight">\(W(\boldsymbol{F})\)</span> for the <a class="reference external" href="https://en.wikipedia.org/wiki/Neo-Hookean_solid">Neo-Hookean material</a> can be expressed as:</p>
+<div class="math notranslate nohighlight">
+\[W(F) = \frac{G}{2}(J^{-2/3}I_1 - 3) + \frac{K}{2}(J - 1)^2\]</div>
+</section>
+<section id="Implementation">
+<h2>Implementation<a class="headerlink" href="#Implementation" title="Link to this heading">#</a></h2>
+<p>First, we need to import some useful modules：</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import some useful modules.</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="c1"># Import JAX-FEM specific modules.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.problem</span><span class="w"> </span><span class="kn">import</span> <span class="n">Problem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.solver</span><span class="w"> </span><span class="kn">import</span> <span class="n">solver</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_sol</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.generate_mesh</span><span class="w"> </span><span class="kn">import</span> <span class="n">box_mesh_gmsh</span><span class="p">,</span> <span class="n">get_meshio_cell_type</span><span class="p">,</span> <span class="n">Mesh</span>
+</pre></div>
+</div>
+</div>
+<section id="Weak-form">
+<h3>Weak form<a class="headerlink" href="#Weak-form" title="Link to this heading">#</a></h3>
+<p>In this example, we use the <strong>Laplace Kernel</strong> to implement hyperelastic constitutive relations by overriding the <code class="docutils literal notranslate"><span class="pre">get_tensor_map</span></code> method to define hyperelastic material response, where the <code class="docutils literal notranslate"><span class="pre">get_tensor_map</span></code> function defines the core mapping:</p>
+<div class="math notranslate nohighlight">
+\[\text{tensor map}: \nabla \boldsymbol{u} \rightarrow \boldsymbol{P} = \frac{\partial W(\boldsymbol{F})}{\partial \boldsymbol{F}}\bigg|_{\boldsymbol{F}=\nabla \boldsymbol{u} + \boldsymbol{I}}\]</div>
+<p>The implementation strategy involves: defining the strain energy density function <code class="docutils literal notranslate"><span class="pre">psi(F)</span></code> representing <span class="math notranslate nohighlight">\(W(\boldsymbol{F})\)</span>, then using <code class="docutils literal notranslate"><span class="pre">jax.grad(psi)</span></code> to compute the first Piola-Kirchhoff stress tensor. The Laplace Kernel calls this mapping to convert displacement gradients into stress tensors and computes the volume integral <span class="math notranslate nohighlight">\(\int_\Omega \boldsymbol{P} : \nabla \boldsymbol{v} \, d\Omega\)</span>.</p>
+<p>This process completely avoids manual derivation of complex stress expressions. Users only need to define the mathematical expression of physical laws (strain energy function), while automatic differentiation (AD) technique in <code class="docutils literal notranslate"><span class="pre">jax</span></code> automatically handles all complex tensor differential operations, including computation of the first Piola-Kirchhoff stress tensor <span class="math notranslate nohighlight">\(\boldsymbol{P}\)</span> and tangent stiffness matrix generation. This not only eliminates the risk of errors in complex tensor
+derivations but also makes constitutive model implementation as intuitive as writing mathematical formulas.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define constitutive relationship.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">HyperElasticity</span><span class="p">(</span><span class="n">Problem</span><span class="p">):</span>
+    <span class="c1"># The function &#39;get_tensor_map&#39; overrides base class method. Generally, JAX-FEM</span>
+    <span class="c1"># solves -div(f(u_grad)) = b. Here, we define f(u_grad) = P. Notice how we first</span>
+    <span class="c1"># define &#39;psi&#39; (representing W), and then use automatic differentiation (jax.grad)</span>
+    <span class="c1"># to obtain the &#39;P_fn&#39; function.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_tensor_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">psi</span><span class="p">(</span><span class="n">F</span><span class="p">):</span>
+            <span class="n">E</span> <span class="o">=</span> <span class="mf">10.</span>
+            <span class="n">nu</span> <span class="o">=</span> <span class="mf">0.3</span>
+            <span class="n">mu</span> <span class="o">=</span> <span class="n">E</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">+</span> <span class="n">nu</span><span class="p">))</span>
+            <span class="n">kappa</span> <span class="o">=</span> <span class="n">E</span> <span class="o">/</span> <span class="p">(</span><span class="mf">3.</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">nu</span><span class="p">))</span>
+            <span class="n">J</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="n">F</span><span class="p">)</span>
+            <span class="n">Jinv</span> <span class="o">=</span> <span class="n">J</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">2.</span> <span class="o">/</span> <span class="mf">3.</span><span class="p">)</span>
+            <span class="n">I1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">F</span><span class="p">)</span>
+            <span class="n">energy</span> <span class="o">=</span> <span class="p">(</span><span class="n">mu</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">Jinv</span> <span class="o">*</span> <span class="n">I1</span> <span class="o">-</span> <span class="mf">3.</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">kappa</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">J</span> <span class="o">-</span> <span class="mf">1.</span><span class="p">)</span><span class="o">**</span><span class="mf">2.</span>
+            <span class="k">return</span> <span class="n">energy</span>
+
+        <span class="n">P_fn</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">first_PK_stress</span><span class="p">(</span><span class="n">u_grad</span><span class="p">):</span>
+            <span class="n">I</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+            <span class="n">F</span> <span class="o">=</span> <span class="n">u_grad</span> <span class="o">+</span> <span class="n">I</span>
+            <span class="n">P</span> <span class="o">=</span> <span class="n">P_fn</span><span class="p">(</span><span class="n">F</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">P</span>
+
+        <span class="k">return</span> <span class="n">first_PK_stress</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Mesh">
+<h3>Mesh<a class="headerlink" href="#Mesh" title="Link to this heading">#</a></h3>
+<p>Here we use the first-order hexahedron element <code class="docutils literal notranslate"><span class="pre">HEX8</span></code> to discretize the computational domain:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Specify mesh-related information (first-order hexahedron element).</span>
+<span class="n">ele_type</span> <span class="o">=</span> <span class="s1">&#39;HEX8&#39;</span>
+<span class="n">cell_type</span> <span class="o">=</span> <span class="n">get_meshio_cell_type</span><span class="p">(</span><span class="n">ele_type</span><span class="p">)</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;data&#39;</span><span class="p">)</span>
+<span class="n">Lx</span><span class="p">,</span> <span class="n">Ly</span><span class="p">,</span> <span class="n">Lz</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span>
+<span class="n">meshio_mesh</span> <span class="o">=</span> <span class="n">box_mesh_gmsh</span><span class="p">(</span><span class="n">Nx</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+                       <span class="n">Ny</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+                       <span class="n">Nz</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+                       <span class="n">Lx</span><span class="o">=</span><span class="n">Lx</span><span class="p">,</span>
+                       <span class="n">Ly</span><span class="o">=</span><span class="n">Ly</span><span class="p">,</span>
+                       <span class="n">Lz</span><span class="o">=</span><span class="n">Lz</span><span class="p">,</span>
+                       <span class="n">data_dir</span><span class="o">=</span><span class="n">data_dir</span><span class="p">,</span>
+                       <span class="n">ele_type</span><span class="o">=</span><span class="n">ele_type</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">meshio_mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">meshio_mesh</span><span class="o">.</span><span class="n">cells_dict</span><span class="p">[</span><span class="n">cell_type</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Boundary-conditions">
+<h3>Boundary conditions<a class="headerlink" href="#Boundary-conditions" title="Link to this heading">#</a></h3>
+<p>In this example, the Neumann boundary condition corresponds to a traction of zero and is therefore not explicitly specified. The code below demonstrates the three steps for applying Dirichlet boundary conditions:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define boundary locations.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">left</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">right</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Lx</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+
+
+<span class="c1"># Define value function.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">zero_dirichlet_val</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">dirichlet_val_x2</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">+</span> <span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">3.</span><span class="p">)</span> <span class="o">-</span>
+            <span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">3.</span><span class="p">)</span> <span class="o">-</span> <span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mf">2.</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">dirichlet_val_x3</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">+</span> <span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">3.</span><span class="p">)</span> <span class="o">+</span>
+            <span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">3.</span><span class="p">)</span> <span class="o">-</span> <span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="mf">2.</span>
+
+
+<span class="n">dirichlet_bc_info</span> <span class="o">=</span> <span class="p">[[</span><span class="n">left</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">+</span> <span class="p">[</span><span class="n">right</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span>
+                     <span class="p">[</span><span class="n">zero_dirichlet_val</span><span class="p">,</span> <span class="n">dirichlet_val_x2</span><span class="p">,</span> <span class="n">dirichlet_val_x3</span><span class="p">]</span> <span class="o">+</span>
+                     <span class="p">[</span><span class="n">zero_dirichlet_val</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Problem">
+<h3>Problem<a class="headerlink" href="#Problem" title="Link to this heading">#</a></h3>
+<p>We have completed all the preliminary preparations for the problem. Then we can proceed to create an instance of our BVP:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create an instance of the problem.</span>
+<span class="n">problem</span> <span class="o">=</span> <span class="n">HyperElasticity</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span>
+                          <span class="n">vec</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                          <span class="n">dim</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                          <span class="n">ele_type</span><span class="o">=</span><span class="n">ele_type</span><span class="p">,</span>
+                          <span class="n">dirichlet_bc_info</span><span class="o">=</span><span class="n">dirichlet_bc_info</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Solver">
+<h3>Solver<a class="headerlink" href="#Solver" title="Link to this heading">#</a></h3>
+<p>The defined problem is passed to <code class="docutils literal notranslate"><span class="pre">solver</span></code> to solve the defined BVP. Here, we employ the Newton-Raphson method, specifically defined in <code class="docutils literal notranslate"><span class="pre">jax_fem.solver</span></code>. Under the hood, the solver iteratively solves the nonlinear equation system <span class="math notranslate nohighlight">\(\boldsymbol{R}(\boldsymbol{u}) = \boldsymbol{0}\)</span>, comprising four main steps:</p>
+<ol class="arabic simple">
+<li><p>Residual calculation: Call <code class="docutils literal notranslate"><span class="pre">problem.newton_update()</span></code> to compute the residual vector of the current solution</p></li>
+<li><p>Linear solve: Solve the linear system <span class="math notranslate nohighlight">\(\boldsymbol{J} \Delta \boldsymbol{u} = -\boldsymbol{R}\)</span> through <code class="docutils literal notranslate"><span class="pre">linear_incremental_solver</span></code></p></li>
+<li><p>Solution update: <span class="math notranslate nohighlight">\(\boldsymbol{u}^{(k+1)} = \boldsymbol{u}^{(k)} + \Delta \boldsymbol{u}\)</span></p></li>
+<li><p>Convergence check: Verify <span class="math notranslate nohighlight">\(\|\boldsymbol{R}(\boldsymbol{u}^{(k+1)})\|_2 &lt; \text{tol}\)</span> and relative error criteria</p></li>
+</ol>
+<p>Leveraging the automatic differentiation technique in <code class="docutils literal notranslate"><span class="pre">jax</span></code>, the Jacobian matrices <span class="math notranslate nohighlight">\(\boldsymbol{J}\)</span> can be automatically computed. For boundary condition treatment, the <strong>row elimination</strong> method is adopted to impose Dirichlet boundary conditions by modifying corresponding rows of the stiffness matrix and residual vector to enforce boundary constraints. Here, we choose the <code class="docutils literal notranslate"><span class="pre">PETSc</span></code> solver to solve the involved linear system:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Solve the defined problem.</span>
+<span class="n">sol_list</span> <span class="o">=</span> <span class="n">solver</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">solver_options</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;petsc_solver&#39;</span><span class="p">:</span> <span class="p">{}})</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Postprocessing">
+<h3>Postprocessing<a class="headerlink" href="#Postprocessing" title="Link to this heading">#</a></h3>
+<p>The solution can be exported to VTK format files (readable by ParaView and other post-processing software) using the built-in function <code class="docutils literal notranslate"><span class="pre">save_sol</span></code>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Store the solution to local file.</span>
+<span class="n">vtk_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;vtk/u.vtu&#39;</span><span class="p">)</span>
+<span class="n">save_sol</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sol_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vtk_path</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<center><p><img alt="a9532c673829493f8cd549f51f81e980" class="no-scaled-link" src="../../_images/hyperelasticity.png" style="width: 400px;" /></p>
+<p><p>Solution to the hyperelasticity example.</p>
+</p></center><blockquote>
+<div><p>Please refer to this <a class="reference external" href="https://github.com/deepmodeling/jax-fem/blob/main/docs/source/learn/hyperelasticity/example.ipynb">link</a> to download the source file.</p>
+</div></blockquote>
+</section>
+</section>
+<section id="References">
+<h2>References<a class="headerlink" href="#References" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><a class="reference external" href="https://olddocs.fenicsproject.org/dolfin/1.5.0/python/demo/documented/hyperelasticity/python/documentation.html">https://olddocs.fenicsproject.org/dolfin/1.5.0/python/demo/documented/hyperelasticity/python/documentation.html</a></p></li>
+<li><p><a class="reference external" href="https://en.wikipedia.org/wiki/Neo-Hookean_solid">https://en.wikipedia.org/wiki/Neo-Hookean_solid</a></p></li>
+</ol>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../linear_elasticity/example.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Linear elasticity</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../plasticity/example.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Plasticity</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem-definition">Problem definition</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Implementation">Implementation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Weak-form">Weak form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Mesh">Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Boundary-conditions">Boundary conditions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem">Problem</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Solver">Solver</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Postprocessing">Postprocessing</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#References">References</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

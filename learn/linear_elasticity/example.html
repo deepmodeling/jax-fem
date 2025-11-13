@@ -1,0 +1,749 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Linear elasticity &#8212; JAX-FEM 0.0.10 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nbsphinx-code-cells.css?v=2aa19091" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=972fa7a7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=94452c26"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'learn/linear_elasticity/example';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Hyperelasticity" href="../hyperelasticity/example.html" />
+    <link rel="prev" title="Poisson equation" href="../poisson/example.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="JAX-FEM 0.0.10 documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="JAX-FEM 0.0.10 documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guides</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/Quickstart.html">Quickstart</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn by examples</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../poisson/example.html">Poisson equation</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Linear elasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hyperelasticity/example.html">Hyperelasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../plasticity/example.html">Plasticity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../compute_gradients/example.html">Compute gradients</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../topology_optimization/example.html">Topology optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../source_field_identification/example.html">Source field identification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../traction_force_identification/example.html">Traction force identification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../thermal_mechanical_control/example.html">Thermal mechanical control</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../shape_optimization/example.html">Shape optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../structure_material_co_design/example.html">Structure/material co-design</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced topics</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/adv_main.html">Overview</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">More resources</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../more/FAQ.html">Frequently asked questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/useful/main.html">Useful links</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../more/api/api_main.html">API reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_fe.html">jax_fem.fe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_problem.html">jax_fem.problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_basis.html">jax_fem.basis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_solver.html">jax_fem.solver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_mma.html">jax_fem.mma</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_generate_mesh.html">jax_fem.generate_mesh</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../more/api/api_utils.html">jax_fem.utils</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/log.html">Change log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/citation.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/project.html">Miscellaneous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../more/contact.html">Contact</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+<a href="https://github.com/deepmodeling/jax-fem" target="_blank"
+   class="btn btn-sm btn-source-repository-button"
+   title="Source repository"
+   data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+
+</a>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/learn/linear_elasticity/example.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Linear elasticity</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem-definition">Problem definition</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Implementation">Implementation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Weak-Form">Weak Form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Mesh">Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem">Problem</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Solver">Solver</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Postprocessing">Postprocessing</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadLinks = document.querySelectorAll('a.reference.download.internal');
+    downloadLinks.forEach(link => {
+        link.setAttribute('download', '');
+        link.href = '../_sources/' + link.getAttribute('href');
+    });
+});
+</script><section id="Linear-elasticity">
+<h1>Linear elasticity<a class="headerlink" href="#Linear-elasticity" title="Link to this heading">#</a></h1>
+<section id="Problem-definition">
+<h2>Problem definition<a class="headerlink" href="#Problem-definition" title="Link to this heading">#</a></h2>
+<p>In this example, we use a cantilever beam example to demonstrate how to solve linear elasticity problems with JAX-FEM, beginning with its mathematical formulation. The governing equation for linear elasticity of a body <span class="math notranslate nohighlight">\(\Omega\)</span> can be written as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+    -\nabla \cdot \boldsymbol{\sigma}  = \boldsymbol{b} &amp; \quad \textrm{in}  \nobreakspace \nobreakspace \Omega, \\
+    \boldsymbol{u} = \boldsymbol{u}_D &amp;  \quad\textrm{on} \nobreakspace \nobreakspace \Gamma_D,  \\
+    \boldsymbol{\sigma}  \cdot \boldsymbol{n} = \boldsymbol{t}  &amp; \quad \textrm{on} \nobreakspace \nobreakspace \Gamma_N.
+\end{align*}\end{split}\]</div>
+<p>The weak form gives</p>
+<div class="math notranslate nohighlight">
+\[\begin{align*}
+\int_{\Omega}  \boldsymbol{\sigma} : \nabla \boldsymbol{v} \nobreakspace \nobreakspace \textrm{d}x - \int_{\Omega} \boldsymbol{b}  \cdot \boldsymbol{v} \nobreakspace \textrm{d}x - \int_{\Gamma_N} \boldsymbol{t} \cdot \boldsymbol{v} \nobreakspace\nobreakspace \textrm{d}s = 0.
+\end{align*}\]</div>
+<p>We consider a vertical bending load applied to the right side of the beam (<span class="math notranslate nohighlight">\(\boldsymbol{t}=[0, 0, -100]\)</span>) while fixing the left side (<span class="math notranslate nohighlight">\(\boldsymbol{u}_D=[0,0,0]\)</span>), and ignore body force (<span class="math notranslate nohighlight">\(\boldsymbol{b}=[0,0,0]\)</span>). The constitutive relationship is given by</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{align*}
+     \boldsymbol{\sigma} &amp;=  \lambda \nobreakspace \textrm{tr}(\boldsymbol{\varepsilon}) \boldsymbol{I} + 2\mu \nobreakspace \boldsymbol{\varepsilon}, \\
+    \boldsymbol{\varepsilon} &amp;= \frac{1}{2}\left[\nabla\boldsymbol{u} + (\nabla\boldsymbol{u})^{\top}\right].
+\end{align*}\end{split}\]</div>
+</section>
+<section id="Implementation">
+<h2>Implementation<a class="headerlink" href="#Implementation" title="Link to this heading">#</a></h2>
+<p>We follow the similar three steps to solve the above boundary value problem (BVP). Again, we first import some necessary modules.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import some useful modules.</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">onp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pypardiso</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span>
+
+<span class="c1"># Import JAX-FEM specific modules.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.problem</span><span class="w"> </span><span class="kn">import</span> <span class="n">Problem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.solver</span><span class="w"> </span><span class="kn">import</span> <span class="n">solver</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_sol</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem.generate_mesh</span><span class="w"> </span><span class="kn">import</span> <span class="n">box_mesh_gmsh</span><span class="p">,</span> <span class="n">get_meshio_cell_type</span><span class="p">,</span> <span class="n">Mesh</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax_fem</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Weak-Form">
+<h3>Weak Form<a class="headerlink" href="#Weak-Form" title="Link to this heading">#</a></h3>
+<p>As mentioned in the <a class="reference external" href="https://deepmodeling.github.io/jax-fem/learn/poisson/example.html">poisson equation example</a>, the weak form of the above BVP is defined in a subclass based on the <code class="docutils literal notranslate"><span class="pre">Problem</span></code> base class, where the <strong>Laplace Kernel</strong> and <strong>Surface Kernel</strong> are used.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Material properties.</span>
+<span class="n">E</span> <span class="o">=</span> <span class="mf">70e3</span>
+<span class="n">nu</span> <span class="o">=</span> <span class="mf">0.3</span>
+<span class="n">mu</span> <span class="o">=</span> <span class="n">E</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="p">(</span><span class="mf">1.</span><span class="o">+</span><span class="n">nu</span><span class="p">))</span>
+<span class="n">lmbda</span> <span class="o">=</span> <span class="n">E</span><span class="o">*</span><span class="n">nu</span><span class="o">/</span><span class="p">((</span><span class="mi">1</span><span class="o">+</span><span class="n">nu</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">nu</span><span class="p">))</span>
+
+<span class="c1"># Weak forms.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LinearElasticity</span><span class="p">(</span><span class="n">Problem</span><span class="p">):</span>
+    <span class="c1"># The function &#39;get_tensor_map&#39; overrides base class method. Generally, JAX-FEM</span>
+    <span class="c1"># solves -div(f(u_grad)) = b. Here, we have f(u_grad) = sigma.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_tensor_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">stress</span><span class="p">(</span><span class="n">u_grad</span><span class="p">):</span>
+            <span class="n">epsilon</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">u_grad</span> <span class="o">+</span> <span class="n">u_grad</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="n">sigma</span> <span class="o">=</span> <span class="n">lmbda</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">epsilon</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">mu</span><span class="o">*</span><span class="n">epsilon</span>
+            <span class="k">return</span> <span class="n">sigma</span>
+        <span class="k">return</span> <span class="n">stress</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_surface_maps</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">surface_map</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">100.</span><span class="p">])</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">surface_map</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Mesh">
+<h3>Mesh<a class="headerlink" href="#Mesh" title="Link to this heading">#</a></h3>
+<p>We now define the mesh, starting by specifying the second-order tetrahedral element type <code class="docutils literal notranslate"><span class="pre">TET10</span></code> and determining its corresponding cell identifier via <code class="docutils literal notranslate"><span class="pre">get_meshio_cell_type</span></code>. After configuring a script-relative data directory, we call <code class="docutils literal notranslate"><span class="pre">box_mesh_gmsh</span></code> (which interfaces with <code class="docutils literal notranslate"><span class="pre">Gmsh</span></code>) to generate the mesh based on prescribed rectangular domain dimensions and resolution parameters. The resulting mesh’s nodal coordinates and element connectivities are then used to instantiate the solver-ready
+<code class="docutils literal notranslate"><span class="pre">Mesh</span></code> object.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Specify mesh-related information (second-order tetrahedron element).</span>
+<span class="n">ele_type</span> <span class="o">=</span> <span class="s1">&#39;TET10&#39;</span>
+<span class="n">cell_type</span> <span class="o">=</span> <span class="n">get_meshio_cell_type</span><span class="p">(</span><span class="n">ele_type</span><span class="p">)</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;data&#39;</span><span class="p">)</span>
+<span class="n">Lx</span><span class="p">,</span> <span class="n">Ly</span><span class="p">,</span> <span class="n">Lz</span> <span class="o">=</span> <span class="mf">10.</span><span class="p">,</span> <span class="mf">2.</span><span class="p">,</span> <span class="mf">2.</span>
+<span class="n">Nx</span><span class="p">,</span> <span class="n">Ny</span><span class="p">,</span> <span class="n">Nz</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span>
+<span class="n">meshio_mesh</span> <span class="o">=</span> <span class="n">box_mesh_gmsh</span><span class="p">(</span><span class="n">Nx</span><span class="o">=</span><span class="n">Nx</span><span class="p">,</span>
+                       <span class="n">Ny</span><span class="o">=</span><span class="n">Ny</span><span class="p">,</span>
+                       <span class="n">Nz</span><span class="o">=</span><span class="n">Nz</span><span class="p">,</span>
+                       <span class="n">Lx</span><span class="o">=</span><span class="n">Lx</span><span class="p">,</span>
+                       <span class="n">Ly</span><span class="o">=</span><span class="n">Ly</span><span class="p">,</span>
+                       <span class="n">Lz</span><span class="o">=</span><span class="n">Lz</span><span class="p">,</span>
+                       <span class="n">data_dir</span><span class="o">=</span><span class="n">data_dir</span><span class="p">,</span>
+                       <span class="n">ele_type</span><span class="o">=</span><span class="n">ele_type</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">meshio_mesh</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">meshio_mesh</span><span class="o">.</span><span class="n">cells_dict</span><span class="p">[</span><span class="n">cell_type</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<p>### Boundary conditions</p>
+<p>This example implements two boundary condition types. For the Dirichlet boundary condition, we specify the geometric locations, directional components, and constrained values. The Neumann boundary condition requires only location specification, as the surface tractions are inherently defined within the <code class="docutils literal notranslate"><span class="pre">Problem</span></code> subclass via the <code class="docutils literal notranslate"><span class="pre">get_surface_maps</span></code> function.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define boundary locations.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">left</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">right</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Lx</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+
+
+<span class="c1"># Define value function.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">zero_dirichlet_val</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.</span>
+
+<span class="c1"># Define Dirichlet boundary values.</span>
+<span class="c1"># This means on the &#39;left&#39; side, we apply the function &#39;zero_dirichlet_val&#39;</span>
+<span class="c1"># to all components of the displacement variable u.</span>
+<span class="n">dirichlet_bc_info</span> <span class="o">=</span> <span class="p">[[</span><span class="n">left</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="n">zero_dirichlet_val</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">]</span>
+
+<span class="c1"># Define Neumann boundary locations.</span>
+<span class="c1"># This means on the &#39;right&#39; side, we will perform the surface integral to get</span>
+<span class="c1"># the tractions with the function &#39;get_surface_maps&#39; defined in the class &#39;LinearElasticity&#39;.</span>
+<span class="n">location_fns</span> <span class="o">=</span> <span class="p">[</span><span class="n">right</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Problem">
+<h3>Problem<a class="headerlink" href="#Problem" title="Link to this heading">#</a></h3>
+<p>Having completed the weak form formulation, mesh generation, and boundary condition specification, we now create a instance of the defined BVP:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create an instance of the problem.</span>
+<span class="n">problem</span> <span class="o">=</span> <span class="n">LinearElasticity</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span>
+                           <span class="n">vec</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                           <span class="n">dim</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                           <span class="n">ele_type</span><span class="o">=</span><span class="n">ele_type</span><span class="p">,</span>
+                           <span class="n">dirichlet_bc_info</span><span class="o">=</span><span class="n">dirichlet_bc_info</span><span class="p">,</span>
+                           <span class="n">location_fns</span><span class="o">=</span><span class="n">location_fns</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Solver">
+<h3>Solver<a class="headerlink" href="#Solver" title="Link to this heading">#</a></h3>
+<p>Here we choose to solve the problem via the customized <code class="docutils literal notranslate"><span class="pre">Pardiso</span></code> solver. We first define a solution function <code class="docutils literal notranslate"><span class="pre">pardiso_solver</span></code> that accepts the coefficient matrix <span class="math notranslate nohighlight">\(\boldsymbol{A}\)</span>, right-hand side <span class="math notranslate nohighlight">\(\boldsymbol{b}\)</span>, initial value <span class="math notranslate nohighlight">\(\boldsymbol{x}_0\)</span>, and solver options.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">pardiso_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">solver_options</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solves Ax=b with x0 being the initial guess.</span>
+
+<span class="sd">    A: PETSc sparse matrix</span>
+<span class="sd">    b: JaxArray</span>
+<span class="sd">    x0: JaxArray (forward problem) or None (adjoint problem)</span>
+<span class="sd">    solver_options: anything the user defines, at least satisfying solver_options[&#39;custom_solver&#39;] = pardiso_solver</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Pardiso Solver - Solving linear system&quot;</span><span class="p">)</span>
+
+    <span class="c1"># If you need to convert PETSc to scipy</span>
+    <span class="n">indptr</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">getValuesCSR</span><span class="p">()</span>
+    <span class="n">A_sp_scipy</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">csr_array</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">indptr</span><span class="p">),</span> <span class="n">shape</span><span class="o">=</span><span class="n">A</span><span class="o">.</span><span class="n">getSize</span><span class="p">())</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">pypardiso</span><span class="o">.</span><span class="n">spsolve</span><span class="p">(</span><span class="n">A_sp_scipy</span><span class="p">,</span> <span class="n">onp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">x</span>
+</pre></div>
+</div>
+</div>
+<p>Then we can pass the customized solution function into the <code class="docutils literal notranslate"><span class="pre">solver_options</span></code> and solve the problem:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Solve the defined problem.</span>
+<span class="n">sol_list</span> <span class="o">=</span> <span class="n">solver</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">solver_options</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;custom_solver&#39;</span><span class="p">:</span> <span class="n">pardiso_solver</span><span class="p">})</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Postprocessing">
+<h3>Postprocessing<a class="headerlink" href="#Postprocessing" title="Link to this heading">#</a></h3>
+<p>Finally, we can compute the cell-level average von Mises stresses from the solution:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Postprocess for stress evaluations</span>
+<span class="c1"># (num_cells, num_quads, vec, dim)</span>
+<span class="n">u_grad</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sol_to_grad</span><span class="p">(</span><span class="n">sol_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">epsilon</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">u_grad</span> <span class="o">+</span> <span class="n">u_grad</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+<span class="c1"># (num_cells, bnum_quads, 1, 1) * (num_cells, num_quads, vec, dim)</span>
+<span class="c1"># -&gt; (num_cells, num_quads, vec, dim)</span>
+<span class="n">sigma</span> <span class="o">=</span> <span class="n">lmbda</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">epsilon</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="mi">3</span><span class="p">)[:,:,</span><span class="kc">None</span><span class="p">,</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">mu</span><span class="o">*</span><span class="n">epsilon</span>
+<span class="c1"># (num_cells, num_quads)</span>
+<span class="n">cells_JxW</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">JxW</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:]</span>
+<span class="c1"># (num_cells, num_quads, vec, dim) * (num_cells, num_quads, 1, 1) -&gt;</span>
+<span class="c1"># (num_cells, vec, dim) / (num_cells, 1, 1)</span>
+<span class="c1">#  --&gt; (num_cells, vec, dim)</span>
+<span class="n">sigma_average</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">sigma</span> <span class="o">*</span> <span class="n">cells_JxW</span><span class="p">[:,:,</span><span class="kc">None</span><span class="p">,</span><span class="kc">None</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cells_JxW</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)[:,</span><span class="kc">None</span><span class="p">,</span><span class="kc">None</span><span class="p">]</span>
+
+<span class="c1"># Von Mises stress</span>
+<span class="c1"># (num_cells, dim, dim)</span>
+<span class="n">s_dev</span> <span class="o">=</span> <span class="p">(</span><span class="n">sigma_average</span> <span class="o">-</span> <span class="mi">1</span><span class="o">/</span><span class="n">problem</span><span class="o">.</span><span class="n">dim</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">sigma_average</span><span class="p">,</span> <span class="n">axis1</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="mi">2</span><span class="p">)[:,</span><span class="kc">None</span><span class="p">,</span><span class="kc">None</span><span class="p">]</span>
+                                       <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">dim</span><span class="p">)[</span><span class="kc">None</span><span class="p">,:,:])</span>
+<span class="c1"># (num_cells,)</span>
+<span class="n">vm_stress</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">3.</span><span class="o">/</span><span class="mf">2.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">s_dev</span><span class="o">*</span><span class="n">s_dev</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+<p>and store the results in VTK format for visualization:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Store the solution to local file.</span>
+<span class="n">vtk_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;vtk/u.vtu&#39;</span><span class="p">)</span>
+<span class="n">save_sol</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">fes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sol_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vtk_path</span><span class="p">,</span> <span class="n">cell_infos</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;vm_stress&#39;</span><span class="p">,</span> <span class="n">vm_stress</span><span class="p">)])</span>
+</pre></div>
+</div>
+</div>
+<center><p><img alt="efaad1fd152444f8a8dd20ff8c4fbc4e" class="no-scaled-link" src="../../_images/linear_elasticity.png" style="width: 400px;" /></p>
+<p><p>Solution to the linear elasticity problem.</p>
+</p></center><blockquote>
+<div><p>Please refer to this <a class="reference external" href="https://github.com/deepmodeling/jax-fem/blob/main/docs/source/learn/linear_elasticity/example.ipynb">link</a> to download the source file.</p>
+</div></blockquote>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../poisson/example.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Poisson equation</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../hyperelasticity/example.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Hyperelasticity</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem-definition">Problem definition</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Implementation">Implementation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Weak-Form">Weak Form</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Mesh">Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Problem">Problem</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Solver">Solver</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Postprocessing">Postprocessing</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By JAX-FEM team
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, JAX-FEM team.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

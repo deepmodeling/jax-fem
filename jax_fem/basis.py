@@ -17,15 +17,36 @@ from jax_fem import logger
 #         return 2 * (dim*(lag_order - 1) - 1)
 
 def get_elements(ele_type):
-    """Mesh node ordering is important.
-    If the input mesh file is Gmsh .msh or Abaqus .inp, meshio would convert it to
-    its own ordering. My experience shows that meshio ordering is the same as Abaqus.
-    For example, for a 10-node tetrahedron element, the ordering of meshio is the following
-    https://web.mit.edu/calculix_v2.7/CalculiX/ccx_2.7/doc/ccx/node33.html
-    The troublesome thing is that basix has a different ordering. As shown below
-    https://defelement.com/elements/lagrange.html
-    The consequence is that we need to define this "re_order" variable to make sure the
-    ordering is correct.
+    """Obtain element information useful for `basix <https://github.com/FEniCS/basix>`_ to handle. 
+
+    Note that mesh node ordering is important.
+    If the input mesh file is Gmsh .msh or Abaqus .inp, meshio would convert it to its own ordering.
+    Our experience shows that meshio ordering is the same as Abaqus.
+    For example, for a 10-node tetrahedron element, the ordering of meshio follows this 
+    `instruction <https://web.mit.edu/calculix_v2.7/CalculiX/ccx_2.7/doc/ccx/node33.html>`_.
+    The troublesome thing is that basix has `a different ordering <https://defelement.com/elements/lagrange.html>`_. 
+    The consequence is that we need to define the  **re_order** variable to make sure the ordering is correct.
+
+
+    Parameters
+    ----------
+    ele_type: str
+        :attr:`~jax_fem.fe.FiniteElement.ele_type`
+
+    Returns
+    -------
+    element_family : BasixObject
+        `ElementFamily <https://docs.fenicsproject.org/basix/main/python/_autosummary/basix.html#basix.ElementFamily>`_
+    basix_ele : BasixObject
+        For element: `CellType <https://docs.fenicsproject.org/basix/main/python/_autosummary/basix.html#basix.CellType>`_
+    basix_face_ele : BasixObject
+        For element face: `CellType <https://docs.fenicsproject.org/basix/main/python/_autosummary/basix.html#basix.CellType>`_
+    gauss_order : int
+        :attr:`~jax_fem.fe.FiniteElement.gauss_order`
+    degree : int
+        Element degree, used in basix
+    re_order : list
+        Specifieds node re-ordering transformation. For example, [0, 1, 3, 2, 4, 5, 7, 6] for HEX8 element.
     """
     element_family = basix.ElementFamily.P
     if ele_type == 'HEX8':
@@ -94,6 +115,9 @@ def get_elements(ele_type):
 
 
 def reorder_inds(inds, re_order):
+    """Apply re-ordering transformation for node indices.
+    """
+
     new_inds = []
     for ind in inds.reshape(-1):
         new_inds.append(onp.argwhere(re_order == ind))
@@ -102,16 +126,23 @@ def reorder_inds(inds, re_order):
 
 
 def get_shape_vals_and_grads(ele_type, gauss_order=None):
-    """TODO: Add comments
+    """Use `basix <https://github.com/FEniCS/basix>`_ to get shape function values and gradients for elements.
+
+    Parameters
+    ----------
+    ele_type : str
+        :attr:`~jax_fem.fe.FiniteElement.ele_type`
+    gauss_order : int
+        :attr:`~jax_fem.fe.FiniteElement.gauss_order`
 
     Returns
     -------
-    shape_values: ndarray
-        (8, 8) = (num_quads, num_nodes)
-    shape_grads_ref: ndarray
-        (8, 8, 3) = (num_quads, num_nodes, dim)
-    weights: ndarray
-        (8,) = (num_quads,)
+    shape_values: NumpyArray
+        Shape is (num_quads, num_nodes), e.g, (8, 8) for HEX8 element.
+    shape_grads_ref: NumpyArray
+        Shape is (num_quads, num_nodes, dim), e.g, (8, 8, 3) for HEX8 element.
+    weights: NumpyArray
+        Shape is (num_quads,), e.g, (8,) for HEX8 element.
     """
     element_family, basix_ele, basix_face_ele, gauss_order_default, degree, re_order = get_elements(ele_type)
 
@@ -128,20 +159,27 @@ def get_shape_vals_and_grads(ele_type, gauss_order=None):
 
 
 def get_face_shape_vals_and_grads(ele_type, gauss_order=None):
-    """TODO: Add comments
+    """Use `basix <https://github.com/FEniCS/basix>`_ to get shape function values and gradients for element faces.
+
+    Parameters
+    ----------
+    ele_type : str
+        :attr:`~jax_fem.fe.FiniteElement.ele_type`
+    gauss_order : int
+        :attr:`~jax_fem.fe.FiniteElement.gauss_order`
 
     Returns
     -------
-    face_shape_vals: ndarray
-        (6, 4, 8) = (num_faces, num_face_quads, num_nodes)
-    face_shape_grads_ref: ndarray
-        (6, 4, 3) = (num_faces, num_face_quads, num_nodes, dim)
-    face_weights: ndarray
-        (6, 4) = (num_faces, num_face_quads)
-    face_normals:ndarray
-        (6, 3) = (num_faces, dim)
-    face_inds: ndarray
-        (6, 4) = (num_faces, num_face_vertices)
+    face_shape_vals: NumpyArray
+        Shape is (num_faces, num_face_quads, num_nodes), e.g, (6, 4, 8) for HEX8 element.
+    face_shape_grads_ref: NumpyArray
+        Shape is(num_faces, num_face_quads, num_nodes, dim), e.g, (6, 4, 3) for HEX8 element.
+    face_weights: NumpyArray
+        Shape is (num_faces, num_face_quads), e.g, (6, 4) for HEX8 element.
+    face_normals:NumpyArray
+        Shape is (num_faces, dim), e.g, (6, 3) for HEX8 element.
+    face_inds: NumpyArray
+        Shape is (num_faces, num_face_vertices), e.g, (6, 4) for HEX8 element.
     """
     element_family, basix_ele, basix_face_ele, gauss_order_default, degree, re_order = get_elements(ele_type)
 

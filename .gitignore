@@ -8,6 +8,7 @@ dev_code/
 *output/
 *defcon/
 *debug/
+*.ipynb_checkpoints
 tests/benchmarks/*/jax_fem/*
 applications/aesthetic/input/models
 

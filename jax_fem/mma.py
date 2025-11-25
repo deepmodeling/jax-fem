@@ -16,6 +16,7 @@ from functools import partial
 import time
 import scipy
 from jax.experimental.sparse import BCOO
+from jax_fem import logger
 
 from jax import config
 config.update("jax_enable_x64", True)
@@ -412,8 +413,51 @@ def subsolv(m,n,epsimin,low,upp,alfa,beta,p0,q0,P,Q,a0,a,b,c,d):
 
 
 def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numConstraints):
-    # TODO: Scale objective function value to be always within 1-100
-    # See comments in https://doi.org/10.1016/j.compstruc.2018.01.008
+    """
+    Performs topology optimization using the Method of Moving Asymptotes (MMA).
+
+    Parameters
+    ----------
+    fe : FiniteElement
+        Finite element object.
+    rho_ini : NumpyArray
+        Initial density distribution.
+        Shape is (num_rho_vars, 1).
+    optimizationParams : dict
+        Dictionary containing optimization parameters:
+
+        - 'movelimit': Move limit for design variables (float)
+        - 'maxIters': Maximum number of iterations (int)
+    objectiveHandle : callable
+        Function that computes the objective value and its gradient.
+        Signature: ``J, dJ = objectiveHandle(rho_physical)``
+
+        - ``rho_physical``: Physical density field (filtered if enabled). Same shape as ``rho_ini``.
+        - ``J``: Objective value (scalar).
+        - ``dJ``: Objective gradient (NumpyArray, same shape as ``rho_ini``).
+    consHandle : callable
+        Function that computes constraint values and their gradients.
+        Signature: ``vc, dvc = consHandle(rho_physical, iter)``
+
+        - ``rho_physical``: Physical density field (filtered if enabled). Same shape as ``rho_ini``.
+        - ``iter``: Current optimization iteration (int).
+        - ``vc``: Constraint values. Shape is (num_constraints,).
+        - ``dvc``: Constraint gradients. Shape is (num_constraints, ...), where ... shares the same shape with ``rho_ini``.
+    numConstraints : int
+        Number of constraints in the optimization problem.
+
+    Returns
+    -------
+    rho : NumpyArray
+        Optimized density distribution after completing all iterations.
+        Same shape as ``rho_ini``.
+
+    Notes
+    -----
+    TODO: Scale objective function value to be always within 1-100
+    (`ref <https://doi.org/10.1016/j.compstruc.2018.01.008>`_).
+    """
+
     H, Hs = compute_filter_kd_tree(fe)
     ft = {'H':H, 'Hs':Hs}
 
@@ -441,7 +485,7 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
     while loop < optimizationParams['maxIters']:
         loop = loop + 1
 
-        print(f"MMA solver...")
+        logger.info(f"MMA solver...")
         
         if density_filtering:
             rho_physical = applyDensityFilter(ft, rho)
@@ -456,11 +500,6 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
 
         J, dJ = J, dJ.reshape(-1)[:, None]
         vc, dvc = vc[:, None], dvc.reshape(dvc.shape[0], -1)
-
-        print(f"J.shape = {J.shape}")
-        print(f"dJ.shape = {dJ.shape}")
-        print(f"vc.shape = {vc.shape}")
-        print(f"dvc.shape = {dvc.shape}")
 
         J, dJ, vc, dvc = np.array(J), np.array(dJ), np.array(vc), np.array(dvc)
 
@@ -482,8 +521,8 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
 
         time_elapsed = end - start
 
-        print(f"MMA took {time_elapsed} [s]")
+        logger.info(f"MMA took {time_elapsed} [s]")
 
-        print(f'Iter {loop:d}; J {J:.5f}; constraint {vc}\n\n\n')
+        logger.info(f'Iter {loop:d}; J {J:.5f}; constraint {vc}\n\n\n')
 
     return rho

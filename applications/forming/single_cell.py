@@ -35,7 +35,7 @@ def simulation():
         os.remove(f)
 
     Lx, Ly, Lz = 1., 1., 1.
-    meshio_mesh = box_mesh_gmsh(Nx=1, Ny=1, Nz=1, Lx=Lx, Ly=Ly, Lz=Lz, data_dir=data_dir, ele_type=ele_type)
+    meshio_mesh = box_mesh_gmsh(Nx=1, Ny=1, Nz=1, domain_x=Lx,domain_y=Ly, domain_z=Lz, data_dir=data_dir, ele_type=ele_type)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
     def top(point):

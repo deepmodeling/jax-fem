@@ -95,9 +95,9 @@ def problem():
     meshio_mesh = box_mesh_gmsh(Nx=20,
                            Ny=20,
                            Nz=20,
-                           Lx=Lx,
-                           Ly=Ly,
-                           Lz=Lz,
+                           domain_x=Lx,
+                           domain_y=Ly,
+                           domain_z=Lz,
                            data_dir=data_dir,
                            ele_type=ele_type)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])

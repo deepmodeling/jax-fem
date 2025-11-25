@@ -6,11 +6,17 @@ from jax.experimental.sparse import BCOO
 import scipy
 import time
 from petsc4py import PETSc
-
 from jax_fem import logger
-
 from jax import config
 config.update("jax_enable_x64", True)
+
+
+try:
+    import pyamgx
+    PYAMGX_AVAILABLE = True
+except ImportError:
+    PYAMGX_AVAILABLE = False
+    logger.info("pyamgx not installed. AMGX solver disabled.")
 
 
 ################################################################################
@@ -30,6 +36,14 @@ def jax_solve(A, b, x0, precond):
     A = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
     jacobi = np.array(A_sp_scipy.diagonal())
     pc = lambda x: x * (1. / jacobi) if precond else None
+    
+    if issubclass(PETSc.ScalarType, np.complexfloating):
+        logger.debug("JAX Solver - Using PETSc with complex number support")
+        A = A.astype(complex)
+        b = b.astype(complex)
+        if x0 is not None:
+            x0 = x0.astype(complex)
+
     x, info = jax.scipy.sparse.linalg.bicgstab(A,
                                                b,
                                                x0=x0,
@@ -42,7 +56,7 @@ def jax_solve(A, b, x0, precond):
     err = np.linalg.norm(A @ x - b)
     logger.debug(f"JAX Solver - Finshed solving, res = {err}")
     assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
-    x = np.where(err < 0.1, x, np.nan) # For assert purpose, some how this also affects bicgstab.
+    x = np.where(err < 0.1, x, np.nan) # For assert purpose, somehow this also affects bicgstab.
 
     return x
 
@@ -57,7 +71,6 @@ def umfpack_solve(A, b):
 
     logger.debug(f'Scipy Solver - Finished solving, linear solve res = {np.linalg.norm(Asp @ x - b)}')
     return x
-
 
 def petsc_solve(A, b, ksp_type, pc_type):
     rhs = PETSc.Vec().createSeq(len(b))
@@ -87,19 +100,93 @@ def petsc_solve(A, b, ksp_type, pc_type):
     return x.getArray()
 
 
-def linear_solver(A, b, x0, solver_options):
+def AMGX_solve_host(A, x, b):
+    dtype, shape = b.dtype, b.shape
+    A = scipy.sparse.csr_matrix((A.data, (A.indices[:, 0], A.indices[:, 1])), shape=A.shape)
+    b = onp.array(b)
+    x_guess = onp.array(x)
+    # setup AmgX solver
+    # Initialize PyAMGX
+    pyamgx.initialize()
+    ## For solver options: https://github.com/NVIDIA/AMGX/tree/main/src/configs
+    # Create resources
+    cfg = pyamgx.Config().create_from_dict({
+         "config_version": 2,
+        "determinism_flag": 1,
+        "exception_handling": 1,
+        "solver": {
+            "solver": "BICGSTAB",  # "CG", BICGSTAB
+            #change to PBICGSTAB to use preconditioners
+            "use_scalar_norm": 1,
+            "norm": "L2",
+            "tolerance": 1e-10,
+            "monitor_residual": 1,
+            "max_iters": 10000,
+            "convergence": "ABSOLUTE",  # RELATIVE_INI_CORE
+            "monitor_residual": 1,
+            # "print_solve_stats": 1,
+            "preconditioner": { 
+                "scope": "amg",
+                "solver": "AMG",
+                "algorithm": "CLASSICAL",
+                "smoother": "JACOBI",
+                "cycle": "V",
+                "max_levels": 10,
+                "max_iters": 2
+            }
+        }
+    })
 
+    resources = pyamgx.Resources().create_simple(cfg)
+    solver = pyamgx.Solver().create(resources, cfg)
+    # Create matrix and vector objects
+    A_amg = pyamgx.Matrix().create(resources)
+    b_amg = pyamgx.Vector().create(resources)
+    x_amg = pyamgx.Vector().create(resources)
+    # ======
+    # Upload data to PyAMGX objects
+    A_amg.upload_CSR(A)
+    b_amg.upload(b)
+    x_amg.upload(x_guess)
+    # logger.debug(f"Setting up the AMGx solver...")
+    solver.setup(A_amg)
+    solver.solve(b_amg, x_amg)
+    # Download the result
+    result = x_amg.download()
+    # Cleanup
+    x_amg.destroy()
+    b_amg.destroy()
+    A_amg.destroy()
+    solver.destroy()
+    cfg.destroy()
+    resources.destroy()
+    # Finalize PyAMGX
+    pyamgx.finalize()
+    logger.info(f'AMGX Solver - Finished solving, linear solve res = {np.linalg.norm(A @ result - b)}')
+    return result.astype(dtype).reshape(shape)
+
+def AMGX_solve(A, b, x0):
+    if not PYAMGX_AVAILABLE:
+        raise RuntimeError("AMGX disabled: 'pyamgx' not installed")
+
+    result_shape = jax.ShapeDtypeStruct(b.shape, b.dtype)
+    return jax.pure_callback(AMGX_solve_host, result_shape, A,x0,b)
+
+
+def linear_solver(A, b, x0, solver_options):
     # If user does not specify any solver, set jax_solver as the default one.
-    if  len(solver_options.keys() & {'jax_solver', 'umfpack_solver', 'petsc_solver', 'custom_solver'}) == 0: 
+    if  len(solver_options.keys() & {'jax_solver','amgx_solver', 'umfpack_solver', 'petsc_solver', 'custom_solver'}) == 0: 
         solver_options['jax_solver'] = {}
 
     if 'jax_solver' in solver_options:      
         precond = solver_options['jax_solver']['precond'] if 'precond' in solver_options['jax_solver'] else True
         x = jax_solve(A, b, x0, precond)
+    elif 'amgx_solver' in solver_options:
+        x = AMGX_solve(A, b, x0)
     elif 'umfpack_solver' in solver_options:
         x = umfpack_solve(A, b)
     elif 'petsc_solver' in solver_options:   
-        ksp_type = solver_options['petsc_solver']['ksp_type'] if 'ksp_type' in solver_options['petsc_solver'] else  'bcgsl' 
+        ksp_type = solver_options['petsc_solver']['ksp_type'] if 'ksp_type' in solver_options['petsc_solver'] else 'bcgsl' 
         pc_type = solver_options['petsc_solver']['pc_type'] if 'pc_type' in solver_options['petsc_solver'] else 'ilu'
         x = petsc_solve(A, b, ksp_type, pc_type)
     elif 'custom_solver' in solver_options:
@@ -307,64 +394,112 @@ def get_A(problem):
 # The "row elimination" solver
 
 def solver(problem, solver_options={}):
-    """
-    Specify exactly either 'jax_solver' or 'umfpack_solver' or 'petsc_solver'
+    r"""Solve the nonlinear problem using Newton's method with configurable linear solvers.
+
+    The solver imposes Dirichlet B.C. with "row elimination" method. Conceptually,
+
+    .. math::
+        r(u) = D \, r_{\text{unc}}(u) + (I - D)u - u_b \\
+        A = \frac{\text{d}r}{\text{d}u} = D \frac{\text{d}r}{\text{d}u} + (I - D)
+
+    where:
+
+    - :math:`r_{\text{unc}}: \mathbb{R}^N\rightarrow\mathbb{R}^N` is the residual function without considering Dirichlet boundary conditions.
+
+    - :math:`u\in\mathbb{R}^N` is the FE solution vector.
+
+    - :math:`u_b\in\mathbb{R}^N` is the vector for Dirichlet boundary conditions, e.g.,
+
+      .. math::
+            u_b = \begin{bmatrix}
+                  0 \\
+                  0 \\
+                  2 \\
+                  3
+                  \end{bmatrix}
     
-    Examples:
-    (1) solver_options = {'jax_solver': {}}
-    (2) solver_options = {'umfpack_solver': {}}
-    (3) solver_options = {'petsc_solver': {'ksp_type': 'bcgsl', 'pc_type': 'jacobi'}, 'initial_guess': some_guess}
+    - :math:`D\in\mathbb{R}^{N\times N}` is the auxiliary matrix for masking, e.g.,
 
-    Default parameters will be used if no instruction is found:
+      .. math::
+            D = \begin{bmatrix}
+                1 & 0 & 0 & 0 \\
+                0 & 1 & 0 & 0 \\
+                0 & 0 & 0 & 0 \\
+                0 & 0 & 0 & 0
+            \end{bmatrix}
+    
+    - :math:`I\in\mathbb{R}^{N\times N}` is the ientity matrix, e.g., 
 
-    solver_options = 
-    {
-        # If multiple solvers are specified or no solver is specified, 'jax_solver' will be used.
-        'jax_solver': 
-        {
-            # The JAX built-in linear solver 
-            # Reference: https://jax.readthedocs.io/en/latest/_autosummary/jax.scipy.sparse.linalg.bicgstab.html
-            'precond': True,
-        }
+      .. math::
+            I = \begin{bmatrix}
+                1 & 0 & 0 & 0 \\
+                0 & 1 & 0 & 0 \\
+                0 & 0 & 1 & 0 \\
+                0 & 0 & 0 & 1
+            \end{bmatrix}
 
-        'umfpack_solver': 
-        {   
-            # The scipy solver that calls UMFPACK
-            # Reference: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html
-        }
+    - :math:`A\in\mathbb{R}^{N\times N}` is the tangent stiffness matrix (the global Jacobian matrix).
 
-        'petsc_solver':
-        {   
-            # PETSc solver
-            # For more ksp_type and pc_type: https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html
-            'ksp_type': 'bcgsl', # e.g., 'minres', 'gmres', 'tfqmr'
-            'pc_type': 'ilu', # e.g., 'jacobi'
-        }
+    Notes
+    -----
+    - TODO: Show some comments for linear multipoint constraint handling.
 
-        'line_search_flag': False, # Line search method
-        'initial_guess': initial_guess, # Same shape as sol_list
-        'tol': 1e-5, # Absolute tolerance for residual vector (l2 norm), used in Newton's method
-        'rel_tol': 1e-8, # Relative tolerance for residual vector (l2 norm), used in Newton's method
-    }
+    Parameters
+    ----------
+    problem : Problem
+        The nonlinear problem to solve
+    solver_options : dict
+        Configuration dictionary for solver parameters and algorithms.
+        Three solvers are currently available:
 
-    The solver imposes Dirichlet B.C. with "row elimination" method.
+        - `JAX solver <https://jax.readthedocs.io/en/latest/_autosummary/jax.scipy.sparse.linalg.bicgstab.html>`_
+        - `UMFPACK solver <https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html>`_
+        - `PETSc solver <https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html>`_
+    
+        The empty choice ::
 
-    Some memo:
+            solver_options = {}
 
-    res(u) = D*r(u) + (I - D)u - u_b
-    D = [[1 0 0 0]
-         [0 1 0 0]
-         [0 0 0 0]
-         [0 0 0 1]]
-    I = [[1 0 0 0]
-         [0 1 0 0]
-         [0 0 1 0]
-         [0 0 0 1]
-    A = d(res)/d(u) = D*dr/du + (I - D)
+        will default to JAX solver as ::
+        
+            solver_options = {'jax_solver': {}}
 
-    TODO: linear multipoint constraint
+        which will further default to ::
 
-    The function newton_update computes r(u) and dr/du
+            solver_options = {'jax_solver': {'precond': True}}
+
+        The UMFPACK solver can be specified as ::
+
+            solver_options = {'umfpack_solver': {}}
+
+        The PETSc solver can be specified as ::
+
+            solver_options = {
+                 'petsc_solver': {},
+            }        
+    
+        which will default to ::
+
+            solver_options = {
+                 'petsc_solver': {
+                     'ksp_type': 'bcgsl', # other choices can be, e.g., 'minres', 'gmres', 'tfqmr'
+                     'pc_type': 'ilu', # other choices can be, e.g., 'jacobi'
+                 }
+            }  
+    
+        Other available options are :: 
+
+            solver_options = {
+                'line_search_flag': False, # Line search method
+                'initial_guess': initial_guess, # Same shape as sol_list
+                'tol': 1e-5, # Absolute tolerance for residual vector (l2 norm), used in Newton's method
+                'rel_tol': 1e-8, # Relative tolerance for residual vector (l2 norm), used in Newton's method
+            }
+
+    Returns
+    -------
+    sol_list : list
+
     """
     logger.debug(f"Calling the row elimination solver for imposing Dirichlet B.C.")
     logger.debug("Start timing")
@@ -430,8 +565,8 @@ def solver(problem, solver_options={}):
     end = time.time()
     solve_time = end - start
     logger.info(f"Solve took {solve_time} [s]")
-    logger.debug(f"max of dofs = {np.max(dofs)}")
-    logger.debug(f"min of dofs = {np.min(dofs)}")
+    logger.info(f"max of dofs = {np.max(dofs)}")
+    logger.info(f"min of dofs = {np.min(dofs)}")
 
     return sol_list
 
@@ -848,12 +983,24 @@ def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
 
     vjp_linear_fn = get_vjp_contraint_fn_params(params, sol_list)
     vjp_result = vjp_linear_fn(problem.unflatten_fn_sol_list(adjoint_vec))
-    vjp_result = jax.tree_map(lambda x: -x, vjp_result)
+    vjp_result = jax.tree_util.tree_map(lambda x: -x, vjp_result)
 
     return vjp_result
 
 
 def ad_wrapper(problem, solver_options={}, adjoint_solver_options={}):
+    """Automatic differentiation wrapper for the forward problem.
+
+    Parameters
+    ----------
+    problem : Problem
+    solver_options : dictionary
+    adjoint_solver_options : dictionary
+
+    Returns
+    -------
+    fwd_pred : callable
+    """
     @jax.custom_vjp
     def fwd_pred(params):
         problem.set_params(params)

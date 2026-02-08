@@ -81,7 +81,7 @@ JAX-FEM is Automatic Differentiation (AD) + Finite Element Method (FEM), and we 
 
 ## JAX-FEM Express
 
-Want to experience JAX-FEM quickly and conveniently? Try JAX-FEM Express! https://www.bohrium.com/apps/jax-fem-express
+We have built an LLM Agent for JAX-FEM: Try JAX-FEM Express! https://www.bohrium.com/apps/jax-fem-express
 
 <p align="middle">
   <a href="https://www.youtube.com/watch?v=LsBPWGrDhiY">

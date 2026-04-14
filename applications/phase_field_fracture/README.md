@@ -106,8 +106,8 @@ The second approach is to define [custom derivative rules](https://jax.readthedo
 Finally, make sure your _JAX_ version is up-to-date, since we have observed some possible unexpected behavior of the function `np.linalg.eigh` in older versions of _JAX_, e.g., 0.3.x version.
 
 
-## Execution
-Run
+## Example
+Then we present a classic example of a single-edge notched tension test, where a square plate with a pre-existing crack on the left middle is subjected to tension on the top boundary. We follow the same locally refined mesh and material parameters as those in [4]. To excute the example, run
 ```bash
 python -m applications.phase_field_fracture.example
 ```
@@ -115,22 +115,30 @@ from the `jax-fem/` directory.
 
 
 ## Results
-
-Results can be visualized with *ParaWiew*.
-
+The comparison of the load-displacement curve with the reference solution from [4] is shown below. 
 <p align="middle">
-  <img src="materials/fracture.gif" width="700" />
+  <img src="output/ForceVsDisp.png" width="400" /> 
 </p>
 <p align="middle">
-    <em >Deformation (x10)</em>
+    <em >
+    Comparison of force-displacement curve with the reference solution from [4]. 
+    </em>
+</p>
+
+The evolution history and final distribution of the phase field variable can be visualized with *ParaView*.
+
+<p align="middle">
+  <img src="output/history.gif" width="700" />
+</p>
+<p align="middle">
+    <em > Evolution history of the phase field variable. (Deformation is magnified by 10 times.) </em>    
 </p>
 
 <p align="middle">
-  <img src="materials/time_disp.png" width="500" /> 
-  <img src="materials/disp_force.png" width="500" />
+  <img src="output/final.png" width="700" />
 </p>
 <p align="middle">
-    <em >Loading history and tensile force</em>
+    <em > Final distribution of the phase field variable.</em>
 </p>
 
 
@@ -141,3 +149,5 @@ Results can be visualized with *ParaWiew*.
 [2] Xue, Tianju, Sigrid Adriaenssens, and Sheng Mao. "Mapped phase field method for brittle fracture." *Computer Methods in Applied Mechanics and Engineering* 385 (2021): 114046.
 
 [3] Miehe, Christian, and Matthias Lambrecht. "Algorithms for computation of stresses and elasticity moduli in terms of Seth–Hill's family of generalized strain tensors." *Communications in numerical methods in engineering* 17.5 (2001): 337-353.
+
+[4] Shauer, Nathan. "Less than 500 lines self-contained Python finite element implementation of the phase-field method for fracture mechanics." Advances in Engineering Software 210 (2025): 104013.

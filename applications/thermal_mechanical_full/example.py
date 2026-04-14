@@ -200,7 +200,7 @@ def main_fns():
     dirichlet_bc_info_u = [[left, bottom],[0,1],[zero_dirichlet]*2]
     dirichlet_bc_info_T = [[hole],[0],[theta_dirichlet]]
     
-    problem = thermal_mechanical_full([mesh, mesh], vec=[2, 1], dim=2, ele_type=[ele_type, ele_type], gauss_order=[2, 2],
+    problem = thermal_mechanical_full([mesh, mesh], vec=[2, 1], dim=2, ele_type=[ele_type, ele_type], quadrature_order=[2, 2],
                                       dirichlet_bc_info=[dirichlet_bc_info_u, dirichlet_bc_info_T])
     
     sol_u = 0*np.ones((len(mesh.points), 2))

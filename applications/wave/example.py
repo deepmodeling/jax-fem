@@ -163,7 +163,7 @@ def main_fns():
     
     dirichlet_bc_info = [[left, right, bottom, top],[0]*4,[ones_dirichlet]*4]
     
-    problem = wave(mesh, vec=1, dim=2, ele_type = ele_type, gauss_order=2, dirichlet_bc_info = dirichlet_bc_info)
+    problem = wave(mesh, vec=1, dim=2, ele_type = ele_type, quadrature_order=2, dirichlet_bc_info = dirichlet_bc_info)
     sol_2dt = np.zeros((len(points),1))
     sol_dt = np.zeros((len(points),1))
     

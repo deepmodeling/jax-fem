@@ -205,7 +205,7 @@ def problem():
                           [0], 
                           [zero_dirichlet_val]]
 
-    problem = StokesFlow([mesh_u, mesh_p], vec=[2, 1], dim=2, ele_type=[ele_type_u, ele_type_p], gauss_order=[2, 2],
+    problem = StokesFlow([mesh_u, mesh_p], vec=[2, 1], dim=2, ele_type=[ele_type_u, ele_type_p], quadrature_order=[2, 2],
                                 dirichlet_bc_info=[dirichlet_bc_info1, dirichlet_bc_info2])
     problem.configure_Dirichlet_BC_for_dolphin()
 

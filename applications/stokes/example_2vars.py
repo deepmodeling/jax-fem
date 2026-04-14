@@ -83,7 +83,7 @@ def problem():
                           [zero_dirichlet_val, zero_dirichlet_val, 
                            zero_dirichlet_val, zero_dirichlet_val]]
 
-    problem = LinearElasticity([mesh]*2, vec=[1, 2], dim=3, ele_type=[ele_type]*2, gauss_order=[None, None],
+    problem = LinearElasticity([mesh]*2, vec=[1, 2], dim=3, ele_type=[ele_type]*2, quadrature_order=[None, None],
         dirichlet_bc_info=[dirichlet_bc_info1, dirichlet_bc_info2])
     sol_list = solver(problem)
     vtk_path = os.path.join(data_dir, f'vtk/u.vtu')

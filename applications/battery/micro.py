@@ -45,11 +45,11 @@ def prep_micro_problem(micro_mesh, params_micro, dt, stiff_flag='matlab'):
         element_family = basix.ElementFamily.P
         basix_ele = basix.CellType.interval
         degree = 1
-        gauss_order = 2
+        quadrature_order = 2
         
         # Reference domain
         # Following codes mainly come from jax_fem.basis
-        quad_points, weights = basix.make_quadrature(basix_ele, gauss_order)
+        quad_points, weights = basix.make_quadrature(basix_ele, quadrature_order)
         element = basix.create_element(element_family, basix_ele, degree)
         vals_and_grads = element.tabulate(1, quad_points)[:, :, :, :]
         shape_values = vals_and_grads[0, :, :, 0]

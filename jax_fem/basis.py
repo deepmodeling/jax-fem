@@ -41,8 +41,8 @@ def get_elements(ele_type):
         For element: `CellType <https://docs.fenicsproject.org/basix/main/python/_autosummary/basix.html#basix.CellType>`_
     basix_face_ele : BasixObject
         For element face: `CellType <https://docs.fenicsproject.org/basix/main/python/_autosummary/basix.html#basix.CellType>`_
-    gauss_order : int
-        :attr:`~jax_fem.fe.FiniteElement.gauss_order`
+    quadrature_order : int
+        :attr:`~jax_fem.fe.FiniteElement.quadrature_order`
     degree : int
         Element degree, used in basix
     re_order : list
@@ -53,7 +53,7 @@ def get_elements(ele_type):
         re_order = [0, 1, 3, 2, 4, 5, 7, 6]
         basix_ele = basix.CellType.hexahedron
         basix_face_ele = basix.CellType.quadrilateral
-        gauss_order = 2 # 2x2x2, TODO: is this full integration?
+        quadrature_order = 2 # 2x2x2, TODO: is this full integration?
         degree = 1
     elif ele_type == 'HEX27':
         print(f"Warning: 27-node hexahedron is rarely used in practice and not recommended.")
@@ -61,63 +61,62 @@ def get_elements(ele_type):
                     17, 10, 12, 15, 14, 22, 23, 21, 24, 20, 25, 26]
         basix_ele = basix.CellType.hexahedron
         basix_face_ele = basix.CellType.quadrilateral
-        gauss_order = 10 # 6x6x6, full integration
+        quadrature_order = 10 # 6x6x6, full integration
         degree = 2
     elif ele_type == 'HEX20':
         re_order = [0, 1, 3, 2, 4, 5, 7, 6, 8, 11, 13, 9, 16, 18, 19, 17, 10, 12, 15, 14]
         element_family = basix.ElementFamily.serendipity
         basix_ele = basix.CellType.hexahedron
         basix_face_ele = basix.CellType.quadrilateral
-        gauss_order = 2 # 6x6x6, full integration
+        quadrature_order = 2 # 6x6x6, full integration
         degree = 2
     elif ele_type == 'TET4':
         re_order = [0, 1, 2, 3]
         basix_ele = basix.CellType.tetrahedron
         basix_face_ele = basix.CellType.triangle
-        gauss_order = 0 # 1, full integration
+        quadrature_order = 0 # 1, full integration
         degree = 1
     elif ele_type == 'TET10':
         re_order = [0, 1, 2, 3, 9, 6, 8, 7, 5, 4]
         basix_ele = basix.CellType.tetrahedron
         basix_face_ele = basix.CellType.triangle
-        gauss_order = 2 # 4, full integration
+        quadrature_order = 2 # 4, full integration
         degree = 2
     # TODO: Check if this is correct.
     elif ele_type == 'QUAD4':
         re_order = [0, 1, 3, 2]
         basix_ele = basix.CellType.quadrilateral
         basix_face_ele = basix.CellType.interval
-        gauss_order = 2
+        quadrature_order = 2
         degree = 1
     elif ele_type == 'QUAD8':
         re_order = [0, 1, 3, 2, 4, 6, 7, 5]
         element_family = basix.ElementFamily.serendipity
         basix_ele = basix.CellType.quadrilateral
         basix_face_ele = basix.CellType.interval
-        gauss_order = 2
+        quadrature_order = 2
         degree = 2
     elif ele_type == 'TRI3':
         re_order = [0, 1, 2]
         basix_ele = basix.CellType.triangle
         basix_face_ele = basix.CellType.interval
-        gauss_order = 0 # 1, full integration
+        quadrature_order = 0 # 1, full integration
         degree = 1
     elif ele_type == 'TRI6':
         re_order = [0, 1, 2, 5, 3, 4]
         basix_ele = basix.CellType.triangle
         basix_face_ele = basix.CellType.interval
-        gauss_order = 2 # 3, full integration
+        quadrature_order = 2 # 3, full integration
         degree = 2
     else:
         raise NotImplementedError
 
-    return element_family, basix_ele, basix_face_ele, gauss_order, degree, re_order
+    return element_family, basix_ele, basix_face_ele, quadrature_order, degree, re_order
 
 
 def reorder_inds(inds, re_order):
     """Apply re-ordering transformation for node indices.
     """
-
     new_inds = []
     for ind in inds.reshape(-1):
         new_inds.append(onp.argwhere(re_order == ind))
@@ -125,15 +124,31 @@ def reorder_inds(inds, re_order):
     return new_inds
 
 
-def get_shape_vals_and_grads(ele_type, gauss_order=None):
+def _normalize_quadrature_rule(rule):
+    """Convert input to a Basix QuadratureType or None (uses basix.quadrature.string_to_type for strings)."""
+    if rule is None:
+        return basix.QuadratureType.default
+    if isinstance(rule, basix.QuadratureType):
+        return rule
+    if isinstance(rule, str):
+        return basix.quadrature.string_to_type(rule)
+    raise TypeError(
+        "quadrature_rule must be None, a basix.QuadratureType, or a string accepted by "
+        "basix.quadrature.string_to_type (see Basix quadrature docs)."
+    )
+
+
+def get_shape_vals_and_grads(ele_type, quadrature_rule=None, quadrature_order=None):
     """Use `basix <https://github.com/FEniCS/basix>`_ to get shape function values and gradients for elements.
 
     Parameters
     ----------
     ele_type : str
         :attr:`~jax_fem.fe.FiniteElement.ele_type`
-    gauss_order : int
-        :attr:`~jax_fem.fe.FiniteElement.gauss_order`
+    quadrature_order : int
+        :attr:`~jax_fem.fe.FiniteElement.quadrature_order`
+    quadrature_rule:
+        :attr:`~jax_fem.fe.FiniteElement.quadrature_rule`
 
     Returns
     -------
@@ -144,12 +159,14 @@ def get_shape_vals_and_grads(ele_type, gauss_order=None):
     weights: NumpyArray
         Shape is (num_quads,), e.g, (8,) for HEX8 element.
     """
-    element_family, basix_ele, basix_face_ele, gauss_order_default, degree, re_order = get_elements(ele_type)
+    element_family, basix_ele, basix_face_ele, quadrature_order_default, degree, re_order = get_elements(ele_type)
 
-    if gauss_order is None:
-        gauss_order = gauss_order_default
+    quadrature_rule = _normalize_quadrature_rule(quadrature_rule)
+    if quadrature_order is None:
+        quadrature_order = quadrature_order_default
 
-    quad_points, weights = basix.make_quadrature(basix_ele, gauss_order)
+    quad_points, weights = basix.make_quadrature(basix_ele, quadrature_order, rule=quadrature_rule)
+
     element = basix.create_element(element_family, basix_ele, degree)
     vals_and_grads = element.tabulate(1, quad_points)[:, :, re_order, :]
     shape_values = vals_and_grads[0, :, :, 0]
@@ -158,15 +175,17 @@ def get_shape_vals_and_grads(ele_type, gauss_order=None):
     return shape_values, shape_grads_ref, weights
 
 
-def get_face_shape_vals_and_grads(ele_type, gauss_order=None):
+def get_face_shape_vals_and_grads(ele_type, quadrature_rule=None, quadrature_order=None):
     """Use `basix <https://github.com/FEniCS/basix>`_ to get shape function values and gradients for element faces.
 
     Parameters
     ----------
     ele_type : str
         :attr:`~jax_fem.fe.FiniteElement.ele_type`
-    gauss_order : int
-        :attr:`~jax_fem.fe.FiniteElement.gauss_order`
+    quadrature_rule:
+        :attr:`~jax_fem.fe.FiniteElement.quadrature_rule`
+    quadrature_order : int
+        :attr:`~jax_fem.fe.FiniteElement.quadrature_order`
 
     Returns
     -------
@@ -176,20 +195,19 @@ def get_face_shape_vals_and_grads(ele_type, gauss_order=None):
         Shape is(num_faces, num_face_quads, num_nodes, dim), e.g, (6, 4, 3) for HEX8 element.
     face_weights: NumpyArray
         Shape is (num_faces, num_face_quads), e.g, (6, 4) for HEX8 element.
-    face_normals:NumpyArray
+    face_normals: NumpyArray
         Shape is (num_faces, dim), e.g, (6, 3) for HEX8 element.
     face_inds: NumpyArray
         Shape is (num_faces, num_face_vertices), e.g, (6, 4) for HEX8 element.
     """
-    element_family, basix_ele, basix_face_ele, gauss_order_default, degree, re_order = get_elements(ele_type)
+    element_family, basix_ele, basix_face_ele, quadrature_order_default, degree, re_order = get_elements(ele_type)
 
-    if gauss_order is None:
-        gauss_order = gauss_order_default
-
-    # TODO: Check if this is correct.
-    # We should provide freedom for seperate gauss_order for volume integral and surface integral
-    # Currently, they're using the same gauss_order!
-    points, weights = basix.make_quadrature(basix_face_ele, gauss_order)
+    # TODO: We should provide freedom for seperate quadrature_order for volume integral and surface integral
+    # Currently, they're using the same quadrature_order!
+    quadrature_rule = _normalize_quadrature_rule(quadrature_rule)
+    if quadrature_order is None:
+        quadrature_order = quadrature_order_default
+    points, weights = basix.make_quadrature(basix_face_ele, quadrature_order, rule=quadrature_rule)
 
     map_degree = 1
     lagrange_map = basix.create_element(basix.ElementFamily.P, basix_face_ele, map_degree)

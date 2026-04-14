@@ -386,7 +386,7 @@ def output_sol(mesh_macro, sol_macro_time, sol_micro_time, input_dir, output_dir
 #     dirichlet_s_init = [[left, right, separator], [0]*3, [init_val_s_an, init_val_s_ca, zero_dirichlet]]
     
 #     problem_macro_init = macro_P2D([jax_mesh]*4, vec = [1]*4, dim=2, 
-#                                     ele_type = [ele_type]*4, gauss_order=[2]*4,
+#                                     ele_type = [ele_type]*4, quadrature_order=[2]*4,
 #                                     dirichlet_bc_info = [dirichlet_p_init,None,dirichlet_s_init,dirichlet_bc_info_j],
 #                                     location_fns = [lambda point:False])
     

@@ -331,7 +331,7 @@ def battery():
     
     # macro problem for (p,c,s,j)
     problem_macro = macro_P2D([jax_mesh]*4, vec = [1]*4, dim=2, 
-                        ele_type = [ele_type]*4, gauss_order=[2]*4,
+                        ele_type = [ele_type]*4, quadrature_order=[2]*4,
                         dirichlet_bc_info = [None,None,dirichlet_bc_info_s,dirichlet_bc_info_j],
                         location_fns = location_fns_s)
     

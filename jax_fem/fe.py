@@ -5,6 +5,7 @@ import sys
 import time
 import functools
 from dataclasses import dataclass
+from typing import Any, Optional
 from jax_fem.generate_mesh import Mesh
 from jax_fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grads
 from jax_fem import logger
@@ -47,9 +48,12 @@ class FiniteElement:
         - 'HEX27'
         - 'TET4'
         - 'TET10'
-    gauss_order : int
+    quadrature_rule : Any
+        Quadrature rule passed to ``basix.make_quadrature``. Can be ``None``,
+        a ``basix.QuadratureType``, or a string accepted by
+        ``basix.quadrature.string_to_type``.
+    quadrature_order : int
         Order of Gaussian quadrature. 
-
     dirichlet_bc_info : list
         A list for Dirichlet boundary condition information, whose elements are structured as:
         
@@ -66,8 +70,9 @@ class FiniteElement:
     vec: int
     dim: int
     ele_type: str
-    gauss_order: int
-    dirichlet_bc_info: list
+    quadrature_rule: Any = None
+    quadrature_order: Optional[int] = None
+    dirichlet_bc_info: Optional[list] = None
 
     def __post_init__(self):
         self.points = self.mesh.points
@@ -79,9 +84,17 @@ class FiniteElement:
         start = time.time()
         logger.debug(f"Computing shape function values, gradients, etc.")
 
-        self.shape_vals, self.shape_grads_ref, self.quad_weights = get_shape_vals_and_grads(self.ele_type, self.gauss_order)
+        self.shape_vals, self.shape_grads_ref, self.quad_weights = get_shape_vals_and_grads(
+            self.ele_type,
+            quadrature_rule=self.quadrature_rule,
+            quadrature_order=self.quadrature_order,
+        )
         self.face_shape_vals, self.face_shape_grads_ref, self.face_quad_weights, self.face_normals, self.face_inds \
-        = get_face_shape_vals_and_grads(self.ele_type, self.gauss_order)
+        = get_face_shape_vals_and_grads(
+            self.ele_type,
+            quadrature_rule=self.quadrature_rule,
+            quadrature_order=self.quadrature_order,
+        )
         self.num_quads = self.shape_vals.shape[0]
         self.num_nodes = self.shape_vals.shape[1]
         self.num_faces = self.face_shape_vals.shape[0]

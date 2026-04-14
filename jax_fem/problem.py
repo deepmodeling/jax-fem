@@ -4,6 +4,7 @@ import jax.numpy as np
 import jax.flatten_util
 from dataclasses import dataclass
 import functools
+from typing import Any
 
 from jax_fem.utils import timeit 
 from jax_fem.generate_mesh import Mesh
@@ -25,8 +26,10 @@ class Problem:
         :attr:`~jax_fem.fe.FiniteElement.dim`
     ele_type : str
         :attr:`~jax_fem.fe.FiniteElement.ele_type`
-    gauss_order : int
-        :attr:`~jax_fem.fe.FiniteElement.gauss_order`
+    quadrature_rule
+        :attr:`~jax_fem.fe.FiniteElement.quadrature_rule`
+    quadrature_order : int
+        :attr:`~jax_fem.fe.FiniteElement.quadrature_order`
     dirichlet_bc_info : list
         :attr:`~jax_fem.fe.FiniteElement.dirichlet_bc_info`
     location_fns : list
@@ -44,7 +47,8 @@ class Problem:
     vec: int
     dim: int
     ele_type: str = 'HEX8'
-    gauss_order: int = None
+    quadrature_rule: Any = None
+    quadrature_order: int = None
     dirichlet_bc_info: list = None
     location_fns: list = None
     additional_info: tuple = ()
@@ -55,7 +59,8 @@ class Problem:
             self.mesh = [self.mesh]
             self.vec = [self.vec]
             self.ele_type = [self.ele_type]
-            self.gauss_order = [self.gauss_order]
+            self.quadrature_rule = [self.quadrature_rule]
+            self.quadrature_order = [self.quadrature_order]
             self.dirichlet_bc_info = [self.dirichlet_bc_info]
 
         self.num_vars = len(self.mesh)
@@ -64,7 +69,8 @@ class Problem:
                                   vec=self.vec[i], 
                                   dim=self.dim, 
                                   ele_type=self.ele_type[i], 
-                                  gauss_order=self.gauss_order[i] if type(self.gauss_order) == type([]) else self.gauss_order,
+                                  quadrature_rule=self.quadrature_rule[i] if type(self.quadrature_rule) == type([]) else self.quadrature_rule,
+                                  quadrature_order=self.quadrature_order[i] if type(self.quadrature_order) == type([]) else self.quadrature_order,
                                   dirichlet_bc_info=self.dirichlet_bc_info[i] if type(self.dirichlet_bc_info) == type([]) else self.dirichlet_bc_info) \
                     for i in range(self.num_vars)] 
 

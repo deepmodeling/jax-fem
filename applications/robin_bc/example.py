@@ -122,8 +122,8 @@ def problem():
 
     location_fns = [left, right]
 
-    # gauss_order=2 produces the same result with FEniCS
-    problem = Poisson(mesh, vec, dim, ele_type, gauss_order=2, dirichlet_bc_info=dirichlet_bc_info, location_fns=location_fns)
+    # quadrature_order=2 produces the same result with FEniCS
+    problem = Poisson(mesh, vec, dim, ele_type, quadrature_order=2, dirichlet_bc_info=dirichlet_bc_info, location_fns=location_fns)
 
     sol_list = solver(problem)
 

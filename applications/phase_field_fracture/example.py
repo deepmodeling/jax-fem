@@ -232,7 +232,7 @@ history_old = onp.array(history)
 
 
 # Start the major loop for loading steps.
-simulation_flag = False
+simulation_flag = True
 if simulation_flag:
     # clear
     files = glob.glob(os.path.join(vtk_dir, './*'))

@@ -217,8 +217,8 @@ def problem():
     # https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html
     sol_list = solver(problem, solver_options={'petsc_solver': {'ksp_type': 'tfqmr', 'pc_type': 'lu'}})
 
-    # Alternatively, you may use the UMFPACK solver
-    # sol_list = solver(problem, solver_options={'umfpack_solver': {}})
+    # Alternatively, you may use the scipy solver
+    # sol_list = solver(problem, solver_options={'spsolve_solver': {}})
 
     u, p = sol_list
     print(f"Max u = {onp.max(u)}, Min u = {onp.min(u)}")

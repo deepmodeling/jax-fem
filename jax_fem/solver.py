@@ -23,13 +23,6 @@ except ImportError:
 # JAX solver or scipy solver or PETSc solver
 
 def jax_solve(A, b, x0, precond):
-    """Solves the equilibrium equation using a JAX solver.
-
-    Parameters
-    ----------
-    precond
-        Whether to calculate the preconditioner or not
-    """
     logger.debug(f"JAX Solver - Solving linear system")
     indptr, indices, data = A.getValuesCSR()
     A_sp_scipy = scipy.sparse.csr_array((data, indices, indptr), shape=A.getSize())
@@ -60,10 +53,12 @@ def jax_solve(A, b, x0, precond):
 
     return x
 
-def umfpack_solve(A, b):
-    logger.debug(f"Scipy Solver - Solving linear system with UMFPACK")
+def scipy_spsolve(A, b):
+    logger.debug("Scipy Solver - Solving linear system with scipy.sparse.linalg.spsolve")
     indptr, indices, data = A.getValuesCSR()
     Asp = scipy.sparse.csr_matrix((data, indices, indptr))
+    # SciPy's spsolve uses UMFPACK only when scikits.umfpack is installed and
+    # applicable; otherwise it falls back to SuperLU.
     x = scipy.sparse.linalg.spsolve(Asp, onp.array(b))
 
     # TODO: try https://jax.readthedocs.io/en/latest/_autosummary/jax.experimental.sparse.linalg.spsolve.html
@@ -98,7 +93,6 @@ def petsc_solve(A, b, ksp_type, pc_type):
     assert err < 0.1, f"PETSc linear solver failed to converge, err = {err}"
 
     return x.getArray()
-
 
 def AMGX_solve_host(A, x, b):
     dtype, shape = b.dtype, b.shape
@@ -175,7 +169,7 @@ def AMGX_solve(A, b, x0):
 
 def linear_solver(A, b, x0, solver_options):
     # If user does not specify any solver, set jax_solver as the default one.
-    if  len(solver_options.keys() & {'jax_solver','amgx_solver', 'umfpack_solver', 'petsc_solver', 'custom_solver'}) == 0: 
+    if  len(solver_options.keys() & {'jax_solver','amgx_solver', 'spsolve_solver', 'petsc_solver', 'custom_solver'}) == 0: 
         solver_options['jax_solver'] = {}
 
     if 'jax_solver' in solver_options:      
@@ -183,8 +177,8 @@ def linear_solver(A, b, x0, solver_options):
         x = jax_solve(A, b, x0, precond)
     elif 'amgx_solver' in solver_options:
         x = AMGX_solve(A, b, x0)
-    elif 'umfpack_solver' in solver_options:
-        x = umfpack_solve(A, b)
+    elif 'spsolve_solver' in solver_options:
+        x = scipy_spsolve(A, b)
     elif 'petsc_solver' in solver_options:   
         ksp_type = solver_options['petsc_solver']['ksp_type'] if 'ksp_type' in solver_options['petsc_solver'] else 'bcgsl' 
         pc_type = solver_options['petsc_solver']['pc_type'] if 'pc_type' in solver_options['petsc_solver'] else 'ilu'
@@ -453,7 +447,7 @@ def solver(problem, solver_options={}):
         Three solvers are currently available:
 
         - `JAX solver <https://jax.readthedocs.io/en/latest/_autosummary/jax.scipy.sparse.linalg.bicgstab.html>`_
-        - `UMFPACK solver <https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html>`_
+        - `SciPy spsolve (sparse direct) <https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html>`_
         - `PETSc solver <https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html>`_
     
         The empty choice ::
@@ -468,9 +462,9 @@ def solver(problem, solver_options={}):
 
             solver_options = {'jax_solver': {'precond': True}}
 
-        The UMFPACK solver can be specified as ::
+        The SciPy sparse direct solver (``spsolve``) can be specified as ::
 
-            solver_options = {'umfpack_solver': {}}
+            solver_options = {'spsolve_solver': {}}
 
         The PETSc solver can be specified as ::
 
@@ -609,8 +603,8 @@ def arc_length_solver_disp_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_
         res_val = np.linalg.norm(res_vec)
         logger.debug(f"Arc length solver: res_val = {res_val}")
   
-        delta_u_bar = umfpack_solve(A, -res_vec)
-        delta_u_t = umfpack_solve(A, u_b)
+        delta_u_bar = scipy_spsolve(A, -res_vec)
+        delta_u_t = scipy_spsolve(A, u_b)
 
         Delta_u_vec = u_vec - prev_u_vec
         Delta_lamda = lamda - prev_lamda
@@ -685,14 +679,14 @@ def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u
         res_val = np.linalg.norm(res_vec + lamda*q_vec_mapped)
         logger.debug(f"Arc length solver: res_val = {res_val}")
 
-        # TODO: the scipy umfpack solver seems to be far better than the jax linear solver, so we use umfpack solver here.
+        # TODO: scipy.sparse.linalg.spsolve seems far better than the JAX linear solver here, so we use it.
         # x0_1 = assign_bc(np.zeros_like(u_vec), problem)
         # x0_2 = copy_bc(u_vec, problem)
         # delta_u_bar = jax_solve(problem, A, -(res_vec + lamda*q_vec_mapped), x0=x0_1 - x0_2, precond=True)   
         # delta_u_t = jax_solve(problem, A, -q_vec_mapped, x0=np.zeros_like(u_vec), precond=True)   
 
-        delta_u_bar = umfpack_solve(A, -(res_vec + lamda*q_vec_mapped))
-        delta_u_t = umfpack_solve(A, -q_vec_mapped)
+        delta_u_bar = scipy_spsolve(A, -(res_vec + lamda*q_vec_mapped))
+        delta_u_t = scipy_spsolve(A, -q_vec_mapped)
 
         Delta_u_vec = u_vec - prev_u_vec
         Delta_lamda = lamda - prev_lamda
@@ -810,7 +804,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
  
     TODO: Does not support periodic B.C., need some work here.
     """
-    solver_options = {'umfpack_solver': {}}
+    solver_options = {'spsolve_solver': {}}
 
     # TODO: consider these in initial guess
     def newton_update_helper(dofs):

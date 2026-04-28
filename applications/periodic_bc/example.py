@@ -178,7 +178,7 @@ def problem():
     problem = Poisson(mesh, vec=vec, dim=dim, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info)
     problem.P_mat = P_mat
 
-    # Other solvers can be 'jax_solver', 'umfpack_solver'
+    # Other solvers can be 'jax_solver', 'spsolve_solver'
     fwd_pred = ad_wrapper(problem, solver_options={'petsc_solver': {}}, adjoint_solver_options={'petsc_solver': {}}) 
     theta = 1.
     sol_list = fwd_pred(theta)

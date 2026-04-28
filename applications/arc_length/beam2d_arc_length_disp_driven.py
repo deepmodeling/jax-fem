@@ -102,7 +102,7 @@ def example():
                 break
     else:
         # Newton's solver does not converge to buckling configuration
-        sol_list = solver(problem, solver_options={'umfpack_solver': {}})
+        sol_list = solver(problem, solver_options={'spsolve_solver': {}})
         sol = sol_list[0]   
         vtk_path = os.path.join(vtk_dir, f'u.vtu')
         save_sol(problem.fes[0], np.hstack((sol, np.zeros((len(sol), 1)))), vtk_path)

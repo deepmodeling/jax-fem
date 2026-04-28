@@ -25,7 +25,7 @@
 ## JAX-FEM 0.0.7 (Aug 18, 2024)
 
 * Major updates
-  *  Update `jax_fem.solver` to include `UMFPACK` solver provided by `scipy`
+  *  Update `jax_fem.solver` to include `scipy` solver
 
 
 ## Beta

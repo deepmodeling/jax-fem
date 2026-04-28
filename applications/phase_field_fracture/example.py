@@ -1,33 +1,36 @@
 # Import some generally useful packages.
-import numpy as onp
-import jax
-import jax.numpy as np
 import os
 import glob
-import meshio
-import matplotlib.pyplot as plt
 import time
 
+import jax
+import jax.numpy as np
+
+import numpy as onp
+import matplotlib.pyplot as plt
 
 # Import JAX-FEM specific modules.
-from jax_fem.generate_mesh import box_mesh_gmsh, Mesh
+from jax_fem import logger
+logger.setLevel('ERROR')
+from jax_fem.generate_mesh import Mesh, get_meshio_cell_type
 from jax_fem.solver import solver
 from jax_fem.problem import Problem
 from jax_fem.utils import save_sol
 
 from applications.phase_field_fracture.eigen import get_eigen_f_custom
 
-
 # If you have multiple GPUs, set the one to use.
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 # Define some useful directory paths.
 crt_file_path = os.path.dirname(__file__)
-data_dir = os.path.join(crt_file_path, 'data')
-vtk_dir = os.path.join(data_dir, 'vtk')
-numpy_dir = os.path.join(data_dir, 'numpy')
-os.makedirs(numpy_dir, exist_ok=True)
+input_dir = os.path.join(crt_file_path, 'input')
+output_dir = os.path.join(crt_file_path, 'output')
+vtk_dir = os.path.join(output_dir, 'vtk')
+os.makedirs(input_dir, exist_ok=True)
+os.makedirs(output_dir, exist_ok=True)
+os.makedirs(vtk_dir, exist_ok=True)
 
 
 # The bracket operator
@@ -85,7 +88,7 @@ class Elasticity(Problem):
             return lmbda/2.*tr_epsilon_minus**2 + mu*np.sum(safe_minus(eigen_vals)**2) 
     
         def g(d):
-            return (1 - d[0])**2 + 1e-3
+            return (1 - d[0])**2
     
         key = jax.random.PRNGKey(0)
         noise = jax.random.uniform(key, shape=(self.dim, self.dim), minval=-1e-8, maxval=1e-8)
@@ -137,7 +140,7 @@ class Elasticity(Problem):
         sol_d, disp = params
         d = self.fes[0].convert_from_dof_to_quad(sol_d)
         self.internal_vars = [d]
-        dirichlet_bc_info[-1][-2] = get_dirichlet_load(disp)
+        dirichlet_bc_info[-1][-1] = get_dirichlet_load(disp)
         self.fes[0].update_Dirichlet_boundary_conditions(dirichlet_bc_info)
     
     def compute_traction(self, location_fn, sol_u, sol_d):
@@ -152,7 +155,7 @@ class Elasticity(Problem):
             sigmas = vmap_stress(u_grads_reshape, d_face_reshape).reshape(u_grads.shape)
             # TODO: a more general normals with shape (num_selected_faces, num_face_quads, dim, 1) should be supplied
             # (num_selected_faces, num_face_quads, vec, dim) @ (1, 1, dim, 1) -> (num_selected_faces, num_face_quads, vec, 1)
-            normals = np.array([0., 0., 1.])
+            normals = np.array([0., 1.])
             traction = (sigmas @ normals[None, None, :, None])[:, :, :, 0]
             return traction
     
@@ -177,36 +180,32 @@ class Elasticity(Problem):
 G_c = 2.7e-3 # Critical energy release rate [kN/mm] 
 E = 210 # Young's modulus [kN/mm^2]
 nu = 0.3 # Poisson's ratio
-l = 0.02 # Length-scale parameter [mm]
+l = 0.0075 # Length-scale parameter [mm]
 mu = E/(2.*(1. + nu)) # First Lamé parameter
 lmbda = E*nu/((1+nu)*(1-2*nu)) # Second Lamé parameter
 
 
-# Specify mesh-related information (first-order hexahedron element)
-Nx, Ny, Nz = 50, 50, 1 
-Lx, Ly, Lz = 1., 1., 0.02
-meshio_mesh = box_mesh_gmsh(Nx, Ny, Nz, Lx, Ly, Lz, data_dir)
-mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
+# Specify mesh-related information (bilinear quadrilateral element)
+ele_type = 'QUAD4'
+cell_type = get_meshio_cell_type(ele_type)
+npz_data = onp.load(os.path.join(input_dir, 'mesh.npz'))
+points = npz_data['points']
+cells = npz_data['cells']
+mesh = Mesh(points, cells, ele_type)
 
 
-# Define boundary locations.
-def y_max(point):
-    return np.isclose(point[1], Ly, atol=1e-5)
+# Define boundary locations (for u).
+def top(point):
+    return np.isclose(point[1], 0.5, atol=1e-5)
 
-def y_min(point):
-    return np.isclose(point[1], 0., atol=1e-5)
+def bot(point):
+    return np.isclose(point[1], -0.5, atol=1e-5)
 
+def bot_left(point):
+    return np.logical_and(np.isclose(point[0], -0.5, atol=1e-5),
+                          np.isclose(point[1], -0.5, atol=1e-5))
 
-# Create an instance of the phase field problem.
-problem_d = PhaseField(mesh, vec=1, dim=3)
-sol_d_list = [onp.zeros((len(mesh.points), 1))]
-flag = (mesh.points[:, 1] > 0.5*Ly - 0.01*Ly) & (mesh.points[:, 1] < 0.5*Ly + 0.01*Ly) & (mesh.points[:, 0] > 0.5*Lx) 
-sol_d_list[0][flag] = 1. # Specify initial crack
-sol_d_old = onp.array(sol_d_list[0])
-
-
-# Create an instance of the displacement problem.
-def dirichlet_val(point):
+def zero_dirichlet_val(point):
     return 0.
 
 def get_dirichlet_load(disp):
@@ -214,22 +213,19 @@ def get_dirichlet_load(disp):
         return disp
     return val_fn
 
+dirichlet_bc_info = [[bot_left, bot, top], [0, 1, 1], 
+                  [zero_dirichlet_val, zero_dirichlet_val, get_dirichlet_load(0.)]]
 
-# disps = 0.01*Ly*np.linspace(0., 1., 101)
-disps = 0.01*Ly*np.hstack((np.linspace(0, 0.6, 21),
-                           np.linspace(0.6, 0.8, 121),
-                           np.linspace(0.8, -0.4, 61),
-                           np.linspace(-0.4, 0.8, 61),
-                           np.linspace(0.8, 1., 121)))
 
-location_fns = [y_min, y_min, y_min, y_max, y_max, y_max]
-vecs = [0, 1, 2, 0, 1, 2]
-value_fns = [dirichlet_val, dirichlet_val, dirichlet_val, 
-             dirichlet_val, get_dirichlet_load(disps[0]), dirichlet_val]
-dirichlet_bc_info = [location_fns, vecs, value_fns]
+# Create an instance of the phase field problem.
+problem_d = PhaseField(mesh, vec=1, dim=2, ele_type=ele_type)
+sol_d_list = [onp.zeros((len(mesh.points), 1))]
+sol_d_old = onp.array(sol_d_list[0])
 
-problem_u = Elasticity(mesh, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info)
-sol_u_list = [onp.zeros((len(mesh.points), 3))]
+
+# Create an instance of the displacement problem.
+problem_u = Elasticity(mesh, vec=2, dim=2, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info)
+sol_u_list = [onp.zeros((len(mesh.points), 2))]
 sol_u_old = onp.array(sol_u_list[0])
 history = onp.zeros((problem_u.fes[0].num_cells, problem_u.fes[0].num_quads))
 history_old = onp.array(history)
@@ -238,67 +234,76 @@ history_old = onp.array(history)
 # Start the major loop for loading steps.
 simulation_flag = True
 if simulation_flag:
-    files = glob.glob(os.path.join(vtk_dir, f'*'))
+    # clear
+    files = glob.glob(os.path.join(vtk_dir, './*'))
     for f in files:
         os.remove(f)
     
-    vtk_path = os.path.join(vtk_dir, f"u_{0:05d}.vtu")
+    # initial state
+    vtk_path = os.path.join(vtk_dir, f"u_{0:05d}.vtk")
     save_sol(problem_d.fes[0], sol_d_list[0], vtk_path, point_infos=[('u', sol_u_list[0])], cell_infos=[('history', np.mean(history, axis=1))])
-
-    tractions = [0.]
-    for i, disp in enumerate(disps[1:]):
-        print(f"\nStep {i} in {len(disps)}, disp = {disp}")
     
+    # displacement loadings
+    totaltime = 0.8
+    dt = 0.01
+    du = 0.01
+    times = onp.arange(0, totaltime+dt, dt)
+    disps = times * du
+    
+    # solve
+    tractions = [0.]
+    start = time.time()
+    for i, disp in enumerate(disps[1:], start=1):
+        print(f"\nStep {i} in {len(disps)-1}, disp = {disp:.4e}")
         err = 1.
         tol = 1e-5
         while err > tol:
-            print(f"####### max history = {np.max(history)}")
+            logger.debug(f"####### max history = {np.max(history)}")
+            # solve for u
             problem_u.set_params([sol_d_list[0], disp])
-            sol_u_list = solver(problem_u)
-    
-            problem_d.set_params(history)
-            sol_d_list = solver(problem_d)
-    
+            sol_u_list = solver(problem_u, solver_options={'umfpack_solver':{}})
+            # history
             history = problem_u.compute_history(sol_u_list[0], history_old)
-            sol_d_list = [onp.maximum(sol_d_list[0], sol_d_old)]
-    
-            err_u = onp.linalg.norm(sol_u_list[0] - sol_u_old)
-            err_d = onp.linalg.norm(sol_d_list[0] - sol_d_old)
+            # solve for d
+            problem_d.set_params(history)
+            sol_d_list = solver(problem_d, solver_options={'umfpack_solver':{}})
+            # error
+            err_u = onp.linalg.norm(sol_u_list[0] - sol_u_old)/onp.linalg.norm(sol_u_list[0])
+            err_d = onp.linalg.norm(sol_d_list[0] - sol_d_old)/onp.linalg.norm(sol_d_list[0])
             err = onp.maximum(err_u, err_d)
+            # update previous state
             sol_u_old = onp.array(sol_u_list[0])
             sol_d_old = onp.array(sol_d_list[0])
-            print(f"####### err = {err}, tol = {tol}")
-            
-            # Technically, we are not doing the real 'staggered' scheme. This is an early stop strategy.
-            # Comment the following two lines out to get the real staggered scheme, which is more  computationally demanding.
-            if True:
-                break
-    
+            logger.debug(f"####### err = {err:.4e}, tol = {tol}")
+        # update history
         history_old = onp.array(history)
-     
-        traction = problem_u.compute_traction(y_max, sol_u_list[0], sol_d_list[0])/Lz
+        # compute tractions
+        traction = problem_u.compute_traction(top, sol_u_list[0], sol_d_list[0])
         tractions.append(traction[-1])
-        print(f"Traction force = {traction}")
-        vtk_path = os.path.join(vtk_dir, f"u_{i + 1:05d}.vtu")
+        print(f"Traction force = {traction[-1]:.4e}")
+        vtk_path = os.path.join(vtk_dir, f"u_{i + 1:05d}.vtk")
         save_sol(problem_d.fes[0], sol_d_list[0], vtk_path, point_infos=[('u', sol_u_list[0])], cell_infos=[('history', np.mean(history, axis=1))])
+    end = time.time()
+    print(f"Time cost: {end-start:.2f} seconds")
     
+    # save data
     tractions = np.array(tractions)
-    
-    results = np.stack((disps, tractions))
-    np.save(os.path.join(numpy_dir, 'results.npy'), results)
-    
-else:
-    results = np.load(os.path.join(numpy_dir, 'results.npy'))
+    np.savez(os.path.join(output_dir, 'sol.npz'), disps=disps, forces=tractions)
 
-    fig = plt.figure(figsize=(10, 8))
-    plt.plot(results[0], results[1], color='red', marker='o', markersize=4, linestyle='-') 
-    plt.xlabel(r'Displacement of top surface [mm]', fontsize=20)
-    plt.ylabel(r'Force on top surface [kN]', fontsize=20)
-    plt.tick_params(labelsize=18)
-    
-    fig = plt.figure(figsize=(12, 8))
-    plt.plot(1e3*onp.hstack((0., onp.cumsum(np.abs(np.diff(results[0]))))), results[0], color='blue', marker='o', markersize=4, linestyle='-') 
-    plt.xlabel(r'Time [s]', fontsize=20)
-    plt.ylabel(r'Displacement of top surface [mm]', fontsize=20)
-    plt.tick_params(labelsize=18)
-    plt.show()
+
+# Force-displacement curve
+sol = np.load(os.path.join(output_dir, 'sol.npz'))
+sol_ref = onp.load(os.path.join(input_dir, 'sol_ref.npz'))
+fig = plt.figure(figsize=(10, 8))
+plt.rcParams['font.family'] = 'Helvetica'
+plt.rcParams['font.size'] = 20
+plt.rcParams['lines.linewidth'] = 2
+plt.plot(sol_ref['disps'], sol_ref['forces'], 'r-', marker='o', ms=6, label='Ref [4]')
+plt.plot(sol['disps'], sol['forces'], 'b--', marker='o', ms=6, label='JAX-FEM') 
+plt.xlabel(r'Displacement of top surface [mm]')
+plt.ylabel(r'Force on top surface [kN]')
+plt.legend(frameon=False, loc='upper left')
+plt.tick_params()
+plt.tight_layout()
+plt.savefig(os.path.join(output_dir, 'ForceVsDisp.png'), dpi=600, format='png')
+plt.show()

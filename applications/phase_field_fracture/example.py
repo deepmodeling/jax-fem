@@ -261,12 +261,12 @@ if simulation_flag:
             logger.debug(f"####### max history = {np.max(history)}")
             # solve for u
             problem_u.set_params([sol_d_list[0], disp])
-            sol_u_list = solver(problem_u, solver_options={'umfpack_solver':{}})
+            sol_u_list = solver(problem_u, solver_options={'spsolve_solver':{}})
             # history
             history = problem_u.compute_history(sol_u_list[0], history_old)
             # solve for d
             problem_d.set_params(history)
-            sol_d_list = solver(problem_d, solver_options={'umfpack_solver':{}})
+            sol_d_list = solver(problem_d, solver_options={'spsolve_solver':{}})
             # error
             err_u = onp.linalg.norm(sol_u_list[0] - sol_u_old)/onp.linalg.norm(sol_u_list[0])
             err_d = onp.linalg.norm(sol_d_list[0] - sol_d_old)/onp.linalg.norm(sol_d_list[0])

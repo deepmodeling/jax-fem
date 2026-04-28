@@ -539,3 +539,59 @@ class Problem:
             The parameters to be differentiated. 
         """
         raise NotImplementedError("Child class must implement this function!")
+
+    def print_BC_info(self):
+        """Print boundary and surface-integral set information for debugging."""
+        boundary_inds_list = self.boundary_inds_list
+        if len(boundary_inds_list) != 0:
+            print("\n\n### Surface integral boundary sets are specified")
+            for i in range(len(boundary_inds_list)):
+                print(f"\nSurface boundary set {i + 1} information:")
+                print(boundary_inds_list[i])
+                print(
+                    f"Array.shape = (num_selected_faces, 2) = {boundary_inds_list[i].shape}"
+                )
+                print("Interpretation:")
+                print(
+                    "    Array[i, 0] returns the global cell index of the ith selected face"
+                )
+                print(
+                    "    Array[i, 1] returns the local face index of the ith selected face"
+                )
+        else:
+            print("\n\n### No surface integral boundary sets found.")
+
+        for var_i, fe in enumerate(self.fes):
+            var_suffix = (
+                f" (finite element variable {var_i})"
+                if self.num_vars > 1
+                else ""
+            )
+            if len(fe.node_inds_list) != 0:
+                print(f"\n\n### Dirichlet B.C. is specified{var_suffix}")
+                for i in range(len(fe.node_inds_list)):
+                    print(f"\nDirichlet Boundary part {i + 1} information:")
+                    if len(fe.node_inds_list[i]) == 0:
+                        bc_array = onp.zeros((0, 3))
+                    else:
+                        bc_array = onp.stack([
+                            fe.node_inds_list[i],
+                            fe.vec_inds_list[i],
+                            fe.vals_list[i],
+                        ]).T
+                    print(bc_array)
+                    print(
+                        f"Array.shape = (num_selected_dofs, 3) = {bc_array.shape}"
+                    )
+                    print("Interpretation:")
+                    print(
+                        "    Array[i, 0] returns the node index of the ith selected dof"
+                    )
+                    print(
+                        "    Array[i, 1] returns the vec index of the ith selected dof"
+                    )
+                    print(
+                        "    Array[i, 2] returns the value assigned to ith selected dof"
+                    )
+            else:
+                print(f"\n\n### No Dirichlet B.C. found{var_suffix}.")

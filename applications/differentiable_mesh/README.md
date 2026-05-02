@@ -15,13 +15,13 @@ $$
 with weak form: find $u$ such that for all test functions $v$,
 
 $$
-\int_\Omega \nabla u\cdot\nabla v \,\mathrm{d}\Omega + \int_\Omega u^3 v \,\mathrm{d}\Omega = \int_\Omega g v \,\mathrm{d}\Omega.
+\int_\Omega \nabla u\cdot\nabla v \ \mathrm{d}\Omega + \int_\Omega u^3 v \ \mathrm{d}\Omega = \int_\Omega g v \ \mathrm{d}\Omega.
 $$
 
 We use a **manufactured** smooth solution
 
 $$
-u^{\mathrm{ex}}(x,y)=\sin(\pi x)\,(1+y),
+u^{\mathrm{ex}}(x,y)=\sin(\pi x)(1+y),
 $$
 
 so that the source $g$ is chosen consistently (see `NonlinearPoisson.get_mass_map` in `example.py`). On the bottom edge $y=0$,
@@ -95,12 +95,3 @@ Open the VTU in **ParaView**, color by the first or second component of `dJ_dxy`
 </table>
 
 The patterns reflect how moving each boundary or interior node affects the discrete energy (the same sum of squared nodal values as in the definition of $J$ above) through the finite element procedures.
-
----
-
-## References (FEM background)
-
-- Standard FE map from reference to physical gradients: T. J. R. Hughes, *The Finite Element Method*, §3.9 (`FiniteElement.get_shape_grads`).
-- Surface area scaling (Nanson): `FiniteElement.get_face_shape_grads`.
-
-For more elementary JAX-FEM tutorials, see the [project documentation](https://deepmodeling.github.io/jax-fem/learn/overview.html).

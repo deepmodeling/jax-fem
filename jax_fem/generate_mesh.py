@@ -22,8 +22,8 @@ class Mesh():
     """
     def __init__(self, points, cells, ele_type='TET4'):
         # TODO (Very important for debugging purpose!): Assert that cells must have correct orders
-        self.points = points
-        self.cells = cells
+        self.points = np.asarray(points)
+        self.cells = np.asarray(cells)
         self.ele_type = ele_type
 
     def count_selected_faces(self, location_fn):

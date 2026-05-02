@@ -11,10 +11,10 @@ from jax_fem.basis import get_face_shape_vals_and_grads, get_shape_vals_and_grad
 from jax_fem import logger
 
 
-onp.set_printoptions(threshold=sys.maxsize,
-                     linewidth=1000,
-                     suppress=True,
-                     precision=5)
+# onp.set_printoptions(threshold=sys.maxsize,
+#                      linewidth=1000,
+#                      suppress=True,
+#                      precision=5)
 
 
 @dataclass
@@ -58,7 +58,7 @@ class FiniteElement:
         A list for Dirichlet boundary condition information, whose elements are structured as:
         
         - **location_fns**: list of callables
-          Each callable takes a point (NumpyArray) and returns a boolean indicating 
+          Each callable takes a point (JaxArray) and returns a boolean indicating 
           if the point satisfies the location condition
         - **vecs**: list of integers
           Each integer must be in the range of 0 to vec - 1, specifying which 
@@ -98,13 +98,10 @@ class FiniteElement:
         self.num_quads = self.shape_vals.shape[0]
         self.num_nodes = self.shape_vals.shape[1]
         self.num_faces = self.face_shape_vals.shape[0]
-        self.shape_grads, self.JxW = self.get_shape_grads()
-        self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(self.dirichlet_bc_info)
-        
-        # (num_cells, num_quads, num_nodes, 1, dim)
-        self.v_grads_JxW = self.shape_grads[:, :, :, None, :] * self.JxW[:, :, None, None, None]
         self.num_face_quads = self.face_quad_weights.shape[1]
 
+        self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(self.dirichlet_bc_info)
+        
         end = time.time()
         compute_time = end - start
 
@@ -123,18 +120,18 @@ class FiniteElement:
 
         Returns
         -------
-        shape_grads_physical : NumpyArray
+        shape_grads_physical : JaxArray
             Shape is (num_cells, num_quads, num_nodes, dim).
-        JxW : NumpyArray
+        JxW : JaxArray
             Shape is (num_cells, num_quads).
         """
         assert self.shape_grads_ref.shape == (self.num_quads, self.num_nodes, self.dim)
-        physical_coos = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
+        physical_coos = np.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
         # (num_cells, num_quads, num_nodes, dim, dim) -> (num_cells, num_quads, 1, dim, dim)
-        jacobian_dx_deta = onp.sum(physical_coos[:, None, :, :, None] *
+        jacobian_dx_deta = np.sum(physical_coos[:, None, :, :, None] *
                                    self.shape_grads_ref[None, :, :, None, :], axis=2, keepdims=True)
-        jacobian_det = onp.linalg.det(jacobian_dx_deta)[:, :, 0]  # (num_cells, num_quads)
-        jacobian_deta_dx = onp.linalg.inv(jacobian_dx_deta)
+        jacobian_det = np.linalg.det(jacobian_dx_deta)[:, :, 0]  # (num_cells, num_quads)
+        jacobian_deta_dx = np.linalg.inv(jacobian_dx_deta)
         # (1, num_quads, num_nodes, 1, dim) @ (num_cells, num_quads, 1, dim, dim)
         # (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, dim)
         shape_grads_physical = (self.shape_grads_ref[None, :, :, None, :]
@@ -151,26 +148,26 @@ class FiniteElement:
 
         Parameters
         ----------
-        boundary_inds : list[NumpyArray]
+        boundary_inds : NumpyArray
             Shape is (num_selected_faces, 2).
 
         Returns
         -------
-        face_shape_grads_physical : NumpyArray
+        face_shape_grads_physical : JaxArray
             Shape is (num_selected_faces, num_face_quads, num_nodes, dim).
-        nanson_scale : NumpyArray
+        nanson_scale : JaxArray
             Shape is (num_selected_faces, num_face_quads).
         """
-        physical_coos = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
+        physical_coos = np.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
         selected_coos = physical_coos[boundary_inds[:, 0]]  # (num_selected_faces, num_nodes, dim)
         selected_f_shape_grads_ref = self.face_shape_grads_ref[boundary_inds[:, 1]]  # (num_selected_faces, num_face_quads, num_nodes, dim)
         selected_f_normals = self.face_normals[boundary_inds[:, 1]]  # (num_selected_faces, dim)
 
         # (num_selected_faces, 1, num_nodes, dim, 1) * (num_selected_faces, num_face_quads, num_nodes, 1, dim)
         # (num_selected_faces, num_face_quads, num_nodes, dim, dim) -> (num_selected_faces, num_face_quads, dim, dim)
-        jacobian_dx_deta = onp.sum(selected_coos[:, None, :, :, None] * selected_f_shape_grads_ref[:, :, :, None, :], axis=2)
-        jacobian_det = onp.linalg.det(jacobian_dx_deta)  # (num_selected_faces, num_face_quads)
-        jacobian_deta_dx = onp.linalg.inv(jacobian_dx_deta)  # (num_selected_faces, num_face_quads, dim, dim)
+        jacobian_dx_deta = np.sum(selected_coos[:, None, :, :, None] * selected_f_shape_grads_ref[:, :, :, None, :], axis=2)
+        jacobian_det = np.linalg.det(jacobian_dx_deta)  # (num_selected_faces, num_face_quads)
+        jacobian_deta_dx = np.linalg.inv(jacobian_dx_deta)  # (num_selected_faces, num_face_quads, dim, dim)
 
         # (1, num_face_quads, num_nodes, 1, dim) @ (num_selected_faces, num_face_quads, 1, dim, dim)
         # (num_selected_faces, num_face_quads, num_nodes, 1, dim) -> (num_selected_faces, num_face_quads, num_nodes, dim)
@@ -178,7 +175,7 @@ class FiniteElement:
 
         # (num_selected_faces, 1, 1, dim) @ (num_selected_faces, num_face_quads, dim, dim)
         # (num_selected_faces, num_face_quads, 1, dim) -> (num_selected_faces, num_face_quads)
-        nanson_scale = onp.linalg.norm((selected_f_normals[:, None, None, :] @ jacobian_deta_dx)[:, :, 0, :], axis=-1)
+        nanson_scale = np.linalg.norm((selected_f_normals[:, None, None, :] @ jacobian_deta_dx)[:, :, 0, :], axis=-1)
         selected_weights = self.face_quad_weights[boundary_inds[:, 1]]  # (num_selected_faces, num_face_quads)
         nanson_scale = nanson_scale * jacobian_det * selected_weights
         return face_shape_grads_physical, nanson_scale
@@ -188,12 +185,12 @@ class FiniteElement:
 
         Returns
         -------
-        physical_quad_points : NumpyArray
+        physical_quad_points : JaxArray
             Shape is (num_cells, num_quads, dim).
         """
-        physical_coos = onp.take(self.points, self.cells, axis=0)
+        physical_coos = np.take(self.points, self.cells, axis=0)
         # (1, num_quads, num_nodes, 1) * (num_cells, 1, num_nodes, dim) -> (num_cells, num_quads, dim)
-        physical_quad_points = onp.sum(self.shape_vals[None, :, :, None] * physical_coos[:, None, :, :], axis=2)
+        physical_quad_points = np.sum(self.shape_vals[None, :, :, None] * physical_coos[:, None, :, :], axis=2)
         return physical_quad_points
 
     def get_physical_surface_quad_points(self, boundary_inds):
@@ -201,19 +198,19 @@ class FiniteElement:
 
         Parameters
         ----------
-        boundary_inds : list[NumpyArray]
-            Shape for NumpyArray is (num_selected_faces, 2).
+        boundary_inds : NumpyArray
+            Shape is (num_selected_faces, 2).
 
         Returns
         -------
-        physical_surface_quad_points : NumpyArray
-            Shape for NumpyArray is (num_selected_faces, num_face_quads, dim).
+        physical_surface_quad_points : JaxArray
+            Shape is (num_selected_faces, num_face_quads, dim).
         """
-        physical_coos = onp.take(self.points, self.cells, axis=0)
+        physical_coos = np.take(self.points, self.cells, axis=0)
         selected_coos = physical_coos[boundary_inds[:, 0]]  # (num_selected_faces, num_nodes, dim)
         selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]]  # (num_selected_faces, num_face_quads, num_nodes)
         # (num_selected_faces, num_face_quads, num_nodes, 1) * (num_selected_faces, 1, num_nodes, dim) -> (num_selected_faces, num_face_quads, dim)
-        physical_surface_quad_points = onp.sum(selected_face_shape_vals[:, :, :, None] * selected_coos[:, None, :, :], axis=2)
+        physical_surface_quad_points = np.sum(selected_face_shape_vals[:, :, :, None] * selected_coos[:, None, :, :], axis=2)
         return physical_surface_quad_points
 
     def Dirichlet_boundary_conditions(self, dirichlet_bc_info):
@@ -226,11 +223,11 @@ class FiniteElement:
 
         Returns
         -------
-        node_inds_list : list[NumpyArray]
-            The value of the NumpyArray ranges from 0 to num_total_nodes - 1.
-        vec_inds_list : list[NumpyArray]
-            The value of the NumpyArray ranges from 0 to to vec - 1.
-        vals_list : list[NumpyArray]
+        node_inds_list : list[JaxArray]
+            The value of the JaxArray ranges from 0 to num_total_nodes - 1.
+        vec_inds_list : list[JaxArray]
+            The value of the JaxArray ranges from 0 to vec - 1.
+        vals_list : list[JaxArray]
             Dirichlet values to be assigned.
         """
         node_inds_list = []
@@ -248,9 +245,9 @@ class FiniteElement:
                 else:
                     raise ValueError(f"Wrong number of arguments for location_fn: must be 1 or 2, get {num_args}")
 
-                node_inds = onp.argwhere(jax.vmap(location_fn)(self.mesh.points, np.arange(self.num_total_nodes))).reshape(-1)
-                vec_inds = onp.ones_like(node_inds, dtype=onp.int32) * vecs[i]
-                values = jax.vmap(value_fns[i])(self.mesh.points[node_inds].reshape(-1, self.dim)).reshape(-1)
+                node_inds = np.argwhere(jax.vmap(location_fn)(self.points, np.arange(self.num_total_nodes))).reshape(-1)
+                vec_inds = np.ones_like(node_inds, dtype=np.int32) * vecs[i]
+                values = jax.vmap(value_fns[i])(self.points[node_inds].reshape(-1, self.dim)).reshape(-1)
                 node_inds_list.append(node_inds)
                 vec_inds_list.append(vec_inds)
                 vals_list.append(values)
@@ -273,7 +270,7 @@ class FiniteElement:
         Parameters
         ----------
         location_fns : list[callable]
-            The callable is a location function that inputs a point (NumpyArray) and returns if the point satisfies the location condition.
+            The callable is a location function that inputs a point and returns if the point satisfies the location condition.
             For example, ::
 
                 lambda x: np.isclose(x[0], 0.)
@@ -285,8 +282,8 @@ class FiniteElement:
 
         Returns
         -------
-        boundary_inds_list : list[NumpyArray]
-            Shape of NumpyArray is (num_selected_faces, 2).
+        boundary_inds_list : list[JaxArray]
+            Shape of JaxArray is (num_selected_faces, 2).
 
             boundary_inds_list[k][i, 0] returns the global cell index of the ith selected face of boundary subset k.
 
@@ -294,9 +291,9 @@ class FiniteElement:
         """
 
         # TODO: assume this works for all variables, and return the same result
-        cell_points = onp.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
-        cell_face_points = onp.take(cell_points, self.face_inds, axis=1)  # (num_cells, num_faces, num_face_vertices, dim)
-        cell_face_inds = onp.take(self.cells, self.face_inds, axis=1) # (num_cells, num_faces, num_face_vertices)
+        cell_points = np.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
+        cell_face_points = np.take(cell_points, self.face_inds, axis=1)  # (num_cells, num_faces, num_face_vertices, dim)
+        cell_face_inds = np.take(self.cells, self.face_inds, axis=1) # (num_cells, num_faces, num_face_vertices)
         boundary_inds_list = []
         if location_fns is not None:
             for i in range(len(location_fns)):
@@ -311,11 +308,11 @@ class FiniteElement:
                 vmap_location_fn = jax.vmap(location_fn)
                 def on_boundary(cell_points, cell_inds):
                     boundary_flag = vmap_location_fn(cell_points, cell_inds)
-                    return onp.all(boundary_flag)
+                    return np.all(boundary_flag)
 
                 vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
                 boundary_flags = vvmap_on_boundary(cell_face_points, cell_face_inds)
-                boundary_inds = onp.argwhere(boundary_flags)  # (num_selected_faces, 2)
+                boundary_inds = np.argwhere(boundary_flags)  # (num_selected_faces, 2)
                 boundary_inds_list.append(boundary_inds)
 
         return boundary_inds_list
@@ -346,7 +343,8 @@ class FiniteElement:
         ----------
         sol : JaxArray
             Shape is (num_total_nodes, vec).
-        boundary_inds : int
+        boundary_inds : NumpyArray
+            Shape is (num_selected_faces, 2).
 
         Returns
         -------

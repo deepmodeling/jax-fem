@@ -119,14 +119,37 @@ class Problem:
         self.num_total_dofs_all_vars = len(dumb_dofs)
 
         self.num_nodes_cumsum = onp.cumsum([0] + [fe.num_nodes for fe in self.fes])
-        # (num_cells, num_vars, num_quads)
-        self.JxW = onp.transpose(onp.stack([fe.JxW for fe in self.fes]), axes=(1, 0, 2)) 
-        # (num_cells, num_quads, num_nodes +..., dim)
-        self.shape_grads = onp.concatenate([fe.shape_grads for fe in self.fes], axis=2)
-        # (num_cells, num_quads, num_nodes + ..., 1, dim)
-        self.v_grads_JxW = onp.concatenate([fe.v_grads_JxW for fe in self.fes], axis=2)
 
-        # TODO: assert all vars quad points be the same
+        self.initialize_geometric_quantities()
+
+        self.internal_vars = ()
+        self.internal_vars_surfaces = [() for _ in range(len(self.boundary_inds_list))]
+        self.custom_init(*self.additional_info)
+        self.pre_jit_fns()
+
+    def initialize_geometric_quantities(self, fes_points=None):
+        """Initialize geometric quantities for the problem.
+        """
+        if fes_points is not None:
+            for i, fe in enumerate(self.fes):
+                # Purposely not update fe.mesh.points to make it retrievable.
+                fe.points = fes_points[i]
+
+        for i, fe in enumerate(self.fes):
+            # (num_cells, num_quads, num_nodes, dim), (num_cells, num_quads)
+            fe.shape_grads, fe.JxW = fe.get_shape_grads()
+            # (num_cells, num_quads, num_nodes, 1, dim)
+            fe.v_grads_JxW = fe.shape_grads[:, :, :, None, :] * fe.JxW[:, :, None, None, None]
+
+        # Use jax.numpy so differentiable nodal coords (JAX arrays) are not cast to NumPy here.
+        # (num_cells, num_vars, num_quads)
+        self.JxW = np.transpose(np.stack([fe.JxW for fe in self.fes]), axes=(1, 0, 2))
+        # (num_cells, num_quads, num_nodes +..., dim)
+        self.shape_grads = np.concatenate([fe.shape_grads for fe in self.fes], axis=2)
+        # (num_cells, num_quads, num_nodes + ..., 1, dim)
+        self.v_grads_JxW = np.concatenate([fe.v_grads_JxW for fe in self.fes], axis=2)
+
+        # TODO: Now assumes all vars share the same quad points
         # (num_cells, num_quads, dim)
         self.physical_quad_points = self.fes[0].get_physical_quad_points()  
 
@@ -138,7 +161,7 @@ class Problem:
             s_shape_grads = []
             n_scale = []
             s_shape_vals = []
-            for fe in self.fes:
+            for i, fe in enumerate(self.fes):
                 # (num_selected_faces, num_face_quads, num_nodes, dim), (num_selected_faces, num_face_quads)
                 face_shape_grads_physical, nanson_scale = fe.get_face_shape_grads(boundary_inds)  
                 selected_face_shape_vals = fe.face_shape_vals[boundary_inds[:, 1]]  # (num_selected_faces, num_face_quads, num_nodes)
@@ -147,24 +170,19 @@ class Problem:
                 s_shape_vals.append(selected_face_shape_vals)
 
             # (num_selected_faces, num_face_quads, num_nodes + ..., dim)
-            s_shape_grads = onp.concatenate(s_shape_grads, axis=2)
+            s_shape_grads = np.concatenate(s_shape_grads, axis=2)
             # (num_selected_faces, num_vars, num_face_quads)
-            n_scale = onp.transpose(onp.stack(n_scale), axes=(1, 0, 2))  
+            n_scale = np.transpose(np.stack(n_scale), axes=(1, 0, 2))
             # (num_selected_faces, num_face_quads, num_nodes + ...)
-            s_shape_vals = onp.concatenate(s_shape_vals, axis=2)
+            s_shape_vals = np.concatenate(s_shape_vals, axis=2)
             # (num_selected_faces, num_face_quads, dim)
             physical_surface_quad_points = self.fes[0].get_physical_surface_quad_points(boundary_inds) 
 
             self.selected_face_shape_grads.append(s_shape_grads)
             self.nanson_scale.append(n_scale)
             self.selected_face_shape_vals.append(s_shape_vals)
-            # TODO: assert all vars face quad points be the same
+            # TODO: Now assumes all vars share the same quad points
             self.physical_surface_quad_points.append(physical_surface_quad_points)
-
-        self.internal_vars = ()
-        self.internal_vars_surfaces = [() for _ in range(len(self.boundary_inds_list))]
-        self.custom_init(*self.additional_info)
-        self.pre_jit_fns()
 
     def custom_init(self):
         """Child class should override if more things need to be done in initialization

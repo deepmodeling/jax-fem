@@ -1,7 +1,5 @@
 # Differentiable mesh (nodal-coordinate derivatives)
 
-> **GitHub math:** This file uses `$...$` / `$$...$$`. GitHub’s Markdown parser can **eat underscores** used for TeX subscripts (e.g. `u_h` → `uh`) unless the subscript is **always braced** (`u_{h}`). Display blocks should be **one `$$` … `$$` chunk with no blank lines inside**. Cursor’s preview may differ slightly.
-
 This example shows how **JAX-FEM** can differentiate a scalar **objective** with respect to **nodal coordinates** $\mathbf{X}\in\mathbb{R}^{N\times d}$ of the mesh. The implementation uses **`ad_wrapper`** (implicit adjoint through the nonlinear solve). A small **gold finite-difference** check on two independent meshes is provided for one scalar component of $\partial J/\partial \mathbf{X}$.
 
 ---
@@ -23,36 +21,42 @@ $$
 We use a **manufactured** smooth solution
 
 $$
-u_{\mathrm{exact}}(x,y)=\sin(\pi x)\,(1+y),
+u^{\mathrm{ex}}(x,y)=\sin(\pi x)\,(1+y),
 $$
 
 so that the source $g$ is chosen consistently (see `NonlinearPoisson.get_mass_map` in `example.py`). On the bottom edge $y=0$,
 
 $$
-u_{\mathrm{exact}}(x,0)=\sin(\pi x)\neq 0 \quad\text{(except at corners)},
+u^{\mathrm{ex}}(x,0)=\sin(\pi x)\neq 0 \quad\text{(except at corners)},
 $$
 
 which makes the bottom nodes important (we will select one node at the bottom side to compare JAX-FEM with finite difference approach).
 
 ### Boundary conditions
 
-- **Dirichlet:** $u=0$ on $x=0$ and $x=1$; $u=2\sin(\pi x)$ on $y=1$ (matching $u_{\mathrm{exact}}$).
-- **Neumann** on $y=0$: outward normal $\mathbf{n}=(0,-1)$, flux data consistent with $u_{\mathrm{exact}}$ (implemented as the surface map in `get_surface_maps`).
+- **Dirichlet:** $u=0$ on $x=0$ and $x=1$; $u=2\sin(\pi x)$ on $y=1$ (matching $u^{\mathrm{ex}}$ on that edge).
+- **Neumann** on $y=0$: outward normal $\mathbf{n}=(0,-1)$, flux data consistent with $u^{\mathrm{ex}}$ (implemented as the surface map in `get_surface_maps`).
 
 ---
 
 ## Objective and mesh sensitivity
 
-Let $\mathbf{u}_{h}(\mathbf{X})$ be the discrete FEM solution (nodal values) obtained after solving the nonlinear system for fixed $\mathbf{X}$. Write $u_{h,i}$ for the scalar finite-element value at node $i$ (each $u_{h,i}$ depends on the full coordinate matrix $\mathbf{X}$). We define the scalar objective
+Let $\mathbf{U}(\mathbf{X})\in\mathbb{R}^N$ be the vector of nodal finite-element values after solving the nonlinear system for fixed $\mathbf{X}$. Write $U^{(i)}$ for the scalar at node $i$ (each entry depends on $\mathbf{X}$). This matches the scalar field stored in the code’s solution vector. The objective is
 
 $$
-J(\mathbf{X}) = \sum_{i=1}^{N} u_{h,i}^2,
+J(\mathbf{X}) = \sum_{i=1}^{N} \bigl(U^{(i)}\bigr)^2,
 $$
 
-i.e. the sum of squared nodal values. The quantity of interest for **shape / mesh sensitivity** is the **gradient** $\partial J/\partial \mathbf{X}$, a tensor of the same shape as $\mathbf{X}$, i.e. $(N,d)$. Its entries are the partial derivatives $\partial J/\partial X_{i,\alpha}$ for node index $i$ and spatial component index $\alpha\in\{1,\ldots,d\}$ (in 2D, $\alpha\in\{1,2\}$ are the two nodal coordinate directions; the VTK field `dJ_dxy` stores these two components per node).
+i.e. the sum of squared nodal values. The quantity of interest for **shape / mesh sensitivity** is the **gradient** of $J$ with respect to $\mathbf{X}$ (same $(N,d)$ layout as the nodal coordinates). Each entry is the partial derivative of $J$ with respect to one nodal coordinate:
 
-- **Automatic differentiation (AD):** `jax.value_and_grad` on a forward map that takes nodal positions $\mathbf{X}$, wrapped with `ad_wrapper(problem)`, returns $\partial J/\partial \mathbf{X}$ together with $J$ and the primal solution.
-- **Gold finite difference (FD):** `finite_difference.py` builds two **new** `Mesh` / `Problem` instances, perturbs one chosen node by $\pm\varepsilon$ along one axis, solves each side with the standard `solver`, and forms a central difference for $\partial J/\partial X_{i,\alpha}$ at that $(i,\alpha)$. This is a reference for the **same** scalar partial derivative (subject to nonlinear solver noise when $\varepsilon$ is small).
+$$
+\frac{\partial J}{\partial X_{i,\alpha}}
+$$
+
+for node index $i$ and spatial component index $\alpha$ (in 2D, $\alpha\in\{1,2\}$ match the two coordinate directions stored in the VTK field `dJ_dxy`).
+
+- **Automatic differentiation (AD):** `jax.value_and_grad` on a forward map that takes nodal positions $\mathbf{X}$, wrapped with `ad_wrapper(problem)`, returns the full gradient tensor together with $J$ and the primal solution.
+- **Gold finite difference (FD):** `finite_difference.py` builds two **new** `Mesh` / `Problem` instances, perturbs one chosen node by $\pm\varepsilon$ along one axis, solves each side with the standard `solver`, and forms a **central difference** for the **same** scalar entry (same $(i,\alpha)$ as above; subject to nonlinear solver noise when $\varepsilon$ is small).
 
 The script checks that the **number of Neumann faces** is unchanged under the FD perturbation; otherwise AD and FD would not be comparable (topology of the Neumann set can jump if the perturbation crosses the boundary-classification tolerance).
 
@@ -64,7 +68,7 @@ The script checks that the **number of Neumann faces** is unchanged under the FD
 |------|------|
 | `example.py` | Full driver: mesh, BCs, `ad_wrapper`, `value_and_grad`, gold FD, VTK export. |
 | `finite_difference.py` | `gold_fd_two_independent_problems`: two independent solves, central difference. |
-| `images/X.png`, `images/Y.png` | Screenshots of $\partial J/\partial X_{\cdot,1}$ and $\partial J/\partial X_{\cdot,2}$ in ParaView (side by side below). |
+| `images/X.png`, `images/Y.png` | Screenshots of the two coordinate components of the mesh gradient of $J$ (same information as `dJ_dxy`) in ParaView (side by side below). |
 
 ---
 
@@ -78,8 +82,8 @@ python -m applications.differentiable_mesh.example
 
 Outputs:
 
-- Console: discrete error $\lVert u_{h}-u_{\mathrm{exact}}\rVert_\infty$ and a one-line comparison of AD vs gold FD for the chosen perturbation.
-- `applications/differentiable_mesh/output/vtk/u.vtu`: solution, exact field, absolute error, and **`dJ_dxy`** (per node $i$: components $\partial J/\partial X_{i,1}$ and $\partial J/\partial X_{i,2}$).
+- Console: maximum nodal error against the exact solution at nodes, and a one-line comparison of AD vs gold FD for the chosen perturbation.
+- `applications/differentiable_mesh/output/vtk/u.vtu`: solution, exact field, absolute error, and **`dJ_dxy`** (two numbers per node: derivatives of $J$ w.r.t. that node’s first and second coordinate, matching the display formula above with $\alpha=1,2$).
 
 Open the VTU in **ParaView**, color by the first or second component of `dJ_dxy` (or split vectors). Results similar to:
 
@@ -90,7 +94,7 @@ Open the VTU in **ParaView**, color by the first or second component of `dJ_dxy`
   </tr>
 </table>
 
-The patterns reflect how moving each boundary/interior node affects the discrete energy $\sum_{i=1}^{N} u_{h,i}^2$ through the finite element procedures.
+The patterns reflect how moving each boundary or interior node affects the discrete energy (the same sum of squared nodal values as in the definition of $J$ above) through the finite element procedures.
 
 ---
 

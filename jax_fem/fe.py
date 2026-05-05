@@ -109,7 +109,7 @@ class FiniteElement:
         logger.info(f"Solving a problem with {len(self.cells)} cells, {self.num_total_nodes}x{self.vec} = {self.num_total_dofs} dofs.")
         logger.info(f"Element type is {self.ele_type}, using {self.num_quads} quad points per element.")
 
-    def get_shape_grads(self):
+    def get_shape_grads(self, points=None):
         """Compute shape function gradient value.
 
         The gradient is w.r.t physical coordinates. 
@@ -125,8 +125,9 @@ class FiniteElement:
         JxW : JaxArray
             Shape is (num_cells, num_quads).
         """
+        points = self.points if points is None else points
         assert self.shape_grads_ref.shape == (self.num_quads, self.num_nodes, self.dim)
-        physical_coos = np.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
+        physical_coos = np.take(points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
         # (num_cells, num_quads, num_nodes, dim, dim) -> (num_cells, num_quads, 1, dim, dim)
         jacobian_dx_deta = np.sum(physical_coos[:, None, :, :, None] *
                                    self.shape_grads_ref[None, :, :, None, :], axis=2, keepdims=True)
@@ -139,7 +140,7 @@ class FiniteElement:
         JxW = jacobian_det * self.quad_weights[None, :]
         return shape_grads_physical, JxW
 
-    def get_face_shape_grads(self, boundary_inds):
+    def get_face_shape_grads(self, boundary_inds, points=None):
         """Face shape function gradients and JxW (for surface integral).
         Nanson's formula is used to map physical surface ingetral to reference domain.
         Refer to 
@@ -158,7 +159,8 @@ class FiniteElement:
         nanson_scale : JaxArray
             Shape is (num_selected_faces, num_face_quads).
         """
-        physical_coos = np.take(self.points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
+        points = self.points if points is None else points
+        physical_coos = np.take(points, self.cells, axis=0)  # (num_cells, num_nodes, dim)
         selected_coos = physical_coos[boundary_inds[:, 0]]  # (num_selected_faces, num_nodes, dim)
         selected_f_shape_grads_ref = self.face_shape_grads_ref[boundary_inds[:, 1]]  # (num_selected_faces, num_face_quads, num_nodes, dim)
         selected_f_normals = self.face_normals[boundary_inds[:, 1]]  # (num_selected_faces, dim)
@@ -180,7 +182,7 @@ class FiniteElement:
         nanson_scale = nanson_scale * jacobian_det * selected_weights
         return face_shape_grads_physical, nanson_scale
 
-    def get_physical_quad_points(self):
+    def get_physical_quad_points(self, points=None):
         """Compute physical quadrature points
 
         Returns
@@ -188,12 +190,13 @@ class FiniteElement:
         physical_quad_points : JaxArray
             Shape is (num_cells, num_quads, dim).
         """
-        physical_coos = np.take(self.points, self.cells, axis=0)
+        points = self.points if points is None else points
+        physical_coos = np.take(points, self.cells, axis=0)
         # (1, num_quads, num_nodes, 1) * (num_cells, 1, num_nodes, dim) -> (num_cells, num_quads, dim)
         physical_quad_points = np.sum(self.shape_vals[None, :, :, None] * physical_coos[:, None, :, :], axis=2)
         return physical_quad_points
 
-    def get_physical_surface_quad_points(self, boundary_inds):
+    def get_physical_surface_quad_points(self, boundary_inds, points=None):
         """Compute physical quadrature points on the surface
 
         Parameters
@@ -206,7 +209,8 @@ class FiniteElement:
         physical_surface_quad_points : JaxArray
             Shape is (num_selected_faces, num_face_quads, dim).
         """
-        physical_coos = np.take(self.points, self.cells, axis=0)
+        points = self.points if points is None else points
+        physical_coos = np.take(points, self.cells, axis=0)
         selected_coos = physical_coos[boundary_inds[:, 0]]  # (num_selected_faces, num_nodes, dim)
         selected_face_shape_vals = self.face_shape_vals[boundary_inds[:, 1]]  # (num_selected_faces, num_face_quads, num_nodes)
         # (num_selected_faces, num_face_quads, num_nodes, 1) * (num_selected_faces, 1, num_nodes, dim) -> (num_selected_faces, num_face_quads, dim)

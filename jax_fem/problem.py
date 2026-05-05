@@ -130,14 +130,11 @@ class Problem:
     def initialize_geometric_quantities(self, fes_points=None):
         """Initialize geometric quantities for the problem.
         """
-        if fes_points is not None:
-            for i, fe in enumerate(self.fes):
-                # Purposely not update fe.mesh.points to make it retrievable.
-                fe.points = fes_points[i]
+        fes_points = [fe.points for fe in self.fes] if fes_points is None else fes_points
 
         for i, fe in enumerate(self.fes):
             # (num_cells, num_quads, num_nodes, dim), (num_cells, num_quads)
-            fe.shape_grads, fe.JxW = fe.get_shape_grads()
+            fe.shape_grads, fe.JxW = fe.get_shape_grads(fes_points[i])
             # (num_cells, num_quads, num_nodes, 1, dim)
             fe.v_grads_JxW = fe.shape_grads[:, :, :, None, :] * fe.JxW[:, :, None, None, None]
 
@@ -151,7 +148,7 @@ class Problem:
 
         # TODO: Now assumes all vars share the same quad points
         # (num_cells, num_quads, dim)
-        self.physical_quad_points = self.fes[0].get_physical_quad_points()  
+        self.physical_quad_points = self.fes[0].get_physical_quad_points(fes_points[0])  
 
         self.selected_face_shape_grads = []
         self.nanson_scale = []
@@ -163,7 +160,7 @@ class Problem:
             s_shape_vals = []
             for i, fe in enumerate(self.fes):
                 # (num_selected_faces, num_face_quads, num_nodes, dim), (num_selected_faces, num_face_quads)
-                face_shape_grads_physical, nanson_scale = fe.get_face_shape_grads(boundary_inds)  
+                face_shape_grads_physical, nanson_scale = fe.get_face_shape_grads(boundary_inds, fes_points[i])  
                 selected_face_shape_vals = fe.face_shape_vals[boundary_inds[:, 1]]  # (num_selected_faces, num_face_quads, num_nodes)
                 s_shape_grads.append(face_shape_grads_physical)
                 n_scale.append(nanson_scale)
@@ -176,7 +173,7 @@ class Problem:
             # (num_selected_faces, num_face_quads, num_nodes + ...)
             s_shape_vals = np.concatenate(s_shape_vals, axis=2)
             # (num_selected_faces, num_face_quads, dim)
-            physical_surface_quad_points = self.fes[0].get_physical_surface_quad_points(boundary_inds) 
+            physical_surface_quad_points = self.fes[0].get_physical_surface_quad_points(boundary_inds, fes_points[0]) 
 
             self.selected_face_shape_grads.append(s_shape_grads)
             self.nanson_scale.append(n_scale)

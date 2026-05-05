@@ -25,7 +25,7 @@ In this example, displacement is prescribed on left/right faces. Right-face disp
 Kirchhoff stress:
 
 $$
-\tau(F) = \mu (b - I) + \lambda \ln J \, I,
+\tau(F) = \mu (b - I) + \lambda \ln J I,
 \qquad
 b = F F^{\mathsf T},
 \qquad
@@ -53,37 +53,33 @@ $$
 Start from the weak form on the Eulerian configuration:
 
 $$
-\int_{\omega^n} \sigma : \nabla_x v \, dv^n = 0.
+\int_{\omega^n} \sigma : \nabla_x v dv^n = 0.
 $$
 
 Use the map $x = \varphi(x^{n-1})$, with
 
 $$
-dv^n = J_{\text{inc}} \, dv^{n-1},
+dv^n = J_{\text{inc}} dv^{n-1},
 \qquad
-\nabla_x v = \nabla_{x^{n-1}} v \, F_{\text{inc}}^{-1}.
+\nabla_x v = \nabla_{x^{n-1}} v F_{\text{inc}}^{-1}.
 $$
 
 Then
 
 $$
-\int_{\omega^n} \sigma : \nabla_x v \, dv^n
-=
-\int_{\omega^{n-1}} J_{\text{inc}} \, \sigma F_{\text{inc}}^{-\mathsf T}
-: \nabla_{x^{n-1}} v \, dv^{n-1}
-= 0.
+\int_{\omega^n} \sigma : \nabla_x v dv^n = \int_{\omega^{n-1}} J_{\text{inc}} \sigma F_{\text{inc}}^{-\mathsf T} : \nabla_{x^{n-1}} v dv^{n-1} = 0.
 $$
 
 Define
 
 $$
-T_{\text{pull}} = J_{\text{inc}} \, \sigma F_{\text{inc}}^{-\mathsf T},
+T_{\text{pull}} = J_{\text{inc}} \sigma F_{\text{inc}}^{-\mathsf T},
 $$
 
 so the implemented weak form is
 
 $$
-\int_{\omega^{n-1}} T_{\text{pull}} : \nabla_{x^{n-1}} v \, dv^{n-1} = 0.
+\int_{\omega^{n-1}} T_{\text{pull}} : \nabla_{x^{n-1}} v dv^{n-1} = 0.
 $$
 
 This matches code variables in `get_universal_kernel`: `F_inc`, `F`, `tau`, `cauchy`, `J_inc`, `F_inc_inv_T`, `T_pull`, and contraction with `cell_v_grads_JxW`.
@@ -107,15 +103,9 @@ In code:
 
 ## 5) Load Schedule and Incremental Dirichlet Data
 
-Load factor at step $n$:
+The loading process is divided into several steps. At each step $n$, the load factor $\lambda$ is calculated as: $n$ divided by the total number of load steps, where $n$ runs from 1 up to the total number of steps.
 
-$$
-\lambda^n = \frac{n}{\texttt{LOAD\_SCHEDULE\_STEPS}},
-\qquad
-n = 1,\ldots,\texttt{N\_STEPS}.
-$$
-
-Incremental Dirichlet data:
+The incremental Dirichlet boundary data for each step is determined by taking the difference between the total displacement at the current load factor and the total displacement at the previous load factor.
 
 $$
 \Delta u_\Gamma

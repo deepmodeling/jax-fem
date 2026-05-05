@@ -5,10 +5,17 @@ import numpy as onp
 from jax.experimental.sparse import BCOO
 import scipy
 import time
-from petsc4py import PETSc
 from jax_fem import logger
 from jax import config
 config.update("jax_enable_x64", True)
+
+
+try:
+    from petsc4py import PETSc
+    PETSC_AVAILABLE = True
+except ImportError:
+    PETSc = None
+    PETSC_AVAILABLE = False
 
 
 try:
@@ -22,22 +29,41 @@ except ImportError:
 ################################################################################
 # JAX solver or scipy solver or PETSc solver
 
+def _require_petsc():
+    if not PETSC_AVAILABLE:
+        raise RuntimeError(
+            "PETSc support requires 'petsc4py'. Install petsc4py or use a "
+            "non-PETSc solver/matrix path such as get_A_scipy(problem)."
+        )
+    return PETSc
+
+
+def _csr_to_petsc(A_sp_scipy):
+    PETSc = _require_petsc()
+    A_sp_scipy = scipy.sparse.csr_array(A_sp_scipy)
+    return PETSc.Mat().createAIJ(
+        size=A_sp_scipy.shape,
+        csr=(A_sp_scipy.indptr.astype(PETSc.IntType, copy=False),
+             A_sp_scipy.indices.astype(PETSc.IntType, copy=False),
+             A_sp_scipy.data)
+    )
+
+
 def jax_solve(A, b, x0, precond):
     logger.debug(f"JAX Solver - Solving linear system")
-    indptr, indices, data = A.getValuesCSR()
-    A_sp_scipy = scipy.sparse.csr_array((data, indices, indptr), shape=A.getSize())
-    A = BCOO.from_scipy_sparse(A_sp_scipy).sort_indices()
-    jacobi = np.array(A_sp_scipy.diagonal())
+    A = scipy.sparse.csr_array(A)
+    A = A.astype(complex) if np.issubdtype(A.dtype, np.complexfloating) else A
+    A_bcoo = BCOO.from_scipy_sparse(A).sort_indices()
+    jacobi = np.array(A.diagonal())
     pc = lambda x: x * (1. / jacobi) if precond else None
-    
-    if issubclass(PETSc.ScalarType, np.complexfloating):
-        logger.debug("JAX Solver - Using PETSc with complex number support")
-        A = A.astype(complex)
+
+    if np.issubdtype(A.dtype, np.complexfloating):
+        logger.debug("JAX Solver - Using complex number support")
         b = b.astype(complex)
         if x0 is not None:
             x0 = x0.astype(complex)
 
-    x, info = jax.scipy.sparse.linalg.bicgstab(A,
+    x, info = jax.scipy.sparse.linalg.bicgstab(A_bcoo,
                                                b,
                                                x0=x0,
                                                M=pc,
@@ -46,7 +72,7 @@ def jax_solve(A, b, x0, precond):
                                                maxiter=10000)
 
     # Verify convergence
-    err = np.linalg.norm(A @ x - b)
+    err = np.linalg.norm(A_bcoo @ x - b)
     logger.debug(f"JAX Solver - Finshed solving, res = {err}")
     assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
     x = np.where(err < 0.1, x, np.nan) # For assert purpose, somehow this also affects bicgstab.
@@ -55,8 +81,7 @@ def jax_solve(A, b, x0, precond):
 
 def scipy_spsolve(A, b):
     logger.debug("Scipy Solver - Solving linear system with scipy.sparse.linalg.spsolve")
-    indptr, indices, data = A.getValuesCSR()
-    Asp = scipy.sparse.csr_matrix((data, indices, indptr))
+    Asp = scipy.sparse.csr_matrix(A)
     # SciPy's spsolve uses UMFPACK only when scikits.umfpack is installed and
     # applicable; otherwise it falls back to SuperLU.
     x = scipy.sparse.linalg.spsolve(Asp, onp.array(b))
@@ -68,6 +93,8 @@ def scipy_spsolve(A, b):
     return x
 
 def petsc_solve(A, b, ksp_type, pc_type):
+    PETSc = _require_petsc()
+    A = _csr_to_petsc(A)
     rhs = PETSc.Vec().createSeq(len(b))
     rhs.setValues(range(len(b)), onp.array(b))
     ksp = PETSc.KSP().create()
@@ -176,7 +203,7 @@ def linear_solver(A, b, x0, solver_options):
         precond = solver_options['jax_solver']['precond'] if 'precond' in solver_options['jax_solver'] else True
         x = jax_solve(A, b, x0, precond)
     elif 'amgx_solver' in solver_options:
-        x = AMGX_solve(A, b, x0)
+        x = AMGX_solve(BCOO.from_scipy_sparse(A).sort_indices(), b, x0)
     elif 'spsolve_solver' in solver_options:
         x = scipy_spsolve(A, b)
     elif 'petsc_solver' in solver_options:   
@@ -356,30 +383,48 @@ def line_search(problem, dofs, inc):
     return dofs + alpha*inc
 
 
-def get_A(problem):
+def get_A_scipy(problem):
+    """Return the tangent matrix as a SciPy CSR sparse array."""
     logger.debug(f"Creating sparse matrix with scipy...")
     A_sp_scipy = scipy.sparse.csr_array((onp.array(problem.V), (problem.I, problem.J)),
         shape=(problem.num_total_dofs_all_vars, problem.num_total_dofs_all_vars))
     # logger.info(f"Global sparse matrix takes about {A_sp_scipy.data.shape[0]*8*3/2**30} G memory to store.")
 
-    A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape, 
-                              csr=(A_sp_scipy.indptr.astype(PETSc.IntType, copy=False),
-                                   A_sp_scipy.indices.astype(PETSc.IntType, copy=False), 
-                                   A_sp_scipy.data))
+    bc_rows = []
 
     for ind, fe in enumerate(problem.fes):
         for i in range(len(fe.node_inds_list)):
             row_inds = onp.array(fe.node_inds_list[i] * fe.vec + fe.vec_inds_list[i] + problem.offset[ind], dtype=onp.int32)
-            A.zeroRows(row_inds)
+            bc_rows.append(row_inds)
+
+    if bc_rows:
+        bc_rows = onp.unique(onp.concatenate(bc_rows))
+        A_sp_scipy = A_sp_scipy.tocsr(copy=True)
+        missing_diag_rows = []
+        for row_ind in bc_rows:
+            row_start, row_end = A_sp_scipy.indptr[row_ind], A_sp_scipy.indptr[row_ind + 1]
+            A_sp_scipy.data[row_start:row_end] = 0.
+            diag_inds = onp.where(A_sp_scipy.indices[row_start:row_end] == row_ind)[0]
+            if len(diag_inds) > 0:
+                A_sp_scipy.data[row_start + diag_inds[0]] = 1.
+            else:
+                missing_diag_rows.append(row_ind)
+        if missing_diag_rows:
+            A_sp_scipy[missing_diag_rows, missing_diag_rows] = 1.
+        A_sp_scipy.eliminate_zeros()
 
     # Linear multipoint constraints
     if hasattr(problem, 'P_mat'):
-        P = PETSc.Mat().createAIJ(size=problem.P_mat.shape, csr=(problem.P_mat.indptr.astype(PETSc.IntType, copy=False),
-                                                   problem.P_mat.indices.astype(PETSc.IntType, copy=False), problem.P_mat.data))
+        P = scipy.sparse.csr_array(problem.P_mat)
+        A_sp_scipy = P.T @ A_sp_scipy @ P
 
-        tmp = A.matMult(P)
-        P_T = P.transpose()
-        A = P_T.matMult(tmp)
+    return scipy.sparse.csr_array(A_sp_scipy)
+
+
+def get_A(problem):
+    """Return the tangent matrix as a PETSc AIJ matrix."""
+    A_sp_scipy = get_A_scipy(problem)
+    A = _csr_to_petsc(A_sp_scipy)
 
     return A
 
@@ -524,7 +569,7 @@ def solver(problem, solver_options={}):
         if hasattr(problem, 'P_mat'):
             res_vec = problem.P_mat.T @ res_vec
 
-        A = get_A(problem)
+        A = get_A_scipy(problem)
         return res_vec, A
 
     res_vec, A = newton_update_helper(dofs)
@@ -581,7 +626,7 @@ def arc_length_solver_disp_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_
         res_list = problem.newton_update(sol_list)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem, lamda)
-        A = get_A(problem)
+        A = get_A_scipy(problem)
         return res_vec, A
 
     def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
@@ -659,7 +704,7 @@ def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u
         res_list = problem.newton_update(sol_list)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem)
-        A = get_A(problem)
+        A = get_A_scipy(problem)
         return res_vec, A
 
     def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
@@ -812,7 +857,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
         res_list = problem.newton_update(sol_list)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem)
-        A = get_A(problem)
+        A = get_A_scipy(problem)
         return res_vec, A
  
     dofs = np.zeros(problem.num_total_dofs_all_vars)
@@ -963,13 +1008,12 @@ def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
     problem.set_params(params)
     problem.newton_update(sol_list)
 
-    A = get_A(problem)
+    A = get_A_scipy(problem)
     v_vec = jax.flatten_util.ravel_pytree(v_list)[0]
 
     if hasattr(problem, 'P_mat'):
         v_vec = problem.P_mat.T @ v_vec
 
-    # Be careful that A.transpose() does in-place change to A
     adjoint_vec = linear_solver(A.transpose(), v_vec, None, adjoint_solver_options)
 
     if hasattr(problem, 'P_mat'):

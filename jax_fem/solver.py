@@ -13,10 +13,11 @@ config.update("jax_enable_x64", True)
 
 try:
     import pyamgx
+    pyamgx.initialize()
     PYAMGX_AVAILABLE = True
+    logger.info("pyamgx installed, AMGX solver enabled.")
 except ImportError:
     PYAMGX_AVAILABLE = False
-    logger.info("pyamgx not installed. AMGX solver disabled.")
 
 
 ################################################################################
@@ -94,78 +95,130 @@ def petsc_solve(A, b, ksp_type, pc_type):
 
     return x.getArray()
 
-def AMGX_solve_host(A, x, b):
-    dtype, shape = b.dtype, b.shape
-    A = scipy.sparse.csr_matrix((A.data, (A.indices[:, 0], A.indices[:, 1])), shape=A.shape)
-    b = onp.array(b)
-    x_guess = onp.array(x)
-    # setup AmgX solver
-    # Initialize PyAMGX
-    pyamgx.initialize()
-    ## For solver options: https://github.com/NVIDIA/AMGX/tree/main/src/configs
-    # Create resources
-    cfg = pyamgx.Config().create_from_dict({
-         "config_version": 2,
-        "determinism_flag": 1,
-        "exception_handling": 1,
-        "solver": {
-            "solver": "BICGSTAB",  # "CG", BICGSTAB
-            #change to PBICGSTAB to use preconditioners
-            "use_scalar_norm": 1,
-            "norm": "L2",
-            "tolerance": 1e-10,
-            "monitor_residual": 1,
-            "max_iters": 10000,
-            "convergence": "ABSOLUTE",  # RELATIVE_INI_CORE
-            "monitor_residual": 1,
-            # "print_solve_stats": 1,
-            "preconditioner": { 
-                "scope": "amg",
-                "solver": "AMG",
-                "algorithm": "CLASSICAL",
-                "smoother": "JACOBI",
-                "cycle": "V",
-                "max_levels": 10,
-                "max_iters": 2
+def AMGX_solve_host(indptr, indices, data, shape_arr, x, b, cfg_path):
+    dtype, shape_b = b.dtype, b.shape
+
+    n_rows = int(shape_arr[0])
+    n_cols = int(shape_arr[1])
+
+    A_csr = scipy.sparse.csr_matrix(
+        (data, indices, indptr),
+        shape=(n_rows, n_cols)
+    )
+
+    b_host = onp.asarray(b)
+    x_guess = onp.zeros_like(b_host) if x is None else onp.asarray(x)
+
+    cfg = None
+    resources = None
+    solver = None
+    A_amg = None
+    b_amg = None
+    x_amg = None
+
+    try:
+        ## See: https://github.com/NVIDIA/AMGX/tree/main/src/configs
+        if cfg_path is not None:
+            cfg = pyamgx.Config().create_from_file(cfg_path)
+        else:
+            cfg = pyamgx.Config().create_from_dict({
+            "config_version": 2,
+            "determinism_flag": 1,
+            "exception_handling": 1,
+            "solver": {
+                "solver": "BICGSTAB",  # "CG", BICGSTAB
+                #change to PBICGSTAB to use preconditioners
+                "use_scalar_norm": 1,
+                "norm": "L2",
+                "tolerance": 1e-10,
+                "monitor_residual": 1,
+                "max_iters": 10000,
+                "convergence": "ABSOLUTE",  # RELATIVE_INI_CORE
+                "monitor_residual": 1,
+                # "print_solve_stats": 1,
+                "preconditioner": { 
+                    "scope": "amg",
+                    "solver": "AMG",
+                    "algorithm": "CLASSICAL",
+                    "smoother": "JACOBI",
+                    "cycle": "V",
+                    "max_levels": 10,
+                    "max_iters": 2
+                }
             }
-        }
-    })
+        })
+        
+        # Create resources
+        resources = pyamgx.Resources().create_simple(cfg)
+        solver = pyamgx.Solver().create(resources, cfg)
 
-    resources = pyamgx.Resources().create_simple(cfg)
-    solver = pyamgx.Solver().create(resources, cfg)
-    # Create matrix and vector objects
-    A_amg = pyamgx.Matrix().create(resources)
-    b_amg = pyamgx.Vector().create(resources)
-    x_amg = pyamgx.Vector().create(resources)
-    # ======
-    # Upload data to PyAMGX objects
-    A_amg.upload_CSR(A)
-    b_amg.upload(b)
-    x_amg.upload(x_guess)
-    # logger.debug(f"Setting up the AMGx solver...")
-    solver.setup(A_amg)
-    solver.solve(b_amg, x_amg)
-    # Download the result
-    result = x_amg.download()
-    # Cleanup
-    x_amg.destroy()
-    b_amg.destroy()
-    A_amg.destroy()
-    solver.destroy()
-    cfg.destroy()
-    resources.destroy()
-    # Finalize PyAMGX
-    pyamgx.finalize()
-    logger.info(f'AMGX Solver - Finished solving, linear solve res = {np.linalg.norm(A @ result - b)}')
-    return result.astype(dtype).reshape(shape)
+        A_amg = pyamgx.Matrix().create(resources)
+        b_amg = pyamgx.Vector().create(resources)
+        x_amg = pyamgx.Vector().create(resources)
 
-def AMGX_solve(A, b, x0):
+        A_amg.upload_CSR(A_csr)
+        b_amg.upload(b_host)
+        x_amg.upload(x_guess)
+
+        solver.setup(A_amg)
+        solver.solve(b_amg, x_amg)
+
+        result = x_amg.download()
+        result = onp.asarray(result)
+
+        res = onp.linalg.norm(A_csr @ result - b_host)
+        logger.info(f"AMGX Solver - Finished solving, linear solve res = {res}")
+
+        return result.astype(dtype).reshape(shape_b)
+
+    finally:
+        if x_amg is not None:
+            x_amg.destroy()
+        if b_amg is not None:
+            b_amg.destroy()
+        if A_amg is not None:
+            A_amg.destroy()
+        if solver is not None:
+            solver.destroy()
+        if resources is not None:
+            resources.destroy()
+        if cfg is not None:
+            cfg.destroy()
+        
+        # pyamgx.finalize()
+
+def AMGX_solve(A, b, x0, cfg_path):
+
     if not PYAMGX_AVAILABLE:
-        raise RuntimeError("AMGX disabled: 'pyamgx' not installed")
+        raise RuntimeError("pyamgx not installed. AMGX solver disabled.")
+
+    # A is PETSc.Mat here.
+    indptr, indices, data = A.getValuesCSR()
+    n_rows, n_cols = A.getSize()
+
+    # Convert to numpy arrays directly to avoid JAX device memory copy overhead
+    indptr = onp.asarray(indptr, dtype=onp.int32)
+    indices = onp.asarray(indices, dtype=onp.int32)
+
+    # Keep matrix data dtype consistent with b.
+    data = onp.asarray(data, dtype=onp.asarray(b).dtype)
+
+    shape_arr = onp.array([n_rows, n_cols], dtype=onp.int64)
+
+    if x0 is None:
+        x0 = np.zeros_like(b)
 
     result_shape = jax.ShapeDtypeStruct(b.shape, b.dtype)
-    return jax.pure_callback(AMGX_solve_host, result_shape, A,x0,b)
 
+    def amgx_solve_callback(x, b_in):
+        return AMGX_solve_host(indptr, indices, data, shape_arr, x, b_in, cfg_path)
+
+    return jax.pure_callback(
+        amgx_solve_callback,
+        result_shape,
+        x0,
+        b
+    )
 
 def linear_solver(A, b, x0, solver_options):
     # If user does not specify any solver, set jax_solver as the default one.
@@ -176,7 +229,8 @@ def linear_solver(A, b, x0, solver_options):
         precond = solver_options['jax_solver']['precond'] if 'precond' in solver_options['jax_solver'] else True
         x = jax_solve(A, b, x0, precond)
     elif 'amgx_solver' in solver_options:
-        x = AMGX_solve(A, b, x0)
+        cfg_path = solver_options['amgx_solver']['cfg_path'] if 'cfg_path' in solver_options['amgx_solver'] else None
+        x = AMGX_solve(A, b, x0, cfg_path)
     elif 'spsolve_solver' in solver_options:
         x = scipy_spsolve(A, b)
     elif 'petsc_solver' in solver_options:   
@@ -347,7 +401,7 @@ def line_search(problem, dofs, inc):
     for i in range(3):
         alpha *= 0.5
         res_norm_half = res_norm_fn(alpha)
-        print(f"i = {i}, res_norm = {res_norm}, res_norm_half = {res_norm_half}")
+        logger.debug(f"i = {i}, res_norm = {res_norm}, res_norm_half = {res_norm_half}")
         if res_norm_half > res_norm:
             alpha *= 2.
             break

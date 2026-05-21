@@ -20,7 +20,7 @@ class Mesh():
     cells: NumpyArray
         Shape is (num_cells, num_nodes).
     """
-    def __init__(self, points, cells, ele_type):
+    def __init__(self, points, cells, ele_type=None):
         # TODO (Very important for debugging purpose!): Assert that cells must have correct orders
         self.points = np.asarray(points)
         self.cells = np.asarray(cells)

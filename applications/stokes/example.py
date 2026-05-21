@@ -95,7 +95,7 @@ class StokesFlow(Problem):
                     node1, node2 = ind_map(pos_ind)
                     boundary_inds += [c, cell[node1], cell[node2]]
  
-        boundary_inds = onp.array(list(set(boundary_inds)))
+        boundary_inds = onp.array(list(set(onp.array(boundary_inds))))
         valid_inds = onp.argwhere((points_u[boundary_inds][:, 0] < 1 - 1e-5) &  
                                   (points_u[boundary_inds][:, 0] > 1e-5)  ).reshape(-1)
         boundary_inds = boundary_inds[valid_inds]

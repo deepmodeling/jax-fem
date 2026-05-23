@@ -554,7 +554,7 @@ def solver(problem, solver_options={}):
     start = time.time()
 
     if 'initial_guess' in solver_options:
-        # We dont't want inititual guess to play a role in the differentiation chain.
+        # We don't want inititual guess to play a role in the differentiation chain.
         initial_guess = jax.lax.stop_gradient(solver_options['initial_guess'])
         dofs = jax.flatten_util.ravel_pytree(initial_guess)[0]
     else:

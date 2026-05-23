@@ -622,7 +622,7 @@ def solver(problem, solver_options={}):
 ################################################################################
 # The "arc length" solver
 # Reference: Vasios, Nikolaos. "Nonlinear analysis of structures." The Arc-Length method. Harvard (2015).
-# Our implementation follows the Crisfeld's formulation
+# Our implementation follows the Crisfeld's formulation.
 
 # TODO: Do we want to merge displacement-control and force-control codes?
 

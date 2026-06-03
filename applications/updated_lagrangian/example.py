@@ -217,6 +217,7 @@ def end_to_end_ul(rho_design, problem, fe0, fwd_pred, aut=False):
         sol_list = fwd_pred(params)
         delta_u = sol_list[0]
         delta_us.append(delta_u)
+        # Remark: Can't use fe0.shape_grads here because during adjoint tracking, the values will be wrong.
         F_prev = push_F_prev(fe0, x_frozen, delta_u, F_prev)
         u_cum = u_cum + delta_u
         lam_prev = lam

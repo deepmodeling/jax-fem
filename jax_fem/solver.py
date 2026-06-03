@@ -410,21 +410,45 @@ def line_search(problem, dofs, inc):
     return dofs + alpha*inc
 
 
+class _PetscTangentCache:
+    """Reusable full-space PETSc tangent built from fixed ``problem.I/J`` COO pattern."""
+
+    def __init__(self, problem):
+        n = problem.num_total_dofs_all_vars
+        coo_i = onp.asarray(problem.I, dtype=PETSc.IntType)
+        coo_j = onp.asarray(problem.J, dtype=PETSc.IntType)
+        self.mat = PETSc.Mat().createAIJ(size=(n, n))
+        self.mat.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)
+        self.mat.setPreallocationCOO(coo_i, coo_j)
+        self.bc_row_inds_list = []
+        for ind, fe in enumerate(problem.fes):
+            for i in range(len(fe.node_inds_list)):
+                row_inds = onp.array(
+                    fe.node_inds_list[i] * fe.vec + fe.vec_inds_list[i] + problem.offset[ind],
+                    dtype=onp.int32,
+                )
+                self.bc_row_inds_list.append(row_inds)
+
+    def update(self, problem):
+        values = onp.asarray(problem.V, dtype=onp.float64)
+        self.mat.setValuesCOO(values)
+        self.mat.assemble()
+        for row_inds in self.bc_row_inds_list:
+            self.mat.zeroRows(row_inds)
+        return self.mat
+
+
+def _get_petsc_tangent_cache(problem):
+    cache = getattr(problem, '_petsc_tangent_cache', None)
+    if cache is None:
+        cache = _PetscTangentCache(problem)
+        problem._petsc_tangent_cache = cache
+    return cache
+
+
 def get_A(problem):
-    logger.debug(f"Creating sparse matrix with scipy...")
-    A_sp_scipy = scipy.sparse.csr_array((onp.array(problem.V), (problem.I, problem.J)),
-        shape=(problem.num_total_dofs_all_vars, problem.num_total_dofs_all_vars))
-    # logger.info(f"Global sparse matrix takes about {A_sp_scipy.data.shape[0]*8*3/2**30} G memory to store.")
-
-    A = PETSc.Mat().createAIJ(size=A_sp_scipy.shape, 
-                              csr=(A_sp_scipy.indptr.astype(PETSc.IntType, copy=False),
-                                   A_sp_scipy.indices.astype(PETSc.IntType, copy=False), 
-                                   A_sp_scipy.data))
-
-    for ind, fe in enumerate(problem.fes):
-        for i in range(len(fe.node_inds_list)):
-            row_inds = onp.array(fe.node_inds_list[i] * fe.vec + fe.vec_inds_list[i] + problem.offset[ind], dtype=onp.int32)
-            A.zeroRows(row_inds)
+    logger.debug("Updating cached PETSc tangent from COO values...")
+    A = _get_petsc_tangent_cache(problem).update(problem)
 
     # Linear multipoint constraints
     if hasattr(problem, 'P_mat'):
@@ -436,6 +460,276 @@ def get_A(problem):
         A = P_T.matMult(tmp)
 
     return A
+
+
+################################################################################
+# Arc-length solver (Crisfeld; displacement- or force-controlled)
+
+def arc_length_solver_disp_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec,
+                                  prev_Delta_lamda, Delta_l=0.1, psi=1.):
+    """One Crisfeld displacement-controlled arc-length step.
+
+    Reference: Vasios, Nikolaos. "Nonlinear analysis of structures." The Arc-Length method.
+    """
+    def newton_update_helper(dofs):
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        res_list = problem.newton_update(sol_list)
+        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
+        res_vec = apply_bc_vec(res_vec, dofs, problem, lamda)
+        A = get_A(problem)
+        return res_vec, A
+
+    def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
+        return (np.sum(Delta_u_vec1 * Delta_u_vec2)
+                + psi**2. * Delta_lamda1 * Delta_lamda2 * np.sum(u_b**2.))
+
+    u_vec = prev_u_vec
+    lamda = prev_lamda
+    u_b = assign_bc(np.zeros_like(prev_u_vec), problem)
+
+    Delta_u_vec_dir = prev_Delta_u_vec
+    Delta_lamda_dir = prev_Delta_lamda
+
+    tol = 1e-6
+    res_val = 1.
+    while res_val > tol:
+        res_vec, A = newton_update_helper(u_vec)
+        res_val = np.linalg.norm(res_vec)
+        logger.debug(f"Arc length solver: res_val = {res_val}")
+
+        delta_u_bar = scipy_spsolve(A, -res_vec)
+        delta_u_t = scipy_spsolve(A, u_b)
+
+        Delta_u_vec = u_vec - prev_u_vec
+        Delta_lamda = lamda - prev_lamda
+        a1 = np.sum(delta_u_t**2.) + psi**2. * np.sum(u_b**2.)
+        a2 = (2. * np.sum((Delta_u_vec + delta_u_bar) * delta_u_t)
+              + 2. * psi**2. * Delta_lamda * np.sum(u_b**2.))
+        a3 = (np.sum((Delta_u_vec + delta_u_bar)**2.)
+              + psi**2. * Delta_lamda**2. * np.sum(u_b**2.) - Delta_l**2.)
+
+        delta_lamda1 = (-a2 + np.sqrt(a2**2. - 4. * a1 * a3)) / (2. * a1)
+        delta_lamda2 = (-a2 - np.sqrt(a2**2. - 4. * a1 * a3)) / (2. * a1)
+
+        logger.debug(f"Arc length solver: delta_lamda1 = {delta_lamda1}, delta_lamda2 = {delta_lamda2}")
+        assert np.isfinite(delta_lamda1) and np.isfinite(delta_lamda2), (
+            f"No valid solutions for delta lambda, a1 = {a1}, a2 = {a2}, a3 = {a3}")
+
+        delta_u_vec1 = delta_u_bar + delta_lamda1 * delta_u_t
+        delta_u_vec2 = delta_u_bar + delta_lamda2 * delta_u_t
+
+        Delta_u_vec_dir1 = u_vec + delta_u_vec1 - prev_u_vec
+        Delta_lamda_dir1 = lamda + delta_lamda1 - prev_lamda
+        dot_prod1 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir,
+                                        Delta_u_vec_dir1, Delta_lamda_dir1)
+
+        Delta_u_vec_dir2 = u_vec + delta_u_vec2 - prev_u_vec
+        Delta_lamda_dir2 = lamda + delta_lamda2 - prev_lamda
+        dot_prod2 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir,
+                                        Delta_u_vec_dir2, Delta_lamda_dir2)
+
+        if np.abs(dot_prod1) < 1e-10 and np.abs(dot_prod2) < 1e-10:
+            delta_lamda = np.maximum(delta_lamda1, delta_lamda2)
+        elif dot_prod1 > dot_prod2:
+            delta_lamda = delta_lamda1
+        else:
+            delta_lamda = delta_lamda2
+
+        lamda = lamda + delta_lamda
+        delta_u = delta_u_bar + delta_lamda * delta_u_t
+        u_vec = u_vec + delta_u
+
+        Delta_u_vec_dir = u_vec - prev_u_vec
+        Delta_lamda_dir = lamda - prev_lamda
+
+    logger.debug(f"Arc length solver: finished for one step, with Delta lambda = {lamda - prev_lamda}")
+
+    return u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir
+
+
+def get_q_vec(problem):
+    """Reference load vector for force-controlled arc-length (``solver_options['q_vec']``)."""
+    dofs = np.zeros(problem.num_total_dofs_all_vars)
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+    res_list = problem.newton_update(sol_list)
+    return jax.flatten_util.ravel_pytree(res_list)[0]
+
+
+def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec,
+                                   prev_Delta_lamda, q_vec, Delta_l=0.1, psi=1.):
+    """One Crisfeld force-controlled arc-length step.
+
+    Reference: Vasios, Nikolaos. "Nonlinear analysis of structures." The Arc-Length method.
+    """
+    def newton_update_helper(dofs):
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        res_list = problem.newton_update(sol_list)
+        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
+        res_vec = apply_bc_vec(res_vec, dofs, problem)
+        A = get_A(problem)
+        return res_vec, A
+
+    def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
+        return (np.sum(Delta_u_vec1 * Delta_u_vec2)
+                + psi**2. * Delta_lamda1 * Delta_lamda2 * np.sum(q_vec_mapped**2.))
+
+    u_vec = prev_u_vec
+    lamda = prev_lamda
+    q_vec_mapped = assign_zeros_bc(q_vec, problem)
+
+    Delta_u_vec_dir = prev_Delta_u_vec
+    Delta_lamda_dir = prev_Delta_lamda
+
+    tol = 1e-6
+    res_val = 1.
+    while res_val > tol:
+        res_vec, A = newton_update_helper(u_vec)
+        res_val = np.linalg.norm(res_vec + lamda * q_vec_mapped)
+        logger.debug(f"Arc length solver: res_val = {res_val}")
+
+        delta_u_bar = scipy_spsolve(A, -(res_vec + lamda * q_vec_mapped))
+        delta_u_t = scipy_spsolve(A, -q_vec_mapped)
+
+        Delta_u_vec = u_vec - prev_u_vec
+        Delta_lamda = lamda - prev_lamda
+        a1 = np.sum(delta_u_t**2.) + psi**2. * np.sum(q_vec_mapped**2.)
+        a2 = (2. * np.sum((Delta_u_vec + delta_u_bar) * delta_u_t)
+              + 2. * psi**2. * Delta_lamda * np.sum(q_vec_mapped**2.))
+        a3 = (np.sum((Delta_u_vec + delta_u_bar)**2.)
+              + psi**2. * Delta_lamda**2. * np.sum(q_vec_mapped**2.) - Delta_l**2.)
+
+        delta_lamda1 = (-a2 + np.sqrt(a2**2. - 4. * a1 * a3)) / (2. * a1)
+        delta_lamda2 = (-a2 - np.sqrt(a2**2. - 4. * a1 * a3)) / (2. * a1)
+
+        logger.debug(f"Arc length solver: delta_lamda1 = {delta_lamda1}, delta_lamda2 = {delta_lamda2}")
+        assert np.isfinite(delta_lamda1) and np.isfinite(delta_lamda2), (
+            f"No valid solutions for delta lambda, a1 = {a1}, a2 = {a2}, a3 = {a3}")
+
+        delta_u_vec1 = delta_u_bar + delta_lamda1 * delta_u_t
+        delta_u_vec2 = delta_u_bar + delta_lamda2 * delta_u_t
+
+        Delta_u_vec_dir1 = u_vec + delta_u_vec1 - prev_u_vec
+        Delta_lamda_dir1 = lamda + delta_lamda1 - prev_lamda
+        dot_prod1 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir,
+                                        Delta_u_vec_dir1, Delta_lamda_dir1)
+
+        Delta_u_vec_dir2 = u_vec + delta_u_vec2 - prev_u_vec
+        Delta_lamda_dir2 = lamda + delta_lamda2 - prev_lamda
+        dot_prod2 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir,
+                                        Delta_u_vec_dir2, Delta_lamda_dir2)
+
+        if np.abs(dot_prod1) < 1e-10 and np.abs(dot_prod2) < 1e-10:
+            delta_lamda = np.maximum(delta_lamda1, delta_lamda2)
+        elif dot_prod1 > dot_prod2:
+            delta_lamda = delta_lamda1
+        else:
+            delta_lamda = delta_lamda2
+
+        lamda = lamda + delta_lamda
+        delta_u = delta_u_bar + delta_lamda * delta_u_t
+        u_vec = u_vec + delta_u
+
+        Delta_u_vec_dir = u_vec - prev_u_vec
+        Delta_lamda_dir = lamda - prev_lamda
+
+    logger.debug(f"Arc length solver: finished for one step, with Delta lambda = {lamda - prev_lamda}")
+
+    return u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir
+
+
+def _solve_arc_length_disp(problem, solver_options):
+    """Displacement-controlled arc-length (Crisfeld outer loop)."""
+    psi = solver_options.get('psi', 1.)
+    delta_l = solver_options.get('Delta_l', 0.1)
+    max_steps = solver_options.get('max_continuation_steps', 600)
+    lambda_max = solver_options.get('lambda_max', 1.)
+    step_callback = solver_options.get('step_callback')
+
+    u_vec = onp.zeros(problem.num_total_dofs_all_vars)
+    lam = 0.
+    delta_u_dir = onp.zeros_like(u_vec)
+    delta_lam_dir = 0.
+    history = []
+
+    logger.info("Arc-length solve started (displacement control, Crisfeld).")
+    start = time.time()
+    for step in range(max_steps):
+        u_vec, lam, delta_u_dir, delta_lam_dir = arc_length_solver_disp_driven(
+            problem, u_vec, lam, delta_u_dir, delta_lam_dir, Delta_l=delta_l, psi=psi)
+        record = {
+            'step': step,
+            'lam': float(lam),
+            'u': onp.asarray(u_vec, dtype=onp.float64),
+        }
+        history.append(record)
+        if step_callback is not None:
+            step_callback(step, record['u'], lam)
+        if lam >= lambda_max:
+            break
+
+    elapsed = time.time() - start
+    logger.info("Arc-length finished in %.3f s, %d continuation steps, final lambda=%.6f",
+                elapsed, len(history), lam)
+
+    sol_list = problem.unflatten_fn_sol_list(onp.asarray(u_vec))
+    arc_info = {'lam': float(lam), 'history': history, 'control': 'displacement'}
+    return sol_list, arc_info
+
+
+def _solve_arc_length_force(problem, solver_options):
+    """Force-controlled arc-length (Crisfeld outer loop)."""
+    q_vec = solver_options.get('q_vec')
+    if q_vec is None:
+        raise ValueError("Force-controlled arc-length requires solver_options['q_vec'].")
+
+    psi = solver_options.get('psi', 0.5)
+    delta_l = solver_options.get('Delta_l', 0.1)
+    delta_l_late = solver_options.get('Delta_l_late', 1.0)
+    switch_step = solver_options.get('Delta_l_switch_step', 200)
+    max_steps = solver_options.get('max_continuation_steps', 500)
+    lambda_max = solver_options.get('lambda_max', 1.)
+    step_callback = solver_options.get('step_callback')
+
+    u_vec = onp.zeros(problem.num_total_dofs_all_vars)
+    lam = 0.
+    delta_u_dir = onp.zeros_like(u_vec)
+    delta_lam_dir = 0.
+    history = []
+
+    logger.info("Arc-length solve started (force control, Crisfeld).")
+    start = time.time()
+    for step in range(max_steps):
+        dl = delta_l if step < switch_step else delta_l_late
+        u_vec, lam, delta_u_dir, delta_lam_dir = arc_length_solver_force_driven(
+            problem, u_vec, lam, delta_u_dir, delta_lam_dir, q_vec, Delta_l=dl, psi=psi)
+        record = {
+            'step': step,
+            'lam': float(lam),
+            'u': onp.asarray(u_vec, dtype=onp.float64),
+        }
+        history.append(record)
+        if step_callback is not None:
+            step_callback(step, record['u'], lam)
+        if lam >= lambda_max:
+            break
+
+    elapsed = time.time() - start
+    logger.info("Arc-length finished in %.3f s, %d continuation steps, final lambda=%.6f",
+                elapsed, len(history), lam)
+
+    sol_list = problem.unflatten_fn_sol_list(onp.asarray(u_vec))
+    arc_info = {'lam': float(lam), 'history': history, 'control': 'force'}
+    return sol_list, arc_info
+
+
+def _solve_arc_length(problem, solver_options):
+    """Hand Crisfeld arc-length; dispatches on ``arc_length_control``."""
+    control = solver_options.get('arc_length_control', 'displacement')
+    if control == 'force':
+        return _solve_arc_length_force(problem, solver_options)
+    if control == 'displacement':
+        return _solve_arc_length_disp(problem, solver_options)
+    raise ValueError(f"Unknown arc_length_control={control!r}; use 'displacement' or 'force'.")
 
 
 ################################################################################
@@ -549,6 +843,13 @@ def solver(problem, solver_options={}):
     sol_list : list
 
     """
+    solver_options = solver_options or {}
+    if solver_options.get('arc_length', False):
+        sol_list, arc_info = _solve_arc_length(problem, solver_options)
+        if solver_options.get('return_arc_length_info', False):
+            return sol_list, arc_info
+        return sol_list
+
     logger.debug(f"Calling the row elimination solver for imposing Dirichlet B.C.")
     logger.debug("Start timing")
     start = time.time()
@@ -617,184 +918,6 @@ def solver(problem, solver_options={}):
     logger.info(f"min of dofs = {np.min(dofs)}")
 
     return sol_list
-
-
-################################################################################
-# The "arc length" solver
-# Reference: Vasios, Nikolaos. "Nonlinear analysis of structures." The Arc-Length method. Harvard (2015).
-# Our implementation follows the Crisfeld's formulation.
-
-# TODO: Do we want to merge displacement-control and force-control codes?
-
-def arc_length_solver_disp_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec, prev_Delta_lamda, Delta_l=0.1, psi=1.):
-    """
-    TODO: Does not support periodic B.C., need some work here.
-    """
-    def newton_update_helper(dofs):
-        sol_list = problem.unflatten_fn_sol_list(dofs)
-        res_list = problem.newton_update(sol_list)
-        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
-        res_vec = apply_bc_vec(res_vec, dofs, problem, lamda)
-        A = get_A(problem)
-        return res_vec, A
-
-    def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
-        return np.sum(Delta_u_vec1*Delta_u_vec2) + psi**2.*Delta_lamda1*Delta_lamda2*np.sum(u_b**2.)
- 
-    u_vec = prev_u_vec
-    lamda = prev_lamda
-
-    u_b = assign_bc(np.zeros_like(prev_u_vec), problem)
-
-    Delta_u_vec_dir = prev_Delta_u_vec
-    Delta_lamda_dir = prev_Delta_lamda
-
-    tol = 1e-6
-    res_val = 1.
-    while res_val > tol:
-
-        res_vec, A = newton_update_helper(u_vec)
-        res_val = np.linalg.norm(res_vec)
-        logger.debug(f"Arc length solver: res_val = {res_val}")
-  
-        delta_u_bar = scipy_spsolve(A, -res_vec)
-        delta_u_t = scipy_spsolve(A, u_b)
-
-        Delta_u_vec = u_vec - prev_u_vec
-        Delta_lamda = lamda - prev_lamda
-        a1 = np.sum(delta_u_t**2.) + psi**2.*np.sum(u_b**2.)
-        a2 = 2.* np.sum((Delta_u_vec + delta_u_bar)*delta_u_t) + 2.*psi**2.*Delta_lamda*np.sum(u_b**2.)
-        a3 = np.sum((Delta_u_vec + delta_u_bar)**2.) + psi**2.*Delta_lamda**2.*np.sum(u_b**2.) - Delta_l**2.
-
-        delta_lamda1 = (-a2 + np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
-        delta_lamda2 = (-a2 - np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
-
-        logger.debug(f"Arc length solver: delta_lamda1 = {delta_lamda1}, delta_lamda2 = {delta_lamda2}")
-        assert np.isfinite(delta_lamda1) and np.isfinite(delta_lamda2), f"No valid solutions for delta lambda, a1 = {a1}, a2 = {a2}, a3 = {a3}"
-
-        delta_u_vec1 = delta_u_bar + delta_lamda1 * delta_u_t
-        delta_u_vec2 = delta_u_bar + delta_lamda2 * delta_u_t
-
-        Delta_u_vec_dir1 = u_vec + delta_u_vec1 - prev_u_vec
-        Delta_lamda_dir1 = lamda + delta_lamda1 - prev_lamda
-        dot_prod1 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir1, Delta_lamda_dir1)
-
-        Delta_u_vec_dir2 = u_vec + delta_u_vec2 - prev_u_vec
-        Delta_lamda_dir2 = lamda + delta_lamda2 - prev_lamda
-        dot_prod2 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir2, Delta_lamda_dir2)
-
-        if np.abs(dot_prod1) < 1e-10 and np.abs(dot_prod2) < 1e-10:
-            # At initial step, (Delta_u_vec_dir, Delta_lamda_dir) is zero, so both dot_prod1 and dot_prod2 are zero.
-            # We simply select the larger value for delta_lamda.
-            delta_lamda = np.maximum(delta_lamda1, delta_lamda2)
-        elif dot_prod1 > dot_prod2:
-            delta_lamda = delta_lamda1
-        else:
-            delta_lamda = delta_lamda2
-
-        lamda = lamda + delta_lamda
-        delta_u = delta_u_bar + delta_lamda * delta_u_t
-        u_vec = u_vec + delta_u
-
-        Delta_u_vec_dir = u_vec - prev_u_vec
-        Delta_lamda_dir = lamda - prev_lamda
-
-    logger.debug(f"Arc length solver: finished for one step, with Delta lambda = {lamda - prev_lamda}")
- 
-    return u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir
-
-
-def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec, prev_Delta_lamda, q_vec, Delta_l=0.1, psi=1.):
-    """
-    TODO: Does not support periodic B.C., need some work here.
-    """
-    def newton_update_helper(dofs):
-        sol_list = problem.unflatten_fn_sol_list(dofs)
-        res_list = problem.newton_update(sol_list)
-        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
-        res_vec = apply_bc_vec(res_vec, dofs, problem)
-        A = get_A(problem)
-        return res_vec, A
-
-    def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
-        return np.sum(Delta_u_vec1*Delta_u_vec2) + psi**2.*Delta_lamda1*Delta_lamda2*np.sum(q_vec_mapped**2.)
- 
-    u_vec = prev_u_vec
-    lamda = prev_lamda
-    q_vec_mapped = assign_zeros_bc(q_vec, problem)
-
-    Delta_u_vec_dir = prev_Delta_u_vec
-    Delta_lamda_dir = prev_Delta_lamda
-
-    tol = 1e-6
-    res_val = 1.
-    while res_val > tol:
-        res_vec, A = newton_update_helper(u_vec)
-        res_val = np.linalg.norm(res_vec + lamda*q_vec_mapped)
-        logger.debug(f"Arc length solver: res_val = {res_val}")
-
-        # TODO: scipy.sparse.linalg.spsolve seems far better than the JAX linear solver here, so we use it.
-        # x0_1 = assign_bc(np.zeros_like(u_vec), problem)
-        # x0_2 = copy_bc(u_vec, problem)
-        # delta_u_bar = jax_solve(problem, A, -(res_vec + lamda*q_vec_mapped), x0=x0_1 - x0_2, precond=True)   
-        # delta_u_t = jax_solve(problem, A, -q_vec_mapped, x0=np.zeros_like(u_vec), precond=True)   
-
-        delta_u_bar = scipy_spsolve(A, -(res_vec + lamda*q_vec_mapped))
-        delta_u_t = scipy_spsolve(A, -q_vec_mapped)
-
-        Delta_u_vec = u_vec - prev_u_vec
-        Delta_lamda = lamda - prev_lamda
-        a1 = np.sum(delta_u_t**2.) + psi**2.*np.sum(q_vec_mapped**2.)
-        a2 = 2.* np.sum((Delta_u_vec + delta_u_bar)*delta_u_t) + 2.*psi**2.*Delta_lamda*np.sum(q_vec_mapped**2.)
-        a3 = np.sum((Delta_u_vec + delta_u_bar)**2.) + psi**2.*Delta_lamda**2.*np.sum(q_vec_mapped**2.) - Delta_l**2.
-
-        delta_lamda1 = (-a2 + np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
-        delta_lamda2 = (-a2 - np.sqrt(a2**2. - 4.*a1*a3))/(2.*a1)
-
-        logger.debug(f"Arc length solver: delta_lamda1 = {delta_lamda1}, delta_lamda2 = {delta_lamda2}")
-        assert np.isfinite(delta_lamda1) and np.isfinite(delta_lamda2), f"No valid solutions for delta lambda, a1 = {a1}, a2 = {a2}, a3 = {a3}"
-
-        delta_u_vec1 = delta_u_bar + delta_lamda1 * delta_u_t
-        delta_u_vec2 = delta_u_bar + delta_lamda2 * delta_u_t
-
-        Delta_u_vec_dir1 = u_vec + delta_u_vec1 - prev_u_vec
-        Delta_lamda_dir1 = lamda + delta_lamda1 - prev_lamda
-        dot_prod1 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir1, Delta_lamda_dir1)
-
-        Delta_u_vec_dir2 = u_vec + delta_u_vec2 - prev_u_vec
-        Delta_lamda_dir2 = lamda + delta_lamda2 - prev_lamda
-        dot_prod2 = u_lamda_dot_product(Delta_u_vec_dir, Delta_lamda_dir, Delta_u_vec_dir2, Delta_lamda_dir2)
-
-        if np.abs(dot_prod1) < 1e-10 and np.abs(dot_prod2) < 1e-10:
-            # At initial step, (Delta_u_vec_dir, Delta_lamda_dir) is zero, so both dot_prod1 and dot_prod2 are zero.
-            # We simply select the larger value for delta_lamda.
-            delta_lamda = np.maximum(delta_lamda1, delta_lamda2)
-        elif dot_prod1 > dot_prod2:
-            delta_lamda = delta_lamda1
-        else:
-            delta_lamda = delta_lamda2
-
-        lamda = lamda + delta_lamda
-        delta_u = delta_u_bar + delta_lamda * delta_u_t
-        u_vec = u_vec + delta_u
-
-        Delta_u_vec_dir = u_vec - prev_u_vec
-        Delta_lamda_dir = lamda - prev_lamda
-
-    logger.debug(f"Arc length solver: finished for one step, with Delta lambda = {lamda - prev_lamda}")
- 
-    return u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir
-
-
-def get_q_vec(problem):
-    """
-    Used in the arc length method only, to get the external force vector q_vec
-    """
-    dofs = np.zeros(problem.num_total_dofs_all_vars)
-    sol_list = problem.unflatten_fn_sol_list(dofs)
-    res_list = problem.newton_update(sol_list)
-    q_vec = jax.flatten_util.ravel_pytree(res_list)[0]
-    return q_vec
 
 
 ################################################################################
@@ -1024,7 +1147,10 @@ def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
         v_vec = problem.P_mat.T @ v_vec
 
     # Be careful that A.transpose() does in-place change to A
-    adjoint_vec = linear_solver(A.transpose(), v_vec, None, adjoint_solver_options)
+    # However, A.transpose(A_T) does not do in-place change to A
+    A_T = PETSc.Mat()
+    A.transpose(A_T)
+    adjoint_vec = linear_solver(A_T, v_vec, None, adjoint_solver_options)
 
     if hasattr(problem, 'P_mat'):
         adjoint_vec = problem.P_mat @ adjoint_vec

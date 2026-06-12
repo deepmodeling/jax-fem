@@ -1,11 +1,11 @@
 import jax
 import jax.numpy as np
 import os
-import glob
+import shutil
 import meshio
 
 from jax_fem.problem import Problem
-from jax_fem.solver import solver, dynamic_relax_solve
+from jax_fem.solver import solver
 from jax_fem.utils import save_sol
 from jax_fem.generate_mesh import get_meshio_cell_type, Mesh, rectangle_mesh
 
@@ -38,11 +38,9 @@ class Elasticity(Problem):
 
 def simulation():
     input_dir = os.path.join(os.path.dirname(__file__), 'input')
-    output_dir = os.path.join(os.path.dirname(__file__), 'output')
-
-    files = glob.glob(os.path.join(output_dir, f'vtk/*'))
-    for f in files:
-        os.remove(f)
+    output_dir = os.path.join(os.path.dirname(__file__), 'output', 'cellular_solid')
+    shutil.rmtree(output_dir, ignore_errors=True)
+    os.makedirs(output_dir)
 
     ele_type = 'TRI6'
     cell_type = get_meshio_cell_type(ele_type)
@@ -50,7 +48,7 @@ def simulation():
     meshio_mesh = meshio.read(os.path.join(input_dir, f"abaqus/cellular_solid.inp"))
     meshio_mesh.points[:, 0] -= np.min(meshio_mesh.points[:, 0])
     meshio_mesh.points[:, 1] -= np.min(meshio_mesh.points[:, 1])
-    meshio_mesh.write(os.path.join(output_dir, 'vtk/mesh.vtu'))
+    meshio_mesh.write(os.path.join(output_dir, 'mesh.vtu'))
 
     Lx, Ly = np.max(meshio_mesh.points[:, 0]), np.max(meshio_mesh.points[:, 1])
     print(f"Lx={Lx}, Ly={Ly}")
@@ -84,9 +82,9 @@ def simulation():
         print(f"\nStep {i + 1} in {len(disps)}, disp = {disp}")
         dirichlet_bc_info[-1][-1] = get_dirichlet_top(disp)
         problem.fes[0].update_Dirichlet_boundary_conditions(dirichlet_bc_info)
-        sol = dynamic_relax_solve(problem, tol=1e-6)
-        vtk_path = os.path.join(output_dir, f'vtk/u_{i + 1:03d}.vtu')
-        save_sol(problem.fes[0], np.hstack((sol, np.zeros((len(sol), 1)))), vtk_path)
+        sol_list = solver(problem, {'dynamic_relax': {'tol': 1e-6}})
+        vtk_path = os.path.join(output_dir, f'u_{i + 1:03d}.vtu')
+        save_sol(problem.fes[0], np.hstack((sol_list[0], np.zeros((len(sol_list[0]), 1)))), vtk_path)
 
 
 if __name__=="__main__":

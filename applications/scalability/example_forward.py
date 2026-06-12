@@ -2,6 +2,8 @@
 
 import os
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
 
@@ -18,6 +20,7 @@ Nx, Ny, Nz = 80, 80, 80
 def main():
     problem, mesh = build_hyperelastic3d_problem_classic(Nx, Ny, Nz)
 
+    # solver_options = {"amgx_solver": {}}
     solver_options = {"petsc_solver": {}}
     sol_list = solver(problem, solver_options=solver_options)
 

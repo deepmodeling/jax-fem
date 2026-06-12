@@ -31,7 +31,7 @@ def main():
     fe = problem.fes[0]
     rho = RHO * np.ones((fe.num_cells, fe.num_quads))
 
-    solver_options={"petsc_solver": {}}
+    solver_options = {'petsc_solver': {}}
 
     if SAVE_VTK:
         problem.set_params(rho)

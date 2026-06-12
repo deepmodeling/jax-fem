@@ -1,7 +1,7 @@
 """Displacement-controlled arc-length (buckling; λ=1 → END_COMPRESSION)."""
 
-import glob
 import os
+import shutil
 
 import jax.numpy as np
 import numpy as onp
@@ -47,9 +47,8 @@ class BeamHyperelasticWithImperfection(BeamHyperelastic):
 
 
 def main():
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    for path in glob.glob(os.path.join(OUTPUT_DIR, '*.vtu')):
-        os.remove(path)
+    shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
+    os.makedirs(OUTPUT_DIR)
 
     mesh = make_mesh()
     problem = BeamHyperelasticWithImperfection(
@@ -76,23 +75,25 @@ def main():
             )
 
     sol_list, info = solver(problem, solver_options={
-        'arc_length': True,
-        'arc_length_control': 'displacement',
-        'return_arc_length_info': True,
-        'Delta_l': 0.1,
-        'psi': 1.,
-        'lambda_max': 1.0,
-        'max_continuation_steps': 600,
-        'step_callback': on_step,
+        'arc_length': {
+            'control': 'displacement',
+            'return_info': True,
+            'Delta_l': 0.1,
+            'psi': 1.,
+            'max_continuation_steps': 600,
+            'step_callback': on_step,
+        },
     })
 
     sol = sol_list[0]
     right = onp.isclose(mesh.points[:, 0], Lx, atol=1e-5)
-    print(f"\nend ux at λ=1 (target) = {END_COMPRESSION:.4f}")
-    print(f"right edge ux = {sol[right, 0]}")
-    print(f"right edge uy = {sol[right, 1]}  (must be ~0)")
-    print(f"lambda = {info['lam']:.6f},  steps = {len(info['history'])}")
-    print(f"max |uy| (interior) = {float(onp.max(onp.abs(sol[:, 1]))):.6f}")
+    print(f"\ncontinuation: lambda = {info['lam']:.6f},  steps = {len(info['history'])}")
+    if info['polished']:
+        print(f"Newton polish: full BC at lambda = {info['lambda_target']:.6f}")
+    print("final solution:")
+    print(f"  right edge ux = {sol[right, 0]}  (target {END_COMPRESSION:.4f})")
+    print(f"  right edge uy = {sol[right, 1]}  (must be ~0)")
+    print(f"  max |uy| (interior) = {float(onp.max(onp.abs(sol[:, 1]))):.6f}")
 
 
 if __name__ == '__main__':

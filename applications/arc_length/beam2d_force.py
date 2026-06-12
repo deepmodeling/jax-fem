@@ -1,7 +1,7 @@
 """Force-controlled arc-length buckling (hand Crisfeld via ``jax_fem.solver``)."""
 
-import glob
 import os
+import shutil
 
 import jax.numpy as np
 import numpy as onp
@@ -18,6 +18,8 @@ from jax_fem.solver import get_q_vec, solver
 from jax_fem.utils import save_sol
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'output', 'arc_length_force')
+
+END_TRACTION = 5.0
 
 
 def location_midspan_bottom(point):
@@ -36,14 +38,20 @@ def clamped_left_dirichlet_bc_info():
 
 
 class BeamHyperelasticWithImperfection(BeamHyperelastic):
+    """Main problem: design traction on the right edge (+x)."""
+
     def get_surface_maps(self):
-        def surface_map(u, x):
+        def imperfection(u, x):
             return np.array([0., 1e-5])
-        return [surface_map]
+
+        def end_traction(u, x):
+            return np.array([END_TRACTION, 0.])
+
+        return [imperfection, end_traction]
 
 
-class BeamReferenceLoad(Problem):
-    """Auxiliary problem: +x traction on right edge for ``get_q_vec``."""
+class BeamCounterLoad(Problem):
+    """Auxiliary problem: opposite traction on the right edge (cancels at lambda=0)."""
 
     def get_tensor_map(self):
         def first_PK_stress(u_grad):
@@ -52,22 +60,21 @@ class BeamReferenceLoad(Problem):
 
     def get_surface_maps(self):
         def surface_map(u, x):
-            return np.array([10., 0.])
+            return np.array([-END_TRACTION, 0.])
         return [surface_map]
 
 
 def main():
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    for path in glob.glob(os.path.join(OUTPUT_DIR, '*.vtu')):
-        os.remove(path)
+    shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
+    os.makedirs(OUTPUT_DIR)
 
     mesh = make_mesh()
     problem = BeamHyperelasticWithImperfection(
         mesh, vec=2, dim=2, ele_type='QUAD4',
         dirichlet_bc_info=clamped_left_dirichlet_bc_info(),
-        location_fns=[location_midspan_bottom],
+        location_fns=[location_midspan_bottom, location_right],
     )
-    q_vec = get_q_vec(BeamReferenceLoad(
+    q_vec_aux = get_q_vec(BeamCounterLoad(
         mesh, vec=2, dim=2, ele_type='QUAD4',
         location_fns=[location_right],
     ))
@@ -80,26 +87,29 @@ def main():
             save_sol(problem.fes[0], np.hstack((sol, np.zeros((len(sol), 1)))), vtk_path)
 
     sol_list, info = solver(problem, solver_options={
-        'arc_length': True,
-        'arc_length_control': 'force',
-        'return_arc_length_info': True,
-        'q_vec': q_vec,
-        'Delta_l': 0.1,
-        'Delta_l_late': 1.0,
-        'Delta_l_switch_step': 200,
-        'psi': 0.5,
-        'lambda_max': 1.0,
-        'max_continuation_steps': 500,
-        'step_callback': on_step,
+        'arc_length': {
+            'control': 'force',
+            'return_info': True,
+            'q_vec_aux': q_vec_aux,
+            'Delta_l': 0.1,
+            'Delta_l_late': 1.0,
+            'Delta_l_switch_step': 200,
+            'psi': 0.5,
+            'max_continuation_steps': 600,
+            'step_callback': on_step,
+            'linear': {'petsc_solver': {}},
+        },
     })
 
     sol = sol_list[0]
-    lam = info['lam']
     right = onp.isclose(mesh.points[:, 0], Lx, atol=1e-5)
-    print(f"\nlambda = {lam:.6f},  steps = {len(info['history'])}")
-    print(f"right edge ux = {sol[right, 0]}")
-    print(f"right edge uy = {sol[right, 1]}")
-    print(f"max |uy| = {float(onp.max(onp.abs(sol[:, 1]))):.6f}")
+    print(f"\ncontinuation: lambda = {info['lam']:.6f},  steps = {len(info['history'])}")
+    if info['polished']:
+        print(f"Newton polish: full-load equilibrium (lambda = {info['lambda_target']:.6f})")
+    print("final solution:")
+    print(f"  right edge ux = {sol[right, 0]}")
+    print(f"  right edge uy = {sol[right, 1]}")
+    print(f"  max |uy| = {float(onp.max(onp.abs(sol[:, 1]))):.6f}")
 
 
 if __name__ == '__main__':

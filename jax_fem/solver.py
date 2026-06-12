@@ -18,10 +18,11 @@ try:
     logger.info("pyamgx installed, AMGX solver enabled.")
 except ImportError:
     PYAMGX_AVAILABLE = False
+    logger.info("pyamgx not installed, AMGX solver disabled.")
 
 
 ################################################################################
-# JAX solver or scipy solver or PETSc solver
+# Linear solvers (JAX / SciPy / PETSc / AMGX)
 
 def jax_solve(A, b, x0, precond):
     logger.debug(f"JAX Solver - Solving linear system")
@@ -220,27 +221,26 @@ def AMGX_solve(A, b, x0, cfg_path):
         b
     )
 
-def linear_solver(A, b, x0, solver_options):
+def linear_solver(A, b, x0, linear_options):
     # If user does not specify any solver, set jax_solver as the default one.
-    if  len(solver_options.keys() & {'jax_solver','amgx_solver', 'spsolve_solver', 'petsc_solver', 'custom_solver'}) == 0: 
-        solver_options['jax_solver'] = {}
+    if len(linear_options.keys() & {'jax_solver', 'amgx_solver', 'spsolve_solver', 'petsc_solver', 'custom_solver'}) == 0:
+        linear_options['jax_solver'] = {}
 
-    if 'jax_solver' in solver_options:      
-        precond = solver_options['jax_solver']['precond'] if 'precond' in solver_options['jax_solver'] else True
+    if 'jax_solver' in linear_options:
+        precond = linear_options['jax_solver']['precond'] if 'precond' in linear_options['jax_solver'] else True
         x = jax_solve(A, b, x0, precond)
-    elif 'amgx_solver' in solver_options:
-        cfg_path = solver_options['amgx_solver']['cfg_path'] if 'cfg_path' in solver_options['amgx_solver'] else None
+    elif 'amgx_solver' in linear_options:
+        cfg_path = linear_options['amgx_solver']['cfg_path'] if 'cfg_path' in linear_options['amgx_solver'] else None
         x = AMGX_solve(A, b, x0, cfg_path)
-    elif 'spsolve_solver' in solver_options:
+    elif 'spsolve_solver' in linear_options:
         x = scipy_spsolve(A, b)
-    elif 'petsc_solver' in solver_options:   
-        ksp_type = solver_options['petsc_solver']['ksp_type'] if 'ksp_type' in solver_options['petsc_solver'] else 'bcgsl' 
-        pc_type = solver_options['petsc_solver']['pc_type'] if 'pc_type' in solver_options['petsc_solver'] else 'ilu'
+    elif 'petsc_solver' in linear_options:
+        ksp_type = linear_options['petsc_solver']['ksp_type'] if 'ksp_type' in linear_options['petsc_solver'] else 'bcgsl'
+        pc_type = linear_options['petsc_solver']['pc_type'] if 'pc_type' in linear_options['petsc_solver'] else 'ilu'
         x = petsc_solve(A, b, ksp_type, pc_type)
-    elif 'custom_solver' in solver_options:
-        # Users can define their own solver
-        custom_solver = solver_options['custom_solver']
-        x = custom_solver(A, b, x0, solver_options)
+    elif 'custom_solver' in linear_options:
+        custom_solver = linear_options['custom_solver']
+        x = custom_solver(A, b, x0, linear_options)
     else:
         raise NotImplementedError(f"Unknown linear solver.")
 
@@ -248,7 +248,7 @@ def linear_solver(A, b, x0, solver_options):
 
 
 ################################################################################
-# "row elimination" solver
+# Dirichlet boundary conditions ("row elimination")
 
 def apply_bc_vec(res_vec, dofs, problem, scale=1.):
     res_list = problem.unflatten_fn_sol_list(res_vec)
@@ -326,6 +326,9 @@ def copy_bc(dofs, problem):
     return jax.flatten_util.ravel_pytree(new_sol_list)[0]
 
 
+################################################################################
+# Newton helpers: flattening and tangent probe
+
 def get_flatten_fn(fn_sol_list, problem):
 
     def fn_dofs(dofs):
@@ -344,9 +347,17 @@ def operator_to_matrix(operator_fn, problem):
     return J
 
 
-def linear_incremental_solver(problem, res_vec, A, dofs, solver_options):
-    """
-    Linear solver at each Newton's iteration
+################################################################################
+# Newton step (linear increment + optional line search)
+
+def newton_step(problem, res_vec, A, dofs, newton_cfg):
+    """One Newton correction: solve :math:`A\\,\\Delta u = -R`, then update ``dofs``.
+
+    Parameters
+    ----------
+    newton_cfg : dict
+        Newton step options: ``linear`` (passed to :func:`linear_solver`) and
+        optional ``line_search_flag``.
     """
     logger.debug(f"Solving linear system...")
     b = -res_vec
@@ -360,10 +371,9 @@ def linear_incremental_solver(problem, res_vec, A, dofs, solver_options):
         x0_2 = copy_bc(dofs, problem)
         x0 = x0_1 - x0_2
 
-    inc = linear_solver(A, b, x0, solver_options)
+    inc = linear_solver(A, b, x0, newton_cfg.get('linear', {}))
 
-    line_search_flag = solver_options['line_search_flag'] if 'line_search_flag' in solver_options else False
-    if line_search_flag:
+    if newton_cfg.get('line_search_flag', False):
         dofs = line_search(problem, dofs, inc)
     else:
         dofs = dofs + inc
@@ -409,6 +419,9 @@ def line_search(problem, dofs, inc):
 
     return dofs + alpha*inc
 
+
+################################################################################
+# Tangent stiffness matrix (PETSc cache)
 
 class _PetscTangentCache:
     """Reusable full-space PETSc tangent built from fixed ``problem.I/J`` COO pattern."""
@@ -463,14 +476,10 @@ def get_A(problem):
 
 
 ################################################################################
-# Arc-length solver (Crisfeld; displacement- or force-controlled)
+# Arc-length: Crisfeld formulation (displacement / force control)
 
 def arc_length_solver_disp_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec,
                                   prev_Delta_lamda, Delta_l=0.1, psi=1.):
-    """One Crisfeld displacement-controlled arc-length step.
-
-    Reference: Vasios, Nikolaos. "Nonlinear analysis of structures." The Arc-Length method.
-    """
     def newton_update_helper(dofs):
         sol_list = problem.unflatten_fn_sol_list(dofs)
         res_list = problem.newton_update(sol_list)
@@ -548,7 +557,7 @@ def arc_length_solver_disp_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_
 
 
 def get_q_vec(problem):
-    """Reference load vector for force-controlled arc-length (``solver_options['q_vec']``)."""
+    """Load vector at ``u=0`` for force-controlled arc-length (``arc_length`` cfg ``q_vec_aux``)."""
     dofs = np.zeros(problem.num_total_dofs_all_vars)
     sol_list = problem.unflatten_fn_sol_list(dofs)
     res_list = problem.newton_update(sol_list)
@@ -556,11 +565,7 @@ def get_q_vec(problem):
 
 
 def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u_vec,
-                                   prev_Delta_lamda, q_vec, Delta_l=0.1, psi=1.):
-    """One Crisfeld force-controlled arc-length step.
-
-    Reference: Vasios, Nikolaos. "Nonlinear analysis of structures." The Arc-Length method.
-    """
+                                   prev_Delta_lamda, q_aux, Delta_l=0.1, psi=1.):
     def newton_update_helper(dofs):
         sol_list = problem.unflatten_fn_sol_list(dofs)
         res_list = problem.newton_update(sol_list)
@@ -571,11 +576,11 @@ def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u
 
     def u_lamda_dot_product(Delta_u_vec1, Delta_lamda1, Delta_u_vec2, Delta_lamda2):
         return (np.sum(Delta_u_vec1 * Delta_u_vec2)
-                + psi**2. * Delta_lamda1 * Delta_lamda2 * np.sum(q_vec_mapped**2.))
+                + psi**2. * Delta_lamda1 * Delta_lamda2 * np.sum(q_aux_mapped**2.))
 
     u_vec = prev_u_vec
     lamda = prev_lamda
-    q_vec_mapped = assign_zeros_bc(q_vec, problem)
+    q_aux_mapped = assign_zeros_bc(q_aux, problem)
 
     Delta_u_vec_dir = prev_Delta_u_vec
     Delta_lamda_dir = prev_Delta_lamda
@@ -584,19 +589,20 @@ def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u
     res_val = 1.
     while res_val > tol:
         res_vec, A = newton_update_helper(u_vec)
-        res_val = np.linalg.norm(res_vec + lamda * q_vec_mapped)
+        load_term = (1. - lamda) * q_aux_mapped
+        res_val = np.linalg.norm(res_vec + load_term)
         logger.debug(f"Arc length solver: res_val = {res_val}")
 
-        delta_u_bar = scipy_spsolve(A, -(res_vec + lamda * q_vec_mapped))
-        delta_u_t = scipy_spsolve(A, -q_vec_mapped)
+        delta_u_bar = scipy_spsolve(A, -(res_vec + load_term))
+        delta_u_t = scipy_spsolve(A, q_aux_mapped)
 
         Delta_u_vec = u_vec - prev_u_vec
         Delta_lamda = lamda - prev_lamda
-        a1 = np.sum(delta_u_t**2.) + psi**2. * np.sum(q_vec_mapped**2.)
+        a1 = np.sum(delta_u_t**2.) + psi**2. * np.sum(q_aux_mapped**2.)
         a2 = (2. * np.sum((Delta_u_vec + delta_u_bar) * delta_u_t)
-              + 2. * psi**2. * Delta_lamda * np.sum(q_vec_mapped**2.))
+              + 2. * psi**2. * Delta_lamda * np.sum(q_aux_mapped**2.))
         a3 = (np.sum((Delta_u_vec + delta_u_bar)**2.)
-              + psi**2. * Delta_lamda**2. * np.sum(q_vec_mapped**2.) - Delta_l**2.)
+              + psi**2. * Delta_lamda**2. * np.sum(q_aux_mapped**2.) - Delta_l**2.)
 
         delta_lamda1 = (-a2 + np.sqrt(a2**2. - 4. * a1 * a3)) / (2. * a1)
         delta_lamda2 = (-a2 - np.sqrt(a2**2. - 4. * a1 * a3)) / (2. * a1)
@@ -637,13 +643,47 @@ def arc_length_solver_force_driven(problem, prev_u_vec, prev_lamda, prev_Delta_u
     return u_vec, lamda, Delta_u_vec_dir, Delta_lamda_dir
 
 
-def _solve_arc_length_disp(problem, solver_options):
+def _arc_length_newton_polish(problem, sol_list, cfg, lam_continuation):
+    logger.info(
+        "Arc-length continuation ended at lambda=%.6f (target=%.6f); "
+        "standard Newton polish at full load",
+        lam_continuation, _LAMBDA_TARGET)
+    polish = dict(cfg.get('newton', {}))
+    polish['initial_guess'] = sol_list
+    if cfg.get('linear'):
+        polish['linear'] = cfg['linear']
+    return solver(problem, {'newton': polish})
+
+
+def _finish_arc_length(problem, u_vec, lam, cfg, max_steps, history, control):
+    sol_list = problem.unflatten_fn_sol_list(onp.asarray(u_vec))
+    lam_continuation = float(lam)
+    reached_target = lam_continuation >= _LAMBDA_TARGET
+    if not reached_target:
+        logger.warning(
+            "Arc-length stopped at lambda=%.6f after %d continuation steps "
+            "(max_continuation_steps=%d); lambda=1 was not reached — "
+            "the intended forward problem was not solved. "
+            "Increase max_continuation_steps or adjust arc-length settings.",
+            lam_continuation, len(history), max_steps)
+    if reached_target:
+        sol_list = _arc_length_newton_polish(
+            problem, sol_list, cfg, lam_continuation)
+    return sol_list, {
+        'lam': lam_continuation,
+        'lambda_target': _LAMBDA_TARGET,
+        'polished': reached_target,
+        'history': history,
+        'control': control,
+    }
+
+
+def _solve_arc_length_disp(problem, cfg):
     """Displacement-controlled arc-length (Crisfeld outer loop)."""
-    psi = solver_options.get('psi', 1.)
-    delta_l = solver_options.get('Delta_l', 0.1)
-    max_steps = solver_options.get('max_continuation_steps', 600)
-    lambda_max = solver_options.get('lambda_max', 1.)
-    step_callback = solver_options.get('step_callback')
+    psi = cfg.get('psi', 1.)
+    delta_l = cfg.get('Delta_l', 0.1)
+    max_steps = cfg.get('max_continuation_steps', 600)
+    step_callback = cfg.get('step_callback')
 
     u_vec = onp.zeros(problem.num_total_dofs_all_vars)
     lam = 0.
@@ -664,31 +704,29 @@ def _solve_arc_length_disp(problem, solver_options):
         history.append(record)
         if step_callback is not None:
             step_callback(step, record['u'], lam)
-        if lam >= lambda_max:
+        if lam >= _LAMBDA_TARGET:
             break
 
     elapsed = time.time() - start
     logger.info("Arc-length finished in %.3f s, %d continuation steps, final lambda=%.6f",
                 elapsed, len(history), lam)
 
-    sol_list = problem.unflatten_fn_sol_list(onp.asarray(u_vec))
-    arc_info = {'lam': float(lam), 'history': history, 'control': 'displacement'}
-    return sol_list, arc_info
+    return _finish_arc_length(
+        problem, u_vec, lam, cfg, max_steps, history, 'displacement')
 
 
-def _solve_arc_length_force(problem, solver_options):
+def _solve_arc_length_force(problem, cfg):
     """Force-controlled arc-length (Crisfeld outer loop)."""
-    q_vec = solver_options.get('q_vec')
-    if q_vec is None:
-        raise ValueError("Force-controlled arc-length requires solver_options['q_vec'].")
+    q_aux = cfg.get('q_vec_aux')
+    if q_aux is None:
+        raise ValueError("arc_length force control requires cfg['q_vec_aux'].")
 
-    psi = solver_options.get('psi', 0.5)
-    delta_l = solver_options.get('Delta_l', 0.1)
-    delta_l_late = solver_options.get('Delta_l_late', 1.0)
-    switch_step = solver_options.get('Delta_l_switch_step', 200)
-    max_steps = solver_options.get('max_continuation_steps', 500)
-    lambda_max = solver_options.get('lambda_max', 1.)
-    step_callback = solver_options.get('step_callback')
+    psi = cfg.get('psi', 0.5)
+    delta_l = cfg.get('Delta_l', 0.1)
+    delta_l_late = cfg.get('Delta_l_late', 1.0)
+    switch_step = cfg.get('Delta_l_switch_step', 200)
+    max_steps = cfg.get('max_continuation_steps', 500)
+    step_callback = cfg.get('step_callback')
 
     u_vec = onp.zeros(problem.num_total_dofs_all_vars)
     lam = 0.
@@ -701,7 +739,7 @@ def _solve_arc_length_force(problem, solver_options):
     for step in range(max_steps):
         dl = delta_l if step < switch_step else delta_l_late
         u_vec, lam, delta_u_dir, delta_lam_dir = arc_length_solver_force_driven(
-            problem, u_vec, lam, delta_u_dir, delta_lam_dir, q_vec, Delta_l=dl, psi=psi)
+            problem, u_vec, lam, delta_u_dir, delta_lam_dir, q_aux, Delta_l=dl, psi=psi)
         record = {
             'step': step,
             'lam': float(lam),
@@ -710,218 +748,51 @@ def _solve_arc_length_force(problem, solver_options):
         history.append(record)
         if step_callback is not None:
             step_callback(step, record['u'], lam)
-        if lam >= lambda_max:
+        if lam >= _LAMBDA_TARGET:
             break
 
     elapsed = time.time() - start
     logger.info("Arc-length finished in %.3f s, %d continuation steps, final lambda=%.6f",
                 elapsed, len(history), lam)
 
-    sol_list = problem.unflatten_fn_sol_list(onp.asarray(u_vec))
-    arc_info = {'lam': float(lam), 'history': history, 'control': 'force'}
-    return sol_list, arc_info
+    return _finish_arc_length(
+        problem, u_vec, lam, cfg, max_steps, history, 'force')
 
 
-def _solve_arc_length(problem, solver_options):
-    """Hand Crisfeld arc-length; dispatches on ``arc_length_control``."""
-    control = solver_options.get('arc_length_control', 'displacement')
-    if control == 'force':
-        return _solve_arc_length_force(problem, solver_options)
-    if control == 'displacement':
-        return _solve_arc_length_disp(problem, solver_options)
-    raise ValueError(f"Unknown arc_length_control={control!r}; use 'displacement' or 'force'.")
-
-
-################################################################################
-# The "row elimination" solver
-
-def solver(problem, solver_options={}):
-    r"""Solve the nonlinear problem using Newton's method with configurable linear solvers.
-
-    The solver imposes Dirichlet B.C. with "row elimination" method. Conceptually,
-
-    .. math::
-        r(u) = D \, r_{\text{unc}}(u) + (I - D)u - u_b \\
-        A = \frac{\text{d}r}{\text{d}u} = D \frac{\text{d}r}{\text{d}u} + (I - D)
-
-    where:
-
-    - :math:`r_{\text{unc}}: \mathbb{R}^N\rightarrow\mathbb{R}^N` is the residual function without considering Dirichlet boundary conditions.
-
-    - :math:`u\in\mathbb{R}^N` is the FE solution vector.
-
-    - :math:`u_b\in\mathbb{R}^N` is the vector for Dirichlet boundary conditions, e.g.,
-
-      .. math::
-            u_b = \begin{bmatrix}
-                  0 \\
-                  0 \\
-                  2 \\
-                  3
-                  \end{bmatrix}
-    
-    - :math:`D\in\mathbb{R}^{N\times N}` is the auxiliary matrix for masking, e.g.,
-
-      .. math::
-            D = \begin{bmatrix}
-                1 & 0 & 0 & 0 \\
-                0 & 1 & 0 & 0 \\
-                0 & 0 & 0 & 0 \\
-                0 & 0 & 0 & 0
-            \end{bmatrix}
-    
-    - :math:`I\in\mathbb{R}^{N\times N}` is the ientity matrix, e.g., 
-
-      .. math::
-            I = \begin{bmatrix}
-                1 & 0 & 0 & 0 \\
-                0 & 1 & 0 & 0 \\
-                0 & 0 & 1 & 0 \\
-                0 & 0 & 0 & 1
-            \end{bmatrix}
-
-    - :math:`A\in\mathbb{R}^{N\times N}` is the tangent stiffness matrix (the global Jacobian matrix).
-
-    Notes
-    -----
-    - TODO: Show some comments for linear multipoint constraint handling.
-
-    Parameters
-    ----------
-    problem : Problem
-        The nonlinear problem to solve
-    solver_options : dict
-        Configuration dictionary for solver parameters and algorithms.
-        Three solvers are currently available:
-
-        - `JAX solver <https://jax.readthedocs.io/en/latest/_autosummary/jax.scipy.sparse.linalg.bicgstab.html>`_
-        - `SciPy solver <https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html>`_
-        - `PETSc solver <https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html>`_
-    
-        The empty choice ::
-
-            solver_options = {}
-
-        will default to JAX solver as ::
-        
-            solver_options = {'jax_solver': {}}
-
-        which will further default to ::
-
-            solver_options = {'jax_solver': {'precond': True}}
-
-        The SciPy sparse direct solver (``spsolve``) can be specified as ::
-
-            solver_options = {'spsolve_solver': {}}
-
-        The PETSc solver can be specified as ::
-
-            solver_options = {
-                 'petsc_solver': {},
-            }        
-    
-        which will default to ::
-
-            solver_options = {
-                 'petsc_solver': {
-                     'ksp_type': 'bcgsl', # other choices can be, e.g., 'minres', 'gmres', 'tfqmr'
-                     'pc_type': 'ilu', # other choices can be, e.g., 'jacobi'
-                 }
-            }  
-    
-        Other available options are :: 
-
-            solver_options = {
-                'line_search_flag': False, # Line search method
-                'initial_guess': initial_guess, # Same shape as sol_list
-                'tol': 1e-5, # Absolute tolerance for residual vector (l2 norm), used in Newton's method
-                'rel_tol': 1e-8, # Relative tolerance for residual vector (l2 norm), used in Newton's method
-            }
-
-    Returns
-    -------
-    sol_list : list
-
+def _solve_arc_length(problem, cfg):
     """
-    solver_options = solver_options or {}
-    if solver_options.get('arc_length', False):
-        sol_list, arc_info = _solve_arc_length(problem, solver_options)
-        if solver_options.get('return_arc_length_info', False):
-            return sol_list, arc_info
-        return sol_list
-
-    logger.debug(f"Calling the row elimination solver for imposing Dirichlet B.C.")
-    logger.debug("Start timing")
-    start = time.time()
-
-    if 'initial_guess' in solver_options:
-        # We don't want inititual guess to play a role in the differentiation chain.
-        initial_guess = jax.lax.stop_gradient(solver_options['initial_guess'])
-        dofs = jax.flatten_util.ravel_pytree(initial_guess)[0]
-    else:
-        if hasattr(problem, 'P_mat'):
-            dofs = np.zeros(problem.P_mat.shape[1]) # reduced dofs
-        else:
-            dofs = np.zeros(problem.num_total_dofs_all_vars)
-
-    rel_tol = solver_options['rel_tol'] if 'rel_tol' in solver_options else 1e-8
-    tol = solver_options['tol'] if 'tol' in solver_options else 1e-6
-
-    def newton_update_helper(dofs):
-        if hasattr(problem, 'P_mat'):
-            dofs = problem.P_mat @ dofs
-
-        sol_list = problem.unflatten_fn_sol_list(dofs)
-        res_list = problem.newton_update(sol_list)
-        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
-        res_vec = apply_bc_vec(res_vec, dofs, problem)
-
-        if hasattr(problem, 'P_mat'):
-            res_vec = problem.P_mat.T @ res_vec
-
-        A = get_A(problem)
-        return res_vec, A
-
-    res_vec, A = newton_update_helper(dofs)
-    res_val = np.linalg.norm(res_vec)
-    res_val_initial = res_val
-    rel_res_val = res_val/res_val_initial
-    logger.debug(f"Before, l_2 res = {res_val}, relative l_2 res = {rel_res_val}")
-    while (rel_res_val > rel_tol) and (res_val > tol):
-        dofs = linear_incremental_solver(problem, res_vec, A, dofs, solver_options)
-        res_vec, A = newton_update_helper(dofs)
-        # logger.debug(f"DEBUG: l_2 res = {np.linalg.norm(apply_bc_vec(A @ dofs, dofs, problem))}")
-        res_val = np.linalg.norm(res_vec)
-        rel_res_val = res_val/res_val_initial
-
-        logger.debug(f"l_2 res = {res_val}, relative l_2 res = {rel_res_val}")
-
-    assert np.all(np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
-    assert np.all(np.isfinite(dofs)), f"dofs contains NaN, stop the program!"
-
-    if hasattr(problem, 'P_mat'):
-        dofs = problem.P_mat @ dofs
-
-    # If sol_list = [[[u1x, u1y], 
-    #                 [u2x, u2y], 
-    #                 [u3x, u3y], 
-    #                 [u4x, u4y]], 
-    #                [[p1], 
-    #                 [p2]]],
-    # the flattend DOF vector will be [u1x, u1y, u2x, u2y, u3x, u3y, u4x, u4y, p1, p2]
-    sol_list = problem.unflatten_fn_sol_list(dofs)
-
-    end = time.time()
-    solve_time = end - start
-    logger.info(f"Solve took {solve_time} [s]")
-    logger.info(f"max of dofs = {np.max(dofs)}")
-    logger.info(f"min of dofs = {np.min(dofs)}")
-
-    return sol_list
+    Reference: Vasios, Nikolaos. "Nonlinear analysis of structures." The Arc-Length method.
+    """
+    if 'control' not in cfg:
+        raise ValueError(
+            "arc_length requires cfg['control']; use 'displacement' or 'force'.")
+    control = cfg['control']
+    if control == 'displacement':
+        return _solve_arc_length_disp(problem, cfg)
+    if control == 'force':
+        return _solve_arc_length_force(problem, cfg)
+    raise ValueError(f"Unknown arc_length control={control!r}; use 'displacement' or 'force'.")
 
 
 ################################################################################
-# Dynamic relaxation solver
+# Dynamic relaxation
+
+def _solve_dynamic_relax(problem, cfg):
+    flat_guess = None
+    if 'initial_guess' in cfg:
+        initial_guess = jax.lax.stop_gradient(cfg['initial_guess'])
+        flat_guess = jax.flatten_util.ravel_pytree(initial_guess)[0]
+    return dynamic_relax_solve(
+        problem,
+        tol=cfg.get('tol', 1e-6),
+        nKMat=cfg.get('nKMat', 50),
+        nPrint=cfg.get('nPrint', 500),
+        info=cfg.get('info', True),
+        info_force=cfg.get('info_force', True),
+        initial_guess=flat_guess,
+        linear_options=cfg.get('linear', {}),
+    )
+
 
 def assembleCSR(problem, dofs):
     sol_list = problem.unflatten_fn_sol_list(dofs)
@@ -966,7 +837,8 @@ def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info, info_f
             print('Max acceleration: ',np.max(np.absolute(qdotdot)))
 
 
-def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info_force=True, initial_guess=None):
+def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info_force=True,
+                        initial_guess=None, linear_options=None):
     """
     Implementation of
 
@@ -981,7 +853,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
  
     TODO: Does not support periodic B.C., need some work here.
     """
-    solver_options = {'spsolve_solver': {}}
+    linear_options = linear_options or {'spsolve_solver': {}}
 
     # TODO: consider these in initial guess
     def newton_update_helper(dofs):
@@ -994,7 +866,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
  
     dofs = np.zeros(problem.num_total_dofs_all_vars)
     res_vec, A = newton_update_helper(dofs)
-    dofs = linear_incremental_solver(problem, res_vec, A, dofs, solver_options)
+    dofs = newton_step(problem, res_vec, A, dofs, {'linear': linear_options})
 
     if initial_guess is not None:
         dofs = initial_guess
@@ -1097,11 +969,309 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
 
     sol_list = problem.unflatten_fn_sol_list(dofs)
 
-    return sol_list[0]
+    return sol_list
 
 
 ################################################################################
-# Implicit differentiation with the adjoint method
+# solver_options registry and dispatch
+#
+# Layout:
+#
+# Top level: at most ONE method key. Omit for Newton; legacy flat dicts
+# (petsc_solver, tol, initial_guess, ...) are auto-wrapped as newton.
+#
+#   {'newton': {
+#       'tol': 1e-6, 'rel_tol': 1e-8, 'line_search_flag': False,
+#       'initial_guess': sol_list,
+#       'linear': {'petsc_solver': {}},
+#   }}
+#
+#   {'arc_length': {
+#       'control': 'displacement' | 'force',
+#       'return_info': True,
+#       'q_vec_aux': ..., 'Delta_l': 0.1, 'step_callback': fn, ...
+#       'linear': {'petsc_solver': {}},          # polish + inner solves
+#       'newton': {'tol': 1e-6},                 # polish only
+#   }}
+#
+#   {'dynamic_relax': {
+#       'tol': 1e-8, 'nKMat': 50, 'initial_guess': sol_list, ...
+#       'linear': {'spsolve_solver': {}},
+#   }}
+
+_METHOD_KEYS = frozenset({'newton', 'arc_length', 'dynamic_relax'})
+_LINEAR_OPTION_KEYS = frozenset({
+    'jax_solver', 'amgx_solver', 'spsolve_solver', 'petsc_solver', 'custom_solver',
+})
+_NEWTON_OPTION_KEYS = frozenset({'tol', 'rel_tol', 'line_search_flag', 'initial_guess'})
+
+_LAMBDA_TARGET = 1.
+
+
+def _resolve_solver_options(solver_options):
+    """Return (nonlinear_method, method_cfg). Legacy flat dicts become Newton."""
+    opts = solver_options or {}
+    methods = [m for m in _METHOD_KEYS if m in opts]
+
+    if not methods:
+        linear = {k: opts[k] for k in _LINEAR_OPTION_KEYS if k in opts}
+        cfg = {k: opts[k] for k in _NEWTON_OPTION_KEYS if k in opts}
+        if linear:
+            cfg['linear'] = linear
+        return 'newton', cfg
+
+    if len(methods) > 1:
+        raise ValueError(f"Pick one nonlinear method, got {methods}.")
+
+    method = methods[0]
+    if not isinstance(opts[method], dict):
+        raise ValueError(f"solver_options['{method}'] must be a dict.")
+    return method, opts[method]
+
+
+################################################################################
+# Nonlinear solver entry point (``solver()``)
+
+def solver(problem, solver_options={}):
+    r"""Solve a nonlinear problem (Newton by default, or arc-length / dynamic relaxation).
+
+    The solver imposes Dirichlet B.C. with "row elimination" method. Conceptually,
+
+    .. math::
+        r(u) = D \, r_{\text{unc}}(u) + (I - D)u - u_b \\
+        A = \frac{\text{d}r}{\text{d}u} = D \frac{\text{d}r}{\text{d}u} + (I - D)
+
+    where:
+
+    - :math:`r_{\text{unc}}: \mathbb{R}^N\rightarrow\mathbb{R}^N` is the residual function without considering Dirichlet boundary conditions.
+
+    - :math:`u\in\mathbb{R}^N` is the FE solution vector.
+
+    - :math:`u_b\in\mathbb{R}^N` is the vector for Dirichlet boundary conditions, e.g.,
+
+      .. math::
+            u_b = \begin{bmatrix}
+                  0 \\
+                  0 \\
+                  2 \\
+                  3
+                  \end{bmatrix}
+    
+    - :math:`D\in\mathbb{R}^{N\times N}` is the auxiliary matrix for masking, e.g.,
+
+      .. math::
+            D = \begin{bmatrix}
+                1 & 0 & 0 & 0 \\
+                0 & 1 & 0 & 0 \\
+                0 & 0 & 0 & 0 \\
+                0 & 0 & 0 & 0
+            \end{bmatrix}
+    
+    - :math:`I\in\mathbb{R}^{N\times N}` is the ientity matrix, e.g., 
+
+      .. math::
+            I = \begin{bmatrix}
+                1 & 0 & 0 & 0 \\
+                0 & 1 & 0 & 0 \\
+                0 & 0 & 1 & 0 \\
+                0 & 0 & 0 & 1
+            \end{bmatrix}
+
+    - :math:`A\in\mathbb{R}^{N\times N}` is the tangent stiffness matrix (the global Jacobian matrix).
+
+    Notes
+    -----
+    - TODO: Show some comments for linear multipoint constraint handling.
+
+    Parameters
+    ----------
+    problem : Problem
+        The nonlinear problem to solve
+    solver_options : dict
+        Configuration for the nonlinear solve. Use exactly one top-level method key—
+        ``newton``, ``arc_length``, or ``dynamic_relax``. Nest the linear
+        solver and method-specific options inside that block.
+
+        **Newton** (default nonlinear backend)::
+
+            solver_options = {
+                'newton': {
+                    'tol': 1e-5,
+                    'rel_tol': 1e-8,
+                    'line_search_flag': False,
+                    'initial_guess': initial_guess,
+                    'linear': {'petsc_solver': {}},
+                },
+            }
+
+        **Linear solvers** (keys under ``linear`` in any method block).
+        Four backends are currently available:
+
+        - `JAX solver <https://jax.readthedocs.io/en/latest/_autosummary/jax.scipy.sparse.linalg.bicgstab.html>`_
+        - `SciPy solver <https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html>`_
+        - `PETSc solver <https://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html>`_
+        - `AMGX solver <https://github.com/NVIDIA/AMGX>`_ (requires ``pyamgx``)
+
+        Examples nested under ``newton``::
+
+            solver_options = {'newton': {'linear': {'jax_solver': {}}}}
+
+            solver_options = {'newton': {'linear': {'spsolve_solver': {}}}}
+
+            solver_options = {
+                'newton': {
+                    'linear': {
+                        'petsc_solver': {
+                            'ksp_type': 'bcgsl',  # e.g. 'minres', 'gmres', 'tfqmr'
+                            'pc_type': 'ilu',     # e.g. 'jacobi'
+                        },
+                    },
+                },
+            }
+
+            solver_options = {'newton': {'linear': {'amgx_solver': {'cfg_path': 'path/to/amgx.json'}}}}
+
+        **Defaults.** Omitted keys are filled in as follows.
+
+        Newton (inside a ``newton`` block, or implied when no method key is
+        given):
+
+        - ``tol`` → ``1e-6`` (absolute residual :math:`\ell_2` norm)
+        - ``rel_tol`` → ``1e-8`` (relative to the initial residual)
+        - ``line_search_flag`` → ``False``
+        - ``initial_guess`` → zero displacement vector
+        - ``linear``: The following are all equivalent for the linear solve::
+
+            solver_options = {}
+            solver_options = {'newton': {}}
+            solver_options = {'newton': {'linear': {}}}
+            solver_options = {'newton': {'linear': {'jax_solver': {}}}}
+            solver_options = {'newton': {'linear': {'jax_solver': {'precond': True}}}}
+
+        - ``{'jax_solver': {}}`` → ``precond`` → ``True``
+        - ``{'petsc_solver': {}}`` → ``ksp_type`` → ``'bcgsl'``; ``pc_type`` → ``'ilu'``
+        - ``{'amgx_solver': {}}`` → ``cfg_path`` → ``None`` (built-in BICGSTAB + AMG)
+
+        **Arc-length** (Crisfeld; ``control`` is required; set
+        ``return_info`` to obtain continuation metadata)::
+
+            solver_options = {
+                'arc_length': {
+                    'control': 'displacement',  # or 'force' (needs q_vec_aux)
+                    'return_info': True,
+                    'Delta_l': 0.1,
+                    'linear': {'petsc_solver': {}},
+                    'newton': {'tol': 1e-6},  # optional polish at lambda=1
+                },
+            }
+
+        **Dynamic relaxation** (useful for buckling paths)::
+
+            solver_options = {
+                'dynamic_relax': {
+                    'tol': 1e-8,
+                    'linear': {'spsolve_solver': {}},
+                },
+            }
+
+        **Legacy flat dict.** For backward compatibility, a dict with *no*
+        method key is still accepted and interpreted as Newton. Linear and
+        Newton keys may appear at the top level, e.g.::
+
+            solver_options = {'petsc_solver': {}, 'tol': 1e-5}
+
+        is equivalent to specifying::
+
+            solver_options = {'newton': {'linear': {'petsc_solver': {}}, 'tol': 1e-5}}
+
+
+    Returns
+    -------
+    sol_list : list
+
+    """
+    method, cfg = _resolve_solver_options(solver_options)
+    if method == 'arc_length':
+        sol_list, arc_info = _solve_arc_length(problem, cfg)
+        if cfg.get('return_info', False):
+            return sol_list, arc_info
+        return sol_list
+
+    if method == 'dynamic_relax':
+        return _solve_dynamic_relax(problem, cfg)
+
+    logger.debug(f"Calling the row elimination solver for imposing Dirichlet B.C.")
+    logger.debug("Start timing")
+    start = time.time()
+
+    if 'initial_guess' in cfg:
+        # We don't want inititual guess to play a role in the differentiation chain.
+        initial_guess = jax.lax.stop_gradient(cfg['initial_guess'])
+        dofs = jax.flatten_util.ravel_pytree(initial_guess)[0]
+    else:
+        if hasattr(problem, 'P_mat'):
+            dofs = np.zeros(problem.P_mat.shape[1]) # reduced dofs
+        else:
+            dofs = np.zeros(problem.num_total_dofs_all_vars)
+
+    rel_tol = cfg.get('rel_tol', 1e-8)
+    tol = cfg.get('tol', 1e-6)
+
+    def newton_update_helper(dofs):
+        if hasattr(problem, 'P_mat'):
+            dofs = problem.P_mat @ dofs
+
+        sol_list = problem.unflatten_fn_sol_list(dofs)
+        res_list = problem.newton_update(sol_list)
+        res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
+        res_vec = apply_bc_vec(res_vec, dofs, problem)
+
+        if hasattr(problem, 'P_mat'):
+            res_vec = problem.P_mat.T @ res_vec
+
+        A = get_A(problem)
+        return res_vec, A
+
+    res_vec, A = newton_update_helper(dofs)
+    res_val = np.linalg.norm(res_vec)
+    res_val_initial = res_val
+    rel_res_val = res_val/res_val_initial
+    logger.debug(f"Before, l_2 res = {res_val}, relative l_2 res = {rel_res_val}")
+    while (rel_res_val > rel_tol) and (res_val > tol):
+        dofs = newton_step(problem, res_vec, A, dofs, cfg)
+        res_vec, A = newton_update_helper(dofs)
+        # logger.debug(f"DEBUG: l_2 res = {np.linalg.norm(apply_bc_vec(A @ dofs, dofs, problem))}")
+        res_val = np.linalg.norm(res_vec)
+        rel_res_val = res_val/res_val_initial
+
+        logger.debug(f"l_2 res = {res_val}, relative l_2 res = {rel_res_val}")
+
+    assert np.all(np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
+    assert np.all(np.isfinite(dofs)), f"dofs contains NaN, stop the program!"
+
+    if hasattr(problem, 'P_mat'):
+        dofs = problem.P_mat @ dofs
+
+    # If sol_list = [[[u1x, u1y], 
+    #                 [u2x, u2y], 
+    #                 [u3x, u3y], 
+    #                 [u4x, u4y]], 
+    #                [[p1], 
+    #                 [p2]]],
+    # the flattend DOF vector will be [u1x, u1y, u2x, u2y, u3x, u3y, u4x, u4y, p1, p2]
+    sol_list = problem.unflatten_fn_sol_list(dofs)
+
+    end = time.time()
+    solve_time = end - start
+    logger.info(f"Solve took {solve_time} [s]")
+    logger.info(f"max of dofs = {np.max(dofs)}")
+    logger.info(f"min of dofs = {np.min(dofs)}")
+
+    return sol_list
+
+
+################################################################################
+# Implicit differentiation (adjoint method)
 
 def implicit_vjp(problem, sol_list, params, v_list, adjoint_solver_options):
 
@@ -1168,8 +1338,11 @@ def ad_wrapper(problem, solver_options={}, adjoint_solver_options={}):
     Parameters
     ----------
     problem : Problem
-    solver_options : dictionary
-    adjoint_solver_options : dictionary
+    solver_options : dict
+        Same layout as :func:`solver` (nonlinear method + nested ``linear``).
+    adjoint_solver_options : dict
+        Linear solver options for the adjoint solve only (flat dict, e.g.
+        ``{'petsc_solver': {}}``).
 
     Returns
     -------

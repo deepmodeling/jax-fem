@@ -355,7 +355,7 @@ class Problem:
             self.kernel_face.append(kernel_face)
             self.kernel_jac_face.append(kernel_jac_face)
 
-    @timeit
+    # @timeit
     def split_and_compute_cell(self, cells_sol_flat, np_version, jac_flag, internal_vars):
         """Volume integral in weak form
         """

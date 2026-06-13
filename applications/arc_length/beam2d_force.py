@@ -51,7 +51,17 @@ class BeamHyperelasticWithImperfection(BeamHyperelastic):
 
 
 class BeamCounterLoad(Problem):
-    """Auxiliary problem: opposite traction on the right edge (cancels at lambda=0)."""
+    """Auxiliary problem for force-controlled arc-length (``q_vec_aux``).
+
+    Surface traction is the opposite of the main problem's right-edge load
+    (``-END_TRACTION``). ``get_q_vec`` turns this into the reference load
+    vector ``q_aux``. The arc-length residual uses ``R + (1 - λ) q_aux``:
+
+    - **λ = 0:** counter-traction cancels the main traction at ``u = 0``,
+      so continuation starts from the undeformed reference state.
+    - **λ = 1:** ``(1 - λ) q_aux = 0``; only the main problem's full design
+      traction remains (the target forward problem).
+    """
 
     def get_tensor_map(self):
         def first_PK_stress(u_grad):

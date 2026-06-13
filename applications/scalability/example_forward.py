@@ -14,7 +14,7 @@ from applications.scalability.hyperelastic3d_common import (
     build_hyperelastic3d_problem_classic,
 )
 
-Nx, Ny, Nz = 80, 80, 80
+Nx, Ny, Nz = 50, 50, 50
 
 
 def main():

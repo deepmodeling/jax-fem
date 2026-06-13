@@ -171,7 +171,7 @@ def get_shape_vals_and_grads(ele_type, quadrature_rule=None, quadrature_order=No
     vals_and_grads = element.tabulate(1, quad_points)[:, :, re_order, :]
     shape_values = vals_and_grads[0, :, :, 0]
     shape_grads_ref = onp.transpose(vals_and_grads[1:, :, :, 0], axes=(1, 2, 0))
-    logger.debug(f"ele_type = {ele_type}, quad_points.shape = (num_quads, dim) = {quad_points.shape}")
+    logger.info(f"ele_type = {ele_type}, quad_points.shape = (num_quads, dim) = {quad_points.shape}")
     return shape_values, shape_grads_ref, weights
 
 
@@ -246,5 +246,5 @@ def get_face_shape_vals_and_grads(ele_type, quadrature_rule=None, quadrature_ord
     face_shape_vals = vals_and_grads[0, :, :, 0].reshape(num_faces, num_face_quads, -1)
     face_shape_grads_ref = vals_and_grads[1:, :, :, 0].reshape(dim, num_faces, num_face_quads, -1)
     face_shape_grads_ref = onp.transpose(face_shape_grads_ref, axes=(1, 2, 3, 0))
-    logger.debug(f"face_quad_points.shape = (num_faces, num_face_quads, dim) = {face_quad_points.shape}")
+    logger.info(f"face_quad_points.shape = (num_faces, num_face_quads, dim) = {face_quad_points.shape}")
     return face_shape_vals, face_shape_grads_ref, face_weights, face_normals, face_inds

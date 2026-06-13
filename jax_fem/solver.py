@@ -15,10 +15,46 @@ try:
     import pyamgx
     pyamgx.initialize()
     PYAMGX_AVAILABLE = True
-    logger.info("pyamgx installed, AMGX solver enabled.")
 except ImportError:
     PYAMGX_AVAILABLE = False
-    logger.info("pyamgx not installed, AMGX solver disabled.")
+
+
+def _timing_record(timing, name, dt):
+    timing[name] += dt
+
+
+def _log_newton_iter_start(iter_num):
+    print()
+    logger.info("  iter %d", iter_num)
+
+
+def _log_newton_iter_summary(iter_num, local_s, global_s, res_val, rel_res_val, linear_s=None):
+    logger.info("           nonlinear residual: L2 norm = %.3g (relative to initial = %.3g)",
+                res_val, rel_res_val)
+    if linear_s is None:
+        logger.info("           timing: local assembly %6.3f s, global matrix %6.3f s",
+                    local_s, global_s)
+    else:
+        logger.info("           timing: linear solve %6.3f s, local assembly %6.3f s, global matrix %6.3f s",
+                    linear_s, local_s, global_s)
+
+
+def _log_timing_table(n_iters, parts, wall_s):
+    rows = (
+        ('local_assembly', 'local'),
+        ('global_matrix', 'global'),
+        ('linear', 'linear'),
+    )
+    print()
+    logger.info("Timing summary — %d Newton iter, %.3f s wall", n_iters, wall_s)
+    for key, label in rows:
+        dt = parts[key]
+        pct = 100. * dt / wall_s if wall_s > 0 else 0.
+        logger.info("  %-8s %7.3f s  %5.1f%%", label, dt, pct)
+    other = wall_s - sum(parts.values())
+    if other >= 0.01:
+        pct = 100. * other / wall_s if wall_s > 0 else 0.
+        logger.info("  %-8s %7.3f s  %5.1f%%", "other", other, pct)
 
 
 ################################################################################
@@ -49,7 +85,7 @@ def jax_solve(A, b, x0, precond):
 
     # Verify convergence
     err = np.linalg.norm(A @ x - b)
-    logger.debug(f"JAX Solver - Finshed solving, res = {err}")
+    logger.debug("JAX Solver - Finished solving, linear solve res = %.3g", err)
     assert err < 0.1, f"JAX linear solver failed to converge with err = {err}"
     x = np.where(err < 0.1, x, np.nan) # For assert purpose, somehow this also affects bicgstab.
 
@@ -66,7 +102,8 @@ def scipy_spsolve(A, b):
     # TODO: try https://jax.readthedocs.io/en/latest/_autosummary/jax.experimental.sparse.linalg.spsolve.html
     # x = jax.experimental.sparse.linalg.spsolve(av, aj, ai, b)
 
-    logger.debug(f'Scipy Solver - Finished solving, linear solve res = {np.linalg.norm(Asp @ x - b)}')
+    logger.debug("Scipy Solver - Finished solving, linear solve res = %.3g",
+                 np.linalg.norm(Asp @ x - b))
     return x
 
 def petsc_solve(A, b, ksp_type, pc_type):
@@ -91,7 +128,7 @@ def petsc_solve(A, b, ksp_type, pc_type):
     A.mult(x, y)
 
     err = np.linalg.norm(y.getArray() - rhs.getArray())
-    logger.debug(f"PETSc Solver - Finished solving, linear solve res = {err}")
+    logger.debug("PETSc Solver - Finished solving, linear solve res = %.3g", err)
     assert err < 0.1, f"PETSc linear solver failed to converge, err = {err}"
 
     return x.getArray()
@@ -168,7 +205,7 @@ def AMGX_solve_host(indptr, indices, data, shape_arr, x, b, cfg_path):
         result = onp.asarray(result)
 
         res = onp.linalg.norm(A_csr @ result - b_host)
-        logger.info(f"AMGX Solver - Finished solving, linear solve res = {res}")
+        logger.info("AMGX Solver - Finished solving, linear solve res = %.3g", res)
 
         return result.astype(dtype).reshape(shape_b)
 
@@ -350,14 +387,14 @@ def operator_to_matrix(operator_fn, problem):
 ################################################################################
 # Newton step (linear increment + optional line search)
 
-def newton_step(problem, res_vec, A, dofs, newton_cfg):
+def newton_step(problem, res_vec, A, dofs, newton_cfg, timing):
     """One Newton correction: solve :math:`A\\,\\Delta u = -R`, then update ``dofs``.
 
-    Parameters
-    ----------
-    newton_cfg : dict
-        Newton step options: ``linear`` (passed to :func:`linear_solver`) and
-        optional ``line_search_flag``.
+    Returns
+    -------
+    dofs : ndarray
+    linear_s : float
+        Linear solve wall time (also accumulated in ``timing``).
     """
     logger.debug(f"Solving linear system...")
     b = -res_vec
@@ -371,14 +408,17 @@ def newton_step(problem, res_vec, A, dofs, newton_cfg):
         x0_2 = copy_bc(dofs, problem)
         x0 = x0_1 - x0_2
 
+    t0 = time.perf_counter()
     inc = linear_solver(A, b, x0, newton_cfg.get('linear', {}))
+    linear_s = time.perf_counter() - t0
+    _timing_record(timing, 'linear', linear_s)
 
     if newton_cfg.get('line_search_flag', False):
         dofs = line_search(problem, dofs, inc)
     else:
         dofs = dofs + inc
 
-    return dofs
+    return dofs, linear_s
 
 
 def line_search(problem, dofs, inc):
@@ -866,7 +906,8 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
  
     dofs = np.zeros(problem.num_total_dofs_all_vars)
     res_vec, A = newton_update_helper(dofs)
-    dofs = newton_step(problem, res_vec, A, dofs, {'linear': linear_options})
+    dofs, _ = newton_step(problem, res_vec, A, dofs, {'linear': linear_options},
+                          {'local_assembly': 0., 'global_matrix': 0., 'linear': 0.})
 
     if initial_guess is not None:
         dofs = initial_guess
@@ -1200,9 +1241,10 @@ def solver(problem, solver_options={}):
     if method == 'dynamic_relax':
         return _solve_dynamic_relax(problem, cfg)
 
-    logger.debug(f"Calling the row elimination solver for imposing Dirichlet B.C.")
-    logger.debug("Start timing")
-    start = time.time()
+    print()
+    logger.info("Solving the nonlinear problem...")
+    timing = {'local_assembly': 0., 'global_matrix': 0., 'linear': 0.}
+    wall_start = time.perf_counter()
 
     if 'initial_guess' in cfg:
         # We don't want inititual guess to play a role in the differentiation chain.
@@ -1222,29 +1264,37 @@ def solver(problem, solver_options={}):
             dofs = problem.P_mat @ dofs
 
         sol_list = problem.unflatten_fn_sol_list(dofs)
+        t0 = time.perf_counter()
         res_list = problem.newton_update(sol_list)
+        local_s = time.perf_counter() - t0
+        _timing_record(timing, 'local_assembly', local_s)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
         res_vec = apply_bc_vec(res_vec, dofs, problem)
 
         if hasattr(problem, 'P_mat'):
             res_vec = problem.P_mat.T @ res_vec
 
+        t0 = time.perf_counter()
         A = get_A(problem)
-        return res_vec, A
+        global_s = time.perf_counter() - t0
+        _timing_record(timing, 'global_matrix', global_s)
+        return res_vec, A, local_s, global_s
 
-    res_vec, A = newton_update_helper(dofs)
+    _log_newton_iter_start(0)
+    res_vec, A, local_s, global_s = newton_update_helper(dofs)
     res_val = np.linalg.norm(res_vec)
     res_val_initial = res_val
     rel_res_val = res_val/res_val_initial
-    logger.debug(f"Before, l_2 res = {res_val}, relative l_2 res = {rel_res_val}")
+    _log_newton_iter_summary(0, local_s, global_s, res_val, rel_res_val)
+    n_iters = 0
     while (rel_res_val > rel_tol) and (res_val > tol):
-        dofs = newton_step(problem, res_vec, A, dofs, cfg)
-        res_vec, A = newton_update_helper(dofs)
-        # logger.debug(f"DEBUG: l_2 res = {np.linalg.norm(apply_bc_vec(A @ dofs, dofs, problem))}")
+        n_iters += 1
+        _log_newton_iter_start(n_iters)
+        dofs, linear_s = newton_step(problem, res_vec, A, dofs, cfg, timing)
+        res_vec, A, local_s, global_s = newton_update_helper(dofs)
         res_val = np.linalg.norm(res_vec)
         rel_res_val = res_val/res_val_initial
-
-        logger.debug(f"l_2 res = {res_val}, relative l_2 res = {rel_res_val}")
+        _log_newton_iter_summary(n_iters, local_s, global_s, res_val, rel_res_val, linear_s)
 
     assert np.all(np.isfinite(res_val)), f"res_val contains NaN, stop the program!"
     assert np.all(np.isfinite(dofs)), f"dofs contains NaN, stop the program!"
@@ -1261,9 +1311,9 @@ def solver(problem, solver_options={}):
     # the flattend DOF vector will be [u1x, u1y, u2x, u2y, u3x, u3y, u4x, u4y, p1, p2]
     sol_list = problem.unflatten_fn_sol_list(dofs)
 
-    end = time.time()
-    solve_time = end - start
-    logger.info(f"Solve took {solve_time} [s]")
+    _log_timing_table(n_iters, timing, time.perf_counter() - wall_start)
+
+    print()
     logger.info(f"max of dofs = {np.max(dofs)}")
     logger.info(f"min of dofs = {np.min(dofs)}")
 
@@ -1359,6 +1409,7 @@ def ad_wrapper(problem, solver_options={}, adjoint_solver_options={}):
         return sol_list, (params, sol_list)
 
     def f_bwd(res, v):
+        print()
         logger.info("Running backward and solving the adjoint problem...")
         params, sol_list = res
         vjp_result = implicit_vjp(problem, sol_list, params, v, adjoint_solver_options)

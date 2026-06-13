@@ -82,7 +82,7 @@ class FiniteElement:
         self.num_total_dofs = self.num_total_nodes * self.vec
 
         start = time.time()
-        logger.debug(f"Computing shape function values, gradients, etc.")
+        logger.info(f"Computing shape function values, gradients, etc.")
 
         self.shape_vals, self.shape_grads_ref, self.quad_weights = get_shape_vals_and_grads(
             self.ele_type,
@@ -105,9 +105,9 @@ class FiniteElement:
         end = time.time()
         compute_time = end - start
 
-        logger.debug(f"Done pre-computations, took {compute_time} [s]")
         logger.info(f"Solving a problem with {len(self.cells)} cells, {self.num_total_nodes}x{self.vec} = {self.num_total_dofs} dofs.")
         logger.info(f"Element type is {self.ele_type}, using {self.num_quads} quad points per element.")
+        logger.info(f"Pre-computations took {compute_time:.3f} [s]")
 
     def get_shape_grads(self, points=None):
         """Compute shape function gradient value.

@@ -1,5 +1,6 @@
 """Displacement-controlled arc-length (buckling; λ=1 → END_COMPRESSION)."""
 
+import logging
 import os
 import shutil
 
@@ -13,8 +14,11 @@ from applications.arc_length.hyperelastic_models import (
     location_right,
     make_mesh,
 )
+from jax_fem import logger
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
+
+logger.setLevel(logging.INFO)
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'output', 'arc_length_displacement')
 

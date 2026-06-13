@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "jax-fem"
 version = "0.0.12"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 authors = [
   {name = "Tianju Xue", email = "cetxue@ust.hk"},
   {name = "Weipeng Xu", email = "wxuby@connect.ust.hk"}

@@ -1,0 +1,17 @@
+name: jax-fem-env
+channels:
+  - conda-forge
+dependencies:
+  - python==3.13.13
+  - numpy==2.4.6
+  - scipy==1.17.1
+  - matplotlib==3.10.9
+  - meshio==5.3.5
+  - petsc4py==3.25.1
+  - pip==26.1.1
+  - pip:
+    - setuptools==81.0.0
+    - wheel==0.47.0
+    - gmsh==4.15.2
+    - fenics-basix==0.10.0
+    - pyfiglet==1.0.4

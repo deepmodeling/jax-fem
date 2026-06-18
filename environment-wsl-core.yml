@@ -1,0 +1,17 @@
+name: jax-fem-core
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - meshio=5.3.5
+  - petsc4py
+  - jax
+  - jaxlib
+  - gmsh
+  - fenics-basix
+  - pyfiglet
+  - pip
+  - pip:
+      - -e .

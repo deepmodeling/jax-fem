@@ -1,0 +1,1191 @@
+import argparse
+import csv
+import json
+import math
+import os
+from dataclasses import asdict, dataclass
+
+import jax
+import jax.numpy as np
+import numpy as onp
+
+from inp_initial_guess_smoke import read_tet4_inp
+from jax_fem.generate_mesh import Mesh
+from jax_fem.problem import Problem
+from jax_fem.solver import solver
+from jax_fem.utils import save_sol
+
+
+AXIS_TO_ID = {"x": 0, "y": 1, "z": 2}
+ID_TO_AXIS = ("x", "y", "z")
+MODE_TO_ID = {
+    "scan": 1,
+    "hatch_dwell": 2,
+    "layer_dwell": 3,
+    "recoat": 4,
+    "cooling": 5,
+    "path": 6,
+    "release": 7,
+}
+
+
+@dataclass
+class StepState:
+    global_step: int
+    mode: str
+    layer_idx: int
+    hatch_idx: int
+    scan_idx: int
+    laser_center: onp.ndarray
+    laser_power: float
+    laser_switch: float
+    dt: float
+    scan_frac: float
+    hatch_frac: float
+    front_coord: float
+    layer_frac: float
+
+
+class PropertyTable:
+    def __init__(self, path):
+        self.path = path
+        rows = []
+        with open(path, newline="") as f:
+            reader = csv.DictReader(f)
+            if "T" not in reader.fieldnames or "value" not in reader.fieldnames:
+                raise ValueError(f"Property table must contain T,value columns: {path}")
+            for row in reader:
+                rows.append((float(row["T"]), float(row["value"])))
+        if len(rows) < 2:
+            raise ValueError(f"Property table needs at least two rows: {path}")
+        rows.sort(key=lambda item: item[0])
+        self.T = np.asarray([r[0] for r in rows])
+        self.values = np.asarray([r[1] for r in rows])
+
+    def eval(self, T):
+        return np.interp(T, self.T, self.values)
+
+
+class TransientThermal(Problem):
+    def custom_init(
+        self,
+        convection_h,
+        ambient,
+        emissivity,
+        stefan_boltzmann,
+        build_axis_id,
+        plane_axis0_id,
+        plane_axis1_id,
+        build_sign,
+        num_surface_maps,
+    ):
+        self.convection_h = convection_h
+        self.ambient = ambient
+        self.emissivity = emissivity
+        self.stefan_boltzmann = stefan_boltzmann
+        self.build_axis_id = int(build_axis_id)
+        self.plane_axis0_id = int(plane_axis0_id)
+        self.plane_axis1_id = int(plane_axis1_id)
+        self.build_sign = float(build_sign)
+        self.num_surface_maps = int(num_surface_maps)
+
+    def get_tensor_map(self):
+        def heat_flux(
+            T_grad,
+            T_old,
+            dt,
+            laser_center,
+            laser_power,
+            beam_radius,
+            source_depth,
+            laser_switch,
+            active,
+            rho,
+            cp,
+            conductivity,
+            latent_cp,
+        ):
+            return conductivity[0] * T_grad
+
+        return heat_flux
+
+    def get_mass_map(self):
+        def heat_capacity(
+            T,
+            x,
+            T_old,
+            dt,
+            laser_center,
+            laser_power,
+            beam_radius,
+            source_depth,
+            laser_switch,
+            active,
+            rho,
+            cp,
+            conductivity,
+            latent_cp,
+        ):
+            r0 = x[self.plane_axis0_id] - laser_center[self.plane_axis0_id]
+            r1 = x[self.plane_axis1_id] - laser_center[self.plane_axis1_id]
+            r2 = r0**2 + r1**2
+            depth = self.build_sign * (laser_center[self.build_axis_id] - x[self.build_axis_id])
+            q_depth = np.where(depth >= 0.0, np.exp(-depth / source_depth[0]), 0.0)
+            q_vol = (
+                laser_power[0]
+                / (np.pi * beam_radius[0] ** 2 * source_depth[0])
+                * np.exp(-2.0 * r2 / beam_radius[0] ** 2)
+                * q_depth
+                * laser_switch[0]
+                * active[0]
+            )
+            cp_eff = cp[0] + latent_cp[0]
+            return np.array([rho[0] * cp_eff * (T[0] - T_old[0]) / dt[0] - q_vol])
+
+        return heat_capacity
+
+    def get_surface_maps(self):
+        def surface_flux(T, _point):
+            q_conv = self.convection_h * (self.ambient - T[0])
+            q_rad = self.emissivity * self.stefan_boltzmann * (self.ambient**4 - T[0] ** 4)
+            return -np.array([q_conv + q_rad])
+
+        return [surface_flux for _ in range(self.num_surface_maps)]
+
+    def set_params(self, params):
+        (
+            T_old,
+            dt,
+            laser_center,
+            effective_laser_power,
+            beam_radius,
+            source_depth,
+            laser_switch,
+            active_quad,
+            rho_quad,
+            cp_quad,
+            conductivity_quad,
+            latent_cp_quad,
+        ) = params
+
+        num_cells = self.fes[0].num_cells
+        num_quads = self.fes[0].num_quads
+        dt_quad = dt * np.ones((num_cells, num_quads, 1))
+        laser_center_quad = laser_center[None, None, :] * np.ones((num_cells, num_quads))[:, :, None]
+        laser_power_quad = effective_laser_power * np.ones((num_cells, num_quads, 1))
+        beam_radius_quad = beam_radius * np.ones((num_cells, num_quads, 1))
+        source_depth_quad = source_depth * np.ones((num_cells, num_quads, 1))
+        laser_switch_quad = laser_switch * np.ones((num_cells, num_quads, 1))
+
+        self.internal_vars = [
+            self.fes[0].convert_from_dof_to_quad(T_old),
+            dt_quad,
+            laser_center_quad,
+            laser_power_quad,
+            beam_radius_quad,
+            source_depth_quad,
+            laser_switch_quad,
+            active_quad,
+            rho_quad,
+            cp_quad,
+            conductivity_quad,
+            latent_cp_quad,
+        ]
+        self.internal_vars_surfaces = [[] for _ in range(len(self.boundary_inds_list))]
+
+
+class ThermoMechanical(Problem):
+    def custom_init(self, mechanics_model):
+        self.mechanics_model = mechanics_model
+        self.internal_vars = [
+            np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
+            np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
+            np.ones((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
+            np.ones((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
+            np.ones((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
+            np.ones((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
+            np.ones((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
+            np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
+            np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
+        ]
+
+    def stress_fn(self, u_grad, T, dT, active_factor, young, alpha, poisson, yield_stress, hardening, eqp_old):
+        eps = 0.5 * (u_grad + u_grad.T)
+        nu = np.clip(poisson[0], -0.49, 0.49)
+        E = young[0]
+        mu = E / (2.0 * (1.0 + nu))
+        lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
+        thermal_eps = alpha[0] * dT[0] * np.eye(self.dim)
+        elastic_eps = eps - thermal_eps
+        sigma_trial = lmbda * np.trace(elastic_eps) * np.eye(self.dim) + 2.0 * mu * elastic_eps
+
+        if self.mechanics_model == "j2_plastic":
+            hydro = np.trace(sigma_trial) / 3.0 * np.eye(self.dim)
+            dev = sigma_trial - hydro
+            seq = np.sqrt(1.5 * np.sum(dev * dev) + 1e-30)
+            current_yield = np.maximum(yield_stress[0] + hardening[0] * eqp_old[0], 1e-12)
+            scale = np.minimum(1.0, current_yield / seq)
+            sigma = hydro + scale * dev
+        else:
+            sigma = sigma_trial
+
+        return active_factor[0] * sigma
+
+    def get_tensor_map(self):
+        return self.stress_fn
+
+    def set_params(self, params):
+        self.internal_vars = params
+
+    def compute_cell_stress(self, sol, params):
+        T_quad, dT_quad, active_factor_quad, young_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad, eqp_old_quad = params
+        u_grads = np.take(sol, self.fes[0].cells, axis=0)[:, None, :, :, None] * self.fes[0].shape_grads[:, :, :, None, :]
+        u_grads = np.sum(u_grads, axis=2)
+        sigmas = jax.vmap(jax.vmap(self.stress_fn))(
+            u_grads,
+            T_quad,
+            dT_quad,
+            active_factor_quad,
+            young_quad,
+            alpha_quad,
+            poisson_quad,
+            yield_quad,
+            hardening_quad,
+            eqp_old_quad,
+        )
+        sigma_mean = np.mean(sigmas, axis=1)
+        sxx = sigma_mean[:, 0, 0]
+        syy = sigma_mean[:, 1, 1]
+        szz = sigma_mean[:, 2, 2]
+        sxy = sigma_mean[:, 0, 1]
+        syz = sigma_mean[:, 1, 2]
+        sxz = sigma_mean[:, 0, 2]
+        vm = np.sqrt(
+            0.5 * ((sxx - syy) ** 2 + (syy - szz) ** 2 + (szz - sxx) ** 2)
+            + 3.0 * (sxy**2 + syz**2 + sxz**2)
+        )
+        return sigma_mean, vm
+
+    def compute_eqp_update(self, sol, params):
+        if self.mechanics_model != "j2_plastic":
+            return params[-1]
+
+        T_quad, dT_quad, active_factor_quad, young_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad, eqp_old_quad = params
+        u_grads = np.take(sol, self.fes[0].cells, axis=0)[:, None, :, :, None] * self.fes[0].shape_grads[:, :, :, None, :]
+        u_grads = np.sum(u_grads, axis=2)
+
+        def one_quad(u_grad, T, dT, active_factor, young, alpha, poisson, yield_stress, hardening, eqp_old):
+            eps = 0.5 * (u_grad + u_grad.T)
+            nu = np.clip(poisson[0], -0.49, 0.49)
+            E = young[0]
+            mu = E / (2.0 * (1.0 + nu))
+            lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
+            thermal_eps = alpha[0] * dT[0] * np.eye(self.dim)
+            elastic_eps = eps - thermal_eps
+            sigma_trial = lmbda * np.trace(elastic_eps) * np.eye(self.dim) + 2.0 * mu * elastic_eps
+            hydro = np.trace(sigma_trial) / 3.0 * np.eye(self.dim)
+            dev = sigma_trial - hydro
+            seq = np.sqrt(1.5 * np.sum(dev * dev) + 1e-30)
+            current_yield = np.maximum(yield_stress[0] + hardening[0] * eqp_old[0], 1e-12)
+            delta_eqp = np.maximum(seq - current_yield, 0.0) / (3.0 * mu + hardening[0] + 1e-12)
+            active = np.where(active_factor[0] > 0.5, 1.0, 0.0)
+            return np.array([eqp_old[0] + active * delta_eqp])
+
+        return jax.vmap(jax.vmap(one_quad))(
+            u_grads,
+            T_quad,
+            dT_quad,
+            active_factor_quad,
+            young_quad,
+            alpha_quad,
+            poisson_quad,
+            yield_quad,
+            hardening_quad,
+            eqp_old_quad,
+        )
+
+
+def parse_scalar(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    if text == "":
+        return ""
+    if text.lower() in ("true", "yes", "on"):
+        return True
+    if text.lower() in ("false", "no", "off"):
+        return False
+    if text.lower() in ("none", "null"):
+        return None
+    try:
+        if any(ch in text for ch in (".", "e", "E")):
+            return float(text)
+        return int(text)
+    except ValueError:
+        return text.strip("\"'")
+
+
+def read_config(path):
+    if path is None:
+        return {}
+    with open(path) as f:
+        text = f.read()
+    if path.endswith(".json"):
+        data = json.loads(text)
+        if not isinstance(data, dict):
+            raise ValueError("--config JSON must contain an object")
+        return data
+
+    data = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if ":" not in stripped:
+            raise ValueError(f"Only flat YAML key: value entries are supported, got: {line}")
+        key, value = stripped.split(":", 1)
+        data[key.strip().replace("-", "_")] = parse_scalar(value)
+    return data
+
+
+def cfg(config, key, default):
+    return config.get(key, default)
+
+
+def build_parser(config=None):
+    config = config or {}
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default=None)
+    parser.add_argument("--inp", default=cfg(config, "inp", "/home/user/work/159/schema/0119_c3d4_only.inp"))
+    parser.add_argument("--max-cells", type=int, default=cfg(config, "max_cells", 0))
+    parser.add_argument("--mesh-length-scale", type=float, default=cfg(config, "mesh_length_scale", 1.0))
+
+    parser.add_argument("--layers", type=int, default=cfg(config, "layers", 50))
+    parser.add_argument("--steps", type=int, default=cfg(config, "steps", None), help="Backward-compatible alias for --layers.")
+    parser.add_argument("--scan-steps-per-layer", type=int, default=cfg(config, "scan_steps_per_layer", 20))
+    parser.add_argument("--hatch-lines-per-layer", type=int, default=cfg(config, "hatch_lines_per_layer", 1))
+    parser.add_argument("--dt", type=float, default=cfg(config, "dt", 1e-3))
+
+    parser.add_argument("--ambient", type=float, default=cfg(config, "ambient", 300.0))
+    parser.add_argument("--preheat-temperature", type=float, default=cfg(config, "preheat_temperature", None))
+    parser.add_argument("--rho", type=float, default=cfg(config, "rho", 7800.0))
+    parser.add_argument("--cp", type=float, default=cfg(config, "cp", 500.0))
+    parser.add_argument("--conductivity", type=float, default=cfg(config, "conductivity", 20.0))
+    parser.add_argument("--rho-solid", type=float, default=cfg(config, "rho_solid", None))
+    parser.add_argument("--cp-solid", type=float, default=cfg(config, "cp_solid", None))
+    parser.add_argument("--conductivity-solid", type=float, default=cfg(config, "conductivity_solid", None))
+    parser.add_argument("--rho-powder", type=float, default=cfg(config, "rho_powder", 3900.0))
+    parser.add_argument("--cp-powder", type=float, default=cfg(config, "cp_powder", 500.0))
+    parser.add_argument("--conductivity-powder", type=float, default=cfg(config, "conductivity_powder", 1.0))
+    parser.add_argument("--powder-mode", choices=("powder", "void"), default=cfg(config, "powder_mode", "powder"))
+    parser.add_argument("--inactive-thermal-factor", type=float, default=cfg(config, "inactive_thermal_factor", 1e-6))
+    parser.add_argument("--inactive-mechanics-factor", type=float, default=cfg(config, "inactive_mechanics_factor", 1e-9))
+
+    parser.add_argument("--k-table-solid", default=cfg(config, "k_table_solid", None))
+    parser.add_argument("--cp-table-solid", default=cfg(config, "cp_table_solid", None))
+    parser.add_argument("--k-table-powder", default=cfg(config, "k_table_powder", None))
+    parser.add_argument("--cp-table-powder", default=cfg(config, "cp_table_powder", None))
+    parser.add_argument("--solidus-temperature", type=float, default=cfg(config, "solidus_temperature", 0.0))
+    parser.add_argument("--liquidus-temperature", type=float, default=cfg(config, "liquidus_temperature", 0.0))
+    parser.add_argument("--latent-heat", type=float, default=cfg(config, "latent_heat", 0.0))
+
+    parser.add_argument("--convection-h", type=float, default=cfg(config, "convection_h", 10.0))
+    parser.add_argument("--emissivity", type=float, default=cfg(config, "emissivity", 0.0))
+    parser.add_argument("--stefan-boltzmann", type=float, default=cfg(config, "stefan_boltzmann", 5.670374419e-8))
+    parser.add_argument("--bottom-thermal-bc", choices=("fixed", "convection"), default=cfg(config, "bottom_thermal_bc", "fixed"))
+
+    parser.add_argument("--young", type=float, default=cfg(config, "young", 2.0e11))
+    parser.add_argument("--poisson", type=float, default=cfg(config, "poisson", 0.3))
+    parser.add_argument("--alpha", type=float, default=cfg(config, "alpha", 1.2e-5))
+    parser.add_argument("--E-table", dest="E_table", default=cfg(config, "E_table", None))
+    parser.add_argument("--alpha-table", default=cfg(config, "alpha_table", None))
+    parser.add_argument("--poisson-table", default=cfg(config, "poisson_table", None))
+    parser.add_argument("--yield-table", default=cfg(config, "yield_table", None))
+    parser.add_argument("--hardening-table", default=cfg(config, "hardening_table", None))
+    parser.add_argument("--mechanics-model", choices=("linear_elastic", "j2_plastic"), default=cfg(config, "mechanics_model", "linear_elastic"))
+
+    parser.add_argument("--laser-power", type=float, default=cfg(config, "laser_power", 1.0))
+    parser.add_argument("--absorptivity", type=float, default=cfg(config, "absorptivity", 0.35))
+    parser.add_argument("--beam-radius", type=float, default=cfg(config, "beam_radius", 0.0))
+    parser.add_argument("--source-depth", type=float, default=cfg(config, "source_depth", 0.0))
+
+    parser.add_argument("--build-axis", choices=("x", "y", "z"), default=cfg(config, "build_axis", "x"))
+    parser.add_argument("--base-side", choices=("min", "max"), default=cfg(config, "base_side", "min"))
+    parser.add_argument("--scan-axis", choices=("auto", "x", "y", "z"), default=cfg(config, "scan_axis", "auto"))
+    parser.add_argument("--scan-start", type=float, default=cfg(config, "scan_start", None))
+    parser.add_argument("--scan-end", type=float, default=cfg(config, "scan_end", None))
+    parser.add_argument("--scan-start-frac", type=float, default=cfg(config, "scan_start_frac", 0.05))
+    parser.add_argument("--scan-end-frac", type=float, default=cfg(config, "scan_end_frac", 0.95))
+    parser.add_argument("--hatch-start", type=float, default=cfg(config, "hatch_start", None))
+    parser.add_argument("--hatch-end", type=float, default=cfg(config, "hatch_end", None))
+    parser.add_argument("--hatch-start-frac", type=float, default=cfg(config, "hatch_start_frac", 0.05))
+    parser.add_argument("--hatch-end-frac", type=float, default=cfg(config, "hatch_end_frac", 0.95))
+    parser.add_argument("--hatch-fixed", type=float, default=cfg(config, "hatch_fixed", None))
+    parser.add_argument("--serpentine", dest="serpentine", action="store_true", default=cfg(config, "serpentine", True))
+    parser.add_argument("--no-serpentine", dest="serpentine", action="store_false")
+    parser.add_argument("--scan-speed", type=float, default=cfg(config, "scan_speed", 0.0))
+    parser.add_argument("--auto-scan-steps-from-speed", action="store_true", default=cfg(config, "auto_scan_steps_from_speed", False))
+    parser.add_argument("--dwell-steps-between-layers", type=int, default=cfg(config, "dwell_steps_between_layers", 0))
+    parser.add_argument("--dwell-steps-between-hatches", type=int, default=cfg(config, "dwell_steps_between_hatches", 0))
+    parser.add_argument("--recoat-time", type=float, default=cfg(config, "recoat_time", 0.0))
+    parser.add_argument("--path-file", default=cfg(config, "path_file", None))
+
+    parser.add_argument("--substrate-thickness", type=float, default=cfg(config, "substrate_thickness", 0.0))
+    parser.add_argument("--support-thickness", type=float, default=cfg(config, "support_thickness", 0.0))
+    parser.add_argument("--cooling-steps", type=int, default=cfg(config, "cooling_steps", 0))
+    parser.add_argument("--release-after-cooling", action="store_true", default=cfg(config, "release_after_cooling", False))
+
+    parser.add_argument("--mechanics-every", type=int, default=cfg(config, "mechanics_every", 1))
+    parser.add_argument("--thermal-output-every", type=int, default=cfg(config, "thermal_output_every", 0))
+    parser.add_argument("--mechanics-output-every", type=int, default=cfg(config, "mechanics_output_every", 1))
+    parser.add_argument("--summary-every", type=int, default=cfg(config, "summary_every", 1))
+    parser.add_argument("--calibration-dir", default=cfg(config, "calibration_dir", None))
+    parser.add_argument("--output-dir", default=cfg(config, "output_dir", "/home/user/work/159/output/inp_thermal_stress_oneway_layers"))
+    return parser
+
+
+def parse_args():
+    config_parser = argparse.ArgumentParser(add_help=False)
+    config_parser.add_argument("--config", default=None)
+    config_args, _ = config_parser.parse_known_args()
+    config = read_config(config_args.config)
+    parser = build_parser(config)
+    args = parser.parse_args()
+    args.config = config_args.config
+    return args
+
+
+def make_box_locations(points, build_axis="x", base_side="min", tol_ratio=1e-8):
+    pmin = onp.min(points, axis=0)
+    pmax = onp.max(points, axis=0)
+    span = max(float(onp.max(pmax - pmin)), 1.0)
+    atol = tol_ratio * span
+    build_axis_id = AXIS_TO_ID[build_axis]
+    plane_axis_ids = tuple(i for i in range(3) if i != build_axis_id)
+    if base_side == "min":
+        base_coord = pmin[build_axis_id]
+        exposed_coord = pmax[build_axis_id]
+    else:
+        base_coord = pmax[build_axis_id]
+        exposed_coord = pmin[build_axis_id]
+
+    def bottom(point):
+        return np.isclose(point[build_axis_id], base_coord, atol=atol)
+
+    def exposed(point):
+        return np.isclose(point[build_axis_id], exposed_coord, atol=atol)
+
+    def walls(point):
+        a0, a1 = plane_axis_ids
+        return (
+            np.isclose(point[a0], pmin[a0], atol=atol)
+            | np.isclose(point[a0], pmax[a0], atol=atol)
+            | np.isclose(point[a1], pmin[a1], atol=atol)
+            | np.isclose(point[a1], pmax[a1], atol=atol)
+        )
+
+    return pmin, pmax, bottom, exposed, walls, build_axis_id, plane_axis_ids, float(base_coord), float(exposed_coord)
+
+
+def coord_from_frac(pmin, pmax, axis_id, frac):
+    return float(pmin[axis_id] + frac * (pmax[axis_id] - pmin[axis_id]))
+
+
+def resolve_axis_range(pmin, pmax, axis_id, start_value, end_value, start_frac, end_frac):
+    start = float(start_value) if start_value is not None else coord_from_frac(pmin, pmax, axis_id, start_frac)
+    end = float(end_value) if end_value is not None else coord_from_frac(pmin, pmax, axis_id, end_frac)
+    return start, end
+
+
+def resolve_scan_and_hatch_axes(scan_axis, build_axis_id, plane_axis_ids):
+    if scan_axis == "auto":
+        scan_axis_id = plane_axis_ids[0]
+    else:
+        scan_axis_id = AXIS_TO_ID[scan_axis]
+    if scan_axis_id == build_axis_id:
+        raise ValueError("scan_axis cannot be the same as build_axis")
+    hatch_axis_id = [axis for axis in plane_axis_ids if axis != scan_axis_id][0]
+    return scan_axis_id, hatch_axis_id
+
+
+def build_front_coord(layer_idx, layers, pmin, pmax, build_axis_id, base_side):
+    build_min = float(pmin[build_axis_id])
+    build_max = float(pmax[build_axis_id])
+    layer_frac = float(layer_idx + 1) / float(layers)
+    if base_side == "min":
+        coord = build_min + layer_frac * (build_max - build_min)
+    else:
+        coord = build_max - layer_frac * (build_max - build_min)
+    return coord, layer_frac
+
+
+def compute_scan_hatch_coord(args, pmin, pmax, scan_axis_id, hatch_axis_id, hatch_idx, scan_idx):
+    scan_start, scan_end = resolve_axis_range(
+        pmin, pmax, scan_axis_id, args.scan_start, args.scan_end, args.scan_start_frac, args.scan_end_frac
+    )
+    if args.hatch_lines_per_layer <= 1:
+        hatch_coord = float(args.hatch_fixed) if args.hatch_fixed is not None else coord_from_frac(pmin, pmax, hatch_axis_id, 0.5)
+        hatch_frac = 0.5
+    else:
+        hatch_start, hatch_end = resolve_axis_range(
+            pmin, pmax, hatch_axis_id, args.hatch_start, args.hatch_end, args.hatch_start_frac, args.hatch_end_frac
+        )
+        hatch_frac = hatch_idx / float(args.hatch_lines_per_layer - 1)
+        hatch_coord = hatch_start + hatch_frac * (hatch_end - hatch_start)
+    scan_frac = 0.0 if args.scan_steps_per_layer <= 1 else scan_idx / float(args.scan_steps_per_layer - 1)
+    scan_frac_used = 1.0 - scan_frac if args.serpentine and (hatch_idx % 2 == 1) else scan_frac
+    scan_coord = scan_start + scan_frac_used * (scan_end - scan_start)
+    return scan_coord, hatch_coord, scan_frac_used, hatch_frac
+
+
+def make_step_state(global_step, mode, layer_idx, hatch_idx, scan_idx, laser_center, power, switch, dt, scan_frac, hatch_frac, front_coord, layer_frac):
+    return StepState(
+        global_step=global_step,
+        mode=mode,
+        layer_idx=int(layer_idx),
+        hatch_idx=int(hatch_idx),
+        scan_idx=int(scan_idx),
+        laser_center=onp.asarray(laser_center, dtype=onp.float64),
+        laser_power=float(power),
+        laser_switch=float(switch),
+        dt=float(dt),
+        scan_frac=float(scan_frac),
+        hatch_frac=float(hatch_frac),
+        front_coord=float(front_coord),
+        layer_frac=float(layer_frac),
+    )
+
+
+def generate_raster_step_states(args, pmin, pmax, build_axis_id, scan_axis_id, hatch_axis_id):
+    scan_start, scan_end = resolve_axis_range(
+        pmin, pmax, scan_axis_id, args.scan_start, args.scan_end, args.scan_start_frac, args.scan_end_frac
+    )
+    scan_length = abs(scan_end - scan_start)
+    if args.auto_scan_steps_from_speed:
+        if args.scan_speed <= 0.0:
+            raise ValueError("--auto-scan-steps-from-speed requires --scan-speed > 0")
+        args.scan_steps_per_layer = int(math.ceil(scan_length / (args.scan_speed * args.dt))) + 1
+    actual_speed = scan_length / max((args.scan_steps_per_layer - 1) * args.dt, args.dt)
+    if args.scan_speed > 0.0 and args.scan_speed * args.dt > 0.5 * max(args.beam_radius, 1e-12):
+        print("WARNING: scan_speed * dt is larger than 0.5 * beam_radius; consider smaller dt.")
+
+    states = []
+    global_step = 0
+    last_center = 0.5 * (pmin + pmax)
+    for layer_idx in range(args.layers):
+        front_coord, layer_frac = build_front_coord(layer_idx, args.layers, pmin, pmax, build_axis_id, args.base_side)
+        for hatch_idx in range(args.hatch_lines_per_layer):
+            for scan_idx in range(args.scan_steps_per_layer):
+                scan_coord, hatch_coord, scan_frac, hatch_frac = compute_scan_hatch_coord(
+                    args, pmin, pmax, scan_axis_id, hatch_axis_id, hatch_idx, scan_idx
+                )
+                center = 0.5 * (pmin + pmax)
+                center[build_axis_id] = front_coord
+                center[scan_axis_id] = scan_coord
+                center[hatch_axis_id] = hatch_coord
+                last_center = center.copy()
+                states.append(make_step_state(global_step, "scan", layer_idx, hatch_idx, scan_idx, center, args.laser_power, 1.0, args.dt, scan_frac, hatch_frac, front_coord, layer_frac))
+                global_step += 1
+            if hatch_idx < args.hatch_lines_per_layer - 1:
+                for _ in range(args.dwell_steps_between_hatches):
+                    states.append(make_step_state(global_step, "hatch_dwell", layer_idx, hatch_idx, args.scan_steps_per_layer - 1, last_center, 0.0, 0.0, args.dt, 1.0, 0.0, front_coord, layer_frac))
+                    global_step += 1
+        if layer_idx < args.layers - 1:
+            for _ in range(args.dwell_steps_between_layers):
+                states.append(make_step_state(global_step, "layer_dwell", layer_idx, args.hatch_lines_per_layer - 1, args.scan_steps_per_layer - 1, last_center, 0.0, 0.0, args.dt, 1.0, 1.0, front_coord, layer_frac))
+                global_step += 1
+            for _ in range(int(math.ceil(max(args.recoat_time, 0.0) / args.dt))):
+                states.append(make_step_state(global_step, "recoat", layer_idx, args.hatch_lines_per_layer - 1, args.scan_steps_per_layer - 1, last_center, 0.0, 0.0, args.dt, 1.0, 1.0, front_coord, layer_frac))
+                global_step += 1
+
+    final_front, final_frac = build_front_coord(args.layers - 1, args.layers, pmin, pmax, build_axis_id, args.base_side)
+    for _ in range(args.cooling_steps):
+        states.append(make_step_state(global_step, "cooling", args.layers - 1, 0, 0, last_center, 0.0, 0.0, args.dt, 0.0, 0.0, final_front, final_frac))
+        global_step += 1
+    return states, scan_length, actual_speed
+
+
+def generate_path_file_step_states(args, pmin, pmax, build_axis_id):
+    states = []
+    with open(args.path_file, newline="") as f:
+        reader = csv.DictReader(f)
+        required = {"time", "x", "y", "z", "power", "laser_on", "layer", "hatch", "mode"}
+        if not required.issubset(set(reader.fieldnames or [])):
+            raise ValueError(f"--path-file must contain columns: {sorted(required)}")
+        rows = list(reader)
+    if not rows:
+        raise ValueError("--path-file is empty")
+    times = [float(row["time"]) for row in rows]
+    for i, row in enumerate(rows):
+        dt = args.dt if i == 0 else max(times[i] - times[i - 1], 1e-15)
+        center = onp.asarray([float(row["x"]), float(row["y"]), float(row["z"])], dtype=onp.float64)
+        layer_idx = max(int(row["layer"]) - 1, 0)
+        front_coord = float(center[build_axis_id])
+        layer_frac = min(max((layer_idx + 1) / float(args.layers), 0.0), 1.0)
+        states.append(
+            make_step_state(
+                i,
+                row["mode"] or "path",
+                layer_idx,
+                max(int(row["hatch"]) - 1, 0),
+                i,
+                center,
+                float(row["power"]),
+                1.0 if parse_scalar(row["laser_on"]) else 0.0,
+                dt,
+                0.0,
+                0.0,
+                front_coord,
+                layer_frac,
+            )
+        )
+    return states, 0.0, 0.0
+
+
+def load_property_tables(args):
+    tables = {}
+    for key, path in [
+        ("k_solid", args.k_table_solid),
+        ("cp_solid", args.cp_table_solid),
+        ("k_powder", args.k_table_powder),
+        ("cp_powder", args.cp_table_powder),
+        ("E", args.E_table),
+        ("alpha", args.alpha_table),
+        ("poisson", args.poisson_table),
+        ("yield", args.yield_table),
+        ("hardening", args.hardening_table),
+    ]:
+        tables[key] = PropertyTable(path) if path else None
+    return tables
+
+
+def eval_property(T_quad, table, default):
+    if table is None:
+        return default * np.ones_like(T_quad)
+    return table.eval(T_quad)
+
+
+def compute_cell_temperature(T_nodes, cells):
+    return onp.mean(onp.asarray(T_nodes)[cells, 0], axis=1)
+
+
+def make_quad_scalar(cell_values, num_quads):
+    arr = np.asarray(cell_values)[:, None, None]
+    return arr * np.ones((len(cell_values), num_quads, 1))
+
+
+def classify_cells(points, cells, build_axis_id, build_sign, base_coord, args):
+    centroids = onp.mean(points[cells], axis=1)
+    cell_build_coord = centroids[:, build_axis_id]
+    dist_from_base = build_sign * (cell_build_coord - base_coord)
+    substrate = dist_from_base <= args.substrate_thickness if args.substrate_thickness > 0 else onp.zeros(len(cells), dtype=bool)
+    support = (
+        (dist_from_base > args.substrate_thickness)
+        & (dist_from_base <= args.substrate_thickness + args.support_thickness)
+        if args.support_thickness > 0
+        else onp.zeros(len(cells), dtype=bool)
+    )
+    return centroids, cell_build_coord, substrate, support
+
+
+def compute_layer_id(cell_build_coord, build_axis_id, pmin, pmax, args):
+    build_min = float(pmin[build_axis_id])
+    build_max = float(pmax[build_axis_id])
+    if args.base_side == "min":
+        frac = (cell_build_coord - build_min) / max(build_max - build_min, 1e-15)
+    else:
+        frac = (build_max - cell_build_coord) / max(build_max - build_min, 1e-15)
+    return onp.clip(onp.ceil(frac * args.layers), 1, args.layers).astype(onp.int32)
+
+
+def compute_active_cell(state, cell_build_coord, substrate_cell, support_cell, build_sign, args):
+    tol = 1e-12 * max(float(onp.max(onp.abs(cell_build_coord))), 1.0)
+    part_active = build_sign * (state.front_coord - cell_build_coord) >= -tol
+    return substrate_cell | support_cell | part_active
+
+
+def material_cell_state(active_cell, substrate_cell, support_cell):
+    state = onp.zeros(len(active_cell), dtype=onp.float64)
+    state[active_cell] = 1.0
+    state[substrate_cell] = 2.0
+    state[support_cell] = 3.0
+    return state
+
+
+def thermal_material_quads(T_old_quad, active_quad, args, tables):
+    rho_solid = args.rho_solid if args.rho_solid is not None else args.rho
+    cp_solid = args.cp_solid if args.cp_solid is not None else args.cp
+    k_solid = args.conductivity_solid if args.conductivity_solid is not None else args.conductivity
+
+    cp_solid_quad = eval_property(T_old_quad, tables["cp_solid"], cp_solid)
+    k_solid_quad = eval_property(T_old_quad, tables["k_solid"], k_solid)
+    cp_powder_quad = eval_property(T_old_quad, tables["cp_powder"], args.cp_powder)
+    k_powder_quad = eval_property(T_old_quad, tables["k_powder"], args.conductivity_powder)
+
+    if args.powder_mode == "void":
+        rho_inactive = rho_solid * args.inactive_thermal_factor
+        cp_inactive = cp_solid * np.ones_like(T_old_quad)
+        k_inactive = k_solid * args.inactive_thermal_factor * np.ones_like(T_old_quad)
+    else:
+        rho_inactive = args.rho_powder
+        cp_inactive = cp_powder_quad
+        k_inactive = k_powder_quad
+
+    rho_quad = active_quad * rho_solid + (1.0 - active_quad) * rho_inactive
+    cp_quad = active_quad * cp_solid_quad + (1.0 - active_quad) * cp_inactive
+    conductivity_quad = active_quad * k_solid_quad + (1.0 - active_quad) * k_inactive
+
+    if args.latent_heat > 0.0 and args.liquidus_temperature > args.solidus_temperature:
+        in_mushy = (T_old_quad >= args.solidus_temperature) & (T_old_quad <= args.liquidus_temperature)
+        latent_cp = np.where(in_mushy, args.latent_heat / (args.liquidus_temperature - args.solidus_temperature), 0.0)
+    else:
+        latent_cp = np.zeros_like(T_old_quad)
+
+    return rho_quad, cp_quad, conductivity_quad, latent_cp
+
+
+def mechanics_material_quads(T_quad, active_quad, args, tables):
+    E_quad = eval_property(T_quad, tables["E"], args.young)
+    alpha_quad = eval_property(T_quad, tables["alpha"], args.alpha)
+    poisson_quad = eval_property(T_quad, tables["poisson"], args.poisson)
+    if args.mechanics_model == "j2_plastic":
+        if tables["yield"] is None:
+            raise ValueError("--mechanics-model j2_plastic requires --yield-table")
+        yield_quad = eval_property(T_quad, tables["yield"], args.young)
+        hardening_quad = eval_property(T_quad, tables["hardening"], 0.0)
+    else:
+        yield_quad = args.young * np.ones_like(T_quad)
+        hardening_quad = np.zeros_like(T_quad)
+    active_factor_quad = active_quad + args.inactive_mechanics_factor * (1.0 - active_quad)
+    return active_factor_quad, E_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad
+
+
+def make_full_bottom_mechanics_bc(bottom):
+    def zero(_point):
+        return 0.0
+
+    return [[bottom, bottom, bottom], [0, 1, 2], [zero, zero, zero]]
+
+
+def make_anchor_mechanics_bc(points):
+    span = max(float((points.max(axis=0) - points.min(axis=0)).max()), 1.0)
+    atol = 1e-8 * span
+    anchor0_id = int(onp.argmin(points[:, 0]))
+    anchor0 = points[anchor0_id]
+    dist0 = onp.linalg.norm(points - anchor0, axis=1)
+    anchor1_id = int(onp.argmax(dist0))
+    anchor1 = points[anchor1_id]
+    axis = anchor1 - anchor0
+    axis_norm = max(float(onp.linalg.norm(axis)), 1e-12)
+    cross_dist = onp.linalg.norm(onp.cross(points - anchor0, axis / axis_norm), axis=1)
+    anchor2_id = int(onp.argmax(cross_dist))
+    anchor2 = points[anchor2_id]
+
+    def at_node(target):
+        target = np.asarray(target)
+
+        def location(point):
+            return np.linalg.norm(point - target) <= atol
+
+        return location
+
+    def zero(_point):
+        return 0.0
+
+    return [
+        [at_node(anchor0), at_node(anchor0), at_node(anchor0), at_node(anchor1), at_node(anchor1), at_node(anchor2)],
+        [0, 1, 2, 1, 2, 2],
+        [zero, zero, zero, zero, zero, zero],
+    ]
+
+
+def should_run_mechanics(global_step, args):
+    return args.mechanics_every > 0 and global_step % args.mechanics_every == 0
+
+
+def should_save_step(global_step, did_mechanics, is_last, args):
+    if is_last:
+        return True
+    if did_mechanics and args.mechanics_output_every > 0 and global_step % args.mechanics_output_every == 0:
+        return True
+    if args.thermal_output_every > 0 and global_step % args.thermal_output_every == 0:
+        return True
+    return False
+
+
+def save_step(
+    fe,
+    T_new,
+    u,
+    vtk_path,
+    dT_quad,
+    sigma_mean,
+    vm,
+    active_cell,
+    layer_id_cell,
+    activation_step_cell,
+    activation_temperature_cell,
+    material_state_cell,
+    max_temperature_cell,
+    eqp_quad,
+):
+    if sigma_mean is None:
+        zeros = np.zeros((fe.num_cells, 3, 3))
+        sigma_mean = zeros
+        vm = np.zeros((fe.num_cells,))
+    eqp_cell = np.mean(eqp_quad[:, :, 0], axis=1)
+    save_sol(
+        fe,
+        T_new,
+        vtk_path,
+        point_infos=[("T", T_new), ("u", u)],
+        cell_infos=[
+            ("active", np.asarray(active_cell, dtype=np.float64)),
+            ("layer_id", np.asarray(layer_id_cell, dtype=np.float64)),
+            ("activation_step", np.asarray(activation_step_cell, dtype=np.float64)),
+            ("activation_temperature", np.asarray(activation_temperature_cell, dtype=np.float64)),
+            ("material_state", np.asarray(material_state_cell, dtype=np.float64)),
+            ("dT", np.mean(dT_quad[:, :, 0], axis=1)),
+            ("stress_xx", sigma_mean[:, 0, 0]),
+            ("stress_yy", sigma_mean[:, 1, 1]),
+            ("stress_zz", sigma_mean[:, 2, 2]),
+            ("stress_xy", sigma_mean[:, 0, 1]),
+            ("stress_yz", sigma_mean[:, 1, 2]),
+            ("stress_xz", sigma_mean[:, 0, 2]),
+            ("von_mises", vm),
+            ("eq_plastic_strain", eqp_cell),
+            ("max_temperature_history", np.asarray(max_temperature_cell, dtype=np.float64)),
+        ],
+    )
+
+
+def write_used_config(args, output_dir, derived):
+    os.makedirs(output_dir, exist_ok=True)
+    data = dict(vars(args))
+    data["derived"] = derived
+    with open(os.path.join(output_dir, "used_config.json"), "w") as f:
+        json.dump(data, f, indent=2, sort_keys=True)
+
+
+def write_calibration_template(args):
+    if args.calibration_dir is None:
+        return
+    os.makedirs(args.calibration_dir, exist_ok=True)
+    path = os.path.join(args.calibration_dir, "calibration_notes.md")
+    if os.path.exists(path):
+        return
+    with open(path, "w") as f:
+        f.write("# Calibration Notes\n\n")
+        f.write("- melt pool width:\n- melt pool depth:\n- peak temperature:\n")
+        f.write("- cooling rate:\n- final distortion:\n- residual stress:\n")
+
+
+def print_startup(args, raw_pmin, raw_pmax, pmin, pmax, selected_cells, points, thermal, mechanics, derived):
+    print("inp:", args.inp)
+    print("selected_cells:", selected_cells)
+    print("points:", len(points))
+    print("raw_pmin:", raw_pmin)
+    print("raw_pmax:", raw_pmax)
+    print("mesh_length_scale:", args.mesh_length_scale)
+    print("scaled_pmin:", pmin)
+    print("scaled_pmax:", pmax)
+    print("thermal_dofs:", thermal.num_total_dofs_all_vars)
+    print("mechanical_dofs:", mechanics.num_total_dofs_all_vars)
+    print("build_axis:", args.build_axis)
+    print("base_side:", args.base_side)
+    print("build_direction:", f"+{args.build_axis}" if args.base_side == "min" else f"-{args.build_axis}")
+    print("plane_axes:", derived["plane_axes"])
+    print("scan_axis:", derived["scan_axis"])
+    print("hatch_axis:", derived["hatch_axis"])
+    print("layers:", args.layers)
+    print("hatch_lines_per_layer:", args.hatch_lines_per_layer)
+    print("scan_steps_per_layer:", args.scan_steps_per_layer)
+    print("total_thermal_steps:", derived["total_steps"])
+    print("scan_length:", derived["scan_length"])
+    print("scan_speed:", args.scan_speed)
+    print("actual_scan_speed:", derived["actual_scan_speed"])
+    print("dt:", args.dt)
+    print("laser_power:", args.laser_power)
+    print("absorptivity:", args.absorptivity)
+    print("effective_laser_power_nominal:", args.absorptivity * args.laser_power)
+    print("beam_radius:", args.beam_radius)
+    print("source_depth:", args.source_depth)
+    print("powder_mode:", args.powder_mode)
+    print("rho_solid:", args.rho_solid if args.rho_solid is not None else args.rho)
+    print("cp_solid:", args.cp_solid if args.cp_solid is not None else args.cp)
+    print("conductivity_solid:", args.conductivity_solid if args.conductivity_solid is not None else args.conductivity)
+    print("rho_powder:", args.rho_powder)
+    print("cp_powder:", args.cp_powder)
+    print("conductivity_powder:", args.conductivity_powder)
+    print("emissivity:", args.emissivity)
+    print("bottom_thermal_bc:", args.bottom_thermal_bc)
+    print("mechanics_model:", args.mechanics_model)
+    print("thermal_boundary_face_counts:", [len(x) for x in thermal.boundary_inds_list])
+    print("thermal_dirichlet_node_counts:", [len(x) for x in thermal.fes[0].node_inds_list])
+    print("mechanical_dirichlet_node_counts:", [len(x) for x in mechanics.fes[0].node_inds_list])
+    print("output_dir:", args.output_dir)
+
+
+def run_mechanics(mechanics, u_guess, params):
+    mechanics.set_params(params)
+    return solver(
+        mechanics,
+        solver_options={
+            "newton": {
+                "initial_guess": u_guess,
+                "linear": {"spsolve_solver": {}},
+                "tol": 1e-9,
+                "rel_tol": 1e-11,
+            }
+        },
+    )
+
+
+def main():
+    args = parse_args()
+    if args.steps is not None:
+        print("WARNING: --steps is treated as an alias for --layers in this version.")
+        args.layers = args.steps
+    if args.layers < 1 or args.scan_steps_per_layer < 1 or args.hatch_lines_per_layer < 1:
+        raise ValueError("--layers, --scan-steps-per-layer and --hatch-lines-per-layer must be >= 1")
+    if args.mechanics_every < 1:
+        raise ValueError("--mechanics-every must be >= 1")
+    if args.release_after_cooling and args.cooling_steps < 1:
+        print("WARNING: --release-after-cooling requested without cooling steps; release will run after printing.")
+
+    raw_points, cells, selected_cells = read_tet4_inp(args.inp, args.max_cells)
+    raw_pmin = onp.min(raw_points, axis=0)
+    raw_pmax = onp.max(raw_points, axis=0)
+    points = raw_points * args.mesh_length_scale
+
+    (
+        pmin,
+        pmax,
+        bottom,
+        exposed,
+        walls,
+        build_axis_id,
+        plane_axis_ids,
+        base_coord,
+        exposed_coord,
+    ) = make_box_locations(points, build_axis=args.build_axis, base_side=args.base_side)
+
+    scan_axis_id, hatch_axis_id = resolve_scan_and_hatch_axes(args.scan_axis, build_axis_id, plane_axis_ids)
+    span = pmax - pmin
+    plane_scale = max(float(span[plane_axis_ids[0]]), float(span[plane_axis_ids[1]]), 1e-12)
+    build_span = max(float(span[build_axis_id]), 1e-12)
+    args.beam_radius = args.beam_radius if args.beam_radius > 0 else 0.04 * plane_scale
+    args.source_depth = args.source_depth if args.source_depth > 0 else max(0.5 * args.beam_radius, 0.05 * build_span)
+    build_sign = 1.0 if args.base_side == "min" else -1.0
+
+    if args.path_file:
+        step_states, scan_length, actual_scan_speed = generate_path_file_step_states(args, pmin, pmax, build_axis_id)
+    else:
+        step_states, scan_length, actual_scan_speed = generate_raster_step_states(args, pmin, pmax, build_axis_id, scan_axis_id, hatch_axis_id)
+
+    location_fns = [exposed, walls]
+    thermal_bc = None
+    if args.bottom_thermal_bc == "fixed":
+        def ambient_value(_point):
+            return args.ambient
+
+        thermal_bc = [[bottom], [0], [ambient_value]]
+    else:
+        location_fns.append(bottom)
+
+    mesh = Mesh(points, cells, ele_type="TET4")
+    thermal = TransientThermal(
+        mesh=mesh,
+        vec=1,
+        dim=3,
+        ele_type="TET4",
+        dirichlet_bc_info=thermal_bc,
+        location_fns=location_fns,
+        additional_info=(
+            args.convection_h,
+            args.ambient,
+            args.emissivity,
+            args.stefan_boltzmann,
+            build_axis_id,
+            plane_axis_ids[0],
+            plane_axis_ids[1],
+            build_sign,
+            len(location_fns),
+        ),
+    )
+    mechanics = ThermoMechanical(
+        mesh=mesh,
+        vec=3,
+        dim=3,
+        ele_type="TET4",
+        dirichlet_bc_info=make_full_bottom_mechanics_bc(bottom),
+        additional_info=(args.mechanics_model,),
+    )
+
+    tables = load_property_tables(args)
+    cell_centroids, cell_build_coord, substrate_cell, support_cell = classify_cells(points, cells, build_axis_id, build_sign, base_coord, args)
+    layer_id_cell = compute_layer_id(cell_build_coord, build_axis_id, pmin, pmax, args)
+
+    initial_temperature = args.preheat_temperature if args.preheat_temperature is not None else args.ambient
+    T_old = initial_temperature * np.ones((len(points), 1))
+    u_guess = [np.zeros((len(points), 3))]
+    eqp_quad = np.zeros((len(cells), thermal.fes[0].num_quads, 1))
+    max_temperature_cell = initial_temperature * onp.ones(len(cells), dtype=onp.float64)
+    initially_active = substrate_cell | support_cell
+    activation_temperature_cell = initial_temperature * onp.ones(len(cells), dtype=onp.float64)
+    activation_step_cell = -onp.ones(len(cells), dtype=onp.float64)
+    activation_step_cell[initially_active] = 0
+    previous_active = initially_active.copy()
+
+    os.makedirs(args.output_dir, exist_ok=True)
+    write_calibration_template(args)
+    derived = {
+        "plane_axes": [ID_TO_AXIS[i] for i in plane_axis_ids],
+        "scan_axis": ID_TO_AXIS[scan_axis_id],
+        "hatch_axis": ID_TO_AXIS[hatch_axis_id],
+        "total_steps": len(step_states),
+        "scan_length": scan_length,
+        "actual_scan_speed": actual_scan_speed,
+        "base_coord": base_coord,
+        "exposed_coord": exposed_coord,
+    }
+    write_used_config(args, args.output_dir, derived)
+    print_startup(args, raw_pmin, raw_pmax, pmin, pmax, selected_cells, points, thermal, mechanics, derived)
+
+    sigma_mean = None
+    vm = None
+    last_active_cell = previous_active.copy()
+    last_material_state = material_cell_state(last_active_cell, substrate_cell, support_cell)
+    last_dT_quad = np.zeros((len(cells), thermal.fes[0].num_quads, 1))
+
+    for state in step_states:
+        active_cell = compute_active_cell(state, cell_build_coord, substrate_cell, support_cell, build_sign, args)
+        active_quad = make_quad_scalar(active_cell.astype(onp.float64), thermal.fes[0].num_quads)
+        T_old_quad = thermal.fes[0].convert_from_dof_to_quad(T_old)
+        rho_quad, cp_quad, conductivity_quad, latent_cp_quad = thermal_material_quads(T_old_quad, active_quad, args, tables)
+        effective_laser_power = args.absorptivity * state.laser_power
+        thermal.set_params(
+            [
+                T_old,
+                state.dt,
+                np.asarray(state.laser_center),
+                effective_laser_power,
+                args.beam_radius,
+                args.source_depth,
+                state.laser_switch,
+                active_quad,
+                rho_quad,
+                cp_quad,
+                conductivity_quad,
+                latent_cp_quad,
+            ]
+        )
+        T_new = solver(thermal, solver_options={"newton": {"linear": {"spsolve_solver": {}}}})[0]
+
+        cell_T = compute_cell_temperature(T_new, cells)
+        newly_active = active_cell & (~previous_active)
+        activation_temperature_cell[newly_active] = cell_T[newly_active]
+        activation_step_cell[newly_active] = state.global_step
+        max_temperature_cell = onp.maximum(max_temperature_cell, cell_T)
+
+        T_quad = mechanics.fes[0].convert_from_dof_to_quad(T_new)
+        activation_temperature_quad = make_quad_scalar(activation_temperature_cell, mechanics.fes[0].num_quads)
+        dT_quad = (T_quad - activation_temperature_quad) * active_quad
+        active_factor_quad, E_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad = mechanics_material_quads(T_quad, active_quad, args, tables)
+        mechanics_params = [
+            T_quad,
+            dT_quad,
+            active_factor_quad,
+            E_quad,
+            alpha_quad,
+            poisson_quad,
+            yield_quad,
+            hardening_quad,
+            eqp_quad,
+        ]
+
+        did_mechanics = should_run_mechanics(state.global_step, args)
+        if did_mechanics:
+            u_guess = run_mechanics(mechanics, u_guess, mechanics_params)
+            sigma_mean, vm = mechanics.compute_cell_stress(u_guess[0], mechanics_params)
+            eqp_quad = mechanics.compute_eqp_update(u_guess[0], mechanics_params)
+            mechanics_params[-1] = eqp_quad
+
+        material_state_cell = material_cell_state(active_cell, substrate_cell, support_cell)
+        is_last = state.global_step == step_states[-1].global_step
+        if should_save_step(state.global_step, did_mechanics, is_last, args):
+            vtk_path = os.path.join(args.output_dir, f"step_{state.global_step:06d}_{state.mode}.vtu")
+            save_step(
+                thermal.fes[0],
+                T_new,
+                u_guess[0],
+                vtk_path,
+                dT_quad,
+                sigma_mean,
+                vm,
+                active_cell,
+                layer_id_cell,
+                activation_step_cell,
+                activation_temperature_cell,
+                material_state_cell,
+                max_temperature_cell,
+                eqp_quad,
+            )
+        else:
+            vtk_path = ""
+
+        if state.global_step % args.summary_every == 0 or is_last:
+            vm_max = float(np.max(vm)) if vm is not None else 0.0
+            print(
+                f"global_step={state.global_step} mode={state.mode} "
+                f"layer={state.layer_idx + 1}/{args.layers} "
+                f"hatch={state.hatch_idx + 1}/{args.hatch_lines_per_layer} "
+                f"scan={state.scan_idx + 1}/{args.scan_steps_per_layer} "
+                f"front_{ID_TO_AXIS[build_axis_id]}={state.front_coord:.12g} "
+                f"active_cells={int(active_cell.sum())}/{len(active_cell)} "
+                f"T_min={float(np.min(T_new)):.12g} T_max={float(np.max(T_new)):.12g} "
+                f"u_max={float(np.max(np.abs(u_guess[0]))):.12g} "
+                f"vm_max={vm_max:.12g} "
+                f"laser_center={state.laser_center} laser_switch={state.laser_switch:.6g} "
+                f"effective_power={effective_laser_power:.12g} vtk={vtk_path}"
+            )
+
+        previous_active = active_cell
+        last_active_cell = active_cell
+        last_material_state = material_state_cell
+        last_dT_quad = dT_quad
+        T_old = T_new
+
+    if args.release_after_cooling:
+        release_mechanics = ThermoMechanical(
+            mesh=mesh,
+            vec=3,
+            dim=3,
+            ele_type="TET4",
+            dirichlet_bc_info=make_anchor_mechanics_bc(points),
+            additional_info=(args.mechanics_model,),
+        )
+        u_release = run_mechanics(release_mechanics, u_guess, mechanics_params)
+        sigma_mean, vm = release_mechanics.compute_cell_stress(u_release[0], mechanics_params)
+        vtk_path = os.path.join(args.output_dir, "release.vtu")
+        save_step(
+            release_mechanics.fes[0],
+            T_old,
+            u_release[0],
+            vtk_path,
+            last_dT_quad,
+            sigma_mean,
+            vm,
+            last_active_cell,
+            layer_id_cell,
+            activation_step_cell,
+            activation_temperature_cell,
+            last_material_state,
+            max_temperature_cell,
+            eqp_quad,
+        )
+        print(f"release_vtk={vtk_path} release_u_max={float(np.max(np.abs(u_release[0]))):.12g}")
+
+
+if __name__ == "__main__":
+    main()

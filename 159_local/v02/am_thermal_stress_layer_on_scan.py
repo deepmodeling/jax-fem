@@ -36,7 +36,7 @@ STATE_POWDER = 1.0
 STATE_SOLID = 2.0
 STATE_MUSHY = 3.0
 STATE_LIQUID = 4.0
-STATE_SUBSTRATE = 5.0
+STATE_SUBSTRATE = 5.0 
 STATE_SUPPORT = 6.0
 
 
@@ -497,6 +497,8 @@ def build_parser(config=None):
     parser.add_argument("--cp-liquid", type=float, default=cfg(config, "cp_liquid", None), help="Liquid heat capacity. Defaults to solid heat capacity when omitted.")
     parser.add_argument("--conductivity-liquid", type=float, default=cfg(config, "conductivity_liquid", None), help="Liquid thermal conductivity. Defaults to solid conductivity when omitted.")
     parser.add_argument("--powder-mode", choices=("powder", "void"), default=cfg(config, "powder_mode", "powder"))
+    parser.add_argument("--layer-activation-mode", choices=("front", "layer_on_scan"), default=cfg(config, "layer_activation_mode", "layer_on_scan"), help="Layer activation model. 'front' keeps the old front-coordinate activation; 'layer_on_scan' activates the whole current layer when laser scanning starts, mimicking recoating/powder spreading.")
+    parser.add_argument("--future-layer-mode", choices=("void", "powder"), default=cfg(config, "future_layer_mode", "void"), help="Material treatment for future, not-yet-spread layers when --layer-activation-mode layer_on_scan is used. Use 'void' to make future layers inactive before spreading.")
     parser.add_argument("--inactive-thermal-factor", type=float, default=cfg(config, "inactive_thermal_factor", 1e-6))
     parser.add_argument("--inactive-mechanics-factor", type=float, default=cfg(config, "inactive_mechanics_factor", 1e-9))
 
@@ -1200,8 +1202,49 @@ def compute_moving_window_cells(state, physical_layer_id_cell, substrate_cell, s
     return printed_cell, active_cell, cooling_only_cell
 
 
+def should_activate_layer_for_state(state):
+    """Return True when a state represents the start/continuation of laser scanning.
+
+    This is used for the recoating-style activation model: a layer becomes
+    printed/powder only when the laser actually starts scanning that layer,
+    not merely because a front coordinate exists in the path.
+    """
+    return (float(state.laser_switch) > 0.5) and (state.mode in ("scan", "path"))
+
+
+def compute_layer_on_scan_cells(highest_printed_layer, physical_layer_id_cell, substrate_cell, support_cell, args):
+    """Compute printed/window/cooling masks for whole-layer recoating activation.
+
+    If highest_printed_layer = 12 and active_window_below_layers = 10,
+    layers 2..12 are in the active thermal window, and layer 1 is
+    cooling_only. Future layers > 12 remain unprinted.
+    """
+    fixture_cell = substrate_cell | support_cell
+    if int(highest_printed_layer) <= 0:
+        printed_part = onp.zeros_like(physical_layer_id_cell, dtype=bool)
+        thermal_window_part = onp.zeros_like(physical_layer_id_cell, dtype=bool)
+    else:
+        top_layer = int(highest_printed_layer)
+        printed_part = physical_layer_id_cell <= top_layer
+        if args.active_window_below_layers <= 0:
+            thermal_window_part = printed_part
+        else:
+            lower_layer = max(1, top_layer - int(args.active_window_below_layers))
+            thermal_window_part = (physical_layer_id_cell >= lower_layer) & (physical_layer_id_cell <= top_layer)
+
+    printed_cell = fixture_cell | printed_part
+    active_cell = fixture_cell | thermal_window_part
+    cooling_only_cell = printed_cell & (~active_cell)
+    return printed_cell, active_cell, cooling_only_cell
+
+
 def initial_phase_cell(active_cell, substrate_cell, support_cell, args):
-    inactive_code = STATE_POWDER if args.powder_mode == "powder" else STATE_VOID
+    if getattr(args, "layer_activation_mode", "front") == "layer_on_scan" and getattr(args, "future_layer_mode", "void") == "void":
+        # Future layers have not been recoated yet, so they are void/inactive.
+        # They will become powder when their layer is activated at laser scan start.
+        inactive_code = STATE_VOID
+    else:
+        inactive_code = STATE_POWDER if args.powder_mode == "powder" else STATE_VOID
     phase = inactive_code * onp.ones(len(active_cell), dtype=onp.float64)
     # Active printed cells still start as powder; they only become solid after a
     # melt/solidification event. Fixture regions are treated as solid supports.
@@ -1348,10 +1391,22 @@ def thermal_material_quads(T_old_quad, active_quad, phase_quad, args, tables, pr
         np.where(is_powder, k_powder_quad, np.where(is_liquid, k_liquid_quad, np.where(is_mushy, k_mushy, k_solid_quad))),
     )
 
-    # Unprinted region: either powder bed or near-void material, depending on powder_mode.
-    rho_unprinted = args.rho_powder if args.powder_mode == "powder" else rho_void
-    cp_unprinted = cp_powder_quad if args.powder_mode == "powder" else cp_void
-    k_unprinted = k_powder_quad if args.powder_mode == "powder" else k_void
+    # Unprinted region: either powder bed or near-void material.
+    # In layer_on_scan mode with future_layer_mode=void, future layers are not
+    # physically spread yet, so they should not act as a powder heat sink before
+    # their scan begins.
+    future_layers_are_void = (
+        getattr(args, "layer_activation_mode", "front") == "layer_on_scan"
+        and getattr(args, "future_layer_mode", "void") == "void"
+    )
+    if future_layers_are_void or args.powder_mode == "void":
+        rho_unprinted = rho_void
+        cp_unprinted = cp_void
+        k_unprinted = k_void
+    else:
+        rho_unprinted = args.rho_powder
+        cp_unprinted = cp_powder_quad
+        k_unprinted = k_powder_quad
 
     # Printed layers below the moving thermal window: keep heat capacity/history,
     # but strongly reduce conductivity so they no longer dominate local heat loss.
@@ -1648,6 +1703,8 @@ def print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, se
     print("active_window_below_layers:", args.active_window_below_layers)
     print("old_layer_thermal_factor:", args.old_layer_thermal_factor)
     print("old_layer_cooling_h:", args.old_layer_cooling_h)
+    print("layer_activation_mode:", args.layer_activation_mode)
+    print("future_layer_mode:", args.future_layer_mode)
     if args.mechanics_model == "j2_plastic":
         print("WARNING: j2_plastic is a simplified stress-clipping/radial-return approximation; do not use as industrial-grade quantitative residual stress.")
     print("thermal_boundary_face_counts:", [len(x) for x in thermal.boundary_inds_list])
@@ -1833,6 +1890,8 @@ def main():
         "active_window_below_layers": args.active_window_below_layers,
         "old_layer_thermal_factor": args.old_layer_thermal_factor,
         "old_layer_cooling_h": args.old_layer_cooling_h,
+        "layer_activation_mode": args.layer_activation_mode,
+        "future_layer_mode": args.future_layer_mode,
     }
     write_used_config(args, args.output_dir, derived)
     print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, selected_cells, points, thermal, mechanics, derived)
@@ -1845,8 +1904,21 @@ def main():
     last_material_state = material_cell_state(last_active_cell, substrate_cell, support_cell, args, phase_cell=phase_cell_from_quad(phase_quad))
     last_dT_quad = np.zeros((len(cells), thermal.fes[0].num_quads, 1))
 
+    highest_printed_layer = 0
+
     for state in step_states:
-        if args.active_window_below_layers > 0:
+        if args.layer_activation_mode == "layer_on_scan":
+            current_layer = int(state.layer_idx) + 1
+            if should_activate_layer_for_state(state):
+                highest_printed_layer = max(highest_printed_layer, current_layer)
+            printed_cell, active_cell, cooling_only_cell = compute_layer_on_scan_cells(
+                highest_printed_layer,
+                physical_layer_id_cell,
+                substrate_cell,
+                support_cell,
+                args,
+            )
+        elif args.active_window_below_layers > 0:
             printed_cell, active_cell, cooling_only_cell = compute_moving_window_cells(
                 state,
                 physical_layer_id_cell,
@@ -1969,6 +2041,7 @@ def main():
             print(
                 f"global_step={state.global_step} mode={state.mode} "
                 f"layer={state.layer_idx + 1}/{args.layers} "
+                f"highest_printed_layer={highest_printed_layer} "
                 f"hatch={state.hatch_idx + 1}/{args.hatch_lines_per_layer} "
                 f"scan={state.scan_idx + 1}/{args.scan_steps_per_layer} "
                 f"front_{ID_TO_AXIS[build_axis_id]}={state.front_coord:.12g} "

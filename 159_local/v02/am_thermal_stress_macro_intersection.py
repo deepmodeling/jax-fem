@@ -497,6 +497,9 @@ def build_parser(config=None):
     parser.add_argument("--cp-liquid", type=float, default=cfg(config, "cp_liquid", None), help="Liquid heat capacity. Defaults to solid heat capacity when omitted.")
     parser.add_argument("--conductivity-liquid", type=float, default=cfg(config, "conductivity_liquid", None), help="Liquid thermal conductivity. Defaults to solid conductivity when omitted.")
     parser.add_argument("--powder-mode", choices=("powder", "void"), default=cfg(config, "powder_mode", "powder"))
+    parser.add_argument("--layer-activation-mode", choices=("front", "layer_on_scan"), default=cfg(config, "layer_activation_mode", "layer_on_scan"), help="Layer activation model. 'front' keeps the old front-coordinate activation; 'layer_on_scan' activates the whole current layer when laser scanning starts, mimicking recoating/powder spreading.")
+    parser.add_argument("--future-layer-mode", choices=("void", "powder"), default=cfg(config, "future_layer_mode", "void"), help="Material treatment for future, not-yet-spread layers when --layer-activation-mode layer_on_scan is used. Use 'void' to make future layers inactive before spreading.")
+    parser.add_argument("--layer-activation-geometry", choices=("centroid", "intersection"), default=cfg(config, "layer_activation_geometry", "intersection"), help="How cells are assigned to printed layers. 'centroid' uses cell centroid layer id; 'intersection' activates a cell if its vertex interval intersects the layer band. Use intersection for coarse tetra meshes and macro-layer runs.")
     parser.add_argument("--inactive-thermal-factor", type=float, default=cfg(config, "inactive_thermal_factor", 1e-6))
     parser.add_argument("--inactive-mechanics-factor", type=float, default=cfg(config, "inactive_mechanics_factor", 1e-9))
 
@@ -1173,6 +1176,96 @@ def compute_physical_layer_id_cell(cell_build_coord, build_axis_id, part_pmin, p
     return onp.maximum(layer_id, 1).astype(onp.int32)
 
 
+
+def compute_cell_build_interval(points, cells, build_axis_id, build_sign, part_base_coord):
+    """Return each tetra cell's build-direction distance interval from part base.
+
+    The previous layer assignment used the cell centroid only. That can miss
+    thin layers when no centroid lies inside the layer band. This interval
+    representation marks a cell as intersecting a layer if any part of its
+    vertex span crosses that layer band.
+    """
+    cell_axis = onp.asarray(points[cells, build_axis_id], dtype=onp.float64)
+    cell_dist = float(build_sign) * (cell_axis - float(part_base_coord))
+    cell_d_min = onp.min(cell_dist, axis=1)
+    cell_d_max = onp.max(cell_dist, axis=1)
+    return cell_d_min, cell_d_max
+
+
+def cells_intersect_distance_band(cell_d_min, cell_d_max, lower, upper, tol=1e-12):
+    """Boolean mask: cell build-axis interval intersects [lower, upper]."""
+    return (cell_d_max >= float(lower) - tol) & (cell_d_min <= float(upper) + tol)
+
+
+def compute_nominal_layer_id_from_interval(cell_d_min, cell_d_max, args):
+    """Assign a representative layer id for visualization under interval activation.
+
+    This is not used for activation. It is the first physical layer intersected
+    by the cell, useful for ParaView coloring when tetrahedra span multiple
+    thin layers.
+    """
+    if args.layer_thickness is None or args.layer_thickness <= 0.0:
+        return onp.ones_like(cell_d_min, dtype=onp.int32)
+    lt = float(args.layer_thickness)
+    layer_id = onp.floor(onp.maximum(cell_d_min, 0.0) / lt).astype(onp.int32) + 1
+    return onp.maximum(layer_id, 1).astype(onp.int32)
+
+
+def compute_moving_window_cells_by_intersection(state, cell_d_min, cell_d_max, substrate_cell, support_cell, args):
+    """Printed/window/cooling masks using cell-layer interval intersection."""
+    fixture_cell = substrate_cell | support_cell
+    current_layer = int(state.layer_idx) + 1
+    if args.layer_thickness is None or args.layer_thickness <= 0.0:
+        raise ValueError("intersection activation requires --layer-thickness > 0")
+    lt = float(args.layer_thickness)
+
+    printed_lower = 0.0
+    printed_upper = current_layer * lt
+    printed_part = cells_intersect_distance_band(cell_d_min, cell_d_max, printed_lower, printed_upper)
+
+    if args.active_window_below_layers <= 0:
+        window_lower = printed_lower
+    else:
+        lower_layer = max(1, current_layer - int(args.active_window_below_layers))
+        window_lower = float(lower_layer - 1) * lt
+    window_upper = printed_upper
+    thermal_window_part = cells_intersect_distance_band(cell_d_min, cell_d_max, window_lower, window_upper)
+
+    printed_cell = fixture_cell | printed_part
+    active_cell = fixture_cell | thermal_window_part
+    cooling_only_cell = printed_cell & (~active_cell)
+    return printed_cell, active_cell, cooling_only_cell
+
+
+def compute_layer_on_scan_cells_by_intersection(highest_printed_layer, cell_d_min, cell_d_max, substrate_cell, support_cell, args):
+    """Whole-layer recoating activation using cell-layer interval intersection.
+
+    When layer L starts scanning, all cells intersecting layers <= L become
+    printed/powder. The active thermal window is the last N printed layers.
+    """
+    fixture_cell = substrate_cell | support_cell
+    if args.layer_thickness is None or args.layer_thickness <= 0.0:
+        raise ValueError("intersection activation requires --layer-thickness > 0")
+    lt = float(args.layer_thickness)
+    top_layer = int(highest_printed_layer)
+
+    if top_layer <= 0:
+        printed_part = onp.zeros_like(cell_d_min, dtype=bool)
+        thermal_window_part = onp.zeros_like(cell_d_min, dtype=bool)
+    else:
+        printed_part = cells_intersect_distance_band(cell_d_min, cell_d_max, 0.0, top_layer * lt)
+        if args.active_window_below_layers <= 0:
+            window_lower = 0.0
+        else:
+            lower_layer = max(1, top_layer - int(args.active_window_below_layers))
+            window_lower = float(lower_layer - 1) * lt
+        thermal_window_part = cells_intersect_distance_band(cell_d_min, cell_d_max, window_lower, top_layer * lt)
+
+    printed_cell = fixture_cell | printed_part
+    active_cell = fixture_cell | thermal_window_part
+    cooling_only_cell = printed_cell & (~active_cell)
+    return printed_cell, active_cell, cooling_only_cell
+
 def compute_moving_window_cells(state, physical_layer_id_cell, substrate_cell, support_cell, args):
     """Compute printed, thermal-window and cooling-only masks.
 
@@ -1200,8 +1293,49 @@ def compute_moving_window_cells(state, physical_layer_id_cell, substrate_cell, s
     return printed_cell, active_cell, cooling_only_cell
 
 
+def should_activate_layer_for_state(state):
+    """Return True when a state represents the start/continuation of laser scanning.
+
+    This is used for the recoating-style activation model: a layer becomes
+    printed/powder only when the laser actually starts scanning that layer,
+    not merely because a front coordinate exists in the path.
+    """
+    return (float(state.laser_switch) > 0.5) and (state.mode in ("scan", "path"))
+
+
+def compute_layer_on_scan_cells(highest_printed_layer, physical_layer_id_cell, substrate_cell, support_cell, args):
+    """Compute printed/window/cooling masks for whole-layer recoating activation.
+
+    If highest_printed_layer = 12 and active_window_below_layers = 10,
+    layers 2..12 are in the active thermal window, and layer 1 is
+    cooling_only. Future layers > 12 remain unprinted.
+    """
+    fixture_cell = substrate_cell | support_cell
+    if int(highest_printed_layer) <= 0:
+        printed_part = onp.zeros_like(physical_layer_id_cell, dtype=bool)
+        thermal_window_part = onp.zeros_like(physical_layer_id_cell, dtype=bool)
+    else:
+        top_layer = int(highest_printed_layer)
+        printed_part = physical_layer_id_cell <= top_layer
+        if args.active_window_below_layers <= 0:
+            thermal_window_part = printed_part
+        else:
+            lower_layer = max(1, top_layer - int(args.active_window_below_layers))
+            thermal_window_part = (physical_layer_id_cell >= lower_layer) & (physical_layer_id_cell <= top_layer)
+
+    printed_cell = fixture_cell | printed_part
+    active_cell = fixture_cell | thermal_window_part
+    cooling_only_cell = printed_cell & (~active_cell)
+    return printed_cell, active_cell, cooling_only_cell
+
+
 def initial_phase_cell(active_cell, substrate_cell, support_cell, args):
-    inactive_code = STATE_POWDER if args.powder_mode == "powder" else STATE_VOID
+    if getattr(args, "layer_activation_mode", "front") == "layer_on_scan" and getattr(args, "future_layer_mode", "void") == "void":
+        # Future layers have not been recoated yet, so they are void/inactive.
+        # They will become powder when their layer is activated at laser scan start.
+        inactive_code = STATE_VOID
+    else:
+        inactive_code = STATE_POWDER if args.powder_mode == "powder" else STATE_VOID
     phase = inactive_code * onp.ones(len(active_cell), dtype=onp.float64)
     # Active printed cells still start as powder; they only become solid after a
     # melt/solidification event. Fixture regions are treated as solid supports.
@@ -1348,10 +1482,22 @@ def thermal_material_quads(T_old_quad, active_quad, phase_quad, args, tables, pr
         np.where(is_powder, k_powder_quad, np.where(is_liquid, k_liquid_quad, np.where(is_mushy, k_mushy, k_solid_quad))),
     )
 
-    # Unprinted region: either powder bed or near-void material, depending on powder_mode.
-    rho_unprinted = args.rho_powder if args.powder_mode == "powder" else rho_void
-    cp_unprinted = cp_powder_quad if args.powder_mode == "powder" else cp_void
-    k_unprinted = k_powder_quad if args.powder_mode == "powder" else k_void
+    # Unprinted region: either powder bed or near-void material.
+    # In layer_on_scan mode with future_layer_mode=void, future layers are not
+    # physically spread yet, so they should not act as a powder heat sink before
+    # their scan begins.
+    future_layers_are_void = (
+        getattr(args, "layer_activation_mode", "front") == "layer_on_scan"
+        and getattr(args, "future_layer_mode", "void") == "void"
+    )
+    if future_layers_are_void or args.powder_mode == "void":
+        rho_unprinted = rho_void
+        cp_unprinted = cp_void
+        k_unprinted = k_void
+    else:
+        rho_unprinted = args.rho_powder
+        cp_unprinted = cp_powder_quad
+        k_unprinted = k_powder_quad
 
     # Printed layers below the moving thermal window: keep heat capacity/history,
     # but strongly reduce conductivity so they no longer dominate local heat loss.
@@ -1648,6 +1794,9 @@ def print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, se
     print("active_window_below_layers:", args.active_window_below_layers)
     print("old_layer_thermal_factor:", args.old_layer_thermal_factor)
     print("old_layer_cooling_h:", args.old_layer_cooling_h)
+    print("layer_activation_mode:", args.layer_activation_mode)
+    print("future_layer_mode:", args.future_layer_mode)
+    print("layer_activation_geometry:", args.layer_activation_geometry)
     if args.mechanics_model == "j2_plastic":
         print("WARNING: j2_plastic is a simplified stress-clipping/radial-return approximation; do not use as industrial-grade quantitative residual stress.")
     print("thermal_boundary_face_counts:", [len(x) for x in thermal.boundary_inds_list])
@@ -1791,6 +1940,21 @@ def main():
         # the full build height into the truncated --max-print-layers range.
         layer_id_cell = physical_layer_id_cell.copy()
 
+    if args.base_side == "min":
+        part_base_coord_for_interval = float(part_pmin[build_axis_id])
+    else:
+        part_base_coord_for_interval = float(part_pmax[build_axis_id])
+    cell_d_min, cell_d_max = compute_cell_build_interval(
+        points,
+        cells,
+        build_axis_id,
+        build_sign,
+        part_base_coord_for_interval,
+    )
+    if args.layer_activation_geometry == "intersection" and args.layer_thickness is not None and args.layer_thickness > 0.0:
+        layer_id_cell = compute_nominal_layer_id_from_interval(cell_d_min, cell_d_max, args)
+        layer_id_cell[substrate_cell | support_cell] = 0
+
     T_old = initial_temperature * np.ones((len(points), 1))
     u_guess = [np.zeros((len(points), 3))]
     eqp_quad = np.zeros((len(cells), thermal.fes[0].num_quads, 1))
@@ -1833,6 +1997,9 @@ def main():
         "active_window_below_layers": args.active_window_below_layers,
         "old_layer_thermal_factor": args.old_layer_thermal_factor,
         "old_layer_cooling_h": args.old_layer_cooling_h,
+        "layer_activation_mode": args.layer_activation_mode,
+        "future_layer_mode": args.future_layer_mode,
+        "layer_activation_geometry": args.layer_activation_geometry,
     }
     write_used_config(args, args.output_dir, derived)
     print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, selected_cells, points, thermal, mechanics, derived)
@@ -1845,15 +2012,48 @@ def main():
     last_material_state = material_cell_state(last_active_cell, substrate_cell, support_cell, args, phase_cell=phase_cell_from_quad(phase_quad))
     last_dT_quad = np.zeros((len(cells), thermal.fes[0].num_quads, 1))
 
+    highest_printed_layer = 0
+
     for state in step_states:
-        if args.active_window_below_layers > 0:
-            printed_cell, active_cell, cooling_only_cell = compute_moving_window_cells(
-                state,
-                physical_layer_id_cell,
-                substrate_cell,
-                support_cell,
-                args,
-            )
+        if args.layer_activation_mode == "layer_on_scan":
+            current_layer = int(state.layer_idx) + 1
+            if should_activate_layer_for_state(state):
+                highest_printed_layer = max(highest_printed_layer, current_layer)
+            if args.layer_activation_geometry == "intersection":
+                printed_cell, active_cell, cooling_only_cell = compute_layer_on_scan_cells_by_intersection(
+                    highest_printed_layer,
+                    cell_d_min,
+                    cell_d_max,
+                    substrate_cell,
+                    support_cell,
+                    args,
+                )
+            else:
+                printed_cell, active_cell, cooling_only_cell = compute_layer_on_scan_cells(
+                    highest_printed_layer,
+                    physical_layer_id_cell,
+                    substrate_cell,
+                    support_cell,
+                    args,
+                )
+        elif args.active_window_below_layers > 0:
+            if args.layer_activation_geometry == "intersection" and args.layer_thickness is not None and args.layer_thickness > 0.0:
+                printed_cell, active_cell, cooling_only_cell = compute_moving_window_cells_by_intersection(
+                    state,
+                    cell_d_min,
+                    cell_d_max,
+                    substrate_cell,
+                    support_cell,
+                    args,
+                )
+            else:
+                printed_cell, active_cell, cooling_only_cell = compute_moving_window_cells(
+                    state,
+                    physical_layer_id_cell,
+                    substrate_cell,
+                    support_cell,
+                    args,
+                )
         else:
             raw_active_cell = compute_active_cell(state, cell_build_coord, substrate_cell, support_cell, build_sign, args)
             printed_cell = previous_active | raw_active_cell
@@ -1969,6 +2169,7 @@ def main():
             print(
                 f"global_step={state.global_step} mode={state.mode} "
                 f"layer={state.layer_idx + 1}/{args.layers} "
+                f"highest_printed_layer={highest_printed_layer} "
                 f"hatch={state.hatch_idx + 1}/{args.hatch_lines_per_layer} "
                 f"scan={state.scan_idx + 1}/{args.scan_steps_per_layer} "
                 f"front_{ID_TO_AXIS[build_axis_id]}={state.front_coord:.12g} "

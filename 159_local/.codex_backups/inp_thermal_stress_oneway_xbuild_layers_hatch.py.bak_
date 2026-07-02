@@ -1,0 +1,638 @@
+import argparse
+import os
+
+import jax
+import jax.numpy as np
+import numpy as onp
+
+from inp_initial_guess_smoke import read_tet4_inp
+from jax_fem.generate_mesh import Mesh
+from jax_fem.problem import Problem
+from jax_fem.solver import solver
+from jax_fem.utils import save_sol
+
+
+AXIS_TO_ID = {"x": 0, "y": 1, "z": 2}
+ID_TO_AXIS = ("x", "y", "z")
+
+
+class TransientThermal(Problem):
+    def custom_init(
+        self,
+        rho,
+        cp,
+        conductivity,
+        convection_h,
+        ambient,
+        build_axis_id,
+        plane_axis0_id,
+        plane_axis1_id,
+        build_sign,
+    ):
+        self.rho = rho
+        self.cp = cp
+        self.conductivity = conductivity
+        self.convection_h = convection_h
+        self.ambient = ambient
+        self.build_axis_id = int(build_axis_id)
+        self.plane_axis0_id = int(plane_axis0_id)
+        self.plane_axis1_id = int(plane_axis1_id)
+        # base_side=min -> build direction is +axis.
+        # base_side=max -> build direction is -axis.
+        self.build_sign = float(build_sign)
+
+    def get_tensor_map(self):
+        def heat_flux(T_grad, T_old, dt, laser_center, laser_power, beam_radius, source_depth, laser_switch):
+            return self.conductivity * T_grad
+
+        return heat_flux
+
+    def get_mass_map(self):
+        def heat_capacity(T, x, T_old, dt, laser_center, laser_power, beam_radius, source_depth, laser_switch):
+            # Gaussian distribution inside the current layer plane.
+            r0 = x[self.plane_axis0_id] - laser_center[self.plane_axis0_id]
+            r1 = x[self.plane_axis1_id] - laser_center[self.plane_axis1_id]
+            r2 = r0**2 + r1**2
+
+            # One-sided depth decay along build direction.
+            # For build_axis=x, base_side=min:
+            #   depth = x_front - x, so only x <= x_front receives heat.
+            # For base_side=max:
+            #   depth = x - x_front, so only x >= x_front receives heat.
+            depth = self.build_sign * (
+                laser_center[self.build_axis_id] - x[self.build_axis_id]
+            )
+
+            q_depth = np.where(
+                depth >= 0.0,
+                np.exp(-depth / source_depth),
+                0.0,
+            )
+
+            q_vol = (
+                laser_power
+                / (np.pi * beam_radius**2 * source_depth)
+                * np.exp(-2.0 * r2 / beam_radius**2)
+                * q_depth
+                * laser_switch
+            )
+
+            return self.rho * self.cp * (T - T_old) / dt - q_vol
+
+        return heat_capacity
+
+    def get_surface_maps(self):
+        # Laser energy is represented by q_vol in get_mass_map().
+        # The exposed and side surfaces only receive convection here.
+        def exposed_flux(_T, _point, old_T):
+            q_conv = self.convection_h * (self.ambient - old_T[0])
+            return -np.array([q_conv])
+
+        def wall_flux(_T, _point, old_T):
+            q_conv = self.convection_h * (self.ambient - old_T[0])
+            return -np.array([q_conv])
+
+        return [exposed_flux, wall_flux]
+
+    def set_params(self, params):
+        T_old, dt, laser_center, laser_power, beam_radius, source_depth, laser_switch = params
+
+        dt_quad = dt * np.ones((self.fes[0].num_cells, self.fes[0].num_quads, 1))
+        laser_center_quad = laser_center[None, None, :] * np.ones(
+            (self.fes[0].num_cells, self.fes[0].num_quads)
+        )[:, :, None]
+        laser_power_quad = laser_power * np.ones((self.fes[0].num_cells, self.fes[0].num_quads, 1))
+        beam_radius_quad = beam_radius * np.ones((self.fes[0].num_cells, self.fes[0].num_quads, 1))
+        source_depth_quad = source_depth * np.ones((self.fes[0].num_cells, self.fes[0].num_quads, 1))
+        laser_switch_quad = laser_switch * np.ones((self.fes[0].num_cells, self.fes[0].num_quads, 1))
+
+        self.internal_vars = [
+            self.fes[0].convert_from_dof_to_quad(T_old),
+            dt_quad,
+            laser_center_quad,
+            laser_power_quad,
+            beam_radius_quad,
+            source_depth_quad,
+            laser_switch_quad,
+        ]
+
+        T_old_exposed = self.fes[0].convert_from_dof_to_face_quad(T_old, self.boundary_inds_list[0])
+        T_old_walls = self.fes[0].convert_from_dof_to_face_quad(T_old, self.boundary_inds_list[1])
+
+        self.internal_vars_surfaces = [
+            [T_old_exposed],
+            [T_old_walls],
+        ]
+
+
+class LinearThermoElasticity(Problem):
+    def custom_init(self, young, poisson, alpha):
+        self.young = young
+        self.poisson = poisson
+        self.alpha = alpha
+        self.mu = young / (2.0 * (1.0 + poisson))
+        self.lmbda = young * poisson / ((1.0 + poisson) * (1.0 - 2.0 * poisson))
+        self.internal_vars = [
+            np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1))
+        ]
+
+    def stress_fn(self, u_grad, dT):
+        eps = 0.5 * (u_grad + u_grad.T)
+        thermal_eps = self.alpha * dT[0] * np.eye(self.dim)
+        elastic_eps = eps - thermal_eps
+        return self.lmbda * np.trace(elastic_eps) * np.eye(self.dim) + 2.0 * self.mu * elastic_eps
+
+    def get_tensor_map(self):
+        return self.stress_fn
+
+    def set_params(self, params):
+        self.internal_vars = params
+
+    def compute_cell_stress(self, sol, dT_quad):
+        u_grads = np.take(sol, self.fes[0].cells, axis=0)[:, None, :, :, None] * self.fes[0].shape_grads[:, :, :, None, :]
+        u_grads = np.sum(u_grads, axis=2)
+        sigmas = jax.vmap(jax.vmap(self.stress_fn))(u_grads, dT_quad)
+        sigma_mean = np.mean(sigmas, axis=1)
+
+        sxx = sigma_mean[:, 0, 0]
+        syy = sigma_mean[:, 1, 1]
+        szz = sigma_mean[:, 2, 2]
+        sxy = sigma_mean[:, 0, 1]
+        syz = sigma_mean[:, 1, 2]
+        sxz = sigma_mean[:, 0, 2]
+
+        vm = np.sqrt(
+            0.5 * ((sxx - syy) ** 2 + (syy - szz) ** 2 + (szz - sxx) ** 2)
+            + 3.0 * (sxy**2 + syz**2 + sxz**2)
+        )
+        return sigma_mean, vm
+
+
+def make_box_locations(points, build_axis="x", base_side="min", tol_ratio=1e-8):
+    pmin = onp.min(points, axis=0)
+    pmax = onp.max(points, axis=0)
+    span = max(float(onp.max(pmax - pmin)), 1.0)
+    atol = tol_ratio * span
+
+    build_axis_id = AXIS_TO_ID[build_axis]
+    plane_axis_ids = tuple(i for i in range(3) if i != build_axis_id)
+
+    if base_side == "min":
+        base_coord = pmin[build_axis_id]
+        exposed_coord = pmax[build_axis_id]
+    else:
+        base_coord = pmax[build_axis_id]
+        exposed_coord = pmin[build_axis_id]
+
+    def bottom(point):
+        return np.isclose(point[build_axis_id], base_coord, atol=atol)
+
+    def exposed(point):
+        return np.isclose(point[build_axis_id], exposed_coord, atol=atol)
+
+    def walls(point):
+        a0, a1 = plane_axis_ids
+        return (
+            np.isclose(point[a0], pmin[a0], atol=atol)
+            | np.isclose(point[a0], pmax[a0], atol=atol)
+            | np.isclose(point[a1], pmin[a1], atol=atol)
+            | np.isclose(point[a1], pmax[a1], atol=atol)
+        )
+
+    return pmin, pmax, bottom, exposed, walls, build_axis_id, plane_axis_ids, base_coord, exposed_coord
+
+
+def resolve_scan_and_hatch_axes(scan_axis, build_axis_id, plane_axis_ids):
+    if scan_axis == "auto":
+        scan_axis_id = plane_axis_ids[0]
+    else:
+        scan_axis_id = AXIS_TO_ID[scan_axis]
+
+    if scan_axis_id == build_axis_id:
+        raise ValueError(
+            "scan_axis cannot be the same as build_axis. "
+            "Use --scan-axis auto or choose one of "
+            f"{ID_TO_AXIS[plane_axis_ids[0]]}/{ID_TO_AXIS[plane_axis_ids[1]]}."
+        )
+
+    hatch_axis_id = [axis for axis in plane_axis_ids if axis != scan_axis_id][0]
+    return scan_axis_id, hatch_axis_id
+
+
+def coord_from_frac(pmin, pmax, axis_id, frac):
+    return float(pmin[axis_id] + frac * (pmax[axis_id] - pmin[axis_id]))
+
+
+def resolve_axis_range(pmin, pmax, axis_id, start_value, end_value, start_frac, end_frac):
+    start = float(start_value) if start_value is not None else coord_from_frac(pmin, pmax, axis_id, start_frac)
+    end = float(end_value) if end_value is not None else coord_from_frac(pmin, pmax, axis_id, end_frac)
+    return start, end
+
+
+def build_front_coord(layer_idx, layers, pmin, pmax, build_axis_id, base_side):
+    if layers < 1:
+        raise ValueError("--layers must be >= 1")
+
+    build_min = float(pmin[build_axis_id])
+    build_max = float(pmax[build_axis_id])
+    build_span = build_max - build_min
+
+    # layer_idx=0 means first printed layer front.
+    # layer_idx=layers-1 means final exposed face.
+    layer_frac = float(layer_idx + 1) / float(layers)
+
+    if base_side == "min":
+        coord = build_min + layer_frac * build_span
+    else:
+        coord = build_max - layer_frac * build_span
+
+    return coord, layer_frac
+
+
+def compute_scan_hatch_coord(args, pmin, pmax, scan_axis_id, hatch_axis_id, hatch_idx, scan_idx):
+    scan_start, scan_end = resolve_axis_range(
+        pmin,
+        pmax,
+        scan_axis_id,
+        args.scan_start,
+        args.scan_end,
+        args.scan_start_frac,
+        args.scan_end_frac,
+    )
+
+    if args.hatch_lines_per_layer <= 1:
+        if args.hatch_fixed is not None:
+            hatch_coord = float(args.hatch_fixed)
+        else:
+            hatch_coord = coord_from_frac(pmin, pmax, hatch_axis_id, 0.5)
+        hatch_frac = 0.5
+    else:
+        hatch_start, hatch_end = resolve_axis_range(
+            pmin,
+            pmax,
+            hatch_axis_id,
+            args.hatch_start,
+            args.hatch_end,
+            args.hatch_start_frac,
+            args.hatch_end_frac,
+        )
+        hatch_frac_local = hatch_idx / float(args.hatch_lines_per_layer - 1)
+        hatch_coord = hatch_start + hatch_frac_local * (hatch_end - hatch_start)
+        hatch_frac = hatch_frac_local
+
+    if args.scan_steps_per_layer <= 1:
+        scan_frac = 0.0
+    else:
+        scan_frac = scan_idx / float(args.scan_steps_per_layer - 1)
+
+    # Serpentine/raster strategy: reverse scan direction on every odd hatch line.
+    if args.serpentine and (hatch_idx % 2 == 1):
+        scan_frac_used = 1.0 - scan_frac
+    else:
+        scan_frac_used = scan_frac
+
+    scan_coord = scan_start + scan_frac_used * (scan_end - scan_start)
+
+    return scan_coord, hatch_coord, scan_frac_used, hatch_frac
+
+
+def laser_state(global_step, args, pmin, pmax, build_axis_id, scan_axis_id, hatch_axis_id):
+    steps_per_layer = args.hatch_lines_per_layer * args.scan_steps_per_layer
+
+    layer_idx = global_step // steps_per_layer
+    local_step = global_step % steps_per_layer
+    hatch_idx = local_step // args.scan_steps_per_layer
+    scan_idx = local_step % args.scan_steps_per_layer
+
+    laser_center = 0.5 * (pmin + pmax)
+    front_coord, layer_frac = build_front_coord(
+        layer_idx,
+        args.layers,
+        pmin,
+        pmax,
+        build_axis_id,
+        args.base_side,
+    )
+    scan_coord, hatch_coord, scan_frac, hatch_frac = compute_scan_hatch_coord(
+        args,
+        pmin,
+        pmax,
+        scan_axis_id,
+        hatch_axis_id,
+        hatch_idx,
+        scan_idx,
+    )
+
+    laser_center[build_axis_id] = front_coord
+    laser_center[scan_axis_id] = scan_coord
+    laser_center[hatch_axis_id] = hatch_coord
+
+    laser_switch = 1.0
+
+    return (
+        int(layer_idx),
+        int(hatch_idx),
+        int(scan_idx),
+        np.asarray(laser_center),
+        laser_switch,
+        float(scan_frac),
+        float(hatch_frac),
+        float(front_coord),
+        float(layer_frac),
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--inp", default="/home/user/work/159/schema/0119_c3d4_only.inp")
+    parser.add_argument("--max-cells", type=int, default=0)
+
+    # New AM-style loop controls.
+    parser.add_argument("--layers", type=int, default=50)
+    parser.add_argument(
+        "--steps",
+        type=int,
+        default=None,
+        help="Backward-compatible alias for --layers. Prefer --layers.",
+    )
+    parser.add_argument("--scan-steps-per-layer", type=int, default=20)
+    parser.add_argument("--hatch-lines-per-layer", type=int, default=1)
+
+    parser.add_argument("--dt", type=float, default=1e-3)
+    parser.add_argument("--ambient", type=float, default=300.0)
+    parser.add_argument("--rho", type=float, default=7800.0)
+    parser.add_argument("--cp", type=float, default=500.0)
+    parser.add_argument("--conductivity", type=float, default=20.0)
+    parser.add_argument("--convection-h", type=float, default=10.0)
+    parser.add_argument("--young", type=float, default=2.0e11)
+    parser.add_argument("--poisson", type=float, default=0.3)
+    parser.add_argument("--alpha", type=float, default=1.2e-5)
+    parser.add_argument("--laser-power", type=float, default=1.0)
+    parser.add_argument("--beam-radius", type=float, default=0.0)
+    parser.add_argument("--source-depth", type=float, default=0.0)
+
+    parser.add_argument("--build-axis", choices=("x", "y", "z"), default="x")
+    parser.add_argument("--base-side", choices=("min", "max"), default="min")
+
+    parser.add_argument("--scan-axis", choices=("auto", "x", "y", "z"), default="auto")
+    parser.add_argument("--scan-start", type=float, default=None)
+    parser.add_argument("--scan-end", type=float, default=None)
+    parser.add_argument("--scan-start-frac", type=float, default=0.05)
+    parser.add_argument("--scan-end-frac", type=float, default=0.95)
+
+    parser.add_argument("--hatch-start", type=float, default=None)
+    parser.add_argument("--hatch-end", type=float, default=None)
+    parser.add_argument("--hatch-start-frac", type=float, default=0.05)
+    parser.add_argument("--hatch-end-frac", type=float, default=0.95)
+    parser.add_argument(
+        "--hatch-fixed",
+        type=float,
+        default=None,
+        help="Used only when --hatch-lines-per-layer=1. Fixes the hatch-axis coordinate.",
+    )
+
+    parser.add_argument("--serpentine", dest="serpentine", action="store_true", default=True)
+    parser.add_argument("--no-serpentine", dest="serpentine", action="store_false")
+
+    parser.add_argument("--mechanics-every", type=int, default=1)
+    parser.add_argument("--output-dir", default="/home/user/work/159/output/inp_thermal_stress_oneway_layers")
+    args = parser.parse_args()
+
+    if args.steps is not None:
+        print("WARNING: --steps is treated as an alias for --layers in this version.")
+        args.layers = args.steps
+
+    if args.layers < 1:
+        raise ValueError("--layers must be >= 1")
+    if args.scan_steps_per_layer < 1:
+        raise ValueError("--scan-steps-per-layer must be >= 1")
+    if args.hatch_lines_per_layer < 1:
+        raise ValueError("--hatch-lines-per-layer must be >= 1")
+    if args.mechanics_every < 1:
+        raise ValueError("--mechanics-every must be >= 1")
+
+    points, cells, selected_cells = read_tet4_inp(args.inp, args.max_cells)
+    mesh = Mesh(points, cells, ele_type="TET4")
+
+    (
+        pmin,
+        pmax,
+        bottom,
+        exposed,
+        walls,
+        build_axis_id,
+        plane_axis_ids,
+        base_coord,
+        exposed_coord,
+    ) = make_box_locations(
+        points,
+        build_axis=args.build_axis,
+        base_side=args.base_side,
+    )
+
+    scan_axis_id, hatch_axis_id = resolve_scan_and_hatch_axes(
+        args.scan_axis,
+        build_axis_id,
+        plane_axis_ids,
+    )
+
+    span = pmax - pmin
+    plane_scale = max(float(span[plane_axis_ids[0]]), float(span[plane_axis_ids[1]]), 1e-12)
+    build_span = max(float(span[build_axis_id]), 1e-12)
+    beam_radius = args.beam_radius if args.beam_radius > 0 else 0.04 * plane_scale
+    source_depth = args.source_depth if args.source_depth > 0 else max(0.5 * beam_radius, 0.05 * build_span)
+    build_sign = 1.0 if args.base_side == "min" else -1.0
+
+    def ambient_value(_point):
+        return args.ambient
+
+    def zero(_point):
+        return 0.0
+
+    # Thermal BC: bottom face is held at ambient temperature.
+    # Mechanical BC: bottom face is fully fixed.
+    thermal_bc = [[bottom], [0], [ambient_value]]
+    mechanics_bc = [[bottom, bottom, bottom], [0, 1, 2], [zero, zero, zero]]
+
+    thermal = TransientThermal(
+        mesh=mesh,
+        vec=1,
+        dim=3,
+        ele_type="TET4",
+        dirichlet_bc_info=thermal_bc,
+        location_fns=[exposed, walls],
+        additional_info=(
+            args.rho,
+            args.cp,
+            args.conductivity,
+            args.convection_h,
+            args.ambient,
+            build_axis_id,
+            plane_axis_ids[0],
+            plane_axis_ids[1],
+            build_sign,
+        ),
+    )
+
+    mechanics = LinearThermoElasticity(
+        mesh=mesh,
+        vec=3,
+        dim=3,
+        ele_type="TET4",
+        dirichlet_bc_info=mechanics_bc,
+        additional_info=(args.young, args.poisson, args.alpha),
+    )
+
+    os.makedirs(args.output_dir, exist_ok=True)
+
+    T_old = args.ambient * np.ones((len(points), 1))
+    u_guess = [np.zeros((len(points), 3))]
+
+    total_steps = args.layers * args.hatch_lines_per_layer * args.scan_steps_per_layer
+    first_front, _ = build_front_coord(0, args.layers, pmin, pmax, build_axis_id, args.base_side)
+    last_front, _ = build_front_coord(args.layers - 1, args.layers, pmin, pmax, build_axis_id, args.base_side)
+
+    scan_start, scan_end = resolve_axis_range(
+        pmin,
+        pmax,
+        scan_axis_id,
+        args.scan_start,
+        args.scan_end,
+        args.scan_start_frac,
+        args.scan_end_frac,
+    )
+
+    if args.hatch_lines_per_layer <= 1:
+        hatch_start = args.hatch_fixed if args.hatch_fixed is not None else coord_from_frac(pmin, pmax, hatch_axis_id, 0.5)
+        hatch_end = hatch_start
+    else:
+        hatch_start, hatch_end = resolve_axis_range(
+            pmin,
+            pmax,
+            hatch_axis_id,
+            args.hatch_start,
+            args.hatch_end,
+            args.hatch_start_frac,
+            args.hatch_end_frac,
+        )
+
+    implied_scan_speed = abs(scan_end - scan_start) / max((args.scan_steps_per_layer - 1) * args.dt, args.dt)
+
+    print("inp:", args.inp)
+    print("selected_cells:", selected_cells)
+    print("points:", len(points))
+    print("thermal_dofs:", thermal.num_total_dofs_all_vars)
+    print("mechanical_dofs:", mechanics.num_total_dofs_all_vars)
+    print("thermal_boundary_face_counts [exposed, walls]:", [len(x) for x in thermal.boundary_inds_list])
+    print("thermal_dirichlet_node_counts [bottom]:", [len(x) for x in thermal.fes[0].node_inds_list])
+    print("mechanical_dirichlet_node_counts [bottom ux, uy, uz]:", [len(x) for x in mechanics.fes[0].node_inds_list])
+    print("pmin:", pmin)
+    print("pmax:", pmax)
+    print("build_axis:", args.build_axis)
+    print("base_side:", args.base_side)
+    print("build_direction:", f"+{args.build_axis}" if args.base_side == "min" else f"-{args.build_axis}")
+    print("base_coord:", base_coord)
+    print("exposed_coord:", exposed_coord)
+    print("build_span:", build_span)
+    print("layers:", args.layers)
+    print("hatch_lines_per_layer:", args.hatch_lines_per_layer)
+    print("scan_steps_per_layer:", args.scan_steps_per_layer)
+    print("total_thermal_steps:", total_steps)
+    print("first_front_coord:", first_front)
+    print("last_front_coord:", last_front)
+    print("plane_axes:", [ID_TO_AXIS[i] for i in plane_axis_ids])
+    print("scan_axis:", ID_TO_AXIS[scan_axis_id])
+    print("hatch_axis:", ID_TO_AXIS[hatch_axis_id])
+    print("scan_range:", (scan_start, scan_end))
+    print("hatch_range:", (hatch_start, hatch_end))
+    print("serpentine:", args.serpentine)
+    print("beam_radius:", beam_radius)
+    print("source_depth:", source_depth)
+    print("dt:", args.dt)
+    print("implied_scan_speed:", implied_scan_speed)
+
+    for global_step in range(total_steps):
+        (
+            layer_idx,
+            hatch_idx,
+            scan_idx,
+            laser_center,
+            laser_switch,
+            scan_frac,
+            hatch_frac,
+            front_coord,
+            layer_frac,
+        ) = laser_state(
+            global_step,
+            args,
+            pmin,
+            pmax,
+            build_axis_id,
+            scan_axis_id,
+            hatch_axis_id,
+        )
+
+        thermal.set_params([T_old, args.dt, laser_center, args.laser_power, beam_radius, source_depth, laser_switch])
+        T_new = solver(thermal, solver_options={"newton": {"linear": {"spsolve_solver": {}}}})[0]
+
+        if global_step % args.mechanics_every == 0:
+            dT_quad = mechanics.fes[0].convert_from_dof_to_quad(T_new - args.ambient)
+            mechanics.set_params([dT_quad])
+            u_guess = solver(
+                mechanics,
+                solver_options={
+                    "newton": {
+                        "initial_guess": u_guess,
+                        "linear": {"spsolve_solver": {}},
+                        "tol": 1e-9,
+                        "rel_tol": 1e-11,
+                    }
+                },
+            )
+
+            sigma_mean, vm = mechanics.compute_cell_stress(u_guess[0], dT_quad)
+            vtk_path = os.path.join(args.output_dir, f"step_{global_step:06d}.vtu")
+            save_sol(
+                thermal.fes[0],
+                T_new,
+                vtk_path,
+                point_infos=[("u", u_guess[0])],
+                cell_infos=[
+                    ("dT", np.mean(dT_quad[:, :, 0], axis=1)),
+                    ("stress_xx", sigma_mean[:, 0, 0]),
+                    ("von_mises", vm),
+                ],
+            )
+
+            print(
+                f"global_step={global_step} "
+                f"layer={layer_idx + 1}/{args.layers} "
+                f"hatch={hatch_idx + 1}/{args.hatch_lines_per_layer} "
+                f"scan={scan_idx + 1}/{args.scan_steps_per_layer} "
+                f"layer_frac={layer_frac:.6g} "
+                f"front_{ID_TO_AXIS[build_axis_id]}={front_coord:.12g} "
+                f"scan_frac={scan_frac:.6g} "
+                f"hatch_frac={hatch_frac:.6g} "
+                f"T_min={float(np.min(T_new)):.12g} "
+                f"T_max={float(np.max(T_new)):.12g} "
+                f"u_max={float(np.max(np.abs(u_guess[0]))):.12g} "
+                f"vm_max={float(np.max(vm)):.12g} "
+                f"laser_center={onp.asarray(laser_center)} "
+                f"vtk={vtk_path}"
+            )
+        else:
+            print(
+                f"global_step={global_step} "
+                f"layer={layer_idx + 1}/{args.layers} "
+                f"hatch={hatch_idx + 1}/{args.hatch_lines_per_layer} "
+                f"scan={scan_idx + 1}/{args.scan_steps_per_layer} "
+                f"front_{ID_TO_AXIS[build_axis_id]}={front_coord:.12g} "
+                f"laser_center={onp.asarray(laser_center)} "
+                f"T_max={float(np.max(T_new)):.12g}"
+            )
+
+        T_old = T_new
+
+
+if __name__ == "__main__":
+    main()

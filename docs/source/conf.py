@@ -115,7 +115,7 @@ html_theme_options = {
 }
 
 # Path to your logo (relative to source directory)
-html_logo = "_static/images/logo.png"
+html_logo = "_static/assets/logo.png"
 
 
 html_static_path = ['_static'] 

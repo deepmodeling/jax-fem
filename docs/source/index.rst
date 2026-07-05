@@ -16,21 +16,21 @@ Welcome to JAX-FEM's documentation!
 
    <div style="display: flex; justify-content: center; align-items: flex-start; gap: 20px;">
    <figure style="margin: 0; text-align: center;">
-      <img src="_static/images/von_mises.png" style="height: 200px; width: auto; object-fit: contain;" />
+      <img src="_static/assets/von_mises.png" style="height: 200px; width: auto; object-fit: contain;" />
       <p style="margin-top: 10px;"><em>Linear static analysis of a bracket.</em></p>
    </figure>
    <figure style="margin: 0; text-align: center;">
-      <img src="_static/images/to.gif" style="height: 200px; width: auto; object-fit: contain;" />
+      <img src="_static/assets/to.gif" style="height: 200px; width: auto; object-fit: contain;" />
       <p style="margin-top: 10px;"><em>Topology optimization with differentiable simulation.</em></p>
    </figure>
    </div>
 
    <div style="display: flex; justify-content: center; align-items: flex-start; gap: 60px;">
       <figure style="margin: 0; text-align: center;">
-         <img src="_static/images/stokes_u.png" style="height: 200px; width: auto; object-fit: contain;" />
+         <img src="_static/assets/stokes_u.png" style="height: 200px; width: auto; object-fit: contain;" />
       </figure>
       <figure style="margin: 0; text-align: center;">
-         <img src="_static/images/stokes_p.png" style="height: 200px; width: auto; object-fit: contain;" />
+         <img src="_static/assets/stokes_p.png" style="height: 200px; width: auto; object-fit: contain;" />
       </figure>
    </div>
    <p style="text-align: center; margin-top: 10px;"><em>Stokes flow: velocity (left) and pressure(right).</em></p>
@@ -38,10 +38,10 @@ Welcome to JAX-FEM's documentation!
 
    <div style="display: flex; justify-content: center; align-items: flex-start; gap: 60px;">
       <figure style="margin: 0; text-align: center;">
-         <img src="_static/images/polycrystal_grain.gif" style="height: 260px; width: auto; object-fit: contain;" />
+         <img src="_static/assets/polycrystal_grain.gif" style="height: 260px; width: auto; object-fit: contain;" />
       </figure>
       <figure style="margin: 0; text-align: center;">
-         <img src="_static/images/polycrystal_stress.gif" style="height: 260px; width: auto; object-fit: contain;" />
+         <img src="_static/assets/polycrystal_stress.gif" style="height: 260px; width: auto; object-fit: contain;" />
       </figure>
    </div>
    <p style="text-align: center; margin-top: 10px;"><em>Crystal plasticity: grain structure (left) and stress-xx (right).</em></p>
@@ -49,7 +49,7 @@ Welcome to JAX-FEM's documentation!
 
    <div style="display: flex; justify-content: center; align-items: flex-start; gap: 20px;">
       <figure style="margin: 0; text-align: center;">
-         <img src="_static/images/ded.gif" style="height: 280px; width: auto; object-fit: contain;" />
+         <img src="_static/assets/ded.gif" style="height: 280px; width: auto; object-fit: contain;" />
       </figure>
    </div>
    <p style="text-align: center; margin-top: 10px;"><em>Thermal profile in direct energy deposition.</em></p>
@@ -117,4 +117,3 @@ Welcome to JAX-FEM's documentation!
    Miscellaneous <more/project>
 
    Contact <more/contact>
-   

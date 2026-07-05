@@ -57,9 +57,9 @@ class BeamCounterLoad(Problem):
     (``-END_TRACTION``). ``get_q_vec`` turns this into the reference load
     vector ``q_aux``. The arc-length residual uses ``R + (1 - λ) q_aux``:
 
-    - **λ = 0:** counter-traction cancels the main traction at ``u = 0``,
-      so continuation starts from the undeformed reference state.
-    - **λ = 1:** ``(1 - λ) q_aux = 0``; only the main problem's full design
+    - **λ = 0:** counter-traction cancels only the main problem's right-edge
+      target traction. The imperfection load remains active.
+    - **λ = 1:** ``(1 - λ) q_aux = 0``; only the main problem's full
       traction remains (the target forward problem).
     """
 

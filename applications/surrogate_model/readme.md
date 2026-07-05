@@ -3,7 +3,7 @@
 ## Work flow
 
 <p align="middle">
-  <img src="materials/surrogatemodel.png" width="800" />
+  <img src="assets/surrogatemodel.png" width="800" />
 </p>
 
 The neutral network surrogate model computational homogenization procedure steps. 
@@ -17,7 +17,7 @@ The neutral network surrogate model computational homogenization procedure steps
 ## RVE
 
 <p align="middle">
-  <img src="materials/RVE.png" width="600" />
+  <img src="assets/RVE.png" width="600" />
 </p>
 
 <center><p>Geometry for RVE</p></center>
@@ -43,8 +43,8 @@ Run
 Visualized with ParaView:
 
 <p align="middle">
-  <img src="materials/strech.png" width="500" /> 
-  <img src="materials/compression.png" width="500" />
+  <img src="assets/strech.png" width="500" />
+  <img src="assets/compression.png" width="500" />
 </p>
 <p align="middle">
     <em >Deformation under 20% stretch (left) and 5% compression (right)</em>
@@ -59,4 +59,3 @@ This example was constributed by Min Shen from Prof. Sheng Mao's research group 
 ## Reference
 
 [1] Xue, Tianju, Alex Beatson, Maurizio Chiaramonte, Geoffrey Roeder, Jordan T. Ash, Yigit Menguc, Sigrid Adriaenssens, Ryan P. Adams, and Sheng Mao. "A data-driven computational scheme for the nonlinear mechanical properties of cellular mechanical metamaterials under large deformation." Soft matter 16, no. 32 (2020): 7524-7534.
-

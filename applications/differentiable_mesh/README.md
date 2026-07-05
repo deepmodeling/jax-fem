@@ -68,7 +68,7 @@ The script checks that the **number of Neumann faces** is unchanged under the FD
 |------|------|
 | `example.py` | Full driver: mesh, BCs, `ad_wrapper`, `value_and_grad`, gold FD, VTK export. |
 | `finite_difference.py` | `gold_fd_two_independent_problems`: two independent solves, central difference. |
-| `images/X.png`, `images/Y.png` | Screenshots of the two coordinate components of the mesh gradient of $J$ (same information as `dJ_dxy`) in ParaView (side by side below). |
+| `assets/X.png`, `assets/Y.png` | Screenshots of the two coordinate components of the mesh gradient of $J$ (same information as `dJ_dxy`) in ParaView (side by side below). |
 
 ---
 
@@ -89,8 +89,8 @@ Open the VTU in **ParaView**, color by the first or second component of `dJ_dxy`
 
 <table>
   <tr>
-    <td width="50%" valign="top" align="center"><strong>∂J/∂X<sub>·,1</sub></strong> (1st component of <code>dJ_dxy</code>)<br/><img src="images/X.png" alt="dJ/dX column 1 in ParaView"/></td>
-    <td width="50%" valign="top" align="center"><strong>∂J/∂X<sub>·,2</sub></strong> (2nd component of <code>dJ_dxy</code>)<br/><img src="images/Y.png" alt="dJ/dX column 2 in ParaView"/></td>
+    <td width="50%" valign="top" align="center"><strong>∂J/∂X<sub>·,1</sub></strong> (1st component of <code>dJ_dxy</code>)<br/><img src="assets/X.png" alt="dJ/dX column 1 in ParaView"/></td>
+    <td width="50%" valign="top" align="center"><strong>∂J/∂X<sub>·,2</sub></strong> (2nd component of <code>dJ_dxy</code>)<br/><img src="assets/Y.png" alt="dJ/dX column 2 in ParaView"/></td>
   </tr>
 </table>
 

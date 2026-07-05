@@ -50,9 +50,8 @@ from the `jax-fem/` directory.
 
 Results can be visualized with *ParaWiew*.
 <p align="middle">
-  <img src="material/pressure.gif" width="600" />
+  <img src="assets/pressure.gif" width="600" />
 </p>
 <p align="middle">
     <em >Wave: pressure</em>
 </p>
-

@@ -91,8 +91,8 @@ from the `jax-fem/` directory.
 
 Results can be visualized with *ParaWiew*.
 <p align="middle">
-  <img src="material/theta.gif" width="400" />
-  <img src="material/uy.gif" width="400" />
+  <img src="assets/theta.gif" width="400" />
+  <img src="assets/uy.gif" width="400" />
 </p>
 <p align="middle">
     <em >Thermal mechanical coupling: temperature change (left) and displacement-y (right).</em>

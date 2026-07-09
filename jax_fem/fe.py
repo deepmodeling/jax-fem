@@ -268,6 +268,24 @@ class FiniteElement:
         """
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(dirichlet_bc_info)
 
+    def get_exterior_face_flags(self):
+        """Boolean flags of mesh-exterior faces, shape (num_cells, num_faces).
+
+        A face is exterior when its (sorted) vertex tuple appears in exactly
+        one cell of the mesh. The result is cached on the instance.
+        """
+        cached = getattr(self, '_exterior_face_flags_cache', None)
+        if cached is not None:
+            return cached
+        cells = onp.asarray(self.cells)
+        face_nodes = cells[:, onp.asarray(self.face_inds)]  # (num_cells, num_faces, num_face_vertices)
+        num_cells, num_faces, num_face_vertices = face_nodes.shape
+        keys = onp.sort(face_nodes.reshape(num_cells * num_faces, num_face_vertices), axis=1)
+        _, inverse, counts = onp.unique(keys, axis=0, return_inverse=True, return_counts=True)
+        flags = (counts[inverse] == 1).reshape(num_cells, num_faces)
+        self._exterior_face_flags_cache = flags
+        return flags
+
     def get_boundary_conditions_inds(self, location_fns):
         """Given location functions, compute which faces satisfy the condition.
 
@@ -283,6 +301,13 @@ class FiniteElement:
             For example, ::
 
                 lambda x, ind: np.isclose(x[0], 0.) & np.isin(ind, np.array([1, 3, 10]))
+
+            A location function with attribute ``exterior_only = True``
+            additionally restricts the selection to faces on the mesh
+            exterior (faces owned by exactly one cell). This makes selectors
+            like ``lambda x: True`` usable for "the whole outer surface" of
+            an arbitrary part, which per-node point predicates alone cannot
+            express.
 
         Returns
         -------
@@ -316,6 +341,8 @@ class FiniteElement:
 
                 vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
                 boundary_flags = vvmap_on_boundary(cell_face_points, cell_face_inds)
+                if getattr(location_fns[i], 'exterior_only', False):
+                    boundary_flags = np.asarray(boundary_flags) & np.asarray(self.get_exterior_face_flags())
                 boundary_inds = np.argwhere(boundary_flags)  # (num_selected_faces, 2)
                 boundary_inds_list.append(boundary_inds)
 

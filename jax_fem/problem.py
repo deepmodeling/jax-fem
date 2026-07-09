@@ -4,7 +4,7 @@ import jax.numpy as np
 import jax.flatten_util
 from dataclasses import dataclass
 import functools
-from typing import Any
+from typing import Any, ClassVar, Optional
 
 from jax_fem.utils import timeit 
 from jax_fem.generate_mesh import Mesh
@@ -52,6 +52,8 @@ class Problem:
     dirichlet_bc_info: list = None
     location_fns: list = None
     additional_info: tuple = ()
+    cell_assembly_num_cuts: ClassVar[int] = 20
+    cell_assembly_target_batch_size: ClassVar[Optional[int]] = None
 
     def __post_init__(self):
 
@@ -83,40 +85,23 @@ class Problem:
         for i in range(len(self.fes) - 1):
             self.offset.append(self.offset[i] + self.fes[i].num_total_dofs)
 
-        def find_ind(*x):
-            inds = []
-            for i in range(len(x)):
-                crt_ind = self.fes[i].vec * x[i][:, None] + np.arange(self.fes[i].vec)[None, :] + self.offset[i]
-                inds.append(crt_ind.reshape(-1))
-
-            return np.hstack(inds)
-
         # (num_cells, num_nodes*vec + ...)
-        inds = onp.array(jax.vmap(find_ind)(*self.cells_list))
+        inds = self._cell_dof_indices(self.cells_list)
         self.I = onp.repeat(inds[:, :, None], inds.shape[1], axis=2).reshape(-1)
         self.J = onp.repeat(inds[:, None, :], inds.shape[1], axis=1).reshape(-1)
         self.cells_list_face_list = []
 
         for i, boundary_inds in enumerate(self.boundary_inds_list):
             cells_list_face = [cells[boundary_inds[:, 0]] for cells in self.cells_list] # [(num_selected_faces, num_nodes), ...]
-            inds_face = onp.array(jax.vmap(find_ind)(*cells_list_face)) # (num_selected_faces, num_nodes*vec + ...)
+            inds_face = self._cell_dof_indices(cells_list_face) # (num_selected_faces, num_nodes*vec + ...)
             I_face = onp.repeat(inds_face[:, :, None], inds_face.shape[1], axis=2).reshape(-1)
             J_face = onp.repeat(inds_face[:, None, :], inds_face.shape[1], axis=1).reshape(-1)
             self.I = onp.hstack((self.I, I_face))
             self.J = onp.hstack((self.J, J_face))
             self.cells_list_face_list.append(cells_list_face)
-     
-        self.cells_flat = jax.vmap(lambda *x: jax.flatten_util.ravel_pytree(x)[0])(*self.cells_list) # (num_cells, num_nodes + ...)
 
-        dumb_array_dof = [np.zeros((fe.num_nodes, fe.vec)) for fe in self.fes]
-        # TODO: dumb_array_dof is useless?
-        dumb_array_node = [np.zeros(fe.num_nodes) for fe in self.fes]
-        # _, unflatten_fn_node = jax.flatten_util.ravel_pytree(dumb_array_node)
-        _, self.unflatten_fn_dof = jax.flatten_util.ravel_pytree(dumb_array_dof)
-        
-        dumb_sol_list = [np.zeros((fe.num_total_nodes, fe.vec)) for fe in self.fes]
-        dumb_dofs, self.unflatten_fn_sol_list = jax.flatten_util.ravel_pytree(dumb_sol_list)
-        self.num_total_dofs_all_vars = len(dumb_dofs)
+        self.cells_flat = self._flatten_cells(self.cells_list) # (num_cells, num_nodes + ...)
+        self._init_unflatten_fns()
 
         self.num_nodes_cumsum = onp.cumsum([0] + [fe.num_nodes for fe in self.fes])
 
@@ -355,16 +340,119 @@ class Problem:
             self.kernel_face.append(kernel_face)
             self.kernel_jac_face.append(kernel_jac_face)
 
+    def _cell_assembly_cut_count(self):
+        """Return the number of chunks used for cell local assembly."""
+        target_batch_size = getattr(
+            self,
+            "cell_assembly_target_batch_size",
+            type(self).cell_assembly_target_batch_size,
+        )
+        if target_batch_size is not None:
+            target_batch_size = int(target_batch_size)
+            if target_batch_size <= 0:
+                raise ValueError(
+                    "cell_assembly_target_batch_size must be a positive integer"
+                )
+            num_cuts = (
+                (int(self.num_cells) + target_batch_size - 1)
+                // target_batch_size
+            )
+            return min(max(1, num_cuts), self.num_cells)
+
+        raw_num_cuts = getattr(
+            self,
+            "cell_assembly_num_cuts",
+            type(self).cell_assembly_num_cuts,
+        )
+        num_cuts = int(raw_num_cuts)
+        if num_cuts <= 0:
+            raise ValueError("cell_assembly_num_cuts must be a positive integer")
+        return min(num_cuts, self.num_cells)
+
+    def _flatten_cells(self, cells_list):
+        """Flatten per-cell connectivity arrays."""
+        if self.num_vars == 1:
+            cells = cells_list[0]
+            cell_width = int(onp.prod(cells.shape[1:])) if len(cells.shape) > 1 else 1
+            return np.reshape(cells, (self.num_cells, cell_width))
+        return jax.vmap(lambda *x: jax.flatten_util.ravel_pytree(x)[0])(
+            *cells_list
+        )
+
+    def _cell_dof_indices(self, cells_list):
+        """Return global DOF indices for each cell or selected face cell."""
+        if self.num_vars == 1:
+            cells = onp.asarray(cells_list[0])
+            vec = int(self.fes[0].vec)
+            offset = int(self.offset[0])
+            dof_inds = (
+                cells[..., None] * vec
+                + onp.arange(vec, dtype=cells.dtype)[None, None, :]
+                + offset
+            )
+            cell_width = (cells.shape[1] if cells.ndim > 1 else 1) * vec
+            return dof_inds.reshape((cells.shape[0], cell_width))
+
+        def find_ind(*x):
+            inds = []
+            for i in range(len(x)):
+                crt_ind = (
+                    self.fes[i].vec * x[i][:, None]
+                    + np.arange(self.fes[i].vec)[None, :]
+                    + self.offset[i]
+                )
+                inds.append(crt_ind.reshape(-1))
+
+            return np.hstack(inds)
+
+        return onp.array(jax.vmap(find_ind)(*cells_list))
+
+    def _init_unflatten_fns(self):
+        """Initialize flat DOF unflatten helpers."""
+        if self.num_vars == 1:
+            fe = self.fes[0]
+            cell_shape = (int(fe.num_nodes), int(fe.vec))
+            sol_shape = (int(fe.num_total_nodes), int(fe.vec))
+
+            def unflatten_dof(flat):
+                return [np.reshape(flat, cell_shape)]
+
+            def unflatten_sol_list(flat):
+                return [np.reshape(flat, sol_shape)]
+
+            self.unflatten_fn_dof = unflatten_dof
+            self.unflatten_fn_sol_list = unflatten_sol_list
+            self.num_total_dofs_all_vars = sol_shape[0] * sol_shape[1]
+            return
+
+        dumb_array_dof = [np.zeros((fe.num_nodes, fe.vec)) for fe in self.fes]
+        _, self.unflatten_fn_dof = jax.flatten_util.ravel_pytree(dumb_array_dof)
+
+        dumb_sol_list = [np.zeros((fe.num_total_nodes, fe.vec)) for fe in self.fes]
+        dumb_dofs, self.unflatten_fn_sol_list = jax.flatten_util.ravel_pytree(
+            dumb_sol_list
+        )
+        self.num_total_dofs_all_vars = len(dumb_dofs)
+
+    def _flatten_cells_sol(self, cells_sol_list):
+        """Flatten per-cell solution arrays for cell kernels."""
+        if self.num_vars == 1:
+            return cells_sol_list[0].reshape((self.num_cells, -1))
+        return jax.vmap(lambda *x: jax.flatten_util.ravel_pytree(x)[0])(
+            *cells_sol_list
+        )
+
     # @timeit
     def split_and_compute_cell(self, cells_sol_flat, np_version, jac_flag, internal_vars):
         """Volume integral in weak form
         """
         vmap_fn = self.kernel_jac if jac_flag else self.kernel
-        num_cuts = 20
-        if num_cuts > self.num_cells:
-            num_cuts = self.num_cells
-        batch_size = self.num_cells // num_cuts
+        num_cuts = self._cell_assembly_cut_count()
         input_collection = [cells_sol_flat, self.physical_quad_points, self.shape_grads, self.JxW, self.v_grads_JxW, *internal_vars]
+        if num_cuts == 1:
+            return vmap_fn(*input_collection)
+
+        batch_size = self.num_cells // num_cuts
 
         if jac_flag:
             values = []
@@ -402,9 +490,17 @@ class Problem:
             values = []
             jacs = []
             for i, boundary_inds in enumerate(self.boundary_inds_list):
+                if boundary_inds.shape[0] == 0:
+                    cell_dofs = cells_sol_flat.shape[-1]
+                    dtype = getattr(cells_sol_flat, "dtype", None)
+                    kwargs = {"dtype": dtype} if dtype is not None else {}
+                    values.append(np_version.zeros((0, cell_dofs), **kwargs))
+                    jacs.append(np_version.zeros((0, cell_dofs, cell_dofs), **kwargs))
+                    continue
+
                 vmap_fn = self.kernel_jac_face[i]
                 selected_cell_sols_flat = cells_sol_flat[boundary_inds[:, 0]]  # (num_selected_faces, num_nodes*vec + ...))
-                input_collection = [selected_cell_sols_flat, self.physical_surface_quad_points[i], self.selected_face_shape_vals[i], 
+                input_collection = [selected_cell_sols_flat, self.physical_surface_quad_points[i], self.selected_face_shape_vals[i],
                                     self.selected_face_shape_grads[i], self.nanson_scale[i], *internal_vars_surfaces[i]]
 
                 val, jac = vmap_fn(*input_collection)
@@ -414,10 +510,17 @@ class Problem:
         else:
             values = []
             for i, boundary_inds in enumerate(self.boundary_inds_list):
+                if boundary_inds.shape[0] == 0:
+                    cell_dofs = cells_sol_flat.shape[-1]
+                    dtype = getattr(cells_sol_flat, "dtype", None)
+                    kwargs = {"dtype": dtype} if dtype is not None else {}
+                    values.append(np_version.zeros((0, cell_dofs), **kwargs))
+                    continue
+
                 vmap_fn = self.kernel_face[i]
                 selected_cell_sols_flat = cells_sol_flat[boundary_inds[:, 0]]  # (num_selected_faces, num_nodes*vec + ...))
                 # TODO: duplicated code
-                input_collection = [selected_cell_sols_flat, self.physical_surface_quad_points[i], self.selected_face_shape_vals[i], 
+                input_collection = [selected_cell_sols_flat, self.physical_surface_quad_points[i], self.selected_face_shape_vals[i],
                                     self.selected_face_shape_grads[i], self.nanson_scale[i], *internal_vars_surfaces[i]]
                 val = vmap_fn(*input_collection)
                 values.append(val)
@@ -425,21 +528,44 @@ class Problem:
 
     def compute_residual_vars_helper(self, weak_form_flat, weak_form_face_flat):
         res_list = [np.zeros((fe.num_total_nodes, fe.vec), dtype=weak_form_flat.dtype) for fe in self.fes]
+        if self.num_vars == 1:
+            fe = self.fes[0]
+            cell_num_nodes = getattr(fe, "num_nodes", self.cells_list[0].shape[1])
+            weak_form = weak_form_flat.reshape((-1, cell_num_nodes, fe.vec))
+            res_list[0] = res_list[0].at[self.cells_list[0].reshape(-1)].add(
+                weak_form.reshape(-1, fe.vec)
+            )
+
+            for ind, cells_list_face in enumerate(self.cells_list_face_list):
+                if not cells_list_face or cells_list_face[0].shape[0] == 0:
+                    continue
+                face_cell_num_nodes = cells_list_face[0].shape[1]
+                weak_form_face = weak_form_face_flat[ind].reshape(
+                    (-1, face_cell_num_nodes, fe.vec)
+                )
+                res_list[0] = res_list[0].at[
+                    cells_list_face[0].reshape(-1)
+                ].add(weak_form_face.reshape(-1, fe.vec))
+
+            return res_list
+
         weak_form_list = jax.vmap(lambda x: self.unflatten_fn_dof(x))(weak_form_flat) # [(num_cells, num_nodes, vec), ...]
-        res_list = [res_list[i].at[self.cells_list[i].reshape(-1)].add(weak_form_list[i].reshape(-1, 
+        res_list = [res_list[i].at[self.cells_list[i].reshape(-1)].add(weak_form_list[i].reshape(-1,
             self.fes[i].vec)) for i in range(self.num_vars)]
 
         for ind, cells_list_face in enumerate(self.cells_list_face_list):
+            if not cells_list_face or cells_list_face[0].shape[0] == 0:
+                continue
             weak_form_face_list = jax.vmap(lambda x: self.unflatten_fn_dof(x))(weak_form_face_flat[ind]) # [(num_selected_faces, num_nodes, vec), ...]
-            res_list = [res_list[i].at[cells_list_face[i].reshape(-1)].add(weak_form_face_list[i].reshape(-1, 
-                self.fes[i].vec)) for i in range(self.num_vars)]   
+            res_list = [res_list[i].at[cells_list_face[i].reshape(-1)].add(weak_form_face_list[i].reshape(-1,
+                self.fes[i].vec)) for i in range(self.num_vars)]
 
         return res_list
 
     def compute_residual_vars(self, sol_list, internal_vars, internal_vars_surfaces):
         logger.debug(f"Computing cell residual...")
         cells_sol_list = [sol[cells] for cells, sol in zip(self.cells_list, sol_list)] # [(num_cells, num_nodes, vec), ...]
-        cells_sol_flat = jax.vmap(lambda *x: jax.flatten_util.ravel_pytree(x)[0])(*cells_sol_list) # (num_cells, num_nodes*vec + ...)
+        cells_sol_flat = self._flatten_cells_sol(cells_sol_list) # (num_cells, num_nodes*vec + ...)
         weak_form_flat = self.split_and_compute_cell(cells_sol_flat, np, False, internal_vars)  # (num_cells, num_nodes*vec + ...)
         weak_form_face_flat = self.compute_face(cells_sol_flat, np, False, internal_vars_surfaces)  # [(num_selected_faces, num_nodes*vec + ...), ...]
         return self.compute_residual_vars_helper(weak_form_flat, weak_form_face_flat)
@@ -447,7 +573,7 @@ class Problem:
     def compute_newton_vars(self, sol_list, internal_vars, internal_vars_surfaces):
         logger.debug(f"Computing cell Jacobian and cell residual...")
         cells_sol_list = [sol[cells] for cells, sol in zip(self.cells_list, sol_list)] # [(num_cells, num_nodes, vec), ...]
-        cells_sol_flat = jax.vmap(lambda *x: jax.flatten_util.ravel_pytree(x)[0])(*cells_sol_list) # (num_cells, num_nodes*vec + ...)
+        cells_sol_flat = self._flatten_cells_sol(cells_sol_list) # (num_cells, num_nodes*vec + ...)
         # (num_cells, num_nodes*vec + ...),  (num_cells, num_nodes*vec + ..., num_nodes*vec + ...)
         weak_form_flat, cells_jac_flat = self.split_and_compute_cell(cells_sol_flat, onp, True, internal_vars)
         self.V = onp.array(cells_jac_flat.reshape(-1))

@@ -256,10 +256,15 @@ class TransientThermal(Problem):
         return heat_capacity
 
     def get_surface_maps(self):
-        def surface_flux(T, _point):
+        # face_active masks the flux to faces owned by printed/real material.
+        # Void (not yet spread) cells are not physical surfaces; applying
+        # convection/radiation to their near-singular equations produces
+        # unphysical temperatures. In legacy 'box' mode the mask is all-ones,
+        # which is numerically identical to the historical behavior.
+        def surface_flux(T, _point, face_active):
             q_conv = self.convection_h * (self.ambient - T[0])
             q_rad = self.emissivity * self.stefan_boltzmann * (self.ambient**4 - T[0] ** 4)
-            return -np.array([q_conv + q_rad])
+            return -np.array([(q_conv + q_rad) * face_active[0]])
 
         return [surface_flux for _ in range(self.num_surface_maps)]
 
@@ -279,6 +284,7 @@ class TransientThermal(Problem):
             latent_cp_quad,
             cooling_only_quad,
             old_layer_cooling_h,
+            surface_mask_quad,
         ) = params
 
         num_cells = self.fes[0].num_cells
@@ -307,12 +313,31 @@ class TransientThermal(Problem):
             cooling_only_quad,
             old_layer_cooling_h_quad,
         ]
-        self.internal_vars_surfaces = [[] for _ in range(len(self.boundary_inds_list))]
+        # Per-face activity flags for the surface flux maps. surface_mask_quad
+        # is a (num_cells, num_quads, 1) printed indicator (or all-ones in
+        # legacy mode); each boundary face inherits the flag of its owner cell.
+        num_face_quads = self.fes[0].num_face_quads
+        cell_mask = surface_mask_quad[:, 0, 0]
+        self.internal_vars_surfaces = []
+        for boundary_inds in self.boundary_inds_list:
+            if boundary_inds.shape[0] == 0:
+                self.internal_vars_surfaces.append([])
+                continue
+            face_flags = cell_mask[boundary_inds[:, 0]]
+            face_active = face_flags[:, None, None] * np.ones((1, num_face_quads, 1))
+            self.internal_vars_surfaces.append([face_active])
 
 
 class ThermoMechanical(Problem):
-    def custom_init(self, mechanics_model):
+    def custom_init(self, mechanics_model, yield_saturation=None, foundation_stiffness=0.0):
         self.mechanics_model = mechanics_model
+        # Cap on the hardened yield stress (~UTS). Linear isotropic hardening
+        # extrapolated past its ~10% strain validity produced 2 GPa fictitious
+        # von Mises at the bottom-clamp singularity; saturation bounds it.
+        self.yield_saturation = yield_saturation
+        # Elastic-foundation stiffness (Pa/m) for the bottom surface springs.
+        # 0 disables the springs (rigid Dirichlet clamp is used instead).
+        self.foundation_stiffness = float(foundation_stiffness)
         self.internal_vars = [
             np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
             np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
@@ -336,11 +361,26 @@ class ThermoMechanical(Problem):
         sigma_trial = lmbda * np.trace(elastic_eps) * np.eye(self.dim) + 2.0 * mu * elastic_eps
 
         if self.mechanics_model == "j2_plastic":
+            # Radial return with linear isotropic hardening. Identical to the
+            # legacy min(1, yield/seq) clip when hardening == 0, but with
+            # hardening > 0 the yield surface expands consistently WITHIN the
+            # Newton solve, giving a positive-definite consistent tangent
+            # (the pure clip left the plastic direction with zero stiffness,
+            # which made anchor-only release solves of fully yielded material
+            # ill-posed). delta_eqp matches compute_eqp_update().
             hydro = np.trace(sigma_trial) / 3.0 * np.eye(self.dim)
             dev = sigma_trial - hydro
             seq = np.sqrt(1.5 * np.sum(dev * dev) + 1e-30)
-            current_yield = np.maximum(yield_stress[0] + hardening[0] * eqp_old[0], 1e-12)
-            scale = np.minimum(1.0, current_yield / seq)
+            hardened_yield = yield_stress[0] + hardening[0] * eqp_old[0]
+            if self.yield_saturation is not None and self.yield_saturation > 0.0:
+                sat = self.yield_saturation
+                current_yield = np.maximum(np.minimum(hardened_yield, sat), 1e-12)
+                hardening_eff = np.where(hardened_yield < sat, hardening[0], 0.0)
+            else:
+                current_yield = np.maximum(hardened_yield, 1e-12)
+                hardening_eff = hardening[0]
+            delta_eqp = np.maximum(seq - current_yield, 0.0) / (3.0 * mu + hardening_eff + 1e-12)
+            scale = 1.0 - 3.0 * mu * delta_eqp / seq
             sigma = hydro + scale * dev
         else:
             sigma = sigma_trial
@@ -349,6 +389,21 @@ class ThermoMechanical(Problem):
 
     def get_tensor_map(self):
         return self.stress_fn
+
+    def get_surface_maps(self):
+        # Elastic foundation (Winkler springs) on the base surface: the build
+        # plate has finite compliance; a rigid clamp concentrates fictitious
+        # stress at the clamp edge. Traction on the body is t = -k_s * u; with
+        # the same weak-form sign convention as the thermal surface flux, the
+        # kernel returns +k_s * u. Only used when location_fns select the
+        # bottom faces (bottom-mechanics-bc elastic).
+        if self.foundation_stiffness <= 0.0:
+            return []
+
+        def foundation_traction(u, _point):
+            return self.foundation_stiffness * u
+
+        return [foundation_traction]
 
     def set_params(self, params):
         self.internal_vars = params
@@ -394,8 +449,15 @@ class ThermoMechanical(Problem):
             hydro = np.trace(sigma_trial) / 3.0 * np.eye(self.dim)
             dev = sigma_trial - hydro
             seq = np.sqrt(1.5 * np.sum(dev * dev) + 1e-30)
-            current_yield = np.maximum(yield_stress[0] + hardening[0] * eqp_old[0], 1e-12)
-            delta_eqp = np.maximum(seq - current_yield, 0.0) / (3.0 * mu + hardening[0] + 1e-12)
+            hardened_yield = yield_stress[0] + hardening[0] * eqp_old[0]
+            if self.yield_saturation is not None and self.yield_saturation > 0.0:
+                sat = self.yield_saturation
+                current_yield = np.maximum(np.minimum(hardened_yield, sat), 1e-12)
+                hardening_eff = np.where(hardened_yield < sat, hardening[0], 0.0)
+            else:
+                current_yield = np.maximum(hardened_yield, 1e-12)
+                hardening_eff = hardening[0]
+            delta_eqp = np.maximum(seq - current_yield, 0.0) / (3.0 * mu + hardening_eff + 1e-12)
             active = np.where(active_factor[0] > 0.5, 1.0, 0.0)
             return np.array([eqp_old[0] + active * delta_eqp])
 
@@ -501,6 +563,13 @@ def build_parser(config=None):
     parser.add_argument("--future-layer-mode", choices=("void", "powder"), default=cfg(config, "future_layer_mode", "void"), help="Material treatment for future, not-yet-spread layers when --layer-activation-mode layer_on_scan is used. Use 'void' to make future layers inactive before spreading.")
     parser.add_argument("--layer-activation-geometry", choices=("centroid", "intersection"), default=cfg(config, "layer_activation_geometry", "intersection"), help="How cells are assigned to printed layers. 'centroid' uses cell centroid layer id; 'intersection' activates a cell if its vertex interval intersects the layer band. Use intersection for coarse tetra meshes and macro-layer runs.")
     parser.add_argument("--inactive-thermal-factor", type=float, default=cfg(config, "inactive_thermal_factor", 1e-6))
+    parser.add_argument("--inactive-mass-factor", type=float, default=cfg(config, "inactive_mass_factor", None),
+                        help="Density scaling for inactive/void cells. Legacy behavior (None) reuses "
+                             "--inactive-thermal-factor, which scales k and rho by the SAME factor and therefore leaves "
+                             "the void diffusivity k/(rho*cp) at solid-like values: temperature 'ghost-diffuses' 5-10 mm "
+                             "into un-spread layers above the laser. Set 1.0 to keep full thermal mass in void (only k "
+                             "is reduced), cutting void diffusivity by the k factor and anchoring the otherwise "
+                             "near-singular void equations.")
     parser.add_argument("--inactive-mechanics-factor", type=float, default=cfg(config, "inactive_mechanics_factor", 1e-9))
 
     parser.add_argument("--k-table-solid", default=cfg(config, "k_table_solid", None))
@@ -517,6 +586,33 @@ def build_parser(config=None):
     parser.add_argument("--emissivity", type=float, default=cfg(config, "emissivity", 0.0))
     parser.add_argument("--stefan-boltzmann", type=float, default=cfg(config, "stefan_boltzmann", 5.670374419e-8))
     parser.add_argument("--bottom-thermal-bc", choices=("fixed", "convection"), default=cfg(config, "bottom_thermal_bc", "fixed"))
+    parser.add_argument("--surface-selection", choices=("box", "exterior"), default=cfg(config, "surface_selection", "box"),
+                        help="How convection/radiation faces are selected. 'box' keeps the legacy bounding-box plane selectors "
+                             "(only faces exactly on the box planes; zero faces for curved parts). 'exterior' applies the "
+                             "surface losses to every mesh-exterior face above the base plane, matching a real part surrounded "
+                             "by gas/powder.")
+    parser.add_argument("--boundary-tol", type=float, default=cfg(config, "boundary_tol", None),
+                        help="Absolute tolerance (mesh length units) for base/exposed/wall plane node selection. Defaults to "
+                             "the legacy 1e-8 * bounding-box span, which can miss nodes on real CAD meshes whose base face "
+                             "has sub-mm jitter.")
+    parser.add_argument("--surface-active-mask", dest="surface_active_mask", action="store_true",
+                        default=cfg(config, "surface_active_mask", None),
+                        help="Restrict convection/radiation to faces owned by printed material. Void cells are not physical "
+                             "surfaces and their near-singular equations produce unphysical temperatures under surface flux. "
+                             "Defaults to on for --surface-selection exterior, off for legacy box mode.")
+    parser.add_argument("--no-surface-active-mask", dest="surface_active_mask", action="store_false")
+    parser.add_argument("--stress-relaxation-temperature", type=float,
+                        default=cfg(config, "stress_relaxation_temperature", None),
+                        help="Stress-free reference temperature written when material solidifies (macro calibration knob; "
+                             "Ti64 typically 1073-1173 K). Without it, T_ref is the local temperature at solidification, "
+                             "which in consolidation-on-activation mode equals the powder entry temperature and inverts the "
+                             "residual stress sign.")
+    parser.add_argument("--quadrature-order", type=int, default=cfg(config, "quadrature_order", None),
+                        help="Quadrature order for both thermal and mechanical problems (they must match: phase/material "
+                             "state arrays are shared per quadrature point). TET4 defaults to the legacy single-point rule, "
+                             "whose rank-1 mass matrix produces large spurious temperature oscillations (observed +-1900K) "
+                             "in low-conductivity powder at small Fourier numbers. Use 2 (4-point rule) for a full-rank "
+                             "transient term.")
     parser.add_argument("--front-surface-loss-h", type=float, default=cfg(config, "front_surface_loss_h", 0.0), help="Optional volumetric approximation of convection on the moving build front. 0 disables it.")
     parser.add_argument("--front-surface-loss-thickness", type=float, default=cfg(config, "front_surface_loss_thickness", 0.0), help="Thickness for moving-front loss approximation. Defaults to source_depth when front loss is enabled.")
     parser.add_argument("--front-surface-loss-radiation", dest="front_surface_loss_radiation", action="store_true", default=cfg(config, "front_surface_loss_radiation", False))
@@ -531,6 +627,18 @@ def build_parser(config=None):
     parser.add_argument("--yield-table", default=cfg(config, "yield_table", None))
     parser.add_argument("--hardening-table", default=cfg(config, "hardening_table", None))
     parser.add_argument("--mechanics-model", choices=("linear_elastic", "j2_plastic"), default=cfg(config, "mechanics_model", "linear_elastic"))
+    parser.add_argument("--yield-saturation-stress", type=float, default=cfg(config, "yield_saturation_stress", None),
+                        help="Cap on the hardened yield stress (Pa), ~UTS (Ti64: ~1.15e9). Linear isotropic hardening "
+                             "extrapolated past its ~10%% strain validity produced ~2 GPa fictitious von Mises at the "
+                             "bottom-clamp region; the cap saturates hardening there. None keeps unbounded legacy hardening.")
+    parser.add_argument("--bottom-mechanics-bc", choices=("fixed", "elastic"), default=cfg(config, "bottom_mechanics_bc", "fixed"),
+                        help="'fixed' rigidly clamps the base nodes (legacy; models an infinitely stiff build plate and "
+                             "concentrates fictitious stress at the clamp edge). 'elastic' replaces the clamp with a "
+                             "Winkler elastic foundation on the base faces, giving the plate finite compliance.")
+    parser.add_argument("--bottom-foundation-stiffness", type=float, default=cfg(config, "bottom_foundation_stiffness", 1.0e12),
+                        help="Foundation modulus k_s (Pa/m) for --bottom-mechanics-bc elastic. Calibration knob for the "
+                             "build-plate compliance; 1e12 approximates a ~25 mm steel plate, larger values approach the "
+                             "rigid clamp.")
     parser.add_argument("--mushy-mechanics-factor", type=float, default=cfg(config, "mushy_mechanics_factor", 1e-2), help="Stress/stiffness scaling for mushy-zone material.")
     parser.add_argument("--liquid-mechanics-factor", type=float, default=cfg(config, "liquid_mechanics_factor", 1e-4), help="Stress/stiffness scaling for liquid material.")
     parser.add_argument("--reset-plastic-on-melt", dest="reset_plastic_on_melt", action="store_true", default=cfg(config, "reset_plastic_on_melt", True))
@@ -564,16 +672,45 @@ def build_parser(config=None):
     parser.add_argument("--dwell-steps-between-hatches", type=int, default=cfg(config, "dwell_steps_between_hatches", 0))
     parser.add_argument("--jump-speed", type=float, default=cfg(config, "jump_speed", 0.0), help="Laser-off travel speed between hatch lines. 0 disables generated jump states.")
     parser.add_argument("--recoat-time", type=float, default=cfg(config, "recoat_time", 0.0))
+    parser.add_argument("--recoat-steps", type=int, default=cfg(config, "recoat_steps", 10),
+                        help="Number of implicit time steps used to span each recoat interval (dt = recoat_time / recoat_steps). "
+                             "Applies to both the raster generator and layer transitions in --path-file runs.")
     parser.add_argument("--path-file", default=cfg(config, "path_file", None))
     parser.add_argument("--path-output", default=cfg(config, "path_output", "path_used.csv"), help="CSV file name/path for the actual sampled path. Set empty string to disable.")
 
     parser.add_argument("--substrate-thickness", type=float, default=cfg(config, "substrate_thickness", 0.0))
     parser.add_argument("--support-thickness", type=float, default=cfg(config, "support_thickness", 0.0))
     parser.add_argument("--cooling-steps", type=int, default=cfg(config, "cooling_steps", 0))
+    parser.add_argument("--cooling-dt", type=float, default=cfg(config, "cooling_dt", None),
+                        help="Time step for the trailing cooling states. Defaults to --dt; a larger value lets the part "
+                             "actually cool to ambient before release instead of only spanning cooling_steps * dt seconds.")
+    parser.add_argument("--reset-activation-temperature", dest="reset_activation_temperature", action="store_true",
+                        default=cfg(config, "reset_activation_temperature", False),
+                        help="Reset nodal temperatures of newly activated cells (nodes not shared with previously active "
+                             "material) to the preheat/ambient temperature, modeling freshly spread powder.")
+    parser.add_argument("--no-reset-activation-temperature", dest="reset_activation_temperature", action="store_false")
+    parser.add_argument("--activation-reset-temperature", type=float,
+                        default=cfg(config, "activation_reset_temperature", None),
+                        help="Temperature assigned to newly activated nodes when --reset-activation-temperature is on. "
+                             "Defaults to the preheat/ambient temperature. In consolidation-on-activation (route B) runs, "
+                             "set it to the stress relaxation temperature: the fresh layer enters hot and stress-free and "
+                             "builds stress gradually while cooling, instead of receiving an instantaneous GPa-level "
+                             "thermal load step that stalls the mechanics Newton solve.")
     parser.add_argument("--release-after-cooling", dest="release_after_cooling", action="store_true", default=cfg(config, "release_after_cooling", False))
     parser.add_argument("--no-release-after-cooling", dest="release_after_cooling", action="store_false")
 
     parser.add_argument("--mechanics-every", type=int, default=cfg(config, "mechanics_every", 1))
+    parser.add_argument("--mechanics-tol", type=float, default=cfg(config, "mechanics_tol", None),
+                        help="Absolute Newton residual tolerance for mechanics solves (default keeps legacy 1e-9).")
+    parser.add_argument("--mechanics-rel-tol", type=float, default=cfg(config, "mechanics_rel_tol", None),
+                        help="Relative Newton residual tolerance for mechanics solves (default keeps legacy 1e-11; "
+                             "1e-6 is plenty for engineering stress accuracy and dramatically faster for j2 states).")
+    parser.add_argument("--mechanics-max-iter", type=int, default=cfg(config, "mechanics_max_iter", None),
+                        help="Newton iteration cap for mechanics solves (solver default 100).")
+    parser.add_argument("--mechanics-line-search", dest="mechanics_line_search", action="store_true",
+                        default=cfg(config, "mechanics_line_search", False),
+                        help="Enable Newton line search for mechanics solves; stabilizes j2 yield-surface states.")
+    parser.add_argument("--no-mechanics-line-search", dest="mechanics_line_search", action="store_false")
     parser.add_argument("--thermal-output-every", type=int, default=cfg(config, "thermal_output_every", 0))
     parser.add_argument("--mechanics-output-every", type=int, default=cfg(config, "mechanics_output_every", 1))
     parser.add_argument("--summary-every", type=int, default=cfg(config, "summary_every", 1))
@@ -593,11 +730,14 @@ def parse_args():
     return args
 
 
-def make_box_locations(points, build_axis="x", base_side="min", tol_ratio=1e-8):
+def make_box_locations(points, build_axis="x", base_side="min", tol_ratio=1e-8, abs_tol=None):
     pmin = onp.min(points, axis=0)
     pmax = onp.max(points, axis=0)
     span = max(float(onp.max(pmax - pmin)), 1.0)
-    atol = tol_ratio * span
+    # Real CAD meshes rarely have their base-face nodes exactly coplanar; the
+    # legacy 1e-8 relative tolerance can select only a handful of nodes (8 of
+    # ~1225 on the 0119 part). Pass abs_tol (--boundary-tol) to widen it.
+    atol = float(abs_tol) if abs_tol is not None and abs_tol > 0.0 else tol_ratio * span
     build_axis_id = AXIS_TO_ID[build_axis]
     plane_axis_ids = tuple(i for i in range(3) if i != build_axis_id)
     if base_side == "min":
@@ -981,7 +1121,11 @@ def generate_raster_step_states(args, pmin, pmax, build_axis_id, scan_axis_id, h
                     )
                 )
                 global_step += 1
-            for _ in range(int(math.ceil(max(args.recoat_time, 0.0) / args.dt))):
+            # Span the recoat interval with a few large implicit steps instead
+            # of recoat_time/dt tiny ones (10 s at dt=1e-4 would be 100k steps).
+            recoat_steps = max(int(getattr(args, "recoat_steps", 10)), 1)
+            recoat_dt = max(args.recoat_time, 0.0) / recoat_steps
+            for _ in range(recoat_steps if recoat_dt > 0.0 else 0):
                 states.append(
                     make_step_state(
                         global_step,
@@ -992,7 +1136,7 @@ def generate_raster_step_states(args, pmin, pmax, build_axis_id, scan_axis_id, h
                         last_center,
                         0.0,
                         0.0,
-                        args.dt,
+                        recoat_dt,
                         1.0,
                         1.0,
                         front_coord,
@@ -1010,8 +1154,13 @@ def generate_raster_step_states(args, pmin, pmax, build_axis_id, scan_axis_id, h
         args.base_side,
         args.layer_thickness,
     )
+    cooling_dt = (
+        float(args.cooling_dt)
+        if getattr(args, "cooling_dt", None) is not None and args.cooling_dt > 0.0
+        else args.dt
+    )
     for _ in range(args.cooling_steps):
-        states.append(make_step_state(global_step, "cooling", args.layers - 1, 0, 0, last_center, 0.0, 0.0, args.dt, 0.0, 0.0, final_front, final_frac))
+        states.append(make_step_state(global_step, "cooling", args.layers - 1, 0, 0, last_center, 0.0, 0.0, cooling_dt, 0.0, 0.0, final_front, final_frac))
         global_step += 1
 
     representative_scan_length = max(scan_lengths) if scan_lengths else nominal_scan_length
@@ -1035,6 +1184,10 @@ def generate_path_file_step_states(args, pmin, pmax, build_axis_id):
     if not has_front_coord:
         print("WARNING: --path-file has no front_coord column; using laser center coordinate along build_axis as activation front.")
     times = [float(row["time"]) for row in rows]
+    recoat_steps = max(int(getattr(args, "recoat_steps", 10)), 1)
+    recoat_dt = max(args.recoat_time, 0.0) / recoat_steps if args.recoat_time > 0.0 else 0.0
+    global_step = 0
+    prev_layer_idx = None
     for i, row in enumerate(rows):
         if i > 0 and times[i] <= times[i - 1]:
             raise ValueError(
@@ -1050,9 +1203,40 @@ def generate_path_file_step_states(args, pmin, pmax, build_axis_id):
             front_coord = float(center[build_axis_id])
         layer_frac = min(max((layer_idx + 1) / float(args.layers), 0.0), 1.0)
         scan_id = int(row["scan_id"]) if has_scan_id and str(row.get("scan_id", "")).strip() != "" else i
+
+        # Machine path files often contain scan vectors only, with no recoater
+        # dwell between layers. Insert laser-off recoat states at each layer
+        # transition so interlayer cooling exists (dt = recoat_time/recoat_steps).
+        if (
+            recoat_dt > 0.0
+            and prev_layer_idx is not None
+            and layer_idx > prev_layer_idx
+            and states
+        ):
+            last = states[-1]
+            for _ in range(recoat_steps):
+                states.append(
+                    make_step_state(
+                        global_step,
+                        "recoat",
+                        last.layer_idx,
+                        last.hatch_idx,
+                        last.scan_idx,
+                        last.laser_center,
+                        0.0,
+                        0.0,
+                        recoat_dt,
+                        last.scan_frac,
+                        last.hatch_frac,
+                        last.front_coord,
+                        last.layer_frac,
+                    )
+                )
+                global_step += 1
+
         states.append(
             make_step_state(
-                i,
+                global_step,
                 row["mode"] or "path",
                 layer_idx,
                 max(int(row["hatch"]) - 1, 0),
@@ -1067,9 +1251,15 @@ def generate_path_file_step_states(args, pmin, pmax, build_axis_id):
                 layer_frac,
             )
         )
+        global_step += 1
+        prev_layer_idx = layer_idx
 
     last = states[-1]
-    global_step = last.global_step + 1
+    cooling_dt = (
+        float(args.cooling_dt)
+        if getattr(args, "cooling_dt", None) is not None and args.cooling_dt > 0.0
+        else args.dt
+    )
     for _ in range(args.cooling_steps):
         states.append(
             make_step_state(
@@ -1081,7 +1271,7 @@ def generate_path_file_step_states(args, pmin, pmax, build_axis_id):
                 last.laser_center,
                 0.0,
                 0.0,
-                args.dt,
+                cooling_dt,
                 last.scan_frac,
                 last.hatch_frac,
                 last.front_coord,
@@ -1118,6 +1308,29 @@ def eval_property(T_quad, table, default):
 
 def compute_cell_temperature(T_nodes, cells):
     return onp.mean(onp.asarray(T_nodes)[cells, 0], axis=1)
+
+
+def reset_new_cell_nodal_temperature(T_old, cells, newly_printed_cell, previous_active_cell, value):
+    """Reset nodal temperatures of freshly activated cells to the powder value.
+
+    Freshly spread powder enters the build at the preheat/ambient temperature,
+    but inactive (void) DOFs drift freely because their thermal mass is scaled
+    by inactive_thermal_factor. Only nodes NOT shared with previously active
+    material are reset, so the interface to already-printed layers keeps its
+    conducted temperature history.
+    """
+    cells_arr = onp.asarray(cells)
+    new_nodes = onp.unique(cells_arr[newly_printed_cell].reshape(-1))
+    if new_nodes.size == 0:
+        return T_old
+    if previous_active_cell.any():
+        old_nodes = onp.unique(cells_arr[previous_active_cell].reshape(-1))
+    else:
+        old_nodes = onp.empty(0, dtype=new_nodes.dtype)
+    reset_nodes = onp.setdiff1d(new_nodes, old_nodes, assume_unique=True)
+    if reset_nodes.size == 0:
+        return T_old
+    return np.asarray(T_old).at[reset_nodes, :].set(value)
 
 
 def make_quad_scalar(cell_values, num_quads):
@@ -1409,13 +1622,26 @@ def update_phase_reference_and_eqp(T_quad, active_quad, phase_quad, T_ref_quad, 
         newly_solidified = became_solid
         entered_melted_state = (hot_liquid | mushy) & ((phase_quad == STATE_SOLID) | (phase_quad == STATE_MUSHY) | (phase_quad == STATE_LIQUID))
     else:
-        # Compatibility mode when no phase-change interval is provided.
+        # Compatibility / macro consolidation-on-activation mode when no
+        # phase-change interval is provided: activated material solidifies
+        # directly. This is the standard part-scale AM approach when the mesh
+        # cannot resolve the melt pool (beam radius < element size) or the
+        # lumped macro path does not carry melt-level energy density.
         became_solid = non_fixture & (phase_quad != STATE_SOLID)
         phase_new = np.where(non_fixture, STATE_SOLID, phase_new)
         newly_solidified = became_solid
         entered_melted_state = np.zeros_like(active, dtype=bool)
 
-    T_ref_new = np.where(newly_solidified, T_quad, T_ref_quad)
+    relax_T = getattr(args, "stress_relaxation_temperature", None)
+    if relax_T is not None and relax_T > 0.0:
+        # Stress-free reference is the relaxation temperature: above it the
+        # material is assumed to carry no stress (macro calibration knob,
+        # Ti64 typically ~1073-1173 K). Residual stress then builds from the
+        # constrained shrinkage between relax_T and the local temperature.
+        T_ref_value = relax_T * np.ones_like(T_quad)
+    else:
+        T_ref_value = T_quad
+    T_ref_new = np.where(newly_solidified, T_ref_value, T_ref_quad)
     if args.reset_plastic_on_melt:
         eqp_new = np.where(entered_melted_state, np.zeros_like(eqp_quad), eqp_quad)
     else:
@@ -1443,7 +1669,10 @@ def thermal_material_quads(T_old_quad, active_quad, phase_quad, args, tables, pr
     if cooling_only_quad is None:
         cooling_only_quad = np.zeros_like(active_quad)
 
-    rho_void = rho_solid * args.inactive_thermal_factor
+    inactive_mass_factor = getattr(args, "inactive_mass_factor", None)
+    if inactive_mass_factor is None:
+        inactive_mass_factor = args.inactive_thermal_factor
+    rho_void = rho_solid * inactive_mass_factor
     cp_void = cp_solid * np.ones_like(T_old_quad)
     k_void = k_solid * args.inactive_thermal_factor * np.ones_like(T_old_quad)
 
@@ -1561,19 +1790,26 @@ def make_full_bottom_mechanics_bc(bottom):
     return [[bottom, bottom, bottom], [0, 1, 2], [zero, zero, zero]]
 
 
-def make_anchor_mechanics_bc(points):
+def make_anchor_mechanics_bc(points, candidate_node_ids=None):
+    # Anchors must sit on load-bearing (printed) material: the mesh extremes
+    # can land on void cells whose near-zero stiffness makes the release
+    # system singular (observed NaN). Pass the printed-node subset.
+    if candidate_node_ids is not None and len(candidate_node_ids) >= 3:
+        candidates = points[onp.asarray(candidate_node_ids)]
+    else:
+        candidates = points
     span = max(float((points.max(axis=0) - points.min(axis=0)).max()), 1.0)
     atol = 1e-8 * span
-    anchor0_id = int(onp.argmin(points[:, 0]))
-    anchor0 = points[anchor0_id]
-    dist0 = onp.linalg.norm(points - anchor0, axis=1)
+    anchor0_id = int(onp.argmin(candidates[:, 0]))
+    anchor0 = candidates[anchor0_id]
+    dist0 = onp.linalg.norm(candidates - anchor0, axis=1)
     anchor1_id = int(onp.argmax(dist0))
-    anchor1 = points[anchor1_id]
+    anchor1 = candidates[anchor1_id]
     axis = anchor1 - anchor0
     axis_norm = max(float(onp.linalg.norm(axis)), 1e-12)
-    cross_dist = onp.linalg.norm(onp.cross(points - anchor0, axis / axis_norm), axis=1)
+    cross_dist = onp.linalg.norm(onp.cross(candidates - anchor0, axis / axis_norm), axis=1)
     anchor2_id = int(onp.argmax(cross_dist))
-    anchor2 = points[anchor2_id]
+    anchor2 = candidates[anchor2_id]
 
     def at_node(target):
         target = np.asarray(target)
@@ -1805,19 +2041,37 @@ def print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, se
     print("output_dir:", args.output_dir)
 
 
-def run_mechanics(mechanics, u_guess, params):
+def run_mechanics(mechanics, u_guess, params, newton_overrides=None):
     mechanics.set_params(params)
-    return solver(
-        mechanics,
-        solver_options={
-            "newton": {
-                "initial_guess": u_guess,
-                "linear": {"spsolve_solver": {}},
-                "tol": 1e-9,
-                "rel_tol": 1e-11,
-            }
-        },
-    )
+    newton = {
+        "initial_guess": u_guess,
+        "linear": {"spsolve_solver": {}},
+        "tol": 1e-9,
+        "rel_tol": 1e-11,
+    }
+    if newton_overrides:
+        newton.update(newton_overrides)
+    return solver(mechanics, solver_options={"newton": newton})
+
+
+def mechanics_newton_overrides_from_args(args):
+    """Newton overrides for the mechanics solves, built from CLI options.
+
+    The legacy defaults (tol=1e-9, rel_tol=1e-11) are far tighter than
+    engineering stress accuracy requires and make yield-surface (j2) states
+    crawl; line search stabilizes Newton when many quadrature points sit on
+    the yield-surface kink.
+    """
+    overrides = {}
+    if args.mechanics_tol is not None:
+        overrides["tol"] = float(args.mechanics_tol)
+    if args.mechanics_rel_tol is not None:
+        overrides["rel_tol"] = float(args.mechanics_rel_tol)
+    if args.mechanics_max_iter is not None:
+        overrides["max_iter"] = int(args.mechanics_max_iter)
+    if args.mechanics_line_search:
+        overrides["line_search_flag"] = True
+    return overrides
 
 
 def main():
@@ -1847,7 +2101,7 @@ def main():
         plane_axis_ids,
         base_coord,
         exposed_coord,
-    ) = make_box_locations(points, build_axis=args.build_axis, base_side=args.base_side)
+    ) = make_box_locations(points, build_axis=args.build_axis, base_side=args.base_side, abs_tol=args.boundary_tol)
 
     scan_axis_id, hatch_axis_id = resolve_scan_and_hatch_axes(args.scan_axis, build_axis_id, plane_axis_ids)
     build_sign = 1.0 if args.base_side == "min" else -1.0
@@ -1875,8 +2129,38 @@ def main():
 
     initial_temperature = args.preheat_temperature if args.preheat_temperature is not None else args.ambient
     bottom_temperature_effective = args.bottom_temperature if args.bottom_temperature is not None else initial_temperature
+    surface_active_mask_enabled = (
+        args.surface_active_mask
+        if args.surface_active_mask is not None
+        else args.surface_selection == "exterior"
+    )
+    mechanics_newton_overrides = mechanics_newton_overrides_from_args(args)
 
-    location_fns = [exposed, walls]
+    if args.surface_selection == "exterior":
+        # Every mesh-exterior face above the base plane exchanges heat with the
+        # environment. The base plane itself is handled by the bottom BC below.
+        span_for_tol = max(float(onp.max(pmax - pmin)), 1.0)
+        base_tol = (
+            float(args.boundary_tol)
+            if args.boundary_tol is not None and args.boundary_tol > 0.0
+            else 1e-8 * span_for_tol
+        )
+
+        def exterior_above_base(point):
+            return build_sign * (point[build_axis_id] - base_coord) > base_tol
+
+        exterior_above_base.exterior_only = True
+        location_fns = [exterior_above_base]
+
+        def exterior_bottom(point):
+            return build_sign * (point[build_axis_id] - base_coord) <= base_tol
+
+        exterior_bottom.exterior_only = True
+        bottom_for_flux = exterior_bottom
+    else:
+        location_fns = [exposed, walls]
+        bottom_for_flux = bottom
+
     thermal_bc = None
     if args.bottom_thermal_bc == "fixed":
         def bottom_temperature_value(_point):
@@ -1884,7 +2168,7 @@ def main():
 
         thermal_bc = [[bottom], [0], [bottom_temperature_value]]
     else:
-        location_fns.append(bottom)
+        location_fns.append(bottom_for_flux)
 
     mesh = Mesh(points, cells, ele_type="TET4")
     thermal = TransientThermal(
@@ -1892,6 +2176,7 @@ def main():
         vec=1,
         dim=3,
         ele_type="TET4",
+        quadrature_order=args.quadrature_order,
         dirichlet_bc_info=thermal_bc,
         location_fns=location_fns,
         additional_info=(
@@ -1909,13 +2194,23 @@ def main():
             args.front_surface_loss_radiation,
         ),
     )
+    if args.bottom_mechanics_bc == "elastic":
+        mechanics_bc = None
+        mechanics_location_fns = [bottom]
+        mechanics_foundation = args.bottom_foundation_stiffness
+    else:
+        mechanics_bc = make_full_bottom_mechanics_bc(bottom)
+        mechanics_location_fns = None
+        mechanics_foundation = 0.0
     mechanics = ThermoMechanical(
         mesh=mesh,
         vec=3,
         dim=3,
         ele_type="TET4",
-        dirichlet_bc_info=make_full_bottom_mechanics_bc(bottom),
-        additional_info=(args.mechanics_model,),
+        quadrature_order=args.quadrature_order,
+        dirichlet_bc_info=mechanics_bc,
+        location_fns=mechanics_location_fns,
+        additional_info=(args.mechanics_model, args.yield_saturation_stress, mechanics_foundation),
     )
 
     tables = load_property_tables(args)
@@ -2066,6 +2361,17 @@ def main():
         # Layer activation means the quadrature point now contains powder.
         # It becomes solid only after passing through liquid/mushy and cooling.
         phase_quad = np.where((printed_quad > 0.5) & (phase_quad == STATE_VOID), STATE_POWDER, phase_quad)
+        if args.reset_activation_temperature:
+            newly_printed_pre = printed_cell & (~previous_active)
+            if newly_printed_pre.any():
+                activation_reset_value = (
+                    float(args.activation_reset_temperature)
+                    if args.activation_reset_temperature is not None
+                    else initial_temperature
+                )
+                T_old = reset_new_cell_nodal_temperature(
+                    T_old, cells, newly_printed_pre, previous_active, activation_reset_value
+                )
         T_old_quad = thermal.fes[0].convert_from_dof_to_quad(T_old)
         rho_quad, cp_quad, conductivity_quad, latent_cp_quad = thermal_material_quads(
             T_old_quad,
@@ -2077,6 +2383,10 @@ def main():
             cooling_only_quad=cooling_only_quad,
         )
         effective_laser_power = args.absorptivity * state.laser_power
+        if surface_active_mask_enabled:
+            surface_mask_quad = printed_quad
+        else:
+            surface_mask_quad = np.ones_like(printed_quad)
         thermal.set_params(
             [
                 T_old,
@@ -2093,6 +2403,7 @@ def main():
                 latent_cp_quad,
                 cooling_only_quad,
                 args.old_layer_cooling_h,
+                surface_mask_quad,
             ]
         )
         T_new = solver(thermal, solver_options={"newton": {"linear": {"spsolve_solver": {}}}})[0]
@@ -2142,7 +2453,7 @@ def main():
         is_last = state.global_step == step_states[-1].global_step
         did_mechanics = should_run_mechanics(state.global_step, args) or (is_last and args.mechanics_every > 0)
         if did_mechanics:
-            u_guess = run_mechanics(mechanics, u_guess, mechanics_params)
+            u_guess = run_mechanics(mechanics, u_guess, mechanics_params, mechanics_newton_overrides)
             quad_stress = mechanics.compute_cell_stress(u_guess[0], mechanics_params)
             eqp_quad = mechanics.compute_eqp_update(u_guess[0], mechanics_params)
             mechanics_params[-1] = eqp_quad
@@ -2207,15 +2518,19 @@ def main():
         T_old = T_new
 
     if args.release_after_cooling:
+        printed_node_ids = onp.unique(
+            onp.asarray(cells)[onp.asarray(last_printed_cell, dtype=bool)].reshape(-1)
+        )
         release_mechanics = ThermoMechanical(
             mesh=mesh,
             vec=3,
             dim=3,
             ele_type="TET4",
-            dirichlet_bc_info=make_anchor_mechanics_bc(points),
-            additional_info=(args.mechanics_model,),
+            quadrature_order=args.quadrature_order,
+            dirichlet_bc_info=make_anchor_mechanics_bc(points, candidate_node_ids=printed_node_ids),
+            additional_info=(args.mechanics_model, args.yield_saturation_stress, 0.0),
         )
-        u_release = run_mechanics(release_mechanics, u_guess, mechanics_params)
+        u_release = run_mechanics(release_mechanics, u_guess, mechanics_params, mechanics_newton_overrides)
         quad_stress = release_mechanics.compute_cell_stress(u_release[0], mechanics_params)
         vtk_path = os.path.join(args.output_dir, "release.vtu")
         save_step(

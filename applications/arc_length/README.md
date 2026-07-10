@@ -110,8 +110,7 @@ applications/arc_length/output/arc_length_force/
 | Force control | $\lambda=1.001729$ after 512 steps | Solves the original main problem with the full target end load and no counter-load; the polished solution has $\max\lvert u_y\rvert\approx26.1848$. |
 
 `info["lam"]` and the VTU files describe continuation before polish. The
-returned `sol_list` and terminal `final solution` are the polished solution at
-the exact target.
+returned `sol_list` and terminal `final solution` are the polished solution by the Newton's method at the exact target where $\lambda=1$.
 
 <p align="center">
   <img src="assets/demo.png" width="600" />

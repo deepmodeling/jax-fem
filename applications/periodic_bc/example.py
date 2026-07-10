@@ -9,7 +9,6 @@ import scipy
 from jax_fem.problem import Problem
 from jax_fem.solver import solver, ad_wrapper
 from jax_fem.generate_mesh import Mesh, box_mesh_gmsh, get_meshio_cell_type
-from jax_fem.utils import save_sol, modify_vtu_file
 from jax_fem.basis import get_elements
 
 
@@ -134,6 +133,23 @@ class Poisson(Problem):
         self.internal_vars = [thetas]
 
 
+def save_scalar_solution_3d(fe, sol, sol_file):
+    cell_type = get_meshio_cell_type(fe.ele_type)
+    sol_dir = os.path.dirname(sol_file)
+    os.makedirs(sol_dir, exist_ok=True)
+
+    points = onp.asarray(fe.points)
+    if points.shape[1] == 2:
+        points = onp.hstack((points, onp.zeros((points.shape[0], 1))))
+
+    out_mesh = meshio.Mesh(
+        points=points,
+        cells={cell_type: fe.cells},
+        point_data={"u": onp.asarray(sol).reshape(-1).astype(onp.float32)},
+    )
+    out_mesh.write(sol_file)
+
+
 def problem():
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
     ele_type = 'TRI6'
@@ -178,12 +194,12 @@ def problem():
     problem = Poisson(mesh, vec=vec, dim=dim, ele_type=ele_type, dirichlet_bc_info=dirichlet_bc_info)
     problem.P_mat = P_mat
 
-    # Other solvers can be 'jax_solver', 'spsolve_solver'
-    fwd_pred = ad_wrapper(problem, solver_options={'petsc_solver': {}}, adjoint_solver_options={'petsc_solver': {}}) 
+    solver_options = {"spsolve_solver": {}}
+    fwd_pred = ad_wrapper(problem, solver_options=solver_options, adjoint_solver_options=solver_options) 
     theta = 1.
     sol_list = fwd_pred(theta)
     vtk_path = os.path.join(data_dir, f'vtk/u.vtu')
-    save_sol(problem.fes[0], sol_list[0], vtk_path)
+    save_scalar_solution_3d(problem.fes[0], sol_list[0], vtk_path)
 
     # Test AD
     def J(theta):

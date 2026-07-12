@@ -825,7 +825,7 @@ def _solve_dynamic_relax(problem, cfg):
     return dynamic_relax_solve(
         problem,
         tol=cfg.get('tol', 1e-6),
-        nKMat=cfg.get('nKMat', 50),
+        nKMat=cfg.get('nKMat', 1000),
         nPrint=cfg.get('nPrint', 500),
         info=cfg.get('info', True),
         info_force=cfg.get('info_force', True),
@@ -868,7 +868,7 @@ def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info, info_f
         #logger.info('\t------------------------------------')
         if info_force == True:
             print(('\nDR Iteration %d: Max force (residual error) = %g (tol = %g)' +
-                   'Max velocity = %g') % (nIters, error, tol,
+                   ' Max velocity = %g') % (nIters, error, tol,
                                             np.max(np.absolute(qdot))))
         if info == True:
             print('\nDamping t: ',t, );
@@ -877,7 +877,7 @@ def printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info, info_f
             print('Max acceleration: ',np.max(np.absolute(qdotdot)))
 
 
-def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info_force=True,
+def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, info_force=True,
                         initial_guess=None, linear_options=None):
     """
     Implementation of
@@ -955,7 +955,6 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
 
     while error > tol:
 
-        print(f"error = {error}")
         # marching forward
         q_old[:] = q[:]; R_old[:] = R[:]
         q[:] += h*qdot; dofs = np.array(q)
@@ -990,8 +989,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
         # compute new velocities and accelerations
         qdot_old[:] = qdot[:]; qdotdot_old[:] = qdotdot[:];
         qdot = (2.- c*h)/(2 + c*h) * qdot_old - 2.*h/(2.+c*h)* R / M
-        qdot_old[:] = qdot[:]
-        qdotdot = qdot - qdot_old
+        qdotdot = (qdot - qdot_old) / h
 
         # output on screen
         printInfo(error, t, c, tol, eps, qdot, qdotdot, nIters, nPrint, info, info_force)
@@ -1036,7 +1034,7 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=50, nPrint=500, info=True, info
 #   }}
 #
 #   {'dynamic_relax': {
-#       'tol': 1e-8, 'nKMat': 50, 'initial_guess': sol_list, ...
+#       'tol': 1e-8, 'nKMat': 1000, 'initial_guess': sol_list, ...
 #       'linear': {'spsolve_solver': {}},
 #   }}
 

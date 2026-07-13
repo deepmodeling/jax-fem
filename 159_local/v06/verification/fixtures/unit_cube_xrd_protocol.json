@@ -1,0 +1,72 @@
+{
+  "gauges": [
+    {
+      "center_m": [
+        0.0005,
+        0.0005,
+        0.0005
+      ],
+      "geometry_model": "rectangular_box",
+      "direction_specimen": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "id": "cube_eps_xx",
+      "rotation_gauge_to_specimen": [
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "size_m": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    }
+  ],
+  "mesh_to_specimen": {
+    "registration_rms_m": 0.0,
+    "rotation": [
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "scale_m_per_mesh_unit": 1.0,
+    "translation_m": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "maximum_registration_rms_fraction_of_min_gauge": 0.25,
+  "measurement_temperature_k": 300.0,
+  "minimum_material_fill_fraction": 0.95,
+  "required_state": "attached_to_build_plate_before_EDM",
+  "schema_version": "v06.xrd-gauges/1",
+  "temperature_tolerance_k": 1.0
+}

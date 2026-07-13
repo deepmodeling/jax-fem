@@ -1,0 +1,223 @@
+{
+  "case_id": "strantza_2018",
+  "specimen_id": "C45",
+  "data_availability": {
+    "next_action": "Obtain author data or digitize Figure 4 with pixel and alignment uncertainty before pointwise NRMSE claims.",
+    "raw_data_url": null,
+    "status": "paper_anchors_only"
+  },
+  "geometry": {
+    "build_plate_mm": [
+      55.0,
+      55.0,
+      8.0
+    ],
+    "coordinate_system": {
+      "x": "bridge longitudinal direction",
+      "y": "bridge width direction, measured section at y=2.5 mm",
+      "z": "build direction"
+    },
+    "cross_section": "xz mid-plane at y=2.5 mm",
+    "part_overall_mm": [
+      21.0,
+      5.0,
+      9.0
+    ],
+    "status": "partial_text_metadata; full bridge dimensions remain in Figure 1",
+    "support_structures": false
+  },
+  "material": "Ti-6Al-4V",
+  "measurement": {
+    "comparison_quantity": "residual elastic strain, not element stress",
+    "gauge_definition": {
+      "eps_xx": {
+        "direction_specimen_xyz": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "geometry_model": "rhomboidal_diffraction_volume",
+        "size_axis_order": "specimen_xyz",
+        "size_interpretation": "reported bounding dimensions, not a rectangular-box equivalence",
+        "size_mm": [
+          0.2,
+          1.5,
+          0.2
+        ],
+        "weighting": "uniform_top_hat"
+      },
+      "eps_yy": {
+        "direction_specimen_xyz": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "geometry_model": "rhomboidal_diffraction_volume",
+        "size_axis_order": "specimen_xyz",
+        "size_interpretation": "reported bounding dimensions, not a rectangular-box equivalence",
+        "size_mm": [
+          1.5,
+          0.2,
+          0.2
+        ],
+        "weighting": "uniform_top_hat"
+      },
+      "eps_zz": {
+        "direction_specimen_xyz": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "geometry_model": "rhomboidal_diffraction_volume",
+        "size_axis_order": "specimen_xyz",
+        "size_interpretation": "reported bounding dimensions, not a rectangular-box equivalence",
+        "size_mm": [
+          0.2,
+          1.5,
+          0.2
+        ],
+        "weighting": "uniform_top_hat"
+      }
+    },
+    "gauge_volume_mm": {
+      "eps_xx_eps_zz": [
+        0.2,
+        1.5,
+        0.2
+      ],
+      "eps_yy": [
+        1.5,
+        0.2,
+        0.2
+      ]
+    },
+    "method": "CHESS A2 energy-dispersive high-energy X-ray diffraction",
+    "measurement_state": "attached_to_build_plate_before_EDM",
+    "operator_requirements": {
+      "input_quantity": "elastic_strain_tensor",
+      "input_unit": "1",
+      "minimum_material_fill_fraction": 0.95,
+      "output_unit": "microstrain",
+      "registration_required": true,
+      "v06_geometry_support": "rectangular_box_only; formal comparison blocked until rhomboidal operator is implemented"
+    },
+    "sampling_spacing_mm": {
+      "eps_xx_eps_zz": 0.5,
+      "eps_yy": 1.0
+    },
+    "strain_uncertainty_1sigma_microstrain": {
+      "eps_xx_eps_zz": [
+        100.0,
+        160.0
+      ],
+      "eps_yy": [
+        120.0,
+        250.0
+      ]
+    },
+    "stress_conversion": {
+      "poisson": 0.32,
+      "stress_uncertainty_mpa": 30.0,
+      "young_gpa": 115.0
+    }
+  },
+  "process": {
+    "field_source": {
+      "citation": "Strantza et al., Materials Letters 231 (2018) 221-224",
+      "fields": [
+        "machine",
+        "laser_power_w",
+        "scan_speed_mm_s",
+        "layer_thickness_um",
+        "reported_track_width_um",
+        "scan_strategy"
+      ],
+      "source_location": "NIST official PDF, experimental-method description"
+    },
+    "layer_thickness_um": 30.0,
+    "laser_power_w": 100.0,
+    "machine": "Concept Laser M2",
+    "reported_track_width_um": 150.0,
+    "scan_speed_mm_s": 600.0,
+    "scan_strategy": "continuous 45 degree scan with 90 degree inter-layer rotation"
+  },
+  "reported_anchors": [
+    {
+      "component": "eps_zz",
+      "id": "eps_zz_edge_tensile_max_microstrain",
+      "kind": "target",
+      "region": "extreme lateral edges of measured xz section",
+      "source_location": "PDF page 4, Figure 2 discussion",
+      "screening_tolerance_microstrain": 320.0,
+      "value": 7600.0
+    },
+    {
+      "component": "eps_zz",
+      "id": "eps_zz_interior_compressive_min_microstrain",
+      "kind": "target",
+      "region": "interior of measured xz section",
+      "source_location": "PDF page 4, Figure 2 discussion",
+      "screening_tolerance_microstrain": 320.0,
+      "value": -5300.0
+    },
+    {
+      "component": "eps_yy",
+      "id": "eps_yy_perimeter_tensile_microstrain",
+      "kind": "range",
+      "range": [
+        3000.0,
+        3700.0
+      ],
+      "region": "arch perimeter and top/bottom",
+      "source_location": "PDF page 4, Figure 2 discussion"
+    },
+    {
+      "component": "eps_xx",
+      "id": "eps_xx_arch_compressive_microstrain",
+      "kind": "range",
+      "range": [
+        -2500.0,
+        -80.0
+      ],
+      "region": "near arch perimeter",
+      "source_location": "PDF page 4, Figure 2 discussion"
+    },
+    {
+      "component": "eps_zz",
+      "id": "eps_zz_z6p25_edge_microstrain",
+      "kind": "target",
+      "region": "line-out at z=6.25 mm, free edges",
+      "source_location": "PDF page 7, Figure 4 discussion",
+      "screening_tolerance_microstrain": 320.0,
+      "value": 8000.0
+    },
+    {
+      "component": "eps_zz",
+      "id": "eps_zz_z6p25_interior_microstrain",
+      "kind": "target",
+      "region": "line-out at z=6.25 mm, interior",
+      "source_location": "PDF page 7, Figure 4 discussion",
+      "screening_tolerance_microstrain": 320.0,
+      "value": -4000.0
+    }
+  ],
+  "role": "held_out_validation",
+  "schema_version": "v06.experimental-case.1",
+  "source": {
+    "citation": "Strantza et al., Materials Letters 231 (2018) 221-224",
+    "designation_crosscheck": {
+      "citation": "Strantza et al., Additive Manufacturing 45 (2021) 102003",
+      "note": "The later paper identifies the earlier continuously scanned 45 degree specimen as C45.",
+      "official_pdf": "https://www.osti.gov/servlets/purl/1785480"
+    },
+    "doi": "10.1016/j.matlet.2018.07.141",
+    "official_pdf": "https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=925448",
+    "verification_status": "verified_against_NIST_fulltext_2026-07-10"
+  },
+  "use_limitations": [
+    "Reported extrema and ranges are screening anchors, not a replacement for pointwise field data.",
+    "The current rectangular-box XRD operator is not the paper's rhomboidal diffraction volume and cannot support a formal Strantza accuracy claim.",
+    "Formal NRMSE and reduced-chi-square validation requires author data or uncertainty-aware digitization.",
+    "Stress anchors are secondary because isotropic strain-to-stress conversion adds model uncertainty."
+  ]
+}

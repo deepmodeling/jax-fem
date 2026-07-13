@@ -192,6 +192,19 @@ class PathFileRecoatInsertionTest(unittest.TestCase):
             [s.global_step for s in states], list(range(len(states)))
         )
 
+    def test_layer_limit_truncates_path_rows(self):
+        # --max-print-layers reduces args.layers; path-file mode must stop
+        # scanning AND activating beyond it (observed: 91 layers printed
+        # despite --max-print-layers 1).
+        base = load_v03()
+        path = self.write_path(self.two_layer_rows())
+        args = self.make_args(path, layers=1)
+        states, _, _ = base.generate_path_file_step_states(
+            args, onp.zeros(3), onp.ones(3), 0
+        )
+        self.assertEqual(len(states), 2)
+        self.assertTrue(all(s.layer_idx == 0 for s in states))
+
     def test_cooling_dt_overrides_dt_for_trailing_cooling(self):
         base = load_v03()
         path = self.write_path(self.two_layer_rows())

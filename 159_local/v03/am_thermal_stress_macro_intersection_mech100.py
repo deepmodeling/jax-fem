@@ -1197,6 +1197,11 @@ def generate_path_file_step_states(args, pmin, pmax, build_axis_id):
         dt = args.dt if i == 0 else times[i] - times[i - 1]
         center = path_scale * onp.asarray([float(row["x"]), float(row["y"]), float(row["z"])], dtype=onp.float64)
         layer_idx = max(int(row["layer"]) - 1, 0)
+        # Honor --layers / --max-print-layers in path-file mode: rows beyond
+        # the layer limit are dropped (matching the raster generator), instead
+        # of silently scanning and ACTIVATING all layers in the CSV.
+        if layer_idx >= args.layers:
+            break
         if has_front_coord and str(row.get("front_coord", "")).strip() != "":
             front_coord = path_scale * float(row["front_coord"])
         else:

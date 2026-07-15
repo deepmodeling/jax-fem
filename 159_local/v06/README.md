@@ -9,6 +9,13 @@ v06 是当前主开发目录，v05 只保留为消融和复现基线。这里的
 - `driver.py`：v03 时间循环 + v04 性能层的唯一兼容入口，不依赖 v05 runtime；会在 v04 JIT/cache 安装后重新挂载 v06 生命周期钩子。
 - `mechanics/j2.py`：纯 JAX 小应变关联 J2、精确的线性硬化饱和跨越、完整 `eps_p` 张量和弹性应变反算。
 - `mechanics/lifecycle.py`：出生/重熔 `eps_ref`、高温松弛增量截断、事件强制 mechanics update；release 同时继承 `eps_p/eps_ref`。
+- 粉末侧向约束（2026-07-15，实现于 v03 基座、v05/v06 wrapper 透传）：`--powder-mechanics-bc elastic`
+  在已打印材料的外侧面（基面以上、exterior 模式）加**仅水平分量**的 Winkler 弹簧
+  （`--powder-foundation-stiffness`，Pa/m，默认 1e9≈松散粉 E/嵌埋深度），面掩码逐力学步
+  跟随 printed 状态（未打印单元的近奇异面不受锚定）；release 问题不含该面，
+  "释放=去粉"语义自动成立。默认 `none` 保持旧行为。E2E 校验：建造期侧向位移被
+  约束（玩具算例降 3 个量级）、线弹性 release 与无粉末逐位一致（正确的去粉语义）。
+  `k_p` 是未标定旋钮，定量结论前需与实验/文献粉床模量对标。
 - `material_validation.py`：材料表进入 JIT 前检查温度轴、有限值以及 `E>0`、`-1<ν<0.5`、`σy>0`、`H≥0`、正热容/导热率/密度。
 - VTU 输出：`elastic_strain_quad_*`、`eps_p_quad_*`、`eps_ref_quad_*`，为 XRD 同物理量比较提供输入。
 - `verification/mesh_quality.py`、`mesh_audit.py`：TET4 体积、方向、边长比、非有限坐标和无量纲质量审计。
@@ -99,7 +106,8 @@ full91 网格含 197,266 个 TET4，无翻转或零体积单元，但最差质�
 - 离散弱式账本已接通，但严格焓状态、质量集总/单调格式及激活质量携带的参考焓仍未完成。
 - 温度相关热膨胀仍是 `alpha(T)·ΔT`，尚未改为积分/增量形式。
 - `eps_ref/eps_p` 已写入 VTU，但可恢复的二进制 checkpoint/restart 仍缺失。
-- 显式基板、支撑与 EDM 切割过程以及 Winkler 降阶误差尚未建立。
+- 显式基板、支撑与 EDM 切割过程以及 Winkler 降阶误差尚未建立；粉末侧向
+  Winkler 弹簧已实现但 `k_p` 未标定（法向/切向不区分是已知近似）。
 - Bayat 标定原始数据与 Strantza held-out 逐点数据尚未取得。
 - Strantza 菱形衍射体积、约 2000 个 gauge 的空间索引和位置不确定度传播尚未实现。
 - full91 必须重网格后才能进入论文展示。

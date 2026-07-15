@@ -86,8 +86,12 @@ def install_plastic_history_patch(base_module, profiler=None) -> bool:
         ])
 
     class PlasticHistoryThermoMechanical(BaseMech):
-        def custom_init(self, mechanics_model, yield_saturation=None, foundation_stiffness=0.0):
-            BaseMech.custom_init(self, mechanics_model, yield_saturation, foundation_stiffness)
+        def custom_init(self, mechanics_model, yield_saturation=None, foundation_stiffness=0.0,
+                        *extra):
+            # *extra forwards newer base options (powder foundation, plane
+            # axes) without hard-coding their signature here.
+            BaseMech.custom_init(self, mechanics_model, yield_saturation, foundation_stiffness,
+                                 *extra)
             shape = (len(self.fes[0].cells), self.fes[0].num_quads, 6)
             self._eps_p_state = np.zeros(shape)
             self.internal_vars = list(self.internal_vars) + [self._eps_p_state]

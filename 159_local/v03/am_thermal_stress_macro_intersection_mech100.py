@@ -329,7 +329,8 @@ class TransientThermal(Problem):
 
 
 class ThermoMechanical(Problem):
-    def custom_init(self, mechanics_model, yield_saturation=None, foundation_stiffness=0.0):
+    def custom_init(self, mechanics_model, yield_saturation=None, foundation_stiffness=0.0,
+                    powder_foundation_stiffness=0.0, powder_plane_axes=()):
         self.mechanics_model = mechanics_model
         # Cap on the hardened yield stress (~UTS). Linear isotropic hardening
         # extrapolated past its ~10% strain validity produced 2 GPa fictitious
@@ -338,6 +339,26 @@ class ThermoMechanical(Problem):
         # Elastic-foundation stiffness (Pa/m) for the bottom surface springs.
         # 0 disables the springs (rigid Dirichlet clamp is used instead).
         self.foundation_stiffness = float(foundation_stiffness)
+        # Lateral powder-bed support (Winkler springs, Pa/m) on the exterior
+        # side faces above the base. Powder resists horizontal motion of the
+        # printed layers but offers essentially no shear resistance along the
+        # build direction, so the springs act only on the plane-axis
+        # components (powder_plane_axes). Faces are masked per step by the
+        # printed state of their owner cell (set_powder_surface_mask); the
+        # release problem is constructed without these surfaces, so release
+        # keeps its de-powdered meaning.
+        self.powder_foundation_stiffness = float(powder_foundation_stiffness or 0.0)
+        if self.powder_foundation_stiffness > 0.0:
+            axis_mask = onp.zeros((3,))
+            axis_mask[list(powder_plane_axes)] = 1.0
+            self.powder_axis_mask = np.asarray(axis_mask)
+            # The powder side surface is always the LAST location fn (main()
+            # appends it after the optional bottom foundation surface).
+            self.powder_boundary_index = len(self.boundary_inds_list) - 1
+            # No support until the first activation update of the run.
+            self.set_powder_surface_mask(
+                onp.zeros(len(self.fes[0].cells), dtype=bool)
+            )
         self.internal_vars = [
             np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
             np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
@@ -397,13 +418,56 @@ class ThermoMechanical(Problem):
         # the same weak-form sign convention as the thermal surface flux, the
         # kernel returns +k_s * u. Only used when location_fns select the
         # bottom faces (bottom-mechanics-bc elastic).
-        if self.foundation_stiffness <= 0.0:
-            return []
+        #
+        # Map order must match the location_fns order built in main():
+        # [bottom (if elastic), powder side (if enabled)].
+        maps = []
 
-        def foundation_traction(u, _point):
-            return self.foundation_stiffness * u
+        if self.foundation_stiffness > 0.0:
+            def foundation_traction(u, _point):
+                return self.foundation_stiffness * u
 
-        return [foundation_traction]
+            maps.append(foundation_traction)
+
+        if getattr(self, "powder_foundation_stiffness", 0.0) > 0.0:
+            def powder_traction(u, _point, face_powder):
+                # Horizontal-only Winkler support from the surrounding powder
+                # bed; face_powder gates the springs to printed material.
+                return (
+                    self.powder_foundation_stiffness
+                    * face_powder[0]
+                    * self.powder_axis_mask
+                    * u
+                )
+
+            maps.append(powder_traction)
+
+        return maps
+
+    def set_powder_surface_mask(self, printed_cell_mask):
+        """Gate the lateral powder springs to faces of printed cells.
+
+        Faces owned by unprinted (void/future) cells must not be anchored:
+        their equations are near-singular (inactive_mechanics_factor) and a
+        spring there would both pollute the solve and apply support to
+        material that does not exist yet. Call once per mechanics solve with
+        the current printed-cell mask; the release problem never has this
+        surface, so powder support vanishes on release.
+        """
+        if getattr(self, "powder_foundation_stiffness", 0.0) <= 0.0:
+            return
+        boundary_inds = self.boundary_inds_list[self.powder_boundary_index]
+        if boundary_inds.shape[0] == 0:
+            self.internal_vars_surfaces[self.powder_boundary_index] = []
+            return
+        num_face_quads = self.fes[0].num_face_quads
+        face_flags = onp.asarray(printed_cell_mask, dtype=onp.float64)[
+            boundary_inds[:, 0]
+        ]
+        face_powder = np.asarray(
+            face_flags[:, None, None] * onp.ones((1, num_face_quads, 1))
+        )
+        self.internal_vars_surfaces[self.powder_boundary_index] = [face_powder]
 
     def set_params(self, params):
         self.internal_vars = params
@@ -639,6 +703,16 @@ def build_parser(config=None):
                         help="Foundation modulus k_s (Pa/m) for --bottom-mechanics-bc elastic. Calibration knob for the "
                              "build-plate compliance; 1e12 approximates a ~25 mm steel plate, larger values approach the "
                              "rigid clamp.")
+    parser.add_argument("--powder-mechanics-bc", choices=("none", "elastic"), default=cfg(config, "powder_mechanics_bc", "none"),
+                        help="'none' keeps free lateral surfaces (legacy: the surrounding powder bed constrains nothing). "
+                             "'elastic' adds horizontal-only Winkler springs on the exterior side faces of printed "
+                             "material, modeling lateral support from the unmelted powder bed; springs follow the "
+                             "printed state per step and are absent from the release solve (de-powdering). "
+                             "Requires --surface-selection exterior.")
+    parser.add_argument("--powder-foundation-stiffness", type=float, default=cfg(config, "powder_foundation_stiffness", 1.0e9),
+                        help="Foundation modulus k_p (Pa/m) for --powder-mechanics-bc elastic. Calibration knob: "
+                             "k_p ~ E_powder / L_embed with loose Ti64 powder E ~ 1-100 MPa and mm-scale embedment "
+                             "gives ~1e8-1e11; default 1e9 is a soft support ~3 orders below the build plate.")
     parser.add_argument("--mushy-mechanics-factor", type=float, default=cfg(config, "mushy_mechanics_factor", 1e-2), help="Stress/stiffness scaling for mushy-zone material.")
     parser.add_argument("--liquid-mechanics-factor", type=float, default=cfg(config, "liquid_mechanics_factor", 1e-4), help="Stress/stiffness scaling for liquid material.")
     parser.add_argument("--reset-plastic-on-melt", dest="reset_plastic_on_melt", action="store_true", default=cfg(config, "reset_plastic_on_melt", True))
@@ -2205,8 +2279,27 @@ def main():
         mechanics_foundation = args.bottom_foundation_stiffness
     else:
         mechanics_bc = make_full_bottom_mechanics_bc(bottom)
-        mechanics_location_fns = None
+        mechanics_location_fns = []
         mechanics_foundation = 0.0
+    powder_foundation = 0.0
+    if args.powder_mechanics_bc == "elastic":
+        if args.surface_selection != "exterior":
+            raise ValueError(
+                "--powder-mechanics-bc elastic requires --surface-selection exterior "
+                "(the side faces of a curved part are only correct in exterior mode)"
+            )
+        powder_foundation = args.powder_foundation_stiffness
+
+        def powder_side(point):
+            # Exterior faces strictly above the base plane: the printed
+            # material embedded in the surrounding powder bed. Must stay the
+            # LAST mechanics location fn (custom_init assumes it).
+            return build_sign * (point[build_axis_id] - base_coord) > base_tol
+
+        powder_side.exterior_only = True
+        mechanics_location_fns = list(mechanics_location_fns) + [powder_side]
+    if not mechanics_location_fns:
+        mechanics_location_fns = None
     mechanics = ThermoMechanical(
         mesh=mesh,
         vec=3,
@@ -2215,7 +2308,13 @@ def main():
         quadrature_order=args.quadrature_order,
         dirichlet_bc_info=mechanics_bc,
         location_fns=mechanics_location_fns,
-        additional_info=(args.mechanics_model, args.yield_saturation_stress, mechanics_foundation),
+        additional_info=(
+            args.mechanics_model,
+            args.yield_saturation_stress,
+            mechanics_foundation,
+            powder_foundation,
+            tuple(plane_axis_ids),
+        ),
     )
 
     tables = load_property_tables(args)
@@ -2458,6 +2557,9 @@ def main():
         is_last = state.global_step == step_states[-1].global_step
         did_mechanics = should_run_mechanics(state.global_step, args) or (is_last and args.mechanics_every > 0)
         if did_mechanics:
+            # Lateral powder springs follow the printed state: only faces of
+            # printed cells are embedded in powder and receive support.
+            mechanics.set_powder_surface_mask(printed_cell)
             u_guess = run_mechanics(mechanics, u_guess, mechanics_params, mechanics_newton_overrides)
             quad_stress = mechanics.compute_cell_stress(u_guess[0], mechanics_params)
             eqp_quad = mechanics.compute_eqp_update(u_guess[0], mechanics_params)

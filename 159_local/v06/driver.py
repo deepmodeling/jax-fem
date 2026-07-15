@@ -354,9 +354,13 @@ def install_v06_adapter(base_module, profiler=None):
             mechanics_model,
             yield_saturation=None,
             foundation_stiffness=0.0,
+            *extra,
         ):
+            # *extra forwards newer base options (powder lateral foundation,
+            # plane axes) without hard-coding their signature here.
             BaseMech.custom_init(
-                self, mechanics_model, yield_saturation, foundation_stiffness
+                self, mechanics_model, yield_saturation, foundation_stiffness,
+                *extra,
             )
             shape = (len(self.fes[0].cells), self.fes[0].num_quads, 3, 3)
             self._eps_p_state = np.zeros(shape)

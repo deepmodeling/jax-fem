@@ -109,6 +109,7 @@ SOLVER_FLAGS = {
     "petsc": ["--xla-linear-solver", "petsc"],
     "petsc-gpu": ["--xla-linear-solver", "petsc", "--xla-petsc-gpu"],
     "amgx": ["--xla-linear-solver", "amgx"],
+    "pardiso": ["--xla-linear-solver", "pardiso"],
 }
 
 COUNTER_META_KEYS = (

@@ -9,6 +9,7 @@ inside the Newton loop without touching the physics driver:
     jax      -- JAX BiCGStab/CG on GPU (optional Jacobi preconditioner)
     petsc    -- petsc4py KSP (optionally GPU-aware, ksp/pc configurable)
     amgx     -- NVIDIA AMGX (via pyamgx) with persistent resources
+    pardiso  -- MKL PARDISO via pypardiso (CPU multithreaded direct solve)
     keep     -- do not rewrite; use whatever the base config specifies
 
 Design constraints (see docs/XLA_UPGRADE_ROADMAP.md):
@@ -92,6 +93,7 @@ LINEAR_SOLVER_KEYS = frozenset(
         "cg_solver",
         "bicgstab_solver",
         "gmres_solver",
+        "custom_solver",
     }
 )
 
@@ -103,7 +105,45 @@ _SOLVER_CHOICE_TO_KEY = {
     "jax": "jax_solver",
     "petsc": "petsc_solver",
     "amgx": "amgx_solver",
+    "pardiso": "custom_solver",
 }
+
+
+class _PardisoCustomSolver:
+    """`custom_solver` adapter: PETSc AIJ -> SciPy CSR -> MKL PARDISO.
+
+    Direct solve like spsolve (same accuracy class), but factorization runs
+    multithreaded via MKL. pypardiso is imported lazily so the option
+    plumbing stays importable without it.
+    """
+
+    label = "pardiso_solver(mkl multithreaded direct)"
+
+    def __init__(self) -> None:
+        self._solver = None
+
+    def __deepcopy__(self, memo):
+        # Shared instance keeps the PARDISO handle alive across the
+        # option-rewrite deep copies done for every solve.
+        return self
+
+    def __call__(self, A, b, x0, linear_options):
+        import numpy as onp
+        import scipy.sparse
+        import pypardiso
+
+        if self._solver is None:
+            self._solver = pypardiso.PyPardisoSolver()
+        indptr, indices, data = A.getValuesCSR()
+        Asp = scipy.sparse.csr_matrix(
+            (
+                data,
+                indices.astype(onp.int32, copy=False),
+                indptr.astype(onp.int32, copy=False),
+            )
+        )
+        rhs = onp.asarray(b, dtype=onp.float64)
+        return pypardiso.spsolve(Asp, rhs, solver=self._solver)
 
 
 def linear_options_from_args(args: argparse.Namespace) -> Optional[Dict[str, Any]]:
@@ -162,6 +202,10 @@ def linear_options_from_args(args: argparse.Namespace) -> Optional[Dict[str, Any
         # AMGX resources are expensive to create; keep them alive across
         # the whole scan (persistent handle managed by the solver adapter).
         inner["persistent_resources"] = True
+    elif choice == "pardiso":
+        # jax_fem's custom_solver hook expects the callable itself as the
+        # option value, not a nested options dict.
+        return {key: _PardisoCustomSolver()}
 
     return {key: inner}
 
@@ -906,6 +950,9 @@ def _solver_label(linear_options: Mapping[str, Any] | None) -> str:
         )
     if "spsolve_solver" in linear_options:
         return "spsolve_solver(cpu scipy baseline)"
+    if "custom_solver" in linear_options:
+        custom = linear_options["custom_solver"]
+        return getattr(custom, "label", f"custom_solver({custom!r})")
     return str(linear_options)
 
 
@@ -3062,7 +3109,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         next(iter(replacement)) if replacement else "base-config"
     )
     report.meta["linear_solver_label"] = _solver_label(replacement)
-    report.meta["linear_solver_options"] = copy.deepcopy(replacement)
+    report.meta["linear_solver_options"] = (
+        {
+            key: value
+            if isinstance(value, (dict, list, str, int, float, bool, type(None)))
+            else getattr(value, "label", repr(value))
+            for key, value in replacement.items()
+        }
+        if replacement
+        else copy.deepcopy(replacement)
+    )
     report.meta["full_loop_xla"] = False
     report.meta["thermal_warm_start_enabled"] = bool(
         args.xla_thermal_warm_start

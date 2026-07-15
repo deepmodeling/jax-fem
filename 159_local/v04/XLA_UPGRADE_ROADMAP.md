@@ -1157,3 +1157,40 @@ PETSc CSR values → cached BCOO structure 替换。
    原因（conversion-dominated / solve-dominated / transfer-dominated），
    默认解算器保持 spsolve。
 6. 不允许在 Phase 3/4 未完成前提交 lax.scan 全循环重写。
+
+
+## 2026-07-15 — pardiso 后端（MKL 多线程 CPU 直接法）
+
+背景：lane1 first5 stride1 参考解（197k cells / 52735 thermal dofs）profile 显示
+solver stage 占 wall 的 89%（49910s / 56042s，93552 次 spsolve，约 533 ms/次）。
+历史 bench 全部在 tiny/small/medium 档（20–500 cells）得出 "spsolve 最优"，
+未在真实矩阵规模验证过。
+
+变更：
+- wrapper 新增 `--xla-linear-solver pardiso`：经 jax_fem `custom_solver` 钩子
+  注入 `_PardisoCustomSolver`（PETSc AIJ → SciPy CSR → pypardiso/MKL）。
+  纯选项层不引入 pypardiso import；失败时按既有 fallback 逻辑回退 spsolve。
+- `LINEAR_SOLVER_KEYS` 增加 `custom_solver`；profile meta 的
+  `linear_solver_options` 对不可 JSON 化的值写入其 `label`。
+- bench harness `SOLVER_FLAGS` 增加 `pardiso`。
+- 环境：`pip install pypardiso`（pypardiso 0.4.7 + mkl 2026.1.0）。
+
+real-slice 档（真实 197k 网格、8 步、repeat=2 discard-first=1 warm 样本）：
+
+| solver | wall(s) | solver stage /step | 最终 VTU max_abs_T_diff vs spsolve |
+|---|---|---|---|
+| spsolve | 5.77 | 490 ms | — |
+| pardiso | 2.31 | 68 ms（7.1x） | 0.000e+00（逐位一致） |
+| jax-precond (bicgstab+jacobi) | 2.57 | 104 ms（4.7x） | 2.1e-04 |
+| jax-cg-no-check | 4.77 | 390 ms | 温度场非物理（T_min 260K），弃用 |
+| jax-gmres | 436.43 | 54 s | 发散，弃用 |
+
+medium 档（thermal+mechanics 耦合，224 次线性求解）：pardiso 端到端 11.08s vs
+spsolve 15.40s；T 逐位一致，u max_abs_diff 4.5e-13（机器噪声级）。该档矩阵太小，
+solver stage 本身 pardiso 稍慢（0.57s vs 0.32s），符合"直接法多线程仅在大矩阵
+受益"的预期；真实规模结论以 real-slice 为准。
+
+结论：真实规模下默认求解器应改用 pardiso。按 lane1 profile 外推：
+solver 49910s → ≈7000s，全程 15.6h → ≈3.7h（≈4.2x 端到端）。历史 "spsolve
+最优" 的结论仅适用于 tiny/small/medium 档，已不再约束 representative 规模。
+单测：tests.test_v04_xla_wrapper 74 tests OK。

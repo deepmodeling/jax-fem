@@ -121,6 +121,7 @@ bash 159_local/v05/run_v05_boundary_analysis.sh <输出目录>
 | v03 | 完整热-力主求解器 + 2026-07-08 物理修复（外表面换热、底面容差、recoat、冷却、激活重置、松弛温度、径向返回、积分阶、弹性地基、饱和硬化…详见修复台账） |
 | v04 | XLA/性能层（装配 batch 修复 3.4×、residual-only 检查、26 段 profiling、benchmark harness）+ flash 快扫模式 |
 | **v05** | **增量塑性（ε_p 张量、release 状态继承）+ 边界应力分析套件**；两个维护入口指向此版 |
+| v07 | CPU 多核线性求解（`--xla-linear-solver pardiso`，MKL 直接法，solver 7.1×、全程 ≈4.2×，VTU 逐位一致；实现在 v04 wrapper，方案见 `v07/V07_CPU_MULTICORE_SOLVER.md`） |
 
 ## References
 

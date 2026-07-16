@@ -37,3 +37,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Kaess 2023 paper figure renders (regenerable from the committed PDF)
+159_local/v06/validation/cases/kaess_2023_figures/

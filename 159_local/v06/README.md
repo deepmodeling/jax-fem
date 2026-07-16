@@ -101,6 +101,32 @@ full91 网格含 197,266 个 TET4，无翻转或零体积单元，但最差质�
 
 来源：[Strantza et al. 2018 DOI](https://doi.org/10.1016/j.matlet.2018.07.141)，[NIST 全文](https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=925448)，[Strantza et al. 2021 OSTI 全文](https://www.osti.gov/servlets/purl/1785480)。
 
+## Kaess 2023 对比实验(code-to-code,规划中)
+
+**标注:这是一个对比实验(数值对标),不是实验验证**,不替代 Strantza
+held-out 数据。对标 Kaess, Werz & Weihe (2023, *Materials* 16(6):2321,
+[DOI](https://doi.org/10.3390/ma16062321)) 的 Abaqus 介观悬臂梁 LPBF 仿真:
+1.2×0.7×0.6 mm 域、316L、真实移动 Gaussian 热源(250 W/850 mm/s/30 µm)、
+锯切 release、周围粉末显式建为弱固体(E=10 GPa 假设/σy=1 MPa)。选它的理由:
+参数全公开、域小到 pardiso 下真实热源可负担、悬臂+切割与 v06 release 语义
+同构,且与粉末侧向约束主题直接衔接(2026-07-15 k_p 阶梯
+`output/kp_ladder_20260715_180936` 判定部件尺度不敏感,本 case 检验介观尺度
+是否翻转)。三期计划(管线连通→移动热源+预热阶梯趋势→粉末表示三方对照)
+与设置摘要见 [validation/cases/kaess_2023_benchmark_plan.md](validation/cases/kaess_2023_benchmark_plan.md),
+机器可读元数据见 [validation/cases/kaess_2023.json](validation/cases/kaess_2023.json)。
+判据纪律:Figure 8/9 数字化前只允许趋势级结论;定量不吻合不构成否证
+(参考解粉末刚度与吸收率为作者假设值)。
+
+**实施状态(2026-07-16)**:第一期已跑通端到端(运行脚本与网格/路径/QoI
+工具在 `benchmarks/kaess_2023/`,316L 材料表在 `materials/316L/`)。
+两个定性锚点通过:release 后悬臂前端上翘(+6.7 µm @150 °C)、深度应力
+三区形状(顶面拉 ~486 MPa/内部压)。**约束态热审计被 below-ambient 门
+正确拒绝**(激活阶跃下冲 -141 K,一致质量阵 G1 伪影)——complete_valid
+的 Kaess 运行以 G1 修复为前置。过程中修复:朴素 6-tet 切分不共形(已改
+Kuhn 剖分)、v06 J2 核两个 AD NaN 陷阱(sqrt(0)、finfo.tiny 下溢,零
+trial 应力象限触发,含 jacfwd/jacrev 回归测试)。实施日志与偏差记录见
+[kaess_2023_benchmark_plan.md](validation/cases/kaess_2023_benchmark_plan.md)。
+
 ## 当前科学缺口
 
 - 离散弱式账本已接通，但严格焓状态、质量集总/单调格式及激活质量携带的参考焓仍未完成。

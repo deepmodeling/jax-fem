@@ -1,0 +1,120 @@
+{
+  "case_id": "kaess_2023",
+  "role": "code_to_code_benchmark",
+  "claim_boundary": "numerical reference comparison only; NOT experimental validation and cannot substitute for Strantza held-out data",
+  "schema_version": "v06.benchmark-case.1",
+  "source": {
+    "citation": "Kaess M., Werz M., Weihe S., Residual Stress Formation Mechanisms in Laser Powder Bed Fusion - A Numerical Evaluation, Materials 16(6):2321, 2023",
+    "doi": "10.3390/ma16062321",
+    "license": "CC BY 4.0",
+    "open_access": {
+      "europepmc_fulltext_xml": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10055713/fullTextXML",
+      "pmc": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10055713/",
+      "publisher": "https://www.mdpi.com/1996-1944/16/6/2321"
+    },
+    "verification_status": "setup parameters verified against EuropePMC fulltext 2026-07-16; figure-level quantitative values NOT yet digitized"
+  },
+  "reference_model": {
+    "code": "Abaqus, weakly-coupled (sequential) thermomechanical, implicit both passes, line search for convergence",
+    "elements": "DC3D8 thermal / C3D8 mechanical, 29568 elements total",
+    "activation": "layer-by-layer element activation via model change; supports initially solid (their build not simulated)",
+    "release": "partial separation from build plate at end via element deletion in lower support area (saw/EDM-cut analogue)",
+    "heat_source": "hemispherical volumetric Gaussian (Goldak-type), moving via DFLUX, absorption eta applied",
+    "powder_representation": {
+      "type": "explicit weak-solid elements switched powder->solid on melting via field variable",
+      "density_g_cm3": 4.0,
+      "young_modulus_gpa": 10.0,
+      "young_modulus_status": "author assumption, not measured",
+      "yield_stress_mpa": 1.0,
+      "conductivity_w_mk": {"20C": 0.15, "1370C": 0.6}
+    },
+    "mechanical_bc": "bottom surface fixed in z and rotation; x/y partially permitted to avoid unphysical cooling tension",
+    "thermal_bc": "film 20 W/m2K + radiation emissivity 0.4 on top active layer; ambient = preheat temperature; bottom surface at prescribed build-plate temperature"
+  },
+  "geometry": {
+    "total_domain_mm": [1.2, 0.7, 0.6],
+    "heat_source_influence_area_mm": [1.0, 0.5, 0.3],
+    "shape": "small cantilever over solid support structures (classic cantilever distortion specimen, few-mm scale)",
+    "reference_mesh_identity": "29,568 = 48 x 28 x 22 hexes: in-plane 25 um over 1.2 x 0.7 mm; z = 12 x 25 um (0.3 mm support) + 10 x 30 um (0.3 mm build). Uniquely consistent with all stated dimensions.",
+    "v06_mesh": "159_local/v06/benchmarks/kaess_2023/kaess_cantilever_c3d4.inp - beam+support footprint only (1.0 x 0.5 x 0.6 mm, powder margins unmeshed per v06 void semantics), 40 x 20 x 22 hexes -> Kuhn 6-tet split, 105,600 TET4, min quality 0.618, audit clean",
+    "status": "partition inferred from element-count identity; support internal layout (full block vs comb) and cut/root extent still need Figure 3/7 digitization"
+  },
+  "material": "316L stainless steel (temperature-dependent tables cited in paper references)",
+  "process": {
+    "standard_parameters": {
+      "layer_thickness_um": 30.0,
+      "build_plate_temp_c": 150.0,
+      "laser_power_w": 250.0,
+      "scan_speed_mm_s": 850.0,
+      "laser_beam_radius_um": 50.0,
+      "hatch_spacing_um": 100.0
+    },
+    "parameter_ladders": {
+      "layer_thickness_um": [30.0, 60.0],
+      "build_plate_temp_c": [20.0, 150.0, 300.0, 450.0, 600.0, 750.0, 900.0],
+      "laser_power_w": [100.0, 150.0, 200.0, 250.0, 300.0, 350.0],
+      "laser_speed_mm_s": [340.0, 510.0, 680.0, 850.0, 1020.0, 1190.0],
+      "constant_led_variant_j_mm": 0.29
+    },
+    "layers_modeled": {"60um": 5, "30um": 10},
+    "scan_strategy": "linear pattern, 67 degree inter-layer rotation"
+  },
+  "reported_anchors": [
+    {
+      "id": "cantilever_deflects_upward_after_cut",
+      "kind": "qualitative",
+      "statement": "all parameter sets produce upward cantilever deflection after support cut",
+      "source_location": "Results, Figures 8-9 discussion"
+    },
+    {
+      "id": "preheat_reduces_residual_stress",
+      "kind": "trend",
+      "statement": "higher build plate temperature lowers residual stresses; effect pronounced from 450 C",
+      "source_location": "Abstract; Results discussion"
+    },
+    {
+      "id": "lower_led_reduces_residual_stress",
+      "kind": "trend",
+      "statement": "reduction of line energy density lowers residual stresses",
+      "source_location": "Abstract; Results discussion"
+    },
+    {
+      "id": "depth_stress_profile_shape",
+      "kind": "profile_shape",
+      "statement": "tensile at surface, compressive interior, tensile at build-plate interface (classic three-zone profile)",
+      "source_location": "Introduction (Buchbinder) and Results depth profiles"
+    }
+  ],
+  "quantitative_anchors_status": "UNLOCKED 2026-07-16: author PDF obtained (kaess_2023_paper.pdf), figures rendered to kaess_2023_figures/, Fig 4/9a digitized visually (reading error noted); Fig 8 curves available for profile-level comparison",
+  "digitized_reference_results": {
+    "fig9a_max_front_bending_um_vs_plate_c": {
+      "20": 14.6, "50": 14.5, "150": 14.0, "300": 12.7,
+      "450": 11.9, "600": 10.5, "750": 8.7, "900": 6.1,
+      "reading_error_um": 0.3
+    },
+    "fig9b_max_front_bending_um_vs_power_w_fixed_speed": {
+      "100": 15.5, "350": 13.0, "note": "deflection DEcreases with power at fixed speed; increases 12.0->14.3 at constant LED (varying speed)"
+    },
+    "fig8b_sigma_x_profile_150c": {
+      "surface_mpa": 250, "peak_mpa": 650, "peak_depth_mm": -0.15,
+      "zero_crossing_mm": -0.21, "min_mpa": -450, "min_depth_mm": -0.30,
+      "note": "path per Fig 7 black arrow, extends to -0.4 mm into the support stub; exact x position estimated (perspective)"
+    },
+    "results_text_anchors": "bending significantly reduces from 300 C; stress effects clearly visible from 450 C onward; 30 vs 60 um layer thickness nearly identical at 150 C"
+  },
+  "v06_adaptation_gaps": [
+    "RESOLVED 2026-07-16: 316L tables built and recalibrated against digitized Fig 4 (materials/316L/)",
+    "RESOLVED 2026-07-16: geometry v2 - three support walls per Fig 3/5 (W1 0.025-0.125, W2 0.425-0.525, W3-root 0.775-0.975 mm, +-25um pixel estimate), root-wall-only release anchor per Fig 7 (--release-anchor-mode box)",
+    "RESOLVED 2026-07-16: final plate cooldown to room temperature implemented (--final-cooldown-temperature, ramped bottom Dirichlet); ambient for film/radiation NOT ramped (conduction-dominated, documented approximation)",
+    "OPEN: moving Gaussian heat source (phase 2) exercises the known activation-undershoot weak point; audits expected to gate first attempts",
+    "OPEN: explicit weak-solid powder state (phase 3); interim comparison uses void powder (k=0 between support walls vs paper 0.15-0.6 W/mK)",
+    "OPEN: TET4 vs reference C3D8 hex stiffness difference; alpha secant-vs-incremental convention difference",
+    "NOTE: reference model has no stress relaxation mechanism -> v06 relaxation knob disabled (RELAX_TEMP_K=0) for code-to-code runs"
+  ],
+  "use_limitations": [
+    "This is a code-to-code comparison against a published FE study, marked as 对比实验; it provides no experimental accuracy evidence.",
+    "Reference powder E=10 GPa and absorption are author assumptions; quantitative mismatch does not falsify either model. Trend agreement is the acceptance criterion.",
+    "Trend-level anchors only until Figures 8-9 are digitized with pixel uncertainty.",
+    "Geometry partition (cantilever vs support region) must be taken from Figure 3 before meshing; total-domain dimensions alone are insufficient."
+  ]
+}

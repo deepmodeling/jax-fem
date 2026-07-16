@@ -28,12 +28,21 @@ class J2Update(NamedTuple):
 
 
 def equivalent_stress(stress):
-    """Return von Mises equivalent stress for a symmetric 3x3 tensor."""
+    """Return von Mises equivalent stress for a symmetric 3x3 tensor.
+
+    The sqrt is guarded at exactly zero deviatoric stress: d(sqrt)/dx is
+    infinite at x=0, and both AD modes turn that into NaN (0*inf) for every
+    quadrature point whose trial stress is exactly zero - e.g. freshly
+    activated powder with zero thermal strain. The guard picks the physically
+    correct elastic-branch subgradient (0) instead.
+    """
     stress = jnp.asarray(stress)
     dev = stress - jnp.trace(stress, axis1=-2, axis2=-1)[..., None, None] * (
         jnp.eye(3) / 3.0
     )
-    return jnp.sqrt(1.5 * jnp.sum(dev * dev, axis=(-2, -1)))
+    sq = 1.5 * jnp.sum(dev * dev, axis=(-2, -1))
+    positive = sq > 0.0
+    return jnp.where(positive, jnp.sqrt(jnp.where(positive, sq, 1.0)), 0.0)
 
 
 def elastic_strain_from_stress(stress, young, poisson):
@@ -115,9 +124,22 @@ def radial_return(
     delta_eqp = _plastic_increment(
         q_trial, state.eqp, shear, yield_stress, hardening, saturation
     )
-    q_safe = jnp.maximum(q_trial, jnp.finfo(trial.dtype).tiny)
-    scale = jnp.clip(1.0 - 3.0 * shear * delta_eqp / q_safe, 0.0, 1.0)
-    delta_eps_p = 1.5 * delta_eqp * dev_trial / q_safe
+    # Guard the plastic correction with where() on BOTH the primal and the
+    # denominator: q_trial can be exactly zero (fresh stress-free material),
+    # and a subnormal floor like finfo.tiny underflows to zero when the AD
+    # chain squares it (d(1/q)/du ~ q_dot/q^2), turning the whole jacobian
+    # row into NaN. In the plastic branch q_trial >= yield >> 0, so using
+    # q_trial itself as the divisor is safe there.
+    is_plastic_step = delta_eqp > 0.0
+    q_div = jnp.where(is_plastic_step, q_trial, 1.0)
+    scale = jnp.where(
+        is_plastic_step,
+        jnp.clip(1.0 - 3.0 * shear * delta_eqp / q_div, 0.0, 1.0),
+        1.0,
+    )
+    delta_eps_p = jnp.where(
+        is_plastic_step, 1.5 * delta_eqp / q_div, 0.0
+    ) * dev_trial
     new_state = PlasticState(
         eqp=state.eqp + delta_eqp,
         eps_p=state.eps_p + delta_eps_p,

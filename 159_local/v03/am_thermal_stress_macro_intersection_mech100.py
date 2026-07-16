@@ -772,6 +772,25 @@ def build_parser(config=None):
                              "thermal load step that stalls the mechanics Newton solve.")
     parser.add_argument("--release-after-cooling", dest="release_after_cooling", action="store_true", default=cfg(config, "release_after_cooling", False))
     parser.add_argument("--no-release-after-cooling", dest="release_after_cooling", action="store_false")
+    parser.add_argument("--release-anchor-mode", choices=("rigid_body", "box"),
+                        default=cfg(config, "release_anchor_mode", "rigid_body"),
+                        help="rigid_body (default): free-free release with 3-point rigid-body anchors (full removal "
+                             "from the plate). box: clamp all nodes inside --release-anchor-box (u=0), modeling a "
+                             "partial EDM/saw cut that leaves a root attachment (Kaess 2023 cantilever semantics).")
+    parser.add_argument("--release-anchor-box", type=float, nargs=6, metavar=("XMIN", "XMAX", "YMIN", "YMAX", "ZMIN", "ZMAX"),
+                        default=cfg(config, "release_anchor_box", None),
+                        help="Axis-aligned box (mesh coordinates) whose nodes stay clamped during a box-mode release.")
+    parser.add_argument("--release-cut-box", type=float, nargs=6, metavar=("XMIN", "XMAX", "YMIN", "YMAX", "ZMIN", "ZMAX"),
+                        default=cfg(config, "release_cut_box", None),
+                        help="Cells whose centroid lies inside this box (mesh coordinates) are deactivated in the "
+                             "release solve (stiffness AND locked-in stress scaled by the inactive factor) - the "
+                             "equivalent of deleting sawed-off support elements (Kaess 2023 Fig 7 semantics).")
+    parser.add_argument("--final-cooldown-temperature", type=float,
+                        default=cfg(config, "final_cooldown_temperature", None),
+                        help="Ramp the fixed bottom temperature linearly to this value (K) across the final cooling "
+                             "steps, modeling a build-plate cooldown to room temperature before release "
+                             "(Kaess 2023 style). Requires --bottom-thermal-bc fixed; default keeps the bottom "
+                             "temperature constant.")
 
     parser.add_argument("--mechanics-every", type=int, default=cfg(config, "mechanics_every", 1))
     parser.add_argument("--mechanics-tol", type=float, default=cfg(config, "mechanics_tol", None),
@@ -1908,6 +1927,42 @@ def make_anchor_mechanics_bc(points, candidate_node_ids=None):
     ]
 
 
+def make_box_anchor_mechanics_bc(points, box):
+    # Partial-cut release: nodes inside the axis-aligned box stay clamped
+    # (u=0, all components), modeling the un-cut root attachment that an
+    # EDM/saw cut leaves behind (e.g. the Kaess 2023 cantilever separation).
+    # The box is given in mesh coordinates (after --mesh-length-scale).
+    box = [float(v) for v in box]
+    if len(box) != 6:
+        raise ValueError("release anchor box needs 6 floats: xmin xmax ymin ymax zmin zmax")
+    lo = onp.asarray(box[0::2])
+    hi = onp.asarray(box[1::2])
+    if onp.any(hi <= lo):
+        raise ValueError(f"release anchor box is empty: min={lo}, max={hi}")
+    span = max(float((points.max(axis=0) - points.min(axis=0)).max()), 1e-30)
+    atol = 1e-8 * span
+    inside = onp.all((points >= lo - atol) & (points <= hi + atol), axis=1)
+    count = int(onp.sum(inside))
+    if count < 3:
+        raise ValueError(
+            f"release anchor box contains only {count} mesh nodes; "
+            "a partial-cut anchor needs at least 3 to suppress rigid modes"
+        )
+    print(f"release anchor box: clamping {count} nodes in {box}")
+
+    def location(point):
+        return np.all((point >= lo - atol) & (point <= hi + atol))
+
+    def zero(_point):
+        return 0.0
+
+    return [
+        [location, location, location],
+        [0, 1, 2],
+        [zero, zero, zero],
+    ]
+
+
 def should_run_mechanics(global_step, args):
     return args.mechanics_every > 0 and global_step % args.mechanics_every == 0
 
@@ -2403,6 +2458,15 @@ def main():
     write_used_config(args, args.output_dir, derived)
     print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, selected_cells, points, thermal, mechanics, derived)
 
+    final_cooldown_enabled = (
+        args.final_cooldown_temperature is not None
+        and args.bottom_thermal_bc == "fixed"
+    )
+    if args.final_cooldown_temperature is not None and args.bottom_thermal_bc != "fixed":
+        print("WARNING: --final-cooldown-temperature requires --bottom-thermal-bc fixed; ignoring.")
+    n_cooling_steps = sum(1 for s in step_states if s.mode == "cooling")
+    cooling_step_counter = 0
+
     quad_stress = None
     last_mechanics_step = -1
     last_active_cell = previous_active.copy()
@@ -2486,6 +2550,21 @@ def main():
             printed_quad=printed_quad,
             cooling_only_quad=cooling_only_quad,
         )
+        if final_cooldown_enabled and state.mode == "cooling" and n_cooling_steps > 0:
+            cooling_step_counter += 1
+            ramp = cooling_step_counter / float(n_cooling_steps)
+            ramped_bottom_temperature = (
+                bottom_temperature_effective
+                + ramp * (float(args.final_cooldown_temperature) - bottom_temperature_effective)
+            )
+
+            def ramped_bottom_value(_point, _value=ramped_bottom_temperature):
+                return _value
+
+            thermal.fes[0].update_Dirichlet_boundary_conditions(
+                [[bottom], [0], [ramped_bottom_value]]
+            )
+
         effective_laser_power = args.absorptivity * state.laser_power
         if surface_active_mask_enabled:
             surface_mask_quad = printed_quad
@@ -2628,13 +2707,41 @@ def main():
         printed_node_ids = onp.unique(
             onp.asarray(cells)[onp.asarray(last_printed_cell, dtype=bool)].reshape(-1)
         )
+        if args.release_anchor_mode == "box":
+            if args.release_anchor_box is None:
+                raise ValueError("--release-anchor-mode box requires --release-anchor-box")
+            release_bc = make_box_anchor_mechanics_bc(points, args.release_anchor_box)
+        else:
+            release_bc = make_anchor_mechanics_bc(points, candidate_node_ids=printed_node_ids)
+        if args.release_cut_box is not None:
+            cut = [float(v) for v in args.release_cut_box]
+            lo = onp.asarray(cut[0::2])
+            hi = onp.asarray(cut[1::2])
+            cut_cell = onp.all(
+                (cell_centroids >= lo[None, :]) & (cell_centroids <= hi[None, :]),
+                axis=1,
+            )
+            n_cut = int(cut_cell.sum())
+            print(f"release cut box: deactivating {n_cut} cells in {cut}")
+            if n_cut:
+                cut_quad = make_quad_scalar(
+                    cut_cell.astype(onp.float64),
+                    mechanics.fes[0].num_quads,
+                )
+                # kill both stiffness and locked-in stress of sawed-off cells
+                mechanics_params = list(mechanics_params)
+                mechanics_params[2] = np.where(
+                    cut_quad > 0.5,
+                    args.inactive_mechanics_factor,
+                    mechanics_params[2],
+                )
         release_mechanics = ThermoMechanical(
             mesh=mesh,
             vec=3,
             dim=3,
             ele_type="TET4",
             quadrature_order=args.quadrature_order,
-            dirichlet_bc_info=make_anchor_mechanics_bc(points, candidate_node_ids=printed_node_ids),
+            dirichlet_bc_info=release_bc,
             additional_info=(args.mechanics_model, args.yield_saturation_stress, 0.0),
         )
         u_release = run_mechanics(release_mechanics, u_guess, mechanics_params, mechanics_newton_overrides)

@@ -884,6 +884,31 @@ class MacroMech100V04XlaWrapperTest(unittest.TestCase):
         self.assertEqual(report.stage_calls[self.wrapper.STAGE_SOLVER], 2)
         self.assertEqual(report.meta["solver_fallbacks"], 1)
 
+    def test_install_solver_patch_does_not_retry_newton_stall(self):
+        # A Newton stall reproduces bit-identically under spsolve (both direct
+        # solvers), so the fallback must re-raise instead of burning a second
+        # full Newton budget; increment cutback handles it upstream.
+        calls = []
+
+        def fake_solver(problem, solver_options=None):
+            calls.append(solver_options)
+            raise RuntimeError(
+                "Newton solver did not converge within max_iter=50 iterations")
+
+        original_module = SimpleNamespace(solver=fake_solver)
+        report = self.wrapper.ProfilingReport(label="unit")
+
+        self.wrapper.install_solver_patch(
+            original_module,
+            {"jax_solver": {"precond": True}},
+            fallback_to_spsolve=True,
+            profiler=report,
+        )
+        with self.assertRaises(RuntimeError):
+            original_module.solver("problem", solver_options={"newton": {}})
+        self.assertEqual(len(calls), 1)
+        self.assertNotIn("solver_fallbacks", report.meta)
+
     def test_install_solver_patch_records_setup_once_before_first_solve(self):
         calls = []
 

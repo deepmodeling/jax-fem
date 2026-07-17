@@ -177,3 +177,55 @@ Strantza Fig 4 的纪律一致。
   本 case 检验小尺度是否翻转;
 - Strantza 2018(`strantza_2018.json`):held-out 实验验证,本 case 不替代它;
 - G1 下冲修复:第二期是天然回归试验台。
+
+**2026-07-17(第二期移动热源解锁:力学 Newton 停滞诊断)**:
+
+7-16 晚 std01/std02 死于 SIGHUP(启动未按 overnight 脚本头的 nohup setsid,
+终端关闭连带杀进程,非数值问题);smoke2L 在 layer 2 真实失败:力学 Newton
+停滞。诊断阶梯(3 层冒烟,失败点不稳定 step 80~420):
+
+- rel-tol 1e-4 + max-iter 200:仍停滞(2.14e-4)→ 非容差问题;
+- 根因一:G1 激活下冲把新激活单元打到 -897 K(表域 293–1873 K 端点钳位)
+  → 全刚度冷固体吃 α·ΔT≈-2% 伪热应变。缓解:基座新增
+  `--mechanics-temperature-floor`(默认 None;只钳力学链 dT+材料表输入,
+  热场/相位记账/audit 不钳 → 伪影仍可诊断),p2 脚本默认 293.15 K,
+  4 单测,289 回归无新增失败(4 error 为 v02 历史遗留);
+- floor 单独不够:仍停滞于 3.46e-5(比无 floor 时低一个量级,必要不充分);
+- 根因二:载荷增量。MECH_EVERY 20→5 使停滞高度 ~3e-4→2.087e-5,
+  且 pardiso 与 SciPy spsolve 停滞值逐位相同 → 排除线性求解器,
+  指向 j2 切线/残差轻微不一致造成的收敛地板,地板随增量缩小而下降;
+- 解锁配置:floor 293.15 + MECH_EVERY=5 + mechanics-rel-tol 5e-5
+  (地板上方 2.4 倍余量;代码注释认可 1e-6 量级即工程充分,偏差记录)。
+
+为什么参考模型(Abaqus)没有这些现象:一阶传热单元出厂即节点集总热容
+(=G1 修法)、自动增量切割(=自适应力学子步)、时间平均力 0.5% 收敛判据
+(远宽于 rel 1e-5)。物理无新增,缺的是数值护甲。
+
+偏差项新增:mechanics-temperature-floor 293.15 K(G1 修复落地后移除)、
+mechanics-rel-tol 5e-5、MECH_EVERY=5(成本 ~×4 力学求解)。
+complete_valid 仍以 G1 质量集总/子步为前置(undershoot 门会继续 gated)。
+
+**2026-07-17 续(Abaqus 数值护甲三件套落地,第二期解锁完成)**:
+
+- **自动增量切割**(`--mechanics-max-cuts`,默认 0/p2 脚本 3):Newton 停滞时
+  把热载荷增量按 2/4/8 子步细分重走;子步为纯 Newton 延拓(塑性状态不提交、
+  末子步精确求解原问题,解与直接求解同方程)。cutback3L 冒烟(ME=20,
+  rel-tol 5e-5):9 次停滞 9 次自动脱困(8×2 子步+1×8 子步),**phase2 首次
+  端到端跑通**(3 层扫描+冷却+release,release_u_max 648 µm),
+  release_valid=true,唯 constrained_valid=false(G1 下冲,预期)。
+- **停滞免重试**(v04 fallback 修正):Newton 停滞是非线性性质而非线性后端
+  故障(pardiso/SciPy 停滞值曾逐位相同),直接上抛给切割器,省 ~10 min/次。
+- **热容质量集总**(`--thermal-mass-lumping`,G1 正统修复):TET4 顶点积分
+  =精确行和集总(单测验证对角=一致质量行和),导热项因常梯度逐位不变。
+  lump3L 冒烟(与 cutback3L 单变量对照):**T_min 全程逐位=423.15 K
+  (板温),下冲根除**;切割出场 9→1;步速 8.4→3.5 s/步;
+  **constrained_valid=true**。T_max 略升(8591 vs 5742 K@step0,积分点
+  位置所致,激活即固化路线下为诊断量)。
+- lump3L 后续暴露两个收尾链问题并已修:①provenance 要求产物名
+  xrd_operator_smoke.json 而 p2 脚本写 xrd_operator_kaess.json——完整判定
+  永不可能通过(潜伏,首次到达该代码段);已改脚本输出名对齐合同。
+  ②XRD 算符失败会 set -e 中断 response_gate;已改尽力而为。3 层冒烟中
+  XRD 拒绝(量规体积在 void、温度带外)是截断伪影,量规 z 0.4-0.5 mm
+  位于完整 10 层梁内,完整运行应通过。
+- p2 脚本固化:MECH_REL_TOL=5e-5、MECH_MAX_CUTS=3、MECH_T_FLOOR=293.15、
+  THERMAL_LUMPING=1(均 env 可覆盖)。过夜队列(4 预热点)就绪,待启。

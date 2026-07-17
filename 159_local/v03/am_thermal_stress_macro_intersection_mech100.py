@@ -129,6 +129,40 @@ class PropertyTable:
         return np.interp(T, self.T, self.values)
 
 
+def apply_thermal_mass_lumping(problem):
+    """Switch the thermal volume quadrature to the TET4 vertex rule (lumping).
+
+    With linear tets the stiffness integrand is constant per cell, so moving
+    the quadrature points to the vertices (equal weights V/4) leaves
+    conduction bitwise unchanged while making the capacitance matrix exactly
+    the row-sum lumped diagonal: shape_vals becomes the identity, so the
+    mass-map trial/test products N_i*N_j collapse to delta_ij. Source and
+    loss terms in the mass map become nodal collocation, which is why the
+    physical quad points must be relocated to the vertices as well.
+    """
+    fe = problem.fes[0]
+    if fe.num_quads != fe.num_nodes:
+        raise ValueError(
+            "--thermal-mass-lumping requires num_quads == num_nodes "
+            f"(TET4 with --quadrature-order 2); got {fe.num_quads} quads, "
+            f"{fe.num_nodes} nodes")
+    weights = onp.asarray(fe.quad_weights)
+    if not onp.allclose(weights, weights[0]):
+        raise ValueError(
+            "--thermal-mass-lumping requires an equal-weight quadrature rule; "
+            f"got weights {weights}")
+    grads = onp.asarray(fe.shape_grads_ref)
+    if not onp.allclose(grads, grads[0:1]):
+        raise ValueError(
+            "--thermal-mass-lumping requires constant shape gradients "
+            "(linear elements); higher-order elements are not supported")
+    fe.shape_vals = np.eye(fe.num_nodes)
+    problem.physical_quad_points = fe.get_physical_quad_points()
+    print("thermal mass lumping: TET4 vertex quadrature installed "
+          "(diagonal capacitance, conduction unchanged)")
+    return problem
+
+
 class TransientThermal(Problem):
     def custom_init(
         self,
@@ -804,6 +838,28 @@ def build_parser(config=None):
                         default=cfg(config, "mechanics_line_search", False),
                         help="Enable Newton line search for mechanics solves; stabilizes j2 yield-surface states.")
     parser.add_argument("--no-mechanics-line-search", dest="mechanics_line_search", action="store_false")
+    parser.add_argument("--mechanics-temperature-floor", type=float,
+                        default=cfg(config, "mechanics_temperature_floor", None),
+                        help="Clamp the temperature seen by the mechanics chain (thermal strain and "
+                             "material tables) to at least this value in K. Guard against activation "
+                             "undershoot artifacts (G1) feeding sub-physical temperatures into full-stiffness "
+                             "solid; a mitigation knob, not a fix — the thermal field itself stays unclamped.")
+    parser.add_argument("--thermal-mass-lumping", action="store_true",
+                        default=cfg(config, "thermal_mass_lumping", False),
+                        help="Evaluate the thermal transient/source (mass-map) terms with the TET4 "
+                             "vertex quadrature rule instead of the interior Gauss points. For linear "
+                             "tets this is exactly row-sum capacitance lumping (Abaqus first-order "
+                             "heat-transfer element behavior): the capacitance matrix becomes diagonal, "
+                             "restoring the discrete maximum principle that suppresses activation "
+                             "undershoot; conduction is unaffected (constant gradients). Requires "
+                             "--quadrature-order 2 (4 equal-weight points).")
+    parser.add_argument("--mechanics-max-cuts", type=int,
+                        default=cfg(config, "mechanics_max_cuts", 0),
+                        help="Abaqus-style automatic increment cutback for mechanics solves: on Newton "
+                             "failure retry the thermal-load increment in 2,4,...,2**N equal substeps "
+                             "(temperature interpolated from the last accepted mechanics state). Substeps "
+                             "are pure Newton continuation - the final substep solves the exact original "
+                             "problem and no plastic state is committed in between. 0 disables (legacy).")
     parser.add_argument("--thermal-output-every", type=int, default=cfg(config, "thermal_output_every", 0))
     parser.add_argument("--mechanics-output-every", type=int, default=cfg(config, "mechanics_output_every", 1))
     parser.add_argument("--summary-every", type=int, default=cfg(config, "summary_every", 1))
@@ -1855,6 +1911,18 @@ def thermal_material_quads(T_old_quad, active_quad, phase_quad, args, tables, pr
     return rho_quad, cp_quad, conductivity_quad, latent_cp
 
 
+def clamp_mechanics_temperature(T_quad, floor):
+    """Floor the mechanics-side temperature field; floor=None keeps it untouched.
+
+    Only the mechanics chain (dT/thermal strain and material-table lookups) sees
+    the clamped field; the thermal solution and phase bookkeeping stay unclamped
+    so the guard cannot mask undershoot in thermal diagnostics/audits.
+    """
+    if floor is None:
+        return T_quad
+    return np.maximum(T_quad, floor)
+
+
 def mechanics_material_quads(T_quad, active_quad, phase_quad, args, tables):
     E_quad = eval_property(T_quad, tables["E"], args.young)
     alpha_base = eval_property(T_quad, tables["alpha"], args.alpha)
@@ -2188,6 +2256,70 @@ def run_mechanics(mechanics, u_guess, params, newton_overrides=None):
     return solver(mechanics, solver_options={"newton": newton})
 
 
+def run_mechanics_with_cutback(mechanics, u_guess, params, newton_overrides, args,
+                               T_prev_quad, active_prev_quad, T_ref_quad,
+                               active_quad, phase_quad, tables):
+    """Mechanics solve with Abaqus-style automatic load-increment cutback.
+
+    Try the full increment first. On Newton failure, walk the thermal load
+    from the last accepted mechanics state to the current one in 2,4,...,
+    2**mechanics_max_cuts equal substeps (temperature - hence thermal strain
+    and material tables - interpolated along the way). Substeps are pure
+    Newton continuation: plastic state (params[-1]) is held fixed and the
+    final substep IS the original problem (same params object), so an
+    accepted cutback solution satisfies exactly the equations a direct
+    solve would have. Cells activated since the last accepted solve ramp
+    from their stress-free reference T_ref (dT 0 -> full).
+    """
+    try:
+        return run_mechanics(mechanics, u_guess, params, newton_overrides)
+    except RuntimeError as exc:
+        if not getattr(args, "mechanics_max_cuts", 0):
+            raise
+        last_exc = exc
+        print(f"mechanics cutback: full increment failed ({exc}); subdividing")
+
+    T_cur_quad = params[0]
+    if T_prev_quad is None:
+        T_prev_eff = T_ref_quad
+    else:
+        T_prev_eff = np.where(active_prev_quad > 0, T_prev_quad, T_ref_quad)
+
+    n = 2
+    while n <= 2 ** int(args.mechanics_max_cuts):
+        u = u_guess
+        try:
+            for k in range(1, n + 1):
+                if k == n:
+                    sub_params = params
+                else:
+                    lam = k / n
+                    T_lam = T_prev_eff + lam * (T_cur_quad - T_prev_eff)
+                    dT_lam = (T_lam - T_ref_quad) * active_quad
+                    (active_factor_lam, E_lam, alpha_lam, poisson_lam,
+                     yield_lam, hardening_lam) = mechanics_material_quads(
+                        T_lam, active_quad, phase_quad, args, tables)
+                    sub_params = [
+                        T_lam,
+                        dT_lam,
+                        active_factor_lam,
+                        E_lam,
+                        alpha_lam,
+                        poisson_lam,
+                        yield_lam,
+                        hardening_lam,
+                        params[-1],
+                    ]
+                u = run_mechanics(mechanics, u, sub_params, newton_overrides)
+            print(f"mechanics cutback: converged with {n} substeps")
+            return u
+        except RuntimeError as exc:
+            last_exc = exc
+            print(f"mechanics cutback: {n} substeps failed ({exc}); refining")
+            n *= 2
+    raise last_exc
+
+
 def mechanics_newton_overrides_from_args(args):
     """Newton overrides for the mechanics solves, built from CLI options.
 
@@ -2328,6 +2460,8 @@ def main():
             args.front_surface_loss_radiation,
         ),
     )
+    if args.thermal_mass_lumping:
+        apply_thermal_mass_lumping(thermal)
     if args.bottom_mechanics_bc == "elastic":
         mechanics_bc = None
         mechanics_location_fns = [bottom]
@@ -2474,6 +2608,8 @@ def main():
     last_cooling_only_cell = onp.zeros_like(previous_active, dtype=bool)
     last_material_state = material_cell_state(last_active_cell, substrate_cell, support_cell, args, phase_cell=phase_cell_from_quad(phase_quad))
     last_dT_quad = np.zeros((len(cells), thermal.fes[0].num_quads, 1))
+    last_T_mech_quad = None
+    last_mechanical_active_quad = None
 
     highest_printed_layer = 0
 
@@ -2619,10 +2755,11 @@ def main():
         # displacement/stress. Phase-dependent stiffness inside
         # mechanics_material_quads() still weakens powder/mushy/liquid regions.
         mechanical_active_quad = printed_quad
-        dT_quad = (T_quad - T_ref_quad) * mechanical_active_quad
-        active_factor_quad, E_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad = mechanics_material_quads(T_quad, mechanical_active_quad, phase_quad, args, tables)
+        T_mech_quad = clamp_mechanics_temperature(T_quad, args.mechanics_temperature_floor)
+        dT_quad = (T_mech_quad - T_ref_quad) * mechanical_active_quad
+        active_factor_quad, E_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad = mechanics_material_quads(T_mech_quad, mechanical_active_quad, phase_quad, args, tables)
         mechanics_params = [
-            T_quad,
+            T_mech_quad,
             dT_quad,
             active_factor_quad,
             E_quad,
@@ -2639,11 +2776,16 @@ def main():
             # Lateral powder springs follow the printed state: only faces of
             # printed cells are embedded in powder and receive support.
             mechanics.set_powder_surface_mask(printed_cell)
-            u_guess = run_mechanics(mechanics, u_guess, mechanics_params, mechanics_newton_overrides)
+            u_guess = run_mechanics_with_cutback(
+                mechanics, u_guess, mechanics_params, mechanics_newton_overrides, args,
+                last_T_mech_quad, last_mechanical_active_quad, T_ref_quad,
+                mechanical_active_quad, phase_quad, tables)
             quad_stress = mechanics.compute_cell_stress(u_guess[0], mechanics_params)
             eqp_quad = mechanics.compute_eqp_update(u_guess[0], mechanics_params)
             mechanics_params[-1] = eqp_quad
             last_mechanics_step = state.global_step
+            last_T_mech_quad = T_mech_quad
+            last_mechanical_active_quad = mechanical_active_quad
 
         material_state_cell = material_cell_state(active_cell, substrate_cell, support_cell, args, cell_T, phase_cell=phase_cell_from_quad(phase_quad))
         mechanics_is_current = last_mechanics_step == state.global_step

@@ -121,16 +121,48 @@ class _PardisoCustomSolver:
 
     def __init__(self) -> None:
         self._solver = None
+        self._v07_variant = None
 
     def __deepcopy__(self, memo):
         # Shared instance keeps the PARDISO handle alive across the
         # option-rewrite deep copies done for every solve.
         return self
 
+    def _maybe_v07_variant(self):
+        # V07 ablation hook: V07_PARDISO_MODE selects an experimental
+        # solver ladder from 159_local/v07/pardiso_variants.py. Unset (or
+        # "base") keeps this class's behaviour untouched.
+        if self._v07_variant is None:
+            import os
+
+            mode = os.environ.get("V07_PARDISO_MODE", "").strip()
+            if not mode or mode == "base":
+                self._v07_variant = False
+            else:
+                import importlib.util
+                from pathlib import Path
+
+                vpath = (
+                    Path(__file__).resolve().parents[1]
+                    / "v07"
+                    / "pardiso_variants.py"
+                )
+                spec = importlib.util.spec_from_file_location(
+                    "v07_pardiso_variants", vpath
+                )
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                self._v07_variant = module.VariantSolver(mode)
+        return self._v07_variant
+
     def __call__(self, A, b, x0, linear_options):
         import numpy as onp
         import scipy.sparse
         import pypardiso
+
+        variant = self._maybe_v07_variant()
+        if variant is not False:
+            return variant(A, b, x0, linear_options)
 
         if self._solver is None:
             self._solver = pypardiso.PyPardisoSolver()
@@ -1113,10 +1145,20 @@ def install_solver_patch(
         try:
             return run_original_solver(problem, patched_options)
         except Exception as exc:
+            # A Newton stall is a property of the nonlinear problem, not of the
+            # linear backend: SciPy spsolve reproduces pardiso stall residuals
+            # bit-identically (both are direct solvers), so retrying burns a
+            # full Newton budget for nothing. Re-raise so callers (e.g. the
+            # mechanics increment cutback) can subdivide the load instead.
+            newton_stall = (
+                isinstance(exc, RuntimeError)
+                and "Newton solver did not converge" in str(exc)
+            )
             if (
                 linear_options is None
                 or not fallback_to_spsolve
                 or "spsolve_solver" in linear_options
+                or newton_stall
             ):
                 raise
             if profiler is not None:

@@ -28,7 +28,8 @@ set -euo pipefail
 
 WORK_ROOT="/home/user/work/159"
 REPO_ROOT="${WORK_ROOT}/jax-fem"
-PATH_CSV="${WORK_ROOT}/output/geometry_path_macro1mm_first10_h60/path_macro1mm_first10_h60.csv"
+# 2026-07-17: output/ 阶段分组重组后路径 CSV 移入 01_dev_early/
+PATH_CSV="${WORK_ROOT}/output/01_dev_early/geometry_path_macro1mm_first10_h60/path_macro1mm_first10_h60.csv"
 STRIDE="${STRIDE:-5}"
 MECH_EVERY="${MECH_EVERY:-300}"
 

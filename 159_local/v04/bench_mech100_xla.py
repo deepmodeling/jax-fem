@@ -79,6 +79,15 @@ TIERS = {
         "--mechanics-every", "0",
         "--summary-every", "999999",
     ],
+    "real-slice-mech": [
+        "--max-cells", "0",
+        "--layers", "2",
+        "--scan-steps-per-layer", "4",
+        "--hatch-lines-per-layer", "1",
+        "--layer-activation-geometry", "centroid",
+        "--mechanics-every", "4",
+        "--summary-every", "999999",
+    ],
     "representative": [
         "--max-cells", "0",
         "--layers", "50",

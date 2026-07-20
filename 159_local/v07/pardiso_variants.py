@@ -79,8 +79,15 @@ class _RawPardiso:
             ip[27] = 1   # iparm(28): single-precision factorization
             ip[34] = 0   # iparm(35): 1-based indexing
 
-    def call(self, n, a_data, ia, ja, b, phase):
-        """One raw pardiso call; b must be float64/float32 to match `single`."""
+    def call(self, n, a_data, ia, ja, b, phase, transpose=False):
+        """One raw pardiso call; b must be float64/float32 to match `single`.
+
+        With ``transpose=True`` the call solves A^T x = b using the SAME
+        factorization of A (MKL iparm(12)=2), so an adjoint solve costs one
+        backsolve instead of a fresh factorization of the transposed matrix.
+        """
+        if transpose:
+            self.iparm[11] = 2  # iparm(12): solve transposed system
         x = np.zeros_like(b)
         err = ctypes.c_int32(0)
         c_int32_p = ctypes.POINTER(ctypes.c_int32)
@@ -103,6 +110,8 @@ class _RawPardiso:
             void_p(x.ctypes.data),                      # x
             ctypes.byref(err),
         )
+        if transpose:
+            self.iparm[11] = 0
         if err.value != 0:
             raise RuntimeError(
                 f"MKL PARDISO failed with error {err.value} (phase {phase})"
@@ -154,6 +163,7 @@ class VariantSolver:
             "analyze_calls": 0,
             "pattern_rebuilds": 0,
             "backsolve_hits": 0,
+            "transpose_backsolves": 0,
             "ir_steps_total": 0,
             "ir_steps_max": 0,
         }
@@ -247,6 +257,36 @@ class VariantSolver:
         self._stats["ir_steps_total"] += steps
         self._stats["ir_steps_max"] = max(self._stats["ir_steps_max"], steps)
         return x
+
+    def solve_transposed(self, A, b):
+        """Solve A^T x = b reusing A's factorization (phase23 mode only).
+
+        Intended for adjoint solves: after the forward solve factorized A,
+        this is a single transposed backsolve (iparm(12)) — no explicit
+        transpose matrix, no second factorization. If A was not factorized
+        yet (or its values changed), it is factorized here first, which also
+        warms the cache for subsequent forward solves.
+        """
+        if self.mode != "phase23":
+            raise RuntimeError("solve_transposed requires mode=phase23")
+        indptr, indices, data = A.getValuesCSR()
+        rhs = np.asarray(b, dtype=np.float64)
+        n = indptr.shape[0] - 1
+        st = self._get_state(n, indptr, indices)
+        if (not st.analyzed or st.data is None
+                or not np.array_equal(st.data, data)):
+            if not st.analyzed:
+                self._stats["analyze_calls"] += 1
+                st.raw.call(n, data, st.ia, st.ja,
+                            np.zeros_like(rhs), phase=12)
+                st.analyzed = True
+            else:
+                st.raw.call(n, data, st.ia, st.ja,
+                            np.zeros_like(rhs), phase=22)
+            st.data = data.copy()
+        self._stats["transpose_backsolves"] += 1
+        return st.raw.call(n, data, st.ia, st.ja, rhs, phase=33,
+                           transpose=True)
 
     def _raw_singleton(self):
         st = self._states.get("nocmp")

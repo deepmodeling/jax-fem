@@ -1,6 +1,7 @@
 # V07 跨工况横向对比 — jax-fem 标准样例 × phase23
 
-日期：2026-07-17。状态：**暂停中，7/8 arm 已完成**，续跑与收尾清单见 §4。
+日期：2026-07-17，2026-07-20 收尾（scal/spsolve 定案 + 解一致性核查完成，
+见 §1.4 与 §1.3 更新）。剩余可选扩展见 §4.3。
 承接 `V07_ABLATION.md`（AM 热力耦合已验证：真实一层 5.2x，T/eqp 逐位一致）。
 
 目的：回答"优化是否只对 AM 工况有效"。方法：`bench_apps.py` 在
@@ -39,12 +40,26 @@ backsolve_hits 199/200：全程 1 次分解 + 199 次 phase 33 纯回代
 |---|---|
 | baseline（petsc bcgsl+ilu） | **7.5** |
 | phase23 | 46.7（~23s/次分解，输 6x） |
-| spsolve | 未跑完即暂停（预期更慢，见 §4.1） |
+| spsolve | **OOM 不可行**（2026-07-20 定案：SuperLU 填充 21.9 GB 实存 /
+  142 GB 虚拟，19 min 后被内核 OOM 杀，dmesg 有记录） |
 
 397k 3D 矢量问题 LU 填充过重，且良态问题 petsc 迭代 3.8s/解就收敛，
-2 次求解也摊不掉符号分析。
+2 次求解也摊不掉符号分析。注意分档：PARDISO 在此规模**慢但可行且精度
+正常**（vs petsc rel 1.4e-7），传统 spsolve 直接死于内存。
 
-## 2. 当前适用边界结论（初版，待 §4 收尾后定稿）
+### 1.4 解一致性核查（2026-07-20，全部通过）
+
+| 对比 | 差值 | 判定 |
+|---|---|---|
+| pff 力-位移曲线 baseline vs phase23 | rel 1.7e-8 | 交错非线性路径差异，验证曲线实质相同 |
+| wave 终态 spsolve vs phase23 | **max_abs = 0（逐位一致）** | 1 次分解+199 次回代后仍逐位复现直接法 |
+| wave 终态 库默认迭代 vs phase23 | 3.2e-5 | 差异归属迭代法容差累积（直接法阵营内部为 0） |
+| scal u 场 petsc vs phase23（397k） | rel 1.4e-7 | petsc 迭代容差内，PARDISO 精度正常 |
+
+脚本：`/tmp/v07_accuracy.py` 逻辑已并入本目录 `vtu_diff.py` 用法（pff 用
+npz 直接比 forces）。
+
+## 2. 适用边界结论（定稿）
 
 phase23/PARDISO 直接法路线的甜区 = **中等规模（≲20 万 dofs）×
 大量重复求解 × 非对称/条件数差/定矩阵**：
@@ -54,6 +69,58 @@ phase23/PARDISO 直接法路线的甜区 = **中等规模（≲20 万 dofs）×
 - 定矩阵步进（波动/线性瞬态）：最优场景 → 一次分解全程回代
 - 大规模良态 3D 静力学（scalability 类）：**不适用，留给迭代法**
 
+## 2.5 全量扩展（2026-07-20 下午，"全部都做"轮）
+
+### A. 六个补充工况（baseline vs phase23，零改动拦截）
+
+| 工况 | baseline solver | phase23 solver | 解一致性 | 结论 |
+|---|---|---|---|---|
+| **thermal_mechanical_full** | 54.2s / **490 次牛顿解** | **3.2s / 200 次** | rel 6.1e-8 | 双重收益：单解 17x + **牛顿迭代数 490→200**（petsc ilu 解不准导致牛顿多走 2.4x）；wall 161→80s |
+| stokes（鞍点） | 0.58s（tfqmr+LU） | 0.62s | rel 2.4e-17 | **鲁棒性达标**：加权匹配扛住零对角块，速度平、精度机器级 |
+| dendrite（361 步瞬态相场） | 62.9s（GPU bicgstab） | 67.5s | rel 1.2e-3* | **平/小负**：矩阵逐步变+良态，两边 ~0.18s/解打平；*界面演化放大迭代容差累积，非求解器错误 |
+| serendipity（高阶单元） | 0.89s | 0.67s | rel 2.3e-15 | 小胜 |
+| arc_length | 0.89s | 0.60s | **0.0（逐位）** | 全程仅 2 次线性解，信号弱 |
+| periodic_bc | 两 arm 均在求解前抛 JAX 异常 | 同 | — | 样例自身问题（baseline 也挂），与求解器无关 |
+
+### B. 规模阶梯（3D 超弹性，2 次牛顿解，solver 累计秒）
+
+| dofs | petsc | phase23 | spsolve（传统） |
+|---|---|---|---|
+| 27,783 | **0.40** | 0.61 | 7.79 |
+| 89,373 | **1.30** | 2.28 | 121.4 |
+| 206,763 | **3.57** | 12.1 | 超时（>30min） |
+| 397,953 | **7.48** | 45.4 | 内核 OOM（前测） |
+
+- 良态 3D 弹性问题上迭代法全程胜，直接法劣势随规模从 1.5x 扩大到 6x
+  （3D LU 填充超线性）；四档 max|u| 全一致。
+- **传统 spsolve 在每一档都差 20–90x，之后直接不可行**——AM 工况"从
+  spsolve 出发"的对比里 phase23 的收益是真实的，只是它的对手不该是也
+  不会是良态大 3D 问题上的迭代法。
+
+### C. 伴随基准（89k dofs，iter = 完整 value_and_grad）
+
+| arm | iter 均值 | 备注 |
+|---|---|---|
+| petsc | 4.03s | 伴随=显式 A_T 从头解 |
+| phase23 | 3.85s | 伴随仍分解 A_T |
+| **phase23T（转置复用）** | 3.84s | 伴随=iparm(12) 转置解，**不构造 A_T、不做符号分析**；梯度与 phase23 **同至 12 位**、与 petsc 差 3e-9 |
+
+诚实标注：本例收益仅 ~4%，原因是 `implicit_vjp` 在收敛点重新装配的 A
+与牛顿最后一次分解（倒数第二迭代点）数值不同 → 转置回代前仍需一次数值
+重分解（phase 22，~2.9s@89k）。**若接受"用牛顿末次分解做伴随"（lagged
+adjoint，与 modified Newton 同族的近似）或在收敛点复用分解，伴随可降到
+~0.1s 纯回代**——这是转置复用的完整收益形态，留待与 modified Newton 一起
+评估（涉及梯度近似误差的标定）。机制本身（iparm(12)、多 pattern 正反向
+共存、正确性）已验证到位。
+
+### 扩展轮结论增补
+
+1. **直接法的准确性有二阶收益**：tmfull 里牛顿迭代数减半不是求解速度，
+   是"每步解得准→牛顿路径短"，这类收益在 ilu 迭代法基线上普遍被低估。
+2. 适用边界修正（更细）：甜区判据里"病态/非对称"权重高于"规模"——
+   dendrite（良态瞬态）打平，tmfull（耦合非对称）大胜，两者规模相近。
+3. 转置复用是基础设施级正确的改动，完整收益绑定 lagged-Jacobian 路线。
+
 ## 3. 工具与数据位置
 
 - 通用 harness：`159_local/v07/bench_apps.py`
@@ -62,42 +129,18 @@ phase23/PARDISO 直接法路线的甜区 = **中等规模（≲20 万 dofs）×
 - 驱动脚本：`159_local/v07/run_apps_comparison.sh`（本轮 8 个 arm 的复现入口）
 - 场对比工具：`159_local/v07/vtu_diff.py <ref.vtu> <test.vtu>`
 - 计时 json + 输出快照：`output/05_bench/v07_apps/`
-- 变体实现（本轮新增 backsolve 捷径）：`159_local/v07/pardiso_variants.py`
+- 变体实现（含 backsolve 捷径与 iparm(12) 转置复用）：
+  `159_local/v07/pardiso_variants.py`（`VariantSolver.solve_transposed`）
+- 扩展轮脚本：`bench_adjoint.py`（伴随三臂）、`bench_scal_ladder.py`
+  （规模阶梯）；数据 `output/05_bench/v07_{apps,ladder,adjoint}/`
 
-## 4. 续跑清单（按优先级）
+## 4. 续跑清单
 
-### 4.1 补跑 scal/spsolve（传统直接法参照，预计很慢，给 1h 超时）
+### 4.1 ~~补跑 scal/spsolve~~（已定案 2026-07-20：OOM 不可行，见 §1.3）
 
-```bash
-cd /home/user/work/159/jax-fem && source ~/miniforge3/etc/profile.d/conda.sh \
-  && conda activate jax-fem-env && export PYTHONPATH=$PWD MPLBACKEND=Agg
-timeout 3600 python 159_local/v07/bench_apps.py \
-  applications/scalability/example_forward.py spsolve \
-  output/05_bench/v07_apps/scal_spsolve.json
-# 超时本身就是结论：记"SuperLU 397k 3D 不可行（>1h）"
-```
+### 4.2 ~~解一致性核查~~（已完成 2026-07-20：全部通过，见 §1.4）
 
-### 4.2 解一致性核查（每工况一条判据）
-
-```bash
-# pff：力-位移验证曲线（对文献 ref 的判据）
-python - <<'EOF'
-import numpy as np
-a = np.load('output/05_bench/v07_apps/pff_baseline_out/sol.npz')
-b = np.load('output/05_bench/v07_apps/pff_phase23_out/sol.npz')
-print('force max_abs_diff:', np.max(np.abs(a['forces']-b['forces'])))
-EOF
-# wave：终态场，直接法阵营内部应逐位或 ~1e-15
-python 159_local/v07/vtu_diff.py \
-  output/05_bench/v07_apps/wave_spsolve_out/vtk/u_199.vtk \
-  output/05_bench/v07_apps/wave_phase23_out/vtk/u_199.vtk
-# scal：phase23 vs petsc 基线（预期差 ~迭代容差）
-python 159_local/v07/vtu_diff.py \
-  output/05_bench/v07_apps/scal_baseline_out/vtk/u_classic_50x50x50.vtu \
-  output/05_bench/v07_apps/scal_phase23_out/vtk/u_classic_50x50x50.vtu
-```
-
-### 4.3 补充工况（扩大覆盖面，均可用 bench_apps.py 直接跑）
+### 4.3 补充工况（可选扩展，均可用 bench_apps.py 直接跑）
 
 1. **dendrite**（相场枝晶 + 热耦合，瞬态多步）——预期同 1.1/1.2 混合特征。
 2. **forming / updated_lagrangian**（大变形接触/成形，强非线性牛顿）——

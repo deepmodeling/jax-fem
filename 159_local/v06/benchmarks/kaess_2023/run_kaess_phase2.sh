@@ -60,9 +60,12 @@ MECH_REL_TOL="${MECH_REL_TOL:-5e-5}"
 # 9 -> 1 on the 3-layer smoke. Set THERMAL_LUMPING="" to disable.
 THERMAL_LUMPING="${THERMAL_LUMPING:-1}"
 
+# ELEMENT_TYPE=c3d8 (default): reference-parity hexes with B-bar; c3d4 =
+# legacy volumetric-locking comparison arm (mesh selection further below).
+ELEMENT_TYPE="${ELEMENT_TYPE:-c3d8}"
 RUN_ID="${RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
-OUT_ROOT="${OUT_ROOT:-${WORK_ROOT}/output/kaess_p2_T${PLATE_TEMP_C}C_${POWER_TAG}_${RUN_ID}}"
-RUN_LABEL="kaess-2023-phase2-T${PLATE_TEMP_C}C-${POWER_TAG}"
+OUT_ROOT="${OUT_ROOT:-${WORK_ROOT}/output/kaess_p2_T${PLATE_TEMP_C}C_${POWER_TAG}_${ELEMENT_TYPE}_${RUN_ID}}"
+RUN_LABEL="kaess-2023-phase2-T${PLATE_TEMP_C}C-${POWER_TAG}-${ELEMENT_TYPE}"
 
 MATERIAL_CONFIG="${MATERIAL_CONFIG:-${WORK_ROOT}/materials/316L/ss316l_material_config_kaess.json}"
 # POWDER_SOLID=1: paper-parity weak-solid powder (E=10 GPa / sigma_y=1 MPa,
@@ -71,14 +74,23 @@ MATERIAL_CONFIG="${MATERIAL_CONFIG:-${WORK_ROOT}/materials/316L/ss316l_material_
 # deviation) and makes powder load-bearing during the build, depowdered at
 # release. Default off = phase-2 legacy behavior (powder carries no load).
 POWDER_SOLID="${POWDER_SOLID:-}"
+# v03 auto-enables B-bar on HEX8 (Abaqus C3D8 selective reduced
+# integration), curing the TET4+J2 volumetric locking diagnosed 2026-07-21.
+# The c3d8 powder mesh also meshes the 0.1 mm lateral margins (48x28x22 =
+# 29,568 elements, cell-for-cell the paper's mesh); the c3d4 powder mesh
+# keeps its legacy gap-only fill.
 if [[ -n "${POWDER_SOLID}" ]]; then
-  MESH_FILE="${MESH_FILE:-${SCRIPT_DIR}/kaess_cantilever_c3d4_powder.inp}"
+  if [[ "${ELEMENT_TYPE}" == "c3d8" ]]; then
+    MESH_FILE="${MESH_FILE:-${SCRIPT_DIR}/kaess_cantilever_c3d8_powder_margin.inp}"
+  else
+    MESH_FILE="${MESH_FILE:-${SCRIPT_DIR}/kaess_cantilever_c3d4_powder.inp}"
+  fi
   POWDER_ARGS=(--powder-elset POWDER
                --powder-solid-E "${POWDER_SOLID_E:-10e9}"
                --powder-solid-yield "${POWDER_SOLID_YIELD:-1e6}"
                --powder-solid-hardening "${POWDER_SOLID_HARDENING:-1e7}")
 else
-  MESH_FILE="${MESH_FILE:-${SCRIPT_DIR}/kaess_cantilever_c3d4.inp}"
+  MESH_FILE="${MESH_FILE:-${SCRIPT_DIR}/kaess_cantilever_${ELEMENT_TYPE}.inp}"
   POWDER_ARGS=()
 fi
 EXTRA_ARGS="${EXTRA_ARGS:-}"

@@ -152,14 +152,30 @@ def apply_thermal_mass_lumping(problem):
             "--thermal-mass-lumping requires an equal-weight quadrature rule; "
             f"got weights {weights}")
     grads = onp.asarray(fe.shape_grads_ref)
-    if not onp.allclose(grads, grads[0:1]):
-        raise ValueError(
-            "--thermal-mass-lumping requires constant shape gradients "
-            "(linear elements); higher-order elements are not supported")
-    fe.shape_vals = np.eye(fe.num_nodes)
+    if onp.allclose(grads, grads[0:1]):
+        # Linear simplex (TET4): constant gradients, so the vertex rule also
+        # leaves conduction bitwise unchanged.
+        fe.shape_vals = np.eye(fe.num_nodes)
+        label = "TET4 vertex quadrature (conduction unchanged)"
+    else:
+        # HEX8 2x2x2 Gauss: pair each quad point with the vertex of its
+        # octant (the trilinear basis peaks at its own vertex, so argmax of
+        # the original shape values is that pairing). Capacitance/source
+        # terms collocate at the vertices with weight V/8 while conduction
+        # keeps its Gauss-point gradients - the Abaqus first-order
+        # heat-transfer element (DC3D8) split.
+        sv = onp.asarray(fe.shape_vals)
+        nearest = onp.argmax(sv, axis=1)
+        if len(set(nearest.tolist())) != fe.num_nodes:
+            raise ValueError(
+                "--thermal-mass-lumping: quadrature points do not pair "
+                "one-to-one with element vertices; use --quadrature-order 2")
+        perm = onp.zeros_like(sv)
+        perm[onp.arange(fe.num_quads), nearest] = 1.0
+        fe.shape_vals = np.asarray(perm)
+        label = "HEX8 vertex collocation (conduction stays at Gauss points)"
     problem.physical_quad_points = fe.get_physical_quad_points()
-    print("thermal mass lumping: TET4 vertex quadrature installed "
-          "(diagonal capacitance, conduction unchanged)")
+    print(f"thermal mass lumping: {label} installed (diagonal capacitance)")
     return problem
 
 
@@ -364,7 +380,16 @@ class TransientThermal(Problem):
 
 class ThermoMechanical(Problem):
     def custom_init(self, mechanics_model, yield_saturation=None, foundation_stiffness=0.0,
-                    powder_foundation_stiffness=0.0, powder_plane_axes=()):
+                    powder_foundation_stiffness=0.0, powder_plane_axes=(), bbar=False):
+        # B-bar (element-average volumetric strain). jax-fem dispatches on
+        # hasattr(get_tensor_map)/hasattr(get_universal_kernel) and SUMS all
+        # kernels that exist, so exactly one of the two is bound per
+        # instance (custom_init runs before pre_jit_fns).
+        self.bbar = bool(bbar)
+        if self.bbar:
+            self.get_universal_kernel = self._make_bbar_universal_kernel
+        else:
+            self.get_tensor_map = self._tensor_map_getter
         self.mechanics_model = mechanics_model
         # Cap on the hardened yield stress (~UTS). Linear isotropic hardening
         # extrapolated past its ~10% strain validity produced 2 GPa fictitious
@@ -442,8 +467,75 @@ class ThermoMechanical(Problem):
 
         return active_factor[0] * sigma
 
-    def get_tensor_map(self):
+    def _tensor_map_getter(self):
+        # Bound as instance attribute `get_tensor_map` when bbar is off.
         return self.stress_fn
+
+    def _make_bbar_universal_kernel(self):
+        """B-bar volume kernel: element-average volumetric strain on BOTH the
+        trial and test sides (Hughes 1980; what Abaqus C3D8 does by default).
+
+        Trial: sigma is evaluated at eps_bar = dev(eps) + (theta_bar/3) I with
+        theta_bar the JxW-weighted element average of tr(grad u). Test: for a
+        symmetric sigma, sigma : eps_bar(v) = dev(sigma) : grad(v) +
+        p * theta_bar(v), so the deviatoric part contracts with the raw test
+        gradients and the pressure with the element-average test dilatation.
+        The consistent tangent comes free from jax-fem's jacfwd over this
+        kernel. Cures TET4/HEX8 volumetric locking under J2 flow (checkerboard
+        hydrostatic pressure, diagnosed 2026-07-21); an exact no-op wherever
+        tr(grad u) is element-constant.
+        """
+        num_nodes = self.fes[0].num_nodes
+        dim = self.dim
+        tensor_map = self.stress_fn  # late-bound: subclasses' stress_fn wins
+
+        def kernel(cell_sol_flat, physical_quad_points, cell_shape_grads,
+                   cell_JxW, cell_v_grads_JxW, *cell_internal_vars):
+            # shapes as in Problem.get_laplace_kernel / get_mass_kernel
+            cell_sol = self.unflatten_fn_dof(cell_sol_flat)[0]      # (num_nodes, vec)
+            shape_grads = cell_shape_grads[:, :num_nodes, :]        # (num_quads, num_nodes, dim)
+            v_grads_JxW = cell_v_grads_JxW[:, :num_nodes, :, :]     # (num_quads, num_nodes, 1, dim)
+            JxW = cell_JxW[0]                                       # (num_quads,)
+            eye = np.eye(dim)
+
+            u_grads = np.sum(cell_sol[None, :, :, None] * shape_grads[:, :, None, :],
+                             axis=1)                                # (num_quads, vec, dim)
+            vol = np.sum(JxW)
+            theta = np.trace(u_grads, axis1=-2, axis2=-1)           # (num_quads,)
+            theta_bar = np.sum(theta * JxW) / vol
+            u_grads_bar = u_grads + ((theta_bar - theta) / dim)[:, None, None] * eye
+
+            sigma = jax.vmap(tensor_map)(u_grads_bar, *cell_internal_vars)
+            p = np.trace(sigma, axis1=-2, axis2=-1) / dim           # (num_quads,)
+            sigma_dev = sigma - p[:, None, None] * eye
+
+            # deviatoric stress against raw test gradients ...
+            val = np.sum(sigma_dev[:, None, :, :] * v_grads_JxW, axis=(0, -1))
+            # ... pressure against the element-average test dilatation
+            avg_v_grads = np.sum(v_grads_JxW, axis=0)[:, 0, :] / vol  # (num_nodes, dim)
+            val = val + np.sum(p * JxW) * avg_v_grads
+            return jax.flatten_util.ravel_pytree(val)[0]
+
+        return kernel
+
+    def _u_grads(self, sol):
+        """Displacement gradients at quad points, B-barred when enabled.
+
+        Every consumer of strain outside the residual (stress output, eqp
+        update, stress-free reference capture) must use the SAME strain
+        measure as the residual, so the barring lives here.
+        """
+        u_grads = np.sum(
+            np.take(sol, self.fes[0].cells, axis=0)[:, None, :, :, None]
+            * self.fes[0].shape_grads[:, :, :, None, :],
+            axis=2)                                    # (num_cells, num_quads, vec, dim)
+        if getattr(self, "bbar", False):
+            JxW = self.fes[0].JxW                      # (num_cells, num_quads)
+            theta = np.trace(u_grads, axis1=-2, axis2=-1)
+            theta_bar = (np.sum(theta * JxW, axis=1, keepdims=True)
+                         / np.sum(JxW, axis=1, keepdims=True))
+            u_grads = u_grads + ((theta_bar - theta) / self.dim)[..., None, None] * np.eye(self.dim)
+        return u_grads
 
     def get_surface_maps(self):
         # Elastic foundation (Winkler springs) on the base surface: the build
@@ -508,8 +600,7 @@ class ThermoMechanical(Problem):
 
     def compute_cell_stress(self, sol, params):
         T_quad, dT_quad, active_factor_quad, young_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad, eqp_old_quad = params
-        u_grads = np.take(sol, self.fes[0].cells, axis=0)[:, None, :, :, None] * self.fes[0].shape_grads[:, :, :, None, :]
-        u_grads = np.sum(u_grads, axis=2)
+        u_grads = self._u_grads(sol)
         sigmas = jax.vmap(jax.vmap(self.stress_fn))(
             u_grads,
             T_quad,
@@ -532,8 +623,7 @@ class ThermoMechanical(Problem):
             return params[-1]
 
         T_quad, dT_quad, active_factor_quad, young_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad, eqp_old_quad = params
-        u_grads = np.take(sol, self.fes[0].cells, axis=0)[:, None, :, :, None] * self.fes[0].shape_grads[:, :, :, None, :]
-        u_grads = np.sum(u_grads, axis=2)
+        u_grads = self._u_grads(sol)
 
         def one_quad(u_grad, T, dT, active_factor, young, alpha, poisson, yield_stress, hardening, eqp_old):
             eps = 0.5 * (u_grad + u_grad.T)
@@ -876,6 +966,14 @@ def build_parser(config=None):
                              "restoring the discrete maximum principle that suppresses activation "
                              "undershoot; conduction is unaffected (constant gradients). Requires "
                              "--quadrature-order 2 (4 equal-weight points).")
+    parser.add_argument("--mechanics-bbar", choices=("auto", "on", "off"),
+                        default=cfg(config, "mechanics_bbar", "auto"),
+                        help="B-bar (element-average volumetric strain) for the mechanics element. "
+                             "auto = on for HEX8, off for TET4. On HEX8 this is the Abaqus C3D8 "
+                             "selective-reduced-integration behavior and prevents volumetric locking "
+                             "under J2 flow (checkerboard hydrostatic pressure). On TET4 the strain "
+                             "is element-constant, so B-bar is an exact no-op - TET4 locking needs a "
+                             "hex mesh (or nodal averaging, not implemented).")
     parser.add_argument("--mechanics-max-cuts", type=int,
                         default=cfg(config, "mechanics_max_cuts", 0),
                         help="Abaqus-style automatic increment cutback for mechanics solves: on Newton "
@@ -1515,27 +1613,59 @@ def make_quad_scalar(cell_values, num_quads):
     return arr * np.ones((len(cell_values), num_quads, 1))
 
 
-def read_inp_cell_set(path, set_name, num_cells):
-    """Boolean mask over tetra cells for a named inp ELSET.
+SOLID_BLOCKS = (("tetra", "TET4"), ("hexahedron", "HEX8"))
 
-    Cell order must match read_tet4_inp(): both read the same meshio tetra
+
+def read_solid_inp(path, max_cells):
+    """Read a C3D4 (tetra) or C3D8 (hexahedron) inp.
+
+    Returns (points, cells, selected_cells, ele_type). The hexahedron path
+    keeps meshio cell order (VTK == Abaqus C3D8 node order, no reordering)
+    so ELSET indices from read_inp_cell_set() stay aligned.
+    """
+    import meshio
+
+    meshio_mesh = meshio.read(path)
+    if "hexahedron" in meshio_mesh.cells_dict:
+        if "tetra" in meshio_mesh.cells_dict:
+            raise ValueError(f"{path} mixes tetra and hexahedron blocks")
+        if max_cells:
+            raise ValueError("--max-cells truncation is TET4-only")
+        points = onp.asarray(meshio_mesh.points, dtype=onp.float64)
+        cells = onp.asarray(meshio_mesh.cells_dict["hexahedron"], dtype=onp.int64)
+        used = onp.unique(cells.reshape(-1))
+        if len(used) != len(points):
+            old_to_new = -onp.ones(len(points), dtype=onp.int64)
+            old_to_new[used] = onp.arange(len(used), dtype=onp.int64)
+            points = points[used]
+            cells = old_to_new[cells]
+        return points, cells, len(cells), "HEX8"
+    points, cells, selected_cells = read_tet4_inp(path, max_cells)
+    return points, cells, selected_cells, "TET4"
+
+
+def read_inp_cell_set(path, set_name, num_cells):
+    """Boolean mask over solid cells for a named inp ELSET.
+
+    Cell order must match read_solid_inp(): both read the same meshio solid
     block and neither reorders cells (orientation fixes swap nodes in place),
     so the 0-based set indices align with the solver cell array.
     """
     import meshio
 
     meshio_mesh = meshio.read(path)
+    block = next((b for b, _ in SOLID_BLOCKS if b in meshio_mesh.cells_dict), None)
     sets = getattr(meshio_mesh, "cell_sets_dict", None) or {}
-    if set_name not in sets or "tetra" not in sets[set_name]:
+    if block is None or set_name not in sets or block not in sets[set_name]:
         available = ", ".join(sorted(sets)) or "(none)"
         raise ValueError(
-            f"ELSET {set_name!r} with tetra cells not found in {path}; "
-            f"available sets: {available}")
-    indices = onp.asarray(sets[set_name]["tetra"], dtype=onp.int64)
-    if len(meshio_mesh.cells_dict["tetra"]) != num_cells:
+            f"ELSET {set_name!r} with {block or 'solid'} cells not found in "
+            f"{path}; available sets: {available}")
+    indices = onp.asarray(sets[set_name][block], dtype=onp.int64)
+    if len(meshio_mesh.cells_dict[block]) != num_cells:
         raise ValueError(
             f"cell count mismatch between solver mesh ({num_cells}) and "
-            f"{path} tetra block ({len(meshio_mesh.cells_dict['tetra'])}); "
+            f"{path} {block} block ({len(meshio_mesh.cells_dict[block])}); "
             "--max-cells truncation is incompatible with --powder-elset")
     mask = onp.zeros(num_cells, dtype=bool)
     mask[indices] = True
@@ -2416,7 +2546,17 @@ def main():
     if args.release_after_cooling and args.cooling_steps < 1:
         print("WARNING: --release-after-cooling requested without cooling steps; release will run after printing.")
 
-    raw_points, cells, selected_cells = read_tet4_inp(args.inp, args.max_cells)
+    raw_points, cells, selected_cells, ele_type = read_solid_inp(args.inp, args.max_cells)
+    if ele_type == "HEX8" and (args.quadrature_order is None or args.quadrature_order < 2):
+        raise ValueError(
+            "HEX8 meshes require --quadrature-order 2 (2x2x2 Gauss): the "
+            "single-point rule is rank-deficient (hourglass modes)")
+    bbar_enabled = {"auto": ele_type == "HEX8", "on": True, "off": False}[args.mechanics_bbar]
+    print(f"mesh element type: {ele_type}; mechanics B-bar: "
+          f"{'ON' if bbar_enabled else 'OFF'} (--mechanics-bbar {args.mechanics_bbar})")
+    if ele_type == "HEX8" and not bbar_enabled:
+        print("WARNING: HEX8 without B-bar volumetric-locks under J2 flow "
+              "(checkerboard hydrostatic pressure); comparison arms only.")
     raw_pmin = onp.min(raw_points, axis=0)
     raw_pmax = onp.max(raw_points, axis=0)
     points = raw_points * args.mesh_length_scale
@@ -2500,12 +2640,12 @@ def main():
     else:
         location_fns.append(bottom_for_flux)
 
-    mesh = Mesh(points, cells, ele_type="TET4")
+    mesh = Mesh(points, cells, ele_type=ele_type)
     thermal = TransientThermal(
         mesh=mesh,
         vec=1,
         dim=3,
-        ele_type="TET4",
+        ele_type=ele_type,
         quadrature_order=args.quadrature_order,
         dirichlet_bc_info=thermal_bc,
         location_fns=location_fns,
@@ -2557,7 +2697,7 @@ def main():
         mesh=mesh,
         vec=3,
         dim=3,
-        ele_type="TET4",
+        ele_type=ele_type,
         quadrature_order=args.quadrature_order,
         dirichlet_bc_info=mechanics_bc,
         location_fns=mechanics_location_fns,
@@ -2567,6 +2707,7 @@ def main():
             mechanics_foundation,
             powder_foundation,
             tuple(plane_axis_ids),
+            bbar_enabled,
         ),
     )
 
@@ -2974,10 +3115,11 @@ def main():
             mesh=mesh,
             vec=3,
             dim=3,
-            ele_type="TET4",
+            ele_type=ele_type,
             quadrature_order=args.quadrature_order,
             dirichlet_bc_info=release_bc,
-            additional_info=(args.mechanics_model, args.yield_saturation_stress, 0.0),
+            additional_info=(args.mechanics_model, args.yield_saturation_stress,
+                             0.0, 0.0, (), bbar_enabled),
         )
         u_release = run_mechanics(release_mechanics, u_guess, mechanics_params, mechanics_newton_overrides)
         quad_stress = release_mechanics.compute_cell_stress(u_release[0], mechanics_params)

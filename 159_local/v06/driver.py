@@ -450,12 +450,10 @@ def install_v06_adapter(base_module, profiler=None):
                 self._eps_ref_state,
             ]
 
-        def _u_grads(self, sol):
-            gradients = (
-                np.take(sol, self.fes[0].cells, axis=0)[:, None, :, :, None]
-                * self.fes[0].shape_grads[:, :, :, None, :]
-            )
-            return np.sum(gradients, axis=2)
+        # _u_grads is inherited from the v03 base class: it applies B-bar
+        # (element-average volumetric strain) when the problem was built
+        # with bbar=True, keeping the state-update strain measure identical
+        # to the residual's.
 
         def capture_stress_free_reference(
             self,

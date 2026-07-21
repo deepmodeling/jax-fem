@@ -110,14 +110,21 @@ def example():
     save_sol(problem.fes[0], np.hstack((sol_list[0], np.zeros((len(sol_list[0]), 1)))),
              os.path.join(OUTPUT_DIR, 'u.vtu'))
 
-    # The aux problem is to verify that our "noise" (also used in the arc-length example) 
-    # is actually very small.
-    # The aux problem does not have any noise, but still converging to a similar configuration.
+    # The aux problem verifies that the small branch-selecting load (also used
+    # in the arc-length example) has a negligible effect on the buckled
+    # equilibrium. The load is removed, while the buckled solution above is
+    # used as the initial guess to stay on the same equilibrium branch.
     problem_aux = HyperElasticityAux(
         mesh, vec=2, dim=2, ele_type=ele_type, 
         dirichlet_bc_info=dirichlet_bc_info,
     )
-    sol_aux_list = solver(problem_aux, solver_options)
+    solver_options_aux = {
+        'dynamic_relax': {
+            'tol': 1e-8,
+            'initial_guess': sol_list,
+        },
+    }
+    sol_aux_list = solver(problem_aux, solver_options_aux)
     save_sol(problem_aux.fes[0], np.hstack((sol_aux_list[0], np.zeros((len(sol_aux_list[0]), 1)))),
              os.path.join(OUTPUT_DIR, 'u_aux.vtu'))
 

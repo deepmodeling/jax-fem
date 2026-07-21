@@ -65,7 +65,22 @@ OUT_ROOT="${OUT_ROOT:-${WORK_ROOT}/output/kaess_p2_T${PLATE_TEMP_C}C_${POWER_TAG
 RUN_LABEL="kaess-2023-phase2-T${PLATE_TEMP_C}C-${POWER_TAG}"
 
 MATERIAL_CONFIG="${MATERIAL_CONFIG:-${WORK_ROOT}/materials/316L/ss316l_material_config_kaess.json}"
-MESH_FILE="${MESH_FILE:-${SCRIPT_DIR}/kaess_cantilever_c3d4.inp}"
+# POWDER_SOLID=1: paper-parity weak-solid powder (E=10 GPa / sigma_y=1 MPa,
+# Kaess 2023 sec 2.2) - switches to the powder-filled mesh (inter-wall gaps
+# meshed as a POWDER elset; lateral margins still unmeshed, documented
+# deviation) and makes powder load-bearing during the build, depowdered at
+# release. Default off = phase-2 legacy behavior (powder carries no load).
+POWDER_SOLID="${POWDER_SOLID:-}"
+if [[ -n "${POWDER_SOLID}" ]]; then
+  MESH_FILE="${MESH_FILE:-${SCRIPT_DIR}/kaess_cantilever_c3d4_powder.inp}"
+  POWDER_ARGS=(--powder-elset POWDER
+               --powder-solid-E "${POWDER_SOLID_E:-10e9}"
+               --powder-solid-yield "${POWDER_SOLID_YIELD:-1e6}"
+               --powder-solid-hardening "${POWDER_SOLID_HARDENING:-1e7}")
+else
+  MESH_FILE="${MESH_FILE:-${SCRIPT_DIR}/kaess_cantilever_c3d4.inp}"
+  POWDER_ARGS=()
+fi
 EXTRA_ARGS="${EXTRA_ARGS:-}"
 
 for f in "${MATERIAL_CONFIG}" "${MESH_FILE}"; do
@@ -167,6 +182,7 @@ SOLVER_CMD=(
   ${MECH_T_FLOOR:+--mechanics-temperature-floor "${MECH_T_FLOOR}"}
   --mechanics-max-cuts "${MECH_MAX_CUTS}"
   ${THERMAL_LUMPING:+--thermal-mass-lumping}
+  ${POWDER_ARGS[@]+"${POWDER_ARGS[@]}"}
   --release-after-cooling
   --release-anchor-mode box
   # saw cut per paper Fig 7: root wall keeps its plate connection,

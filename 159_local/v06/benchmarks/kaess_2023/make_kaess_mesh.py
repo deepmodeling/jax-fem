@@ -50,7 +50,11 @@ SUPPORT_WALLS = ((0.025e-3, 0.125e-3),
 
 def build_mesh(nx=40, ny=20, support_layers=12, build_layers=10,
                dx=25.0e-6, dy=25.0e-6, dz_support=25.0e-6, dz_build=30.0e-6,
-               walls=SUPPORT_WALLS):
+               walls=SUPPORT_WALLS, powder_fill=False):
+    """powder_fill=True meshes the inter-wall gaps of the support region and
+    reports their (1-based) element ids so they can be written as a POWDER
+    elset. The reference model (Kaess 2023) meshes powder as a weak solid;
+    lateral margins remain unmeshed (documented deviation)."""
     xs = np.arange(nx + 1) * dx
     ys = np.arange(ny + 1) * dy
     z_support = np.arange(support_layers + 1) * dz_support
@@ -72,11 +76,13 @@ def build_mesh(nx=40, ny=20, support_layers=12, build_layers=10,
         return any(lo - 1e-9 < xc < hi + 1e-9 for lo, hi in walls)
 
     tets = []
+    powder_eids = []
     for k in range(nz):
         support_region = k < support_layers
         for j in range(ny):
             for i in range(nx):
-                if support_region and not in_wall(i):
+                gap = support_region and not in_wall(i)
+                if gap and not powder_fill:
                     continue  # powder gap between walls: unmeshed (void)
                 corners = (
                     nid(i, j, k), nid(i + 1, j, k),
@@ -86,6 +92,8 @@ def build_mesh(nx=40, ny=20, support_layers=12, build_layers=10,
                 )
                 for tet in HEX_TO_TETS:
                     tets.append(tuple(corners[c] for c in tet))
+                    if gap:
+                        powder_eids.append(len(tets))  # 1-based element id
 
     # compact node numbering: keep only referenced nodes
     used = np.unique(np.asarray(tets).reshape(-1))
@@ -93,7 +101,7 @@ def build_mesh(nx=40, ny=20, support_layers=12, build_layers=10,
     remap[used] = np.arange(1, len(used) + 1)
     points = points[used - 1]
     tets = [tuple(int(remap[n]) for n in t) for t in tets]
-    return points, tets
+    return points, tets, powder_eids
 
 
 def signed_volumes(points, tets):
@@ -106,9 +114,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--output", type=Path,
                     default=Path(__file__).parent / "kaess_cantilever_c3d4.inp")
+    ap.add_argument("--powder-fill", action="store_true",
+                    help="mesh the inter-wall support gaps and emit them as "
+                         "an *ELSET, ELSET=POWDER block (weak-solid powder)")
     args = ap.parse_args()
 
-    points, tets = build_mesh()
+    points, tets, powder_eids = build_mesh(powder_fill=args.powder_fill)
     vols = signed_volumes(points, tets)
     flipped = int(np.sum(vols <= 0.0))
     if flipped:
@@ -123,6 +134,8 @@ def main():
     wall_width = sum(hi - lo for lo, hi in SUPPORT_WALLS)
     expected = (1.0e-3 * 0.5e-3 * 0.3e-3          # beam
                 + wall_width * 0.5e-3 * 0.3e-3)   # support walls
+    if args.powder_fill:
+        expected += (1.0e-3 - wall_width) * 0.5e-3 * 0.3e-3  # powder gaps
     total = float(np.sum(vols))
     assert abs(total - expected) / expected < 1e-9, (total, expected)
 
@@ -135,8 +148,13 @@ def main():
         f.write("*ELEMENT, TYPE=C3D4, ELSET=PART\n")
         for e, t in enumerate(tets, start=1):
             f.write(f"{e}, {t[0]}, {t[1]}, {t[2]}, {t[3]}\n")
+        if powder_eids:
+            f.write("*ELSET, ELSET=POWDER\n")
+            for start in range(0, len(powder_eids), 12):
+                f.write(", ".join(str(e) for e in powder_eids[start:start + 12]) + "\n")
 
-    print(f"nodes={len(points)} tets={len(tets)} flipped_fixed={flipped}")
+    print(f"nodes={len(points)} tets={len(tets)} flipped_fixed={flipped} "
+          f"powder_tets={len(powder_eids)}")
     print(f"total_volume={total:.6e} m^3 (expected {expected:.6e})")
     print(f"wrote {args.output}")
 

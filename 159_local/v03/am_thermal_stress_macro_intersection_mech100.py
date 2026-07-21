@@ -844,6 +844,29 @@ def build_parser(config=None):
                              "material tables) to at least this value in K. Guard against activation "
                              "undershoot artifacts (G1) feeding sub-physical temperatures into full-stiffness "
                              "solid; a mitigation knob, not a fix — the thermal field itself stays unclamped.")
+    parser.add_argument("--powder-elset", default=cfg(config, "powder_elset", None),
+                        help="Name of an inp ELSET whose cells are PERMANENT powder: excluded from "
+                             "substrate/support classification and from printing, thermally active "
+                             "as powder from step 0. Combine with --powder-solid-E to make them "
+                             "mechanically load-bearing (weak-solid powder, Kaess 2023 convention).")
+    parser.add_argument("--powder-solid-E", type=float,
+                        default=cfg(config, "powder_solid_E", None),
+                        help="Weak-solid powder Young's modulus in Pa (Kaess 2023: 10e9). When set "
+                             "(requires --powder-elset), permanent-powder cells join the mechanics "
+                             "active set with this constant E, --powder-solid-yield, zero hardening "
+                             "and zero thermal expansion; they are deactivated (depowdered) for the "
+                             "release solve. None keeps legacy behavior (powder carries no load).")
+    parser.add_argument("--powder-solid-yield", type=float,
+                        default=cfg(config, "powder_solid_yield", 1.0e6),
+                        help="Weak-solid powder yield stress in Pa (Kaess 2023: 1e6).")
+    parser.add_argument("--powder-solid-hardening", type=float,
+                        default=cfg(config, "powder_solid_hardening", 1.0e7),
+                        help="Weak-solid powder hardening modulus in Pa. The reference model is "
+                             "ideally plastic (H=0), but H=0 over ~30k permanently-yielded powder "
+                             "cells makes the consistent tangent semi-definite and Newton stalls at "
+                             "~1e-3 relative regardless of increment cutback (observed). The default "
+                             "0.1%% of E adds <1 MPa at 10%% strain - a documented regularization "
+                             "deviation, not physics.")
     parser.add_argument("--thermal-mass-lumping", action="store_true",
                         default=cfg(config, "thermal_mass_lumping", False),
                         help="Evaluate the thermal transient/source (mass-map) terms with the TET4 "
@@ -1492,6 +1515,33 @@ def make_quad_scalar(cell_values, num_quads):
     return arr * np.ones((len(cell_values), num_quads, 1))
 
 
+def read_inp_cell_set(path, set_name, num_cells):
+    """Boolean mask over tetra cells for a named inp ELSET.
+
+    Cell order must match read_tet4_inp(): both read the same meshio tetra
+    block and neither reorders cells (orientation fixes swap nodes in place),
+    so the 0-based set indices align with the solver cell array.
+    """
+    import meshio
+
+    meshio_mesh = meshio.read(path)
+    sets = getattr(meshio_mesh, "cell_sets_dict", None) or {}
+    if set_name not in sets or "tetra" not in sets[set_name]:
+        available = ", ".join(sorted(sets)) or "(none)"
+        raise ValueError(
+            f"ELSET {set_name!r} with tetra cells not found in {path}; "
+            f"available sets: {available}")
+    indices = onp.asarray(sets[set_name]["tetra"], dtype=onp.int64)
+    if len(meshio_mesh.cells_dict["tetra"]) != num_cells:
+        raise ValueError(
+            f"cell count mismatch between solver mesh ({num_cells}) and "
+            f"{path} tetra block ({len(meshio_mesh.cells_dict['tetra'])}); "
+            "--max-cells truncation is incompatible with --powder-elset")
+    mask = onp.zeros(num_cells, dtype=bool)
+    mask[indices] = True
+    return mask
+
+
 def classify_cells(points, cells, build_axis_id, build_sign, base_coord, args):
     centroids = onp.mean(points[cells], axis=1)
     cell_build_coord = centroids[:, build_axis_id]
@@ -1947,6 +1997,20 @@ def mechanics_material_quads(T_quad, active_quad, phase_quad, args, tables):
     )
     active_factor_quad = active_factor_quad * active_quad + args.inactive_mechanics_factor * (1.0 - active_quad)
     alpha_quad = np.where(is_solid_like, alpha_base, np.zeros_like(alpha_base))
+    if getattr(args, "powder_solid_E", None) is not None:
+        # Weak-solid powder (Kaess 2023): constant E/sigma_y, no hardening,
+        # full active factor where mechanically active - the weakness lives in
+        # the material values, not the ersatz factor. alpha stays zero above.
+        is_powder = phase_quad == STATE_POWDER
+        E_quad = np.where(is_powder, args.powder_solid_E, E_quad)
+        yield_quad = np.where(is_powder, args.powder_solid_yield, yield_quad)
+        hardening_quad = np.where(
+            is_powder, getattr(args, "powder_solid_hardening", 1.0e7), hardening_quad)
+        active_factor_quad = np.where(
+            is_powder,
+            active_quad + args.inactive_mechanics_factor * (1.0 - active_quad),
+            active_factor_quad,
+        )
     return active_factor_quad, E_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad
 
 def make_full_bottom_mechanics_bc(bottom):
@@ -2508,6 +2572,19 @@ def main():
 
     tables = load_property_tables(args)
     cell_centroids, cell_build_coord, substrate_cell, support_cell = classify_cells(points, cells, build_axis_id, build_sign, base_coord, args)
+    if args.powder_solid_E is not None and args.powder_elset is None:
+        raise ValueError("--powder-solid-E requires --powder-elset")
+    if args.powder_elset is not None:
+        permanent_powder_cell = read_inp_cell_set(args.inp, args.powder_elset, len(cells))
+        # Permanent powder is never substrate/support/printed; the geometric
+        # classifiers cannot know this (gap cells share the support z-band).
+        substrate_cell &= ~permanent_powder_cell
+        support_cell &= ~permanent_powder_cell
+        print(f"powder elset {args.powder_elset!r}: {int(permanent_powder_cell.sum())} "
+              f"permanent powder cells (weak-solid mechanics: "
+              f"{'ON, E=%g Pa' % args.powder_solid_E if args.powder_solid_E is not None else 'off'})")
+    else:
+        permanent_powder_cell = onp.zeros(len(cells), dtype=bool)
     layer_id_cell = compute_layer_id(cell_build_coord, build_axis_id, part_pmin, part_pmax, args)
     # Fixture cells are not printed part layers. Keep their layer id at 0 for
     # clearer ParaView interpretation.
@@ -2610,6 +2687,8 @@ def main():
     last_dT_quad = np.zeros((len(cells), thermal.fes[0].num_quads, 1))
     last_T_mech_quad = None
     last_mechanical_active_quad = None
+    permanent_powder_quad = make_quad_scalar(
+        permanent_powder_cell.astype(onp.float64), thermal.fes[0].num_quads)
 
     highest_printed_layer = 0
 
@@ -2755,6 +2834,9 @@ def main():
         # displacement/stress. Phase-dependent stiffness inside
         # mechanics_material_quads() still weakens powder/mushy/liquid regions.
         mechanical_active_quad = printed_quad
+        if args.powder_solid_E is not None:
+            # weak-solid powder carries load during the build (Kaess 2023)
+            mechanical_active_quad = np.maximum(printed_quad, permanent_powder_quad)
         T_mech_quad = clamp_mechanics_temperature(T_quad, args.mechanics_temperature_floor)
         dT_quad = (T_mech_quad - T_ref_quad) * mechanical_active_quad
         active_factor_quad, E_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad = mechanics_material_quads(T_mech_quad, mechanical_active_quad, phase_quad, args, tables)
@@ -2877,6 +2959,17 @@ def main():
                     args.inactive_mechanics_factor,
                     mechanics_params[2],
                 )
+        if args.powder_solid_E is not None and permanent_powder_cell.any():
+            # depowdering precedes the saw cut: weak-solid powder is removed
+            # for the release solve exactly like sawed-off cells
+            print(f"release depowder: deactivating "
+                  f"{int(permanent_powder_cell.sum())} powder cells")
+            mechanics_params = list(mechanics_params)
+            mechanics_params[2] = np.where(
+                permanent_powder_quad > 0.5,
+                args.inactive_mechanics_factor,
+                mechanics_params[2],
+            )
         release_mechanics = ThermoMechanical(
             mesh=mesh,
             vec=3,

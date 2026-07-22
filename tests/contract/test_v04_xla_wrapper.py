@@ -268,6 +268,27 @@ class MacroMech100V04XlaWrapperTest(unittest.TestCase):
             "jax_solver(method=spsolve, precond=False, check_residual=False)",
         )
 
+    def test_pardiso_phase23_mode_is_explicit_and_opt_in(self):
+        parser = self.wrapper.build_arg_parser()
+        base_args = parser.parse_args(["--xla-linear-solver", "pardiso"])
+        base_solver = self.wrapper.linear_options_from_args(base_args)[
+            "custom_solver"
+        ]
+        self.assertEqual(base_solver.label, "pardiso_solver(mkl multithreaded direct)")
+
+        phase23_args = parser.parse_args(
+            [
+                "--xla-linear-solver",
+                "pardiso",
+                "--xla-pardiso-mode",
+                "phase23",
+            ]
+        )
+        phase23_solver = self.wrapper.linear_options_from_args(phase23_args)[
+            "custom_solver"
+        ]
+        self.assertEqual(phase23_solver.label, "pardiso_v07(phase23)")
+
     def test_dry_run_records_cell_assembly_cut_override_in_profile_meta(self):
         fake_base = SimpleNamespace(
             read_config=lambda path: {},

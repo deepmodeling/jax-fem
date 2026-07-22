@@ -120,9 +120,15 @@ class _PardisoCustomSolver:
 
     label = "pardiso_solver(mkl multithreaded direct)"
 
-    def __init__(self) -> None:
+    def __init__(self, mode: Optional[str] = None) -> None:
+        valid_modes = {None, "base", "nocmp", "cache-idx", "phase23", "fp32ir"}
+        if mode not in valid_modes:
+            raise ValueError(f"unsupported PARDISO mode: {mode!r}")
         self._solver = None
         self._v07_variant = None
+        self._requested_mode = mode
+        if mode not in (None, "base"):
+            self.label = f"pardiso_v07({mode})"
 
     def __deepcopy__(self, memo):
         # Shared instance keeps the PARDISO handle alive across the
@@ -136,13 +142,16 @@ class _PardisoCustomSolver:
         if self._v07_variant is None:
             import os
 
-            mode = os.environ.get("V07_PARDISO_MODE", "").strip()
+            mode = self._requested_mode
+            if mode is None:
+                mode = os.environ.get("V07_PARDISO_MODE", "").strip()
             if not mode or mode == "base":
                 self._v07_variant = False
             else:
                 from jax_fem_am.solvers.pardiso import VariantSolver
 
                 self._v07_variant = VariantSolver(mode)
+                self.label = self._v07_variant.label
         return self._v07_variant
 
     def __call__(self, A, b, x0, linear_options):
@@ -227,7 +236,11 @@ def linear_options_from_args(args: argparse.Namespace) -> Optional[Dict[str, Any
     elif choice == "pardiso":
         # jax_fem's custom_solver hook expects the callable itself as the
         # option value, not a nested options dict.
-        return {key: _PardisoCustomSolver()}
+        return {
+            key: _PardisoCustomSolver(
+                getattr(args, "xla_pardiso_mode", None)
+            )
+        }
 
     return {key: inner}
 
@@ -797,6 +810,13 @@ def build_arg_parser(parser: Optional[argparse.ArgumentParser] = None
     g.add_argument("--xla-petsc-pc-type", default="jacobi")
     g.add_argument("--xla-petsc-gpu", action="store_true",
                    help="use PETSc aijcusparse/cuda Mat/Vec types")
+    g.add_argument("--xla-pardiso-mode",
+                   choices=["base", "nocmp", "cache-idx", "phase23", "fp32ir"],
+                   default=None,
+                   help=("PARDISO optimization ladder. phase23 reuses CSR indices and "
+                         "symbolic factorization while recomputing numeric factors when "
+                         "matrix values change. Default preserves the base path (or the "
+                         "legacy V07_PARDISO_MODE environment override)."))
     g.add_argument("--xla-amgx-config", default=None,
                    help="path to an AMGX JSON config")
     g.add_argument("--xla-fallback-to-spsolve", action="store_true",
@@ -3151,6 +3171,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     report.meta["residual_only_check_scope"] = (
         "thermal" if args.xla_residual_only_check else "disabled"
+    )
+    report.meta["mechanics_residual_only_check_enabled"] = bool(
+        getattr(args, "mechanics_residual_only_check", False)
     )
     report.meta["step_predicate_cache_enabled"] = bool(
         args.xla_step_predicate_cache

@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import sys
@@ -11,6 +12,16 @@ V06 = ROOT / "cases"
 
 
 class V06RunnerContractTest(unittest.TestCase):
+    def test_kaess_r3_optimized_launcher_keeps_physics_and_enables_safe_optimizations(self):
+        launcher = ROOT / "cases" / "kaess_2023" / "run_kaess_r3_optimized.sh"
+        text = launcher.read_text(encoding="utf-8")
+
+        self.assertIn('PATH_ARGS="${PATH_ARGS:---layers 2}"', text)
+        self.assertIn('POWDER_SOLID="${POWDER_SOLID:-1}"', text)
+        self.assertIn("--mechanics-residual-only-check", text)
+        self.assertIn("--xla-pardiso-mode phase23", text)
+        self.assertIn("run_kaess_phase2.sh", text)
+
     def test_smoke_runner_uses_v06_driver_fixture_and_audit(self):
         text = (V06 / "run_smoke.sh").read_text(encoding="utf-8")
 
@@ -46,6 +57,11 @@ class V06RunnerContractTest(unittest.TestCase):
                     "--xla-dry-run",
                     "--xla-platform",
                     "cpu",
+                    "--xla-linear-solver",
+                    "pardiso",
+                    "--xla-pardiso-mode",
+                    "phase23",
+                    "--mechanics-residual-only-check",
                     "--profile-json",
                     str(profile),
                 ],
@@ -56,12 +72,20 @@ class V06RunnerContractTest(unittest.TestCase):
                 timeout=30,
                 check=False,
             )
-            profile_data = profile.read_text(encoding="utf-8")
+            profile_data = json.loads(profile.read_text(encoding="utf-8"))
 
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("v06: paper-validation constitutive adapter installed", result.stdout)
         self.assertIn("full_loop_xla         = disabled", result.stdout)
-        self.assertIn('"v06_constitutive_model"', profile_data)
+        self.assertIn("v06_constitutive_model", profile_data["meta"])
+        self.assertEqual(
+            profile_data["meta"]["linear_solver_label"],
+            "pardiso_v07(phase23)",
+        )
+        self.assertIs(
+            profile_data["meta"]["mechanics_residual_only_check_enabled"],
+            True,
+        )
 
 
 if __name__ == "__main__":

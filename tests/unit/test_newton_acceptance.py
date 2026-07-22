@@ -93,7 +93,8 @@ class AcceptanceCriteriaTest(BBarTestBase):
 
     def test_overrides_wiring(self):
         base = dict(mechanics_tol=None, mechanics_rel_tol=5e-5,
-                    mechanics_max_iter=50, mechanics_line_search=True)
+                    mechanics_max_iter=50, mechanics_line_search=True,
+                    mechanics_residual_only_check=False)
         args = SimpleNamespace(mechanics_acceptance="legacy", **base)
         self.assertNotIn("acceptance", mechanics_newton_overrides_from_args(args))
         args = SimpleNamespace(
@@ -106,6 +107,26 @@ class AcceptanceCriteriaTest(BBarTestBase):
         acc = mechanics_newton_overrides_from_args(args)["acceptance"]
         self.assertEqual(acc["fallback_after"], 9)
         self.assertAlmostEqual(acc["force_frac"], 0.005)
+
+    def test_residual_only_check_is_opt_in_for_mechanics(self):
+        base = dict(mechanics_tol=None, mechanics_rel_tol=5e-5,
+                    mechanics_max_iter=50, mechanics_line_search=True,
+                    mechanics_acceptance="legacy")
+        disabled = SimpleNamespace(
+            mechanics_residual_only_check=False, **base)
+        self.assertNotIn(
+            "residual_only_check",
+            mechanics_newton_overrides_from_args(disabled),
+        )
+
+        enabled = SimpleNamespace(
+            mechanics_residual_only_check=True, **base)
+        self.assertIs(
+            mechanics_newton_overrides_from_args(enabled)[
+                "residual_only_check"
+            ],
+            True,
+        )
 
 
 if __name__ == "__main__":

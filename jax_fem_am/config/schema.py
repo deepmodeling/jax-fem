@@ -226,6 +226,14 @@ def build_parser(config=None):
                         default=cfg(config, "mechanics_line_search", False),
                         help="Enable Newton line search for mechanics solves; stabilizes j2 yield-surface states.")
     parser.add_argument("--no-mechanics-line-search", dest="mechanics_line_search", action="store_false")
+    parser.add_argument("--mechanics-residual-only-check",
+                        dest="mechanics_residual_only_check", action="store_true",
+                        default=cfg(config, "mechanics_residual_only_check", False),
+                        help="After each mechanics Newton correction, check the residual before rebuilding "
+                             "the tangent. If the acceptance criteria pass, the final unused jacfwd tangent "
+                             "assembly is skipped. Opt-in to preserve legacy mechanics behavior by default.")
+    parser.add_argument("--no-mechanics-residual-only-check",
+                        dest="mechanics_residual_only_check", action="store_false")
     parser.add_argument("--mechanics-acceptance", choices=("legacy", "abaqus"),
                         default=cfg(config, "mechanics_acceptance", "legacy"),
                         help="Newton acceptance criteria for mechanics solves. 'legacy' = single "

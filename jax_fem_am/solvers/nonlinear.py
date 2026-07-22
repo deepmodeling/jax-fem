@@ -25,6 +25,8 @@ def mechanics_newton_overrides_from_args(args):
         overrides["max_iter"] = int(args.mechanics_max_iter)
     if args.mechanics_line_search:
         overrides["line_search_flag"] = True
+    if getattr(args, "mechanics_residual_only_check", False):
+        overrides["residual_only_check"] = True
     if getattr(args, "mechanics_acceptance", "legacy") == "abaqus":
         # Abaqus/Standard-style dual criteria (usb 7.2.3): max-norm force
         # residual vs the increment's out-of-balance force scale (0.5%),

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """XLA / GPU linear-solver wrapper for the mech100 macro thermal-stress solver.
 
-This module wraps ``am_thermal_stress_macro_intersection_mech100`` (the CPU
+This module wraps ``jax_fem_am.simulation.stepper`` (the CPU
 reference implementation) and lets the user swap the *linear* solver used
 inside the Newton loop without touching the physics driver:
 
@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import importlib.util
 import json
 import logging
 import os
@@ -43,11 +42,13 @@ from typing import Any, Dict, Iterator, Mapping, Optional, Sequence
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parents[1]
-V01_DIR = REPO_ROOT / "159_local" / "v01"
-V03_DIR = REPO_ROOT / "159_local" / "v03"
-BASE_MODULE_NAME = "am_thermal_stress_macro_intersection_mech100"
-BASE_SOLVER_PATH = V03_DIR / f"{BASE_MODULE_NAME}.py"
+BASE_MODULE_NAME = "jax_fem_am.simulation.stepper"
+# Equals ``Path(jax_fem_am.simulation.stepper.__file__)``: stepper.py lives in
+# the same package directory as this module. Kept as a path constant (instead
+# of importing the stepper here) so importing this wrapper stays lightweight
+# and ``apply_runtime_env`` can still set JAX_PLATFORM_NAME & friends before
+# JAX is imported. Used for ``report.meta["base_solver"]``.
+BASE_SOLVER_PATH = SCRIPT_DIR / "stepper.py"
 # Measured on the real 197k-cell h60 mesh (RTX 5080 16GB): 2048 splits the
 # jacobian assembly into 96 chunks whose per-chunk onp.vstack device->host
 # copies dominate the kernel cost (cell_jacobian 6.4s -> 0.09s per 8-step
@@ -642,41 +643,31 @@ def _argv(argv: Sequence[str] | None) -> list[str]:
     return list(sys.argv[1:] if argv is None else argv)
 
 
-def _ensure_base_paths() -> None:
-    for path in (V03_DIR, V01_DIR, REPO_ROOT):
-        path_str = str(path)
-        if path_str not in sys.path:
-            sys.path.insert(0, path_str)
-
-
 def load_base_solver(
     module_name: str = BASE_MODULE_NAME,
     module_path: Path = BASE_SOLVER_PATH,
 ):
-    """Load the v03 CPU reference solver lazily.
+    """Load the v03-derived CPU reference solver lazily.
 
-    v04 is intentionally a wrapper around the v03 production script for now:
-    v03 exposes ``read_config()``, ``build_parser()`` and ``main()``, but not
-    the speculative ``run()/default_solver_options()`` interface that the
-    first v04 skeleton assumed.
+    v04 is intentionally a wrapper around the v03 production loop (now
+    ``jax_fem_am.simulation.stepper``): it exposes ``read_config()``,
+    ``build_parser()`` and ``main()``, but not the speculative
+    ``run()/default_solver_options()`` interface that the first v04 skeleton
+    assumed.
+
+    ``module_name``/``module_path`` are kept for signature compatibility with
+    the historical file-path loader. The stepper is a regular module now, so
+    repeated calls return the same ``sys.modules`` entry.
     """
-    _ensure_base_paths()
-    if not module_path.exists():
-        raise RuntimeError(f"base solver not found: {module_path}")
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load base solver module: {module_path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
     try:
-        spec.loader.exec_module(module)
+        import jax_fem_am.simulation.stepper as stepper_module
     except ImportError as exc:  # pragma: no cover - environment dependent
         raise RuntimeError(
             f"could not import base solver module {module_name!r} from "
             f"{module_path}; activate the jax-fem runtime before running "
             "the physics driver"
         ) from exc
-    return module
+    return stepper_module
 
 
 def _add_runtime_args(parser: argparse.ArgumentParser) -> None:

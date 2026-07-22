@@ -14,7 +14,7 @@ class V06RunnerContractTest(unittest.TestCase):
     def test_smoke_runner_uses_v06_driver_fixture_and_audit(self):
         text = (V06 / "run_smoke.sh").read_text(encoding="utf-8")
 
-        self.assertIn("v06/driver.py", text)
+        self.assertIn("jax_fem_am.simulation.runner", text)
         self.assertIn("unit_cube_6tet.inp", text)
         self.assertIn("jax_fem_am.verification.run_audit", text)
         self.assertIn("jax_fem_am.verification.xrd_vtu", text)
@@ -35,19 +35,14 @@ class V06RunnerContractTest(unittest.TestCase):
         env = dict(os.environ)
         env["JAX_PLATFORM_NAME"] = "cpu"
         env["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-        env["PYTHONPATH"] = os.pathsep.join(
-            [
-                str(ROOT / "159_local" / "v01"),
-                str(ROOT / "159_local"),
-                str(ROOT),
-            ]
-        )
+        env["PYTHONPATH"] = str(ROOT)
         with tempfile.TemporaryDirectory() as temporary:
             profile = Path(temporary) / "profile.json"
             result = subprocess.run(
                 [
                     sys.executable,
-                    str(V06 / "driver.py"),
+                    "-m",
+                    "jax_fem_am.simulation.runner",
                     "--xla-dry-run",
                     "--xla-platform",
                     "cpu",

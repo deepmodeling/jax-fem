@@ -37,8 +37,7 @@ from typing import Any, Optional, Sequence
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 V04_WRAPPER_PATH = (
-    REPO_ROOT / "159_local" / "v04"
-    / "am_thermal_stress_macro_intersection_mech100_XLA.py"
+    REPO_ROOT / "jax_fem_am" / "simulation" / "acceleration.py"
 )
 
 

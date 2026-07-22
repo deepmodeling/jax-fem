@@ -7,17 +7,9 @@ only as a frozen comparison baseline.
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 from pathlib import Path
 from typing import Any, Optional, Sequence
 
-
-SCRIPT_DIR = Path(__file__).resolve().parent
-LOCAL_ROOT = SCRIPT_DIR.parent
-REPO_ROOT = SCRIPT_DIR.parents[1]
-if str(LOCAL_ROOT) not in sys.path:
-    sys.path.insert(0, str(LOCAL_ROOT))
 
 from jax_fem_am.materials.j2 import (  # noqa: E402
     PlasticState,
@@ -32,12 +24,6 @@ from jax_fem_am.materials.material_validation import validate_material_inputs  #
 from jax_fem_am.verification.thermal_ledger import (  # noqa: E402
     EnergyLedgerRecorder,
     extract_solver_step,
-)
-
-
-V04_WRAPPER_PATH = (
-    REPO_ROOT / "159_local" / "v04"
-    / "am_thermal_stress_macro_intersection_mech100_XLA.py"
 )
 
 
@@ -63,14 +49,9 @@ REGISTRY = _StateRegistry()
 
 
 def load_v04_wrapper():
-    name = "macro_mech100_v04_xla_for_v06"
-    if name in sys.modules:
-        return sys.modules[name]
-    spec = importlib.util.spec_from_file_location(name, V04_WRAPPER_PATH)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+    import jax_fem_am.simulation.acceleration as acceleration
+
+    return acceleration
 
 
 def install_phase_lifecycle_wrapper(base_module):

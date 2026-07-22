@@ -17,13 +17,9 @@ jax.config.update("jax_enable_x64", True)
 
 ROOT = Path(__file__).resolve().parents[1]
 V03_PATH = (
-    ROOT / "159_local" / "v03"
-    / "am_thermal_stress_macro_intersection_mech100.py"
+    ROOT / "jax_fem_am" / "simulation" / "stepper.py"
 )
-sys.path.insert(0, str(ROOT / "159_local"))
-sys.path.insert(0, str(ROOT / "159_local" / "v01"))
-
-from v06 import driver  # noqa: E402
+from jax_fem_am.simulation import runner as driver  # noqa: E402
 from jax_fem_am.materials.j2 import equivalent_stress  # noqa: E402
 
 

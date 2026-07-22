@@ -11,8 +11,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 V03_PATH = (
-    ROOT / "159_local" / "v03"
-    / "am_thermal_stress_macro_intersection_mech100.py"
+    ROOT / "jax_fem_am" / "simulation" / "stepper.py"
 )
 sys.path.insert(0, str(ROOT / "159_local"))
 sys.path.insert(0, str(ROOT / "159_local" / "v01"))

@@ -8,9 +8,7 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "159_local"))
-
-from v06 import driver  # noqa: E402
+from jax_fem_am.simulation import runner as driver  # noqa: E402
 
 
 class ThermalLedgerHookTest(unittest.TestCase):

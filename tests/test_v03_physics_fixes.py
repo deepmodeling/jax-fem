@@ -10,9 +10,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 V01_DIR = REPO_ROOT / "159_local" / "v01"
 V03_PATH = (
     REPO_ROOT
-    / "159_local"
-    / "v03"
-    / "am_thermal_stress_macro_intersection_mech100.py"
+    / "jax_fem_am"
+    / "simulation"
+    / "stepper.py"
 )
 
 try:

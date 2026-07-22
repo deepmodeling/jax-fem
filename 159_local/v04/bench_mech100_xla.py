@@ -30,8 +30,9 @@ import json
 import sys
 from pathlib import Path
 
-WRAPPER = Path(__file__).resolve().with_name(
-    "am_thermal_stress_macro_intersection_mech100_XLA.py"
+WRAPPER = (
+    Path(__file__).resolve().parents[2]
+    / "jax_fem_am" / "simulation" / "acceleration.py"
 )
 
 # Tier definitions. `case_args` are passed through to the base solver;

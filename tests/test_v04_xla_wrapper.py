@@ -13,9 +13,9 @@ from unittest import mock
 REPO_ROOT = Path(__file__).resolve().parents[1]
 XLA_WRAPPER_PATH = (
     REPO_ROOT
-    / "159_local"
-    / "v04"
-    / "am_thermal_stress_macro_intersection_mech100_XLA.py"
+    / "jax_fem_am"
+    / "simulation"
+    / "acceleration.py"
 )
 BENCH_PATH = REPO_ROOT / "159_local" / "v04" / "bench_mech100_xla.py"
 
@@ -36,9 +36,9 @@ class MacroMech100V04XlaWrapperTest(unittest.TestCase):
         self.assertEqual(
             self.wrapper.BASE_SOLVER_PATH,
             REPO_ROOT
-            / "159_local"
-            / "v03"
-            / "am_thermal_stress_macro_intersection_mech100.py",
+            / "jax_fem_am"
+            / "simulation"
+            / "stepper.py",
         )
         self.assertTrue(self.wrapper.BASE_SOLVER_PATH.exists())
 

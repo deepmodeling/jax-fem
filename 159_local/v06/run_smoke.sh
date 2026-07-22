@@ -35,13 +35,13 @@ if ! mkdir "${OUT_ROOT}" 2>/dev/null; then
   echo "v06 smoke: refusing existing OUT_ROOT: ${OUT_ROOT}" >&2
   exit 2
 fi
-export PYTHONPATH="${REPO_ROOT}/159_local/v01:${REPO_ROOT}/159_local:${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
+export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 export JAX_PLATFORM_NAME="${XLA_PLATFORM}"
 export XLA_PYTHON_CLIENT_PREALLOCATE="false"
 
 cd "${WORK_ROOT}"
 SOLVER_CMD=(
-  "${PYTHON_BIN}" "${REPO_ROOT}/159_local/v06/driver.py"
+  "${PYTHON_BIN}" -m jax_fem_am.simulation.runner
   --config "${MATERIAL_CONFIG}"
   --inp "${MESH_FILE}"
   --output-dir "${OUT_ROOT}"

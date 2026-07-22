@@ -1,0 +1,131 @@
+# Post-run report: kaess_p2_T150C_P250_c3d8_smoke2L_hex
+
+## Locking fingerprint (in-layer demeaned p-std / vm-std)
+
+| frame | cells | p std (MPa) | vm std (MPa) | RATIO | p range (MPa) | vm max |
+|---|---|---|---|---|---|---|
+| last_scan step_000200_scan.vtu | 3019 | 74.4 | 78.0 | **0.95** | [-408, 159] | 463 |
+
+Reference (locked TET4, 10-layer T150C): last_cooling 8.40, release 9.31; healthy = O(1).
+
+## profile.json (top-level timings)
+
+```json
+{
+ "label": "kaess-2023-phase2-T150C-P250-c3d8",
+ "wall_seconds": 21264.185370355,
+ "steps": 2273,
+ "linear_iterations": 7844,
+ "stage_seconds": {
+  "setup": 3.0284909730107756,
+  "activation": 0.024405515927355736,
+  "quad_state": 0.46815647900803015,
+  "material": 6.38629396694887,
+  "history": 0.10077691692276858,
+  "postprocess": 0.3047805880487431,
+  "dof_to_quad": 2.4825463891174877,
+  "nonlinear_solve": 21164.024444034978,
+  "nonlinear_solve_overhead": 2423.452533634525,
+  "bc_initial_guess": 13.640672717257985,
+  "residual_vector": 3.9227139302383875,
+  "residual_flatten": 1.905549323084415,
+  "residual_bc": 1.9398166679602582,
+  "residual_projection": 0.0,
+  "solver": 12513.157877465128,
+  "local_assembly": 6021.759653499001,
+  "global_matrix": 188.09099278882786,
+  "assembly": 6209.850646287829,
+  "cell_jacobian": 1.2514854859909974,
+  "cell_residual": 4.862371325754793,
+  "face_jacobian": 0.7591448416060302,
+  "face_residual": 0.761925502170925,
+  "residual_scatter": 92.76128236595832,
+  "conversion": 0.0,
+  "transfer": 0.0,
+  "io": 0.7314306469925214,
+  "python_overhead": 86.634044844046
+ },
+ "stage_calls": {
+  "setup": 1,
+  "activation": 344,
+  "quad_state": 1034,
+  "material": 733,
+  "history": 344,
+  "postprocess": 688,
+  "dof_to_quad": 1033,
+  "nonlinear_solve": 741,
+  "nonlinear_solve_overhead": 741,
+  "bc_initial_guess": 9244,
+  "residual_vector": 10223,
+  "residual_flatten": 10223,
+  "residual_bc": 10223,
+  "residual_projection": 0,
+  "solver": 9244,
+  "local_assembly": 10223,
+  "global_matrix": 9641,
+  "assembly": 19864,
+  "cell_jacobian": 9641,
+  "cell_residual": 69868,
+  "face_jacobian": 9641,
+  "face_residual": 69868,
+  "residual_scatter": 79509,
+  "conversion": 0,
+  "transfer": 0,
+  "io": 5,
+  "python_overhead": 0
+ },
+ "per_step_seconds": {
+  "setup": 0.0013323761429875828,
+  "activation": 1.0737138551410354e-05,
+  "quad_state": 0.00020596413506732519,
+  "material": 0.002809632189594751,
+  "history": 4.433652306325059e-05,
+  "postprocess": 0.0001340873682572561,
+  "dof_to_quad": 0.0010921893484898758,
+  "nonlinear_solve": 9.311053428963914,
+  "nonlinear_solve_overhead": 1.066191171858568,
+  "bc_initial_guess": 0.006001175854490975,
+  "residual_vector": 0.0017257870348607073,
+  "residual_flatten": 0.0008383411012249956,
+  "residual_bc": 0.000853416923871649,
+  "residual_projection": 0.0,
+  "solver": 5.505128850622581,
+  "local_assembly": 2.6492563367791466,
+  "global_matrix": 0.08275010681426655,
+  "assembly": 2.7320064435934133,
+  "cell_jacobian": 0.0005505875433308391,
+  "cell_residual": 0.0021391866809303975,
+  "face_jacobian": 0.0003339836522683811,
+  "face_residual": 0.00033520699611567313,
+  "residual_scatter": 0.0408100670329777,
+  "conversion": 0.0,
+  "transfer": 0.0,
+  "io": 0.0003217908697723367,
+  "python_overhead": 0.038114406002659924
+ },
+ "meta": {
+  "v06_driver": "/home/user/work/159/jax-fem/159_local/v06/driver.py",
+  "v06_constitutive_model": "state-safe tensor J2 with exact capped-hardening return",
+  "v06_model_boundary": "v03-loop + v04-performance + v06-state",
+  "v06_claim_level": "numerical_model_output_only",
+  "v06_thermal_energy_ledger": "enabled",
+  "base_solver": "/home/user/work/159/jax-fem/159_local/v03/am_thermal_stress_macro_intersection_mech100.py",
+  "linear_solver": "custom_solver",
+  "linear_solver_label": "pardiso_solver(mkl multithreaded direct)",
+  "linear_solver_options": {
+   "custom_solver": "pardiso_solver(mkl multithreaded direct)"
+  },
+  "full_loop_xla": false,
+  "thermal_warm_start_enabled": false,
+  "loop_kernel_jit_enabled": true,
+  "residual_only_check_enabled": true,
+  "residual_only_check_scope": "thermal",
+  "step_predicate_cache_enabled": true,
+  "skip_unused_mechanics_material_enabled": true,
+  "thermal_only_mechanics_surrogate_enabled": true,
+  "quiet_jax_fem_logs_enabled": true,
+  "jax_fem_log_level": "WARNING",
+  "lazy_output_postprocess_enabled": false,
+  "dof_to_quad_cache_enabled": true,
+  "dof_to_quad_cache_scope": "same_finite_element_jax_arra
+```

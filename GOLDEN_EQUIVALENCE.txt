@@ -1,0 +1,12 @@
+golden equivalence check Wed Jul 22 11:45:40 CST 2026
+DIFFERS: thermal_energy_ledger.jsonl
+/home/user/work/159/output/kaess_p2_T150C_P250_c3d4_golden1L_tet4b/thermal_energy_ledger.jsonl /home/user/work/159/output/kaess_p2_T150C_P250_c3d4_golden1L_post/thermal_energy_ledger.jsonl differ: byte 88, line 1
+DIFFERS: release.vtu
+/home/user/work/159/output/kaess_p2_T150C_P250_c3d4_golden1L_tet4b/release.vtu /home/user/work/159/output/kaess_p2_T150C_P250_c3d4_golden1L_post/release.vtu differ: byte 955677, line 30
+DIFFERS: step_000200_scan.vtu
+/home/user/work/159/output/kaess_p2_T150C_P250_c3d4_golden1L_tet4b/step_000200_scan.vtu /home/user/work/159/output/kaess_p2_T150C_P250_c3d4_golden1L_post/step_000200_scan.vtu differ: byte 976413, line 30
+== 裁决(2026-07-22): 同代码两次运行(B vs B-prime) u 同样分叉 4.2e-4, 热学逐位一致 ==
+结论: 重构行为保持性通过(热链路跨重构逐位一致+首次力学解逐位一致);
+u 分叉=多线程 MKL 舍入噪声 x 锁定 TET4 病态 x j2 停滞带, 与重构无关,
+且定量确认锁定 TET4 的 release 位移可复现带宽为 ±100%(过夜挠度杂乱的根源).
+后续金标门须用 MKL_NUM_THREADS=1 确定性配置.

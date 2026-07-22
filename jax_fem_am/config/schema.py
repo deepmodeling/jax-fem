@@ -226,6 +226,23 @@ def build_parser(config=None):
                         default=cfg(config, "mechanics_line_search", False),
                         help="Enable Newton line search for mechanics solves; stabilizes j2 yield-surface states.")
     parser.add_argument("--no-mechanics-line-search", dest="mechanics_line_search", action="store_false")
+    parser.add_argument("--mechanics-acceptance", choices=("legacy", "abaqus"),
+                        default=cfg(config, "mechanics_acceptance", "legacy"),
+                        help="Newton acceptance criteria for mechanics solves. 'legacy' = single "
+                             "relative-residual test (bitwise-preserving default). 'abaqus' = "
+                             "Abaqus/Standard-style dual criteria: max-norm force residual vs the "
+                             "increment's out-of-balance force scale, displacement-correction check, "
+                             "and a linear-convergence fallback - accepts the j2 stall-floor and "
+                             "near-perfectly-plastic powder states that the reference solver treats "
+                             "as converged (see experiments/solver/ABAQUS_SOLVER_NOTES.md).")
+    parser.add_argument("--mechanics-acceptance-force-frac", type=float,
+                        default=cfg(config, "mechanics_acceptance_force_frac", 0.005))
+    parser.add_argument("--mechanics-acceptance-disp-frac", type=float,
+                        default=cfg(config, "mechanics_acceptance_disp_frac", 0.01))
+    parser.add_argument("--mechanics-acceptance-fallback-frac", type=float,
+                        default=cfg(config, "mechanics_acceptance_fallback_frac", 0.02))
+    parser.add_argument("--mechanics-acceptance-fallback-after", type=int,
+                        default=cfg(config, "mechanics_acceptance_fallback_after", 9))
     parser.add_argument("--mechanics-temperature-floor", type=float,
                         default=cfg(config, "mechanics_temperature_floor", None),
                         help="Clamp the temperature seen by the mechanics chain (thermal strain and "

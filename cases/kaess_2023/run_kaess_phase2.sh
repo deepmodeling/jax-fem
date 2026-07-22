@@ -53,6 +53,13 @@ MECH_MAX_CUTS="${MECH_MAX_CUTS:-3}"
 # margin above it and is still well inside engineering stress accuracy
 # (solver help: 1e-6-scale is already plenty). Measured 2026-07-17.
 MECH_REL_TOL="${MECH_REL_TOL:-5e-5}"
+# P0 (2026-07-22): Abaqus/Standard-style dual acceptance criteria (force
+# residual vs increment out-of-balance scale + displacement correction +
+# linear-convergence fallback) - the reference-parity criteria under which
+# both the j2 stall floor and the B-bar/powder stall states count as
+# converged (experiments/solver/ABAQUS_SOLVER_NOTES.md). Set
+# MECH_ACCEPTANCE=legacy for the pre-P0 single-residual behavior.
+MECH_ACCEPTANCE="${MECH_ACCEPTANCE:-abaqus}"
 # G1 fix (validated 2026-07-17, lump3L vs cutback3L): TET4 vertex-quadrature
 # capacitance lumping - Abaqus first-order heat-transfer element behavior.
 # Kills activation undershoot exactly (T_min == plate temperature bitwise),
@@ -189,6 +196,7 @@ SOLVER_CMD=(
   --bottom-mechanics-bc fixed
   --mechanics-every "${MECH_EVERY}"
   --mechanics-rel-tol "${MECH_REL_TOL}"
+  --mechanics-acceptance "${MECH_ACCEPTANCE}"
   --mechanics-max-iter 50
   --mechanics-line-search
   ${MECH_T_FLOOR:+--mechanics-temperature-floor "${MECH_T_FLOOR}"}

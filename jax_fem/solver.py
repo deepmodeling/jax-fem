@@ -1497,7 +1497,7 @@ _LINEAR_OPTION_KEYS = frozenset({
     'jax_solver', 'amgx_solver', 'spsolve_solver', 'petsc_solver', 'custom_solver',
 })
 _NEWTON_OPTION_KEYS = frozenset({'tol', 'rel_tol', 'line_search_flag', 'initial_guess',
-                                 'residual_only_check', 'max_iter'})
+                                 'residual_only_check', 'max_iter', 'acceptance'})
 
 _LAMBDA_TARGET = 1.
 
@@ -1714,6 +1714,19 @@ def solver(problem, solver_options={}):
     tol = cfg.get('tol', 1e-6)
     residual_only_check = bool(cfg.get('residual_only_check', False))
     max_iter = int(cfg.get('max_iter', 100))
+    # Abaqus-style acceptance (opt-in; None keeps the legacy single-residual
+    # criteria bit-for-bit). Modeled on Abaqus/Standard usb 7.2.3: max-norm
+    # force residual measured against the increment's out-of-balance force
+    # scale (proxy for the time-averaged flux q~), a displacement-correction
+    # criterion, and a linear-convergence fallback that relaxes the force
+    # fraction after `fallback_after` iterations while the displacement
+    # criterion keeps guarding solution quality.
+    acceptance = cfg.get('acceptance', None)
+    if acceptance is not None:
+        acc_force_frac = float(acceptance.get('force_frac', 0.005))
+        acc_disp_frac = float(acceptance.get('disp_frac', 0.01))
+        acc_fb_frac = float(acceptance.get('fallback_frac', 0.02))
+        acc_fb_after = int(acceptance.get('fallback_after', 9))
 
     def newton_update_helper(dofs):
         if hasattr(problem, 'P_mat'):
@@ -1780,7 +1793,38 @@ def solver(problem, solver_options={}):
     rel_res_val = res_val/res_val_initial
     _log_newton_iter_summary(0, local_s, global_s, res_val, rel_res_val)
     n_iters = 0
-    while (rel_res_val > rel_tol) and (res_val > tol):
+
+    if acceptance is not None:
+        # Out-of-balance force scale of THIS increment (mean |component| of
+        # the iteration-0 residual): the within-increment proxy for Abaqus's
+        # time-averaged flux q~.
+        acc_q_scale = max(float(np.mean(np.abs(res_vec))), 1e-30)
+        acc_dofs_start = dofs
+        acc_last_du_max = None
+
+    def _accepted(n, res_vec_, res_val_, rel_res_val_, dofs_, last_du_max_):
+        if acceptance is None:
+            # Legacy criteria, logically identical to the original
+            # `while (rel > rel_tol) and (res > tol)` continuation.
+            return (rel_res_val_ <= rel_tol) or (res_val_ <= tol)
+        res_max = float(np.max(np.abs(res_vec_)))
+        frac = acc_force_frac if n < acc_fb_after else acc_fb_frac
+        if res_max > frac * acc_q_scale:
+            return False
+        if last_du_max_ is None:
+            # No correction taken yet: only accept on the strict force check.
+            return res_max <= acc_force_frac * acc_q_scale
+        du_total_max = float(np.max(np.abs(dofs_ - acc_dofs_start)))
+        disp_ok = last_du_max_ <= acc_disp_frac * max(du_total_max, 1e-30)
+        if disp_ok and res_max > acc_force_frac * acc_q_scale:
+            logger.info(
+                f"acceptance: linear-convergence fallback engaged at iter {n} "
+                f"(res_max/q_scale = {res_max / acc_q_scale:.3e} <= "
+                f"{acc_fb_frac:.1e}, disp criterion satisfied)")
+        return disp_ok
+
+    while not _accepted(n_iters, res_vec, res_val, rel_res_val, dofs,
+                        acc_last_du_max if acceptance is not None else None):
         n_iters += 1
         if n_iters > max_iter:
             raise RuntimeError(
@@ -1790,13 +1834,17 @@ def solver(problem, solver_options={}):
                 "Increase solver_options newton 'max_iter', enable "
                 "'line_search_flag', or check the tangent/material model.")
         _log_newton_iter_start(n_iters)
+        dofs_before_step = dofs
         dofs, linear_s = newton_step(problem, res_vec, A, dofs, cfg, timing)
+        if acceptance is not None:
+            acc_last_du_max = float(np.max(np.abs(dofs - dofs_before_step)))
         if residual_only_check:
             res_vec, local_s = residual_only_helper(dofs)
             global_s = 0.
             res_val = np.linalg.norm(res_vec)
             rel_res_val = res_val/res_val_initial
-            if (rel_res_val > rel_tol) and (res_val > tol):
+            if not _accepted(n_iters, res_vec, res_val, rel_res_val, dofs,
+                             acc_last_du_max if acceptance is not None else None):
                 res_vec, A, local_s, global_s = newton_update_helper(dofs)
                 res_val = np.linalg.norm(res_vec)
                 rel_res_val = res_val/res_val_initial

@@ -25,4 +25,16 @@ def mechanics_newton_overrides_from_args(args):
         overrides["max_iter"] = int(args.mechanics_max_iter)
     if args.mechanics_line_search:
         overrides["line_search_flag"] = True
+    if getattr(args, "mechanics_acceptance", "legacy") == "abaqus":
+        # Abaqus/Standard-style dual criteria (usb 7.2.3): max-norm force
+        # residual vs the increment's out-of-balance force scale (0.5%),
+        # displacement-correction check (1%), and the linear-convergence
+        # fallback (2e-2 after iteration 9). Rationale and provenance:
+        # experiments/solver/ABAQUS_SOLVER_NOTES.md (P0).
+        overrides["acceptance"] = {
+            "force_frac": float(args.mechanics_acceptance_force_frac),
+            "disp_frac": float(args.mechanics_acceptance_disp_frac),
+            "fallback_frac": float(args.mechanics_acceptance_fallback_frac),
+            "fallback_after": int(args.mechanics_acceptance_fallback_after),
+        }
     return overrides

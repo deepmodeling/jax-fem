@@ -1,6 +1,6 @@
 """Build-domain geometry helpers (box locations, part bounds, layer/cell classification).
 
-Origin: 159_local/v03/am_thermal_stress_macro_intersection_mech100.py
+Origin: legacy/v03/am_thermal_stress_macro_intersection_mech100.py
 (AXIS_TO_ID, make_box_locations, make_part_build_box, coord_from_frac,
 resolve_axis_range, compute_cell_temperature, classify_cells,
 compute_layer_id, compute_physical_layer_id_cell, compute_cell_build_interval,

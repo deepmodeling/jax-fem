@@ -1,7 +1,7 @@
 """Solid-mesh inp readers (Abaqus via meshio).
 
-Origin: 159_local/v01/inp_initial_guess_smoke.py (read_tet4_inp, compact_mesh,
-connected_cell_ids, orient_tet4) and 159_local/v03/
+Origin: legacy/v01/inp_initial_guess_smoke.py (read_tet4_inp, compact_mesh,
+connected_cell_ids, orient_tet4) and legacy/v03/
 am_thermal_stress_macro_intersection_mech100.py (read_solid_inp,
 read_inp_cell_set). Moved verbatim in the 2026-07-22 restructure.
 """

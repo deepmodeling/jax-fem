@@ -385,36 +385,36 @@ def build_manifest(
         inputs["solver_command"] = _file_record(command_path, repo_root)
 
     source_paths = {
-        "v06_driver": repo_root / "159_local/v06/driver.py",
-        "v06_j2_kernel": repo_root / "159_local/v06/mechanics/j2.py",
-        "v06_mechanical_lifecycle": repo_root
-        / "159_local/v06/mechanics/lifecycle.py",
+        "am_driver": repo_root / "jax_fem_am/simulation/runner.py",
+        "am_j2_kernel": repo_root / "jax_fem_am/materials/j2.py",
+        "am_mechanical_lifecycle": repo_root
+        / "jax_fem_am/domain/lifecycle.py",
         "am_material_validation": repo_root
         / "jax_fem_am/materials/material_validation.py",
-        "v06_runner": repo_root / "159_local/v06/run_smoke.sh",
-        "v06_nonzero_runner": repo_root
-        / "159_local/v06/run_nonzero_smoke.sh",
+        "am_smoke_runner": repo_root / "cases/run_smoke.sh",
+        "am_nonzero_smoke_runner": repo_root
+        / "cases/run_nonzero_smoke.sh",
         "am_provenance": repo_root / "jax_fem_am/verification/provenance.py",
-        "v06_run_audit": repo_root
+        "am_run_audit": repo_root
         / "jax_fem_am/verification/run_audit.py",
-        "v06_mesh_quality": repo_root
+        "am_mesh_quality": repo_root
         / "jax_fem_am/verification/mesh_quality.py",
-        "v06_weighted_statistics": repo_root
+        "am_weighted_statistics": repo_root
         / "jax_fem_am/verification/weighted.py",
-        "v06_thermal_balance": repo_root
+        "am_thermal_balance": repo_root
         / "jax_fem_am/verification/thermal_balance.py",
-        "v06_thermal_ledger": repo_root
+        "am_thermal_ledger": repo_root
         / "jax_fem_am/verification/thermal_ledger.py",
-        "v06_response_gate": repo_root
+        "am_response_gate": repo_root
         / "jax_fem_am/verification/response_gate.py",
-        "v06_xrd_geometry": repo_root / "jax_fem_am/verification/xrd.py",
-        "v06_xrd_vtu": repo_root / "jax_fem_am/verification/xrd_vtu.py",
-        "v04_runtime_wrapper": repo_root
-        / "159_local/v04/am_thermal_stress_macro_intersection_mech100_XLA.py",
-        "v03_base_solver": repo_root
-        / "159_local/v03/am_thermal_stress_macro_intersection_mech100.py",
-        "v01_mesh_reader": repo_root
-        / "159_local/v01/inp_initial_guess_smoke.py",
+        "am_xrd_geometry": repo_root / "jax_fem_am/verification/xrd.py",
+        "am_xrd_vtu": repo_root / "jax_fem_am/verification/xrd_vtu.py",
+        "am_acceleration": repo_root
+        / "jax_fem_am/simulation/acceleration.py",
+        "am_stepper": repo_root
+        / "jax_fem_am/simulation/stepper.py",
+        "am_mesh_readers": repo_root
+        / "jax_fem_am/mesh/readers.py",
     }
     solver_sources = {
         role: _file_record(path, repo_root)
@@ -424,10 +424,6 @@ def build_manifest(
     runtime_source_tree = source_tree_record(
         [
             repo_root / "jax_fem",
-            repo_root / "159_local/v01",
-            repo_root / "159_local/v03",
-            repo_root / "159_local/v04",
-            repo_root / "159_local/v06",
             repo_root / "jax_fem_am",
         ],
         repo_root,

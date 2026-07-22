@@ -1,6 +1,6 @@
 """CLI argument schema (argparse parser) for the AM thermal-stress driver.
 
-Extracted verbatim from 159_local/v03/am_thermal_stress_macro_intersection_mech100.py.
+Extracted verbatim from legacy/v03/am_thermal_stress_macro_intersection_mech100.py.
 """
 
 import argparse

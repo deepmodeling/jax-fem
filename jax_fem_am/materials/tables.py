@@ -1,6 +1,6 @@
 """Temperature-dependent material property tables (T,value CSV).
 
-Origin: 159_local/v03/am_thermal_stress_macro_intersection_mech100.py
+Origin: legacy/v03/am_thermal_stress_macro_intersection_mech100.py
 (PropertyTable, load_property_tables, eval_property). Moved verbatim in the
 2026-07-22 restructure.
 """

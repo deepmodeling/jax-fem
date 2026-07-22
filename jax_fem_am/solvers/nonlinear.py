@@ -1,6 +1,6 @@
 """Newton solver option helpers for the mechanics solves.
 
-Extracted verbatim from 159_local/v03/am_thermal_stress_macro_intersection_mech100.py.
+Extracted verbatim from legacy/v03/am_thermal_stress_macro_intersection_mech100.py.
 run_mechanics and run_mechanics_with_cutback intentionally stay in the v03
 driver module: v06/driver.py patches base_module.run_mechanics, and the
 cutback's bare-name call must keep resolving through the v03 module globals

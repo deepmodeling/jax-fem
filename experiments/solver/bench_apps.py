@@ -2,7 +2,7 @@
 """Run a jax-fem application under a chosen linear-solver arm, with timing.
 
 Usage:
-    python 159_local/v07/bench_apps.py <app_script.py> <arm> [result_json]
+    python experiments/solver/bench_apps.py <app_script.py> <arm> [result_json]
 
 arm:
     baseline -- app's own solver_options, untouched (only timed)

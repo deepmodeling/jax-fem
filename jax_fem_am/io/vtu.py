@@ -1,6 +1,6 @@
 """VTU/ParaView output helpers and run metadata writers.
 
-Origin: 159_local/v03/am_thermal_stress_macro_intersection_mech100.py
+Origin: legacy/v03/am_thermal_stress_macro_intersection_mech100.py
 (von_mises_from_stress, STRESS_COMPONENTS, empty_quad_stress, quad_field_name,
 make_quad_stress_cell_infos, save_step, write_used_config, write_path_output,
 write_calibration_template, print_startup). Moved verbatim in the 2026-07-22

@@ -1,6 +1,6 @@
 """Material phase/state codes and phase-dependent property maps.
 
-Origin: 159_local/v03/am_thermal_stress_macro_intersection_mech100.py
+Origin: legacy/v03/am_thermal_stress_macro_intersection_mech100.py
 (MODE_TO_ID, STATE_* codes, make_quad_scalar, initial_phase_cell,
 phase_cell_from_quad, material_cell_state, thermal_material_quads,
 clamp_mechanics_temperature, mechanics_material_quads). Moved verbatim in

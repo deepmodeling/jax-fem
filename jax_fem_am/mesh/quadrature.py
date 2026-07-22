@@ -1,6 +1,6 @@
 """Thermal quadrature modification: vertex-rule mass lumping.
 
-Origin: 159_local/v03/am_thermal_stress_macro_intersection_mech100.py
+Origin: legacy/v03/am_thermal_stress_macro_intersection_mech100.py
 (apply_thermal_mass_lumping). Moved verbatim in the 2026-07-22 restructure.
 """
 import jax.numpy as np

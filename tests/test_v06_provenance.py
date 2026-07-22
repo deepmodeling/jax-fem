@@ -7,9 +7,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "159_local"))
+sys.path.insert(0, str(ROOT))
 
-from v06.provenance import (  # noqa: E402
+from jax_fem_am.verification.provenance import (  # noqa: E402
     audit_artifacts_match,
     build_manifest,
     response_gate_is_valid,
@@ -254,7 +254,7 @@ class V06ProvenanceTest(unittest.TestCase):
                 label="unit-test",
             )
 
-        self.assertEqual(manifest["schema_version"], "v06.provenance/2")
+        self.assertEqual(manifest["schema_version"], "jax_fem_am.verification.provenance/2")
         self.assertEqual(manifest["claim_level"], "forensic_manifest_only")
         self.assertEqual(manifest["run_status"], "incomplete_or_invalid")
         self.assertEqual(manifest["label"], "unit-test")

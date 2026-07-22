@@ -7,9 +7,9 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "159_local"))
+sys.path.insert(0, str(ROOT))
 
-from v06.material_validation import validate_material_inputs  # noqa: E402
+from jax_fem_am.materials.material_validation import validate_material_inputs  # noqa: E402
 
 
 class Table:

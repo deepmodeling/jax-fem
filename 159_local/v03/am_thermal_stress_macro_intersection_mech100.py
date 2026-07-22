@@ -9,35 +9,68 @@ import jax
 import jax.numpy as np
 import numpy as onp
 
-from inp_initial_guess_smoke import read_tet4_inp
+from jax_fem_am.mesh.readers import (
+    SOLID_BLOCKS,
+    read_inp_cell_set,
+    read_solid_inp,
+    read_tet4_inp,
+)
+from jax_fem_am.materials.tables import (
+    PropertyTable,
+    eval_property,
+    load_property_tables,
+)
+from jax_fem_am.materials.phases import (
+    MODE_TO_ID,
+    STATE_LIQUID,
+    STATE_MUSHY,
+    STATE_POWDER,
+    STATE_SOLID,
+    STATE_SUBSTRATE,
+    STATE_SUPPORT,
+    STATE_VOID,
+    clamp_mechanics_temperature,
+    initial_phase_cell,
+    make_quad_scalar,
+    material_cell_state,
+    mechanics_material_quads,
+    phase_cell_from_quad,
+    thermal_material_quads,
+)
+from jax_fem_am.mesh.model import (
+    AXIS_TO_ID,
+    cells_intersect_distance_band,
+    classify_cells,
+    compute_cell_build_interval,
+    compute_cell_temperature,
+    compute_layer_id,
+    compute_nominal_layer_id_from_interval,
+    compute_physical_layer_id_cell,
+    coord_from_frac,
+    make_box_locations,
+    make_part_build_box,
+    resolve_axis_range,
+)
+from jax_fem_am.mesh.quadrature import apply_thermal_mass_lumping
+from jax_fem_am.io.vtu import (
+    STRESS_COMPONENTS,
+    empty_quad_stress,
+    make_quad_stress_cell_infos,
+    print_startup,
+    quad_field_name,
+    save_step,
+    von_mises_from_stress,
+    write_calibration_template,
+    write_path_output,
+    write_used_config,
+)
 from jax_fem.generate_mesh import Mesh
 from jax_fem.problem import Problem
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
 
 
-AXIS_TO_ID = {"x": 0, "y": 1, "z": 2}
 ID_TO_AXIS = ("x", "y", "z")
-MODE_TO_ID = {
-    "scan": 1,
-    "hatch_dwell": 2,
-    "layer_dwell": 3,
-    "recoat": 4,
-    "cooling": 5,
-    "path": 6,
-    "release": 7,
-    "jump": 8,
-}
-
-# Material/phase codes saved to ParaView and used by the thermal/mechanical
-# property maps. Keep these values stable for post-processing scripts.
-STATE_VOID = 0.0
-STATE_POWDER = 1.0
-STATE_SOLID = 2.0
-STATE_MUSHY = 3.0
-STATE_LIQUID = 4.0
-STATE_SUBSTRATE = 5.0
-STATE_SUPPORT = 6.0
 
 
 @dataclass
@@ -55,128 +88,6 @@ class StepState:
     hatch_frac: float
     front_coord: float
     layer_frac: float
-
-
-def von_mises_from_stress(stress):
-    stress = np.asarray(stress)
-    sxx = stress[..., 0, 0]
-    syy = stress[..., 1, 1]
-    szz = stress[..., 2, 2]
-    sxy = 0.5 * (stress[..., 0, 1] + stress[..., 1, 0])
-    syz = 0.5 * (stress[..., 1, 2] + stress[..., 2, 1])
-    sxz = 0.5 * (stress[..., 0, 2] + stress[..., 2, 0])
-    return np.sqrt(
-        0.5 * ((sxx - syy) ** 2 + (syy - szz) ** 2 + (szz - sxx) ** 2)
-        + 3.0 * (sxy**2 + syz**2 + sxz**2)
-    )
-
-
-STRESS_COMPONENTS = (
-    ("xx", 0, 0),
-    ("yy", 1, 1),
-    ("zz", 2, 2),
-    ("xy", 0, 1),
-    ("yz", 1, 2),
-    ("xz", 0, 2),
-)
-
-
-def empty_quad_stress(num_cells, num_quads):
-    return {
-        "stress_quad": np.zeros((num_cells, num_quads, 3, 3)),
-        "vm_quad": np.zeros((num_cells, num_quads)),
-    }
-
-
-def quad_field_name(base, quad_idx, num_quads):
-    if num_quads == 1:
-        return base
-    return f"{base.replace('quad', f'quad{quad_idx}', 1)}"
-
-
-def make_quad_stress_cell_infos(quad_stress):
-    stress_quad = np.asarray(quad_stress["stress_quad"])
-    vm_quad = np.asarray(quad_stress["vm_quad"])
-    num_quads = stress_quad.shape[1]
-    cell_infos = []
-    for quad_idx in range(num_quads):
-        for suffix, row, col in STRESS_COMPONENTS:
-            value = stress_quad[:, quad_idx, row, col]
-            if row != col:
-                value = 0.5 * (value + stress_quad[:, quad_idx, col, row])
-            cell_infos.append((quad_field_name(f"stress_quad_{suffix}", quad_idx, num_quads), value))
-        cell_infos.append((quad_field_name("vm_quad", quad_idx, num_quads), vm_quad[:, quad_idx]))
-    return cell_infos
-
-
-class PropertyTable:
-    def __init__(self, path):
-        self.path = path
-        rows = []
-        with open(path, newline="") as f:
-            reader = csv.DictReader(f)
-            if "T" not in reader.fieldnames or "value" not in reader.fieldnames:
-                raise ValueError(f"Property table must contain T,value columns: {path}")
-            for row in reader:
-                rows.append((float(row["T"]), float(row["value"])))
-        if len(rows) < 2:
-            raise ValueError(f"Property table needs at least two rows: {path}")
-        rows.sort(key=lambda item: item[0])
-        self.T = np.asarray([r[0] for r in rows])
-        self.values = np.asarray([r[1] for r in rows])
-
-    def eval(self, T):
-        return np.interp(T, self.T, self.values)
-
-
-def apply_thermal_mass_lumping(problem):
-    """Switch the thermal volume quadrature to the TET4 vertex rule (lumping).
-
-    With linear tets the stiffness integrand is constant per cell, so moving
-    the quadrature points to the vertices (equal weights V/4) leaves
-    conduction bitwise unchanged while making the capacitance matrix exactly
-    the row-sum lumped diagonal: shape_vals becomes the identity, so the
-    mass-map trial/test products N_i*N_j collapse to delta_ij. Source and
-    loss terms in the mass map become nodal collocation, which is why the
-    physical quad points must be relocated to the vertices as well.
-    """
-    fe = problem.fes[0]
-    if fe.num_quads != fe.num_nodes:
-        raise ValueError(
-            "--thermal-mass-lumping requires num_quads == num_nodes "
-            f"(TET4 with --quadrature-order 2); got {fe.num_quads} quads, "
-            f"{fe.num_nodes} nodes")
-    weights = onp.asarray(fe.quad_weights)
-    if not onp.allclose(weights, weights[0]):
-        raise ValueError(
-            "--thermal-mass-lumping requires an equal-weight quadrature rule; "
-            f"got weights {weights}")
-    grads = onp.asarray(fe.shape_grads_ref)
-    if onp.allclose(grads, grads[0:1]):
-        # Linear simplex (TET4): constant gradients, so the vertex rule also
-        # leaves conduction bitwise unchanged.
-        fe.shape_vals = np.eye(fe.num_nodes)
-        label = "TET4 vertex quadrature (conduction unchanged)"
-    else:
-        # HEX8 2x2x2 Gauss: pair each quad point with the vertex of its
-        # octant (the trilinear basis peaks at its own vertex, so argmax of
-        # the original shape values is that pairing). Capacitance/source
-        # terms collocate at the vertices with weight V/8 while conduction
-        # keeps its Gauss-point gradients - the Abaqus first-order
-        # heat-transfer element (DC3D8) split.
-        sv = onp.asarray(fe.shape_vals)
-        nearest = onp.argmax(sv, axis=1)
-        if len(set(nearest.tolist())) != fe.num_nodes:
-            raise ValueError(
-                "--thermal-mass-lumping: quadrature points do not pair "
-                "one-to-one with element vertices; use --quadrature-order 2")
-        perm = onp.zeros_like(sv)
-        perm[onp.arange(fe.num_quads), nearest] = 1.0
-        fe.shape_vals = np.asarray(perm)
-        label = "HEX8 vertex collocation (conduction stays at Gauss points)"
-    problem.physical_quad_points = fe.get_physical_quad_points()
-    print(f"thermal mass lumping: {label} installed (diagonal capacitance)")
-    return problem
 
 
 class TransientThermal(Problem):
@@ -1000,72 +911,6 @@ def parse_args():
     return args
 
 
-def make_box_locations(points, build_axis="x", base_side="min", tol_ratio=1e-8, abs_tol=None):
-    pmin = onp.min(points, axis=0)
-    pmax = onp.max(points, axis=0)
-    span = max(float(onp.max(pmax - pmin)), 1.0)
-    # Real CAD meshes rarely have their base-face nodes exactly coplanar; the
-    # legacy 1e-8 relative tolerance can select only a handful of nodes (8 of
-    # ~1225 on the 0119 part). Pass abs_tol (--boundary-tol) to widen it.
-    atol = float(abs_tol) if abs_tol is not None and abs_tol > 0.0 else tol_ratio * span
-    build_axis_id = AXIS_TO_ID[build_axis]
-    plane_axis_ids = tuple(i for i in range(3) if i != build_axis_id)
-    if base_side == "min":
-        base_coord = pmin[build_axis_id]
-        exposed_coord = pmax[build_axis_id]
-    else:
-        base_coord = pmax[build_axis_id]
-        exposed_coord = pmin[build_axis_id]
-
-    def bottom(point):
-        return np.isclose(point[build_axis_id], base_coord, rtol=0.0, atol=atol)
-
-    def exposed(point):
-        return np.isclose(point[build_axis_id], exposed_coord, rtol=0.0, atol=atol)
-
-    def walls(point):
-        a0, a1 = plane_axis_ids
-        return (
-            np.isclose(point[a0], pmin[a0], rtol=0.0, atol=atol)
-            | np.isclose(point[a0], pmax[a0], rtol=0.0, atol=atol)
-            | np.isclose(point[a1], pmin[a1], rtol=0.0, atol=atol)
-            | np.isclose(point[a1], pmax[a1], rtol=0.0, atol=atol)
-        )
-
-    return pmin, pmax, bottom, exposed, walls, build_axis_id, plane_axis_ids, float(base_coord), float(exposed_coord)
-
-
-def make_part_build_box(pmin, pmax, build_axis_id, base_side, substrate_thickness, support_thickness):
-    """Return the build bounds used for part layers and raster paths.
-
-    If substrate/support are included in the mesh, layer fronts should advance
-    through the printed part only, not through the substrate/support thickness.
-    Thickness values are assumed to be in the same internal units as the scaled
-    mesh coordinates.
-    """
-    part_pmin = onp.array(pmin, dtype=onp.float64).copy()
-    part_pmax = onp.array(pmax, dtype=onp.float64).copy()
-    total_offset = max(float(substrate_thickness), 0.0) + max(float(support_thickness), 0.0)
-    build_span = float(pmax[build_axis_id] - pmin[build_axis_id])
-    if total_offset >= build_span and build_span > 0.0:
-        raise ValueError("substrate_thickness + support_thickness must be smaller than the build-axis span")
-    if base_side == "min":
-        part_pmin[build_axis_id] = pmin[build_axis_id] + total_offset
-    else:
-        part_pmax[build_axis_id] = pmax[build_axis_id] - total_offset
-    return part_pmin, part_pmax
-
-
-def coord_from_frac(pmin, pmax, axis_id, frac):
-    return float(pmin[axis_id] + frac * (pmax[axis_id] - pmin[axis_id]))
-
-
-def resolve_axis_range(pmin, pmax, axis_id, start_value, end_value, start_frac, end_frac):
-    start = float(start_value) if start_value is not None else coord_from_frac(pmin, pmax, axis_id, start_frac)
-    end = float(end_value) if end_value is not None else coord_from_frac(pmin, pmax, axis_id, end_frac)
-    return start, end
-
-
 def resolve_scan_and_hatch_axes(scan_axis, build_axis_id, plane_axis_ids):
     if scan_axis == "auto":
         scan_axis_id = plane_axis_ids[0]
@@ -1556,35 +1401,6 @@ def generate_path_file_step_states(args, pmin, pmax, build_axis_id):
         global_step += 1
     return states, 0.0, 0.0
 
-def load_property_tables(args):
-    tables = {}
-    for key, path in [
-        ("k_solid", args.k_table_solid),
-        ("cp_solid", args.cp_table_solid),
-        ("k_powder", args.k_table_powder),
-        ("cp_powder", args.cp_table_powder),
-        ("k_liquid", args.k_table_liquid),
-        ("cp_liquid", args.cp_table_liquid),
-        ("E", args.E_table),
-        ("alpha", args.alpha_table),
-        ("poisson", args.poisson_table),
-        ("yield", args.yield_table),
-        ("hardening", args.hardening_table),
-    ]:
-        tables[key] = PropertyTable(path) if path else None
-    return tables
-
-
-def eval_property(T_quad, table, default):
-    if table is None:
-        return default * np.ones_like(T_quad)
-    return table.eval(T_quad)
-
-
-def compute_cell_temperature(T_nodes, cells):
-    return onp.mean(onp.asarray(T_nodes)[cells, 0], axis=1)
-
-
 def reset_new_cell_nodal_temperature(T_old, cells, newly_printed_cell, previous_active_cell, value):
     """Reset nodal temperatures of freshly activated cells to the powder value.
 
@@ -1608,154 +1424,10 @@ def reset_new_cell_nodal_temperature(T_old, cells, newly_printed_cell, previous_
     return np.asarray(T_old).at[reset_nodes, :].set(value)
 
 
-def make_quad_scalar(cell_values, num_quads):
-    arr = np.asarray(cell_values)[:, None, None]
-    return arr * np.ones((len(cell_values), num_quads, 1))
-
-
-SOLID_BLOCKS = (("tetra", "TET4"), ("hexahedron", "HEX8"))
-
-
-def read_solid_inp(path, max_cells):
-    """Read a C3D4 (tetra) or C3D8 (hexahedron) inp.
-
-    Returns (points, cells, selected_cells, ele_type). The hexahedron path
-    keeps meshio cell order (VTK == Abaqus C3D8 node order, no reordering)
-    so ELSET indices from read_inp_cell_set() stay aligned.
-    """
-    import meshio
-
-    meshio_mesh = meshio.read(path)
-    if "hexahedron" in meshio_mesh.cells_dict:
-        if "tetra" in meshio_mesh.cells_dict:
-            raise ValueError(f"{path} mixes tetra and hexahedron blocks")
-        if max_cells:
-            raise ValueError("--max-cells truncation is TET4-only")
-        points = onp.asarray(meshio_mesh.points, dtype=onp.float64)
-        cells = onp.asarray(meshio_mesh.cells_dict["hexahedron"], dtype=onp.int64)
-        used = onp.unique(cells.reshape(-1))
-        if len(used) != len(points):
-            old_to_new = -onp.ones(len(points), dtype=onp.int64)
-            old_to_new[used] = onp.arange(len(used), dtype=onp.int64)
-            points = points[used]
-            cells = old_to_new[cells]
-        return points, cells, len(cells), "HEX8"
-    points, cells, selected_cells = read_tet4_inp(path, max_cells)
-    return points, cells, selected_cells, "TET4"
-
-
-def read_inp_cell_set(path, set_name, num_cells):
-    """Boolean mask over solid cells for a named inp ELSET.
-
-    Cell order must match read_solid_inp(): both read the same meshio solid
-    block and neither reorders cells (orientation fixes swap nodes in place),
-    so the 0-based set indices align with the solver cell array.
-    """
-    import meshio
-
-    meshio_mesh = meshio.read(path)
-    block = next((b for b, _ in SOLID_BLOCKS if b in meshio_mesh.cells_dict), None)
-    sets = getattr(meshio_mesh, "cell_sets_dict", None) or {}
-    if block is None or set_name not in sets or block not in sets[set_name]:
-        available = ", ".join(sorted(sets)) or "(none)"
-        raise ValueError(
-            f"ELSET {set_name!r} with {block or 'solid'} cells not found in "
-            f"{path}; available sets: {available}")
-    indices = onp.asarray(sets[set_name][block], dtype=onp.int64)
-    if len(meshio_mesh.cells_dict[block]) != num_cells:
-        raise ValueError(
-            f"cell count mismatch between solver mesh ({num_cells}) and "
-            f"{path} {block} block ({len(meshio_mesh.cells_dict[block])}); "
-            "--max-cells truncation is incompatible with --powder-elset")
-    mask = onp.zeros(num_cells, dtype=bool)
-    mask[indices] = True
-    return mask
-
-
-def classify_cells(points, cells, build_axis_id, build_sign, base_coord, args):
-    centroids = onp.mean(points[cells], axis=1)
-    cell_build_coord = centroids[:, build_axis_id]
-    dist_from_base = build_sign * (cell_build_coord - base_coord)
-    substrate = dist_from_base <= args.substrate_thickness if args.substrate_thickness > 0 else onp.zeros(len(cells), dtype=bool)
-    support = (
-        (dist_from_base > args.substrate_thickness)
-        & (dist_from_base <= args.substrate_thickness + args.support_thickness)
-        if args.support_thickness > 0
-        else onp.zeros(len(cells), dtype=bool)
-    )
-    return centroids, cell_build_coord, substrate, support
-
-
-def compute_layer_id(cell_build_coord, build_axis_id, pmin, pmax, args):
-    build_min = float(pmin[build_axis_id])
-    build_max = float(pmax[build_axis_id])
-    if args.base_side == "min":
-        frac = (cell_build_coord - build_min) / max(build_max - build_min, 1e-15)
-    else:
-        frac = (build_max - cell_build_coord) / max(build_max - build_min, 1e-15)
-    return onp.clip(onp.ceil(frac * args.layers), 1, args.layers).astype(onp.int32)
-
-
 def compute_active_cell(state, cell_build_coord, substrate_cell, support_cell, build_sign, args):
     tol = 1e-12 * max(float(onp.max(onp.abs(cell_build_coord))), 1.0)
     part_active = build_sign * (state.front_coord - cell_build_coord) >= -tol
     return substrate_cell | support_cell | part_active
-
-
-def compute_physical_layer_id_cell(cell_build_coord, build_axis_id, part_pmin, part_pmax, build_sign, args):
-    """Return physical layer id for each part cell.
-
-    Unlike compute_layer_id(), this function is based on layer_thickness when
-    available and does not clip to --max-print-layers. Cells beyond the printed
-    test window therefore keep layer ids larger than the simulated layer count.
-    Fixture cells are assigned outside this function.
-    """
-    if args.layer_thickness is None or args.layer_thickness <= 0.0:
-        return compute_layer_id(cell_build_coord, build_axis_id, part_pmin, part_pmax, args)
-
-    if args.base_side == "min":
-        part_base_coord = float(part_pmin[build_axis_id])
-    else:
-        part_base_coord = float(part_pmax[build_axis_id])
-
-    dist_from_part_base = build_sign * (cell_build_coord - part_base_coord)
-    layer_id = onp.ceil(dist_from_part_base / float(args.layer_thickness)).astype(onp.int32)
-    return onp.maximum(layer_id, 1).astype(onp.int32)
-
-
-
-def compute_cell_build_interval(points, cells, build_axis_id, build_sign, part_base_coord):
-    """Return each tetra cell's build-direction distance interval from part base.
-
-    The previous layer assignment used the cell centroid only. That can miss
-    thin layers when no centroid lies inside the layer band. This interval
-    representation marks a cell as intersecting a layer if any part of its
-    vertex span crosses that layer band.
-    """
-    cell_axis = onp.asarray(points[cells, build_axis_id], dtype=onp.float64)
-    cell_dist = float(build_sign) * (cell_axis - float(part_base_coord))
-    cell_d_min = onp.min(cell_dist, axis=1)
-    cell_d_max = onp.max(cell_dist, axis=1)
-    return cell_d_min, cell_d_max
-
-
-def cells_intersect_distance_band(cell_d_min, cell_d_max, lower, upper, tol=1e-12):
-    """Boolean mask: cell build-axis interval intersects [lower, upper]."""
-    return (cell_d_max >= float(lower) - tol) & (cell_d_min <= float(upper) + tol)
-
-
-def compute_nominal_layer_id_from_interval(cell_d_min, cell_d_max, args):
-    """Assign a representative layer id for visualization under interval activation.
-
-    This is not used for activation. It is the first physical layer intersected
-    by the cell, useful for ParaView coloring when tetrahedra span multiple
-    thin layers.
-    """
-    if args.layer_thickness is None or args.layer_thickness <= 0.0:
-        return onp.ones_like(cell_d_min, dtype=onp.int32)
-    lt = float(args.layer_thickness)
-    layer_id = onp.floor(onp.maximum(cell_d_min, 0.0) / lt).astype(onp.int32) + 1
-    return onp.maximum(layer_id, 1).astype(onp.int32)
 
 
 def compute_moving_window_cells_by_intersection(state, cell_d_min, cell_d_max, substrate_cell, support_cell, args):
@@ -1876,52 +1548,6 @@ def compute_layer_on_scan_cells(highest_printed_layer, physical_layer_id_cell, s
     return printed_cell, active_cell, cooling_only_cell
 
 
-def initial_phase_cell(active_cell, substrate_cell, support_cell, args):
-    if getattr(args, "layer_activation_mode", "front") == "layer_on_scan" and getattr(args, "future_layer_mode", "void") == "void":
-        # Future layers have not been recoated yet, so they are void/inactive.
-        # They will become powder when their layer is activated at laser scan start.
-        inactive_code = STATE_VOID
-    else:
-        inactive_code = STATE_POWDER if args.powder_mode == "powder" else STATE_VOID
-    phase = inactive_code * onp.ones(len(active_cell), dtype=onp.float64)
-    # Active printed cells still start as powder; they only become solid after a
-    # melt/solidification event. Fixture regions are treated as solid supports.
-    phase[active_cell & (~substrate_cell) & (~support_cell)] = STATE_POWDER
-    phase[substrate_cell] = STATE_SUBSTRATE
-    phase[support_cell] = STATE_SUPPORT
-    return phase
-
-
-def phase_cell_from_quad(phase_quad):
-    return onp.max(onp.asarray(phase_quad)[:, :, 0], axis=1)
-
-
-def material_cell_state(active_cell, substrate_cell, support_cell, args, cell_temperature=None, phase_cell=None):
-    # State encoding for ParaView and CSV post-processing:
-    #   0 void/inactive weak material
-    #   1 powder
-    #   2 solid
-    #   3 mushy zone
-    #   4 liquid
-    #   5 substrate
-    #   6 support
-    if phase_cell is not None:
-        state = onp.asarray(phase_cell, dtype=onp.float64).copy()
-    else:
-        inactive_code = STATE_POWDER if args.powder_mode == "powder" else STATE_VOID
-        state = inactive_code * onp.ones(len(active_cell), dtype=onp.float64)
-        state[active_cell] = STATE_SOLID
-        if cell_temperature is not None and args.liquidus_temperature > args.solidus_temperature:
-            active_non_fixture = active_cell & (~substrate_cell) & (~support_cell)
-            mushy = active_non_fixture & (cell_temperature >= args.solidus_temperature) & (cell_temperature < args.liquidus_temperature)
-            liquid = active_non_fixture & (cell_temperature >= args.liquidus_temperature)
-            state[mushy] = STATE_MUSHY
-            state[liquid] = STATE_LIQUID
-    state[substrate_cell] = STATE_SUBSTRATE
-    state[support_cell] = STATE_SUPPORT
-    return state
-
-
 def update_phase_reference_and_eqp(T_quad, active_quad, phase_quad, T_ref_quad, eqp_quad, args):
     """Update quadrature-point material phase and stress-free reference temperature.
 
@@ -1982,166 +1608,6 @@ def update_phase_reference_and_eqp(T_quad, active_quad, phase_quad, T_ref_quad, 
         eqp_new = eqp_quad
     return phase_new, T_ref_new, eqp_new, newly_solidified, entered_melted_state
 
-
-def thermal_material_quads(T_old_quad, active_quad, phase_quad, args, tables, printed_quad=None, cooling_only_quad=None):
-    rho_solid = args.rho_solid if args.rho_solid is not None else args.rho
-    cp_solid = args.cp_solid if args.cp_solid is not None else args.cp
-    k_solid = args.conductivity_solid if args.conductivity_solid is not None else args.conductivity
-    rho_liquid = args.rho_liquid if args.rho_liquid is not None else rho_solid
-    cp_liquid = args.cp_liquid if args.cp_liquid is not None else cp_solid
-    k_liquid = args.conductivity_liquid if args.conductivity_liquid is not None else k_solid
-
-    cp_solid_quad = eval_property(T_old_quad, tables["cp_solid"], cp_solid)
-    k_solid_quad = eval_property(T_old_quad, tables["k_solid"], k_solid)
-    cp_powder_quad = eval_property(T_old_quad, tables["cp_powder"], args.cp_powder)
-    k_powder_quad = eval_property(T_old_quad, tables["k_powder"], args.conductivity_powder)
-    cp_liquid_quad = eval_property(T_old_quad, tables["cp_liquid"], cp_liquid)
-    k_liquid_quad = eval_property(T_old_quad, tables["k_liquid"], k_liquid)
-
-    if printed_quad is None:
-        printed_quad = active_quad
-    if cooling_only_quad is None:
-        cooling_only_quad = np.zeros_like(active_quad)
-
-    inactive_mass_factor = getattr(args, "inactive_mass_factor", None)
-    if inactive_mass_factor is None:
-        inactive_mass_factor = args.inactive_thermal_factor
-    rho_void = rho_solid * inactive_mass_factor
-    cp_void = cp_solid * np.ones_like(T_old_quad)
-    k_void = k_solid * args.inactive_thermal_factor * np.ones_like(T_old_quad)
-
-    if args.liquidus_temperature > args.solidus_temperature:
-        mushy_frac = np.clip(
-            (T_old_quad - args.solidus_temperature) / (args.liquidus_temperature - args.solidus_temperature),
-            0.0,
-            1.0,
-        )
-    else:
-        mushy_frac = np.zeros_like(T_old_quad)
-
-    rho_mushy = (1.0 - mushy_frac) * rho_solid + mushy_frac * rho_liquid
-    cp_mushy = (1.0 - mushy_frac) * cp_solid_quad + mushy_frac * cp_liquid_quad
-    k_mushy = (1.0 - mushy_frac) * k_solid_quad + mushy_frac * k_liquid_quad
-
-    is_void = phase_quad == STATE_VOID
-    is_powder = phase_quad == STATE_POWDER
-    is_liquid = phase_quad == STATE_LIQUID
-    is_mushy = phase_quad == STATE_MUSHY
-
-    # Phase-based properties for cells that belong to the current thermal window.
-    rho_phase = np.where(
-        is_void,
-        rho_void,
-        np.where(is_powder, args.rho_powder, np.where(is_liquid, rho_liquid, np.where(is_mushy, rho_mushy, rho_solid))),
-    )
-    cp_phase = np.where(
-        is_void,
-        cp_void,
-        np.where(is_powder, cp_powder_quad, np.where(is_liquid, cp_liquid_quad, np.where(is_mushy, cp_mushy, cp_solid_quad))),
-    )
-    k_phase = np.where(
-        is_void,
-        k_void,
-        np.where(is_powder, k_powder_quad, np.where(is_liquid, k_liquid_quad, np.where(is_mushy, k_mushy, k_solid_quad))),
-    )
-
-    # Unprinted region: either powder bed or near-void material.
-    # In layer_on_scan mode with future_layer_mode=void, future layers are not
-    # physically spread yet, so they should not act as a powder heat sink before
-    # their scan begins.
-    future_layers_are_void = (
-        getattr(args, "layer_activation_mode", "front") == "layer_on_scan"
-        and getattr(args, "future_layer_mode", "void") == "void"
-    )
-    if future_layers_are_void or args.powder_mode == "void":
-        rho_unprinted = rho_void
-        cp_unprinted = cp_void
-        k_unprinted = k_void
-    else:
-        rho_unprinted = args.rho_powder
-        cp_unprinted = cp_powder_quad
-        k_unprinted = k_powder_quad
-
-    # Printed layers below the moving thermal window: keep heat capacity/history,
-    # but strongly reduce conductivity so they no longer dominate local heat loss.
-    rho_old = rho_solid * np.ones_like(T_old_quad)
-    cp_old = cp_solid_quad
-    k_old = k_solid_quad * args.old_layer_thermal_factor
-
-    is_printed = printed_quad > 0.5
-    is_window = active_quad > 0.5
-    is_cooling_only = cooling_only_quad > 0.5
-
-    rho_quad = np.where(is_window, rho_phase, np.where(is_cooling_only, rho_old, rho_unprinted))
-    cp_quad = np.where(is_window, cp_phase, np.where(is_cooling_only, cp_old, cp_unprinted))
-    conductivity_quad = np.where(is_window, k_phase, np.where(is_cooling_only, k_old, k_unprinted))
-
-    # Safety: cells that have not been printed are always treated as unprinted,
-    # even if a phase history entry is accidentally non-void.
-    rho_quad = np.where(is_printed | is_window, rho_quad, rho_unprinted)
-    cp_quad = np.where(is_printed | is_window, cp_quad, cp_unprinted)
-    conductivity_quad = np.where(is_printed | is_window, conductivity_quad, k_unprinted)
-
-    if args.latent_heat > 0.0 and args.liquidus_temperature > args.solidus_temperature:
-        in_mushy = (T_old_quad >= args.solidus_temperature) & (T_old_quad <= args.liquidus_temperature) & is_window
-        latent_cp = np.where(in_mushy, args.latent_heat / (args.liquidus_temperature - args.solidus_temperature), 0.0)
-    else:
-        latent_cp = np.zeros_like(T_old_quad)
-
-    return rho_quad, cp_quad, conductivity_quad, latent_cp
-
-
-def clamp_mechanics_temperature(T_quad, floor):
-    """Floor the mechanics-side temperature field; floor=None keeps it untouched.
-
-    Only the mechanics chain (dT/thermal strain and material-table lookups) sees
-    the clamped field; the thermal solution and phase bookkeeping stay unclamped
-    so the guard cannot mask undershoot in thermal diagnostics/audits.
-    """
-    if floor is None:
-        return T_quad
-    return np.maximum(T_quad, floor)
-
-
-def mechanics_material_quads(T_quad, active_quad, phase_quad, args, tables):
-    E_quad = eval_property(T_quad, tables["E"], args.young)
-    alpha_base = eval_property(T_quad, tables["alpha"], args.alpha)
-    poisson_quad = eval_property(T_quad, tables["poisson"], args.poisson)
-    if args.mechanics_model == "j2_plastic":
-        if tables["yield"] is None:
-            raise ValueError("--mechanics-model j2_plastic requires --yield-table")
-        yield_quad = eval_property(T_quad, tables["yield"], args.young)
-        hardening_quad = eval_property(T_quad, tables["hardening"], 0.0)
-    else:
-        yield_quad = args.young * np.ones_like(T_quad)
-        hardening_quad = np.zeros_like(T_quad)
-
-    is_solid_like = (phase_quad == STATE_SOLID) | (phase_quad == STATE_SUBSTRATE) | (phase_quad == STATE_SUPPORT)
-    is_mushy = phase_quad == STATE_MUSHY
-    is_liquid = phase_quad == STATE_LIQUID
-
-    active_factor_quad = np.where(
-        is_solid_like,
-        1.0,
-        np.where(is_mushy, args.mushy_mechanics_factor, np.where(is_liquid, args.liquid_mechanics_factor, args.inactive_mechanics_factor)),
-    )
-    active_factor_quad = active_factor_quad * active_quad + args.inactive_mechanics_factor * (1.0 - active_quad)
-    alpha_quad = np.where(is_solid_like, alpha_base, np.zeros_like(alpha_base))
-    if getattr(args, "powder_solid_E", None) is not None:
-        # Weak-solid powder (Kaess 2023): constant E/sigma_y, no hardening,
-        # full active factor where mechanically active - the weakness lives in
-        # the material values, not the ersatz factor. alpha stays zero above.
-        is_powder = phase_quad == STATE_POWDER
-        E_quad = np.where(is_powder, args.powder_solid_E, E_quad)
-        yield_quad = np.where(is_powder, args.powder_solid_yield, yield_quad)
-        hardening_quad = np.where(
-            is_powder, getattr(args, "powder_solid_hardening", 1.0e7), hardening_quad)
-        active_factor_quad = np.where(
-            is_powder,
-            active_quad + args.inactive_mechanics_factor * (1.0 - active_quad),
-            active_factor_quad,
-        )
-    return active_factor_quad, E_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad
 
 def make_full_bottom_mechanics_bc(bottom):
     def zero(_point):
@@ -2237,204 +1703,6 @@ def should_save_step(global_step, did_mechanics, is_last, args):
     if args.thermal_output_every > 0 and global_step % args.thermal_output_every == 0:
         return True
     return False
-
-
-def save_step(
-    fe,
-    T_new,
-    u,
-    vtk_path,
-    dT_quad,
-    quad_stress,
-    active_cell,
-    printed_cell,
-    cooling_only_cell,
-    layer_id_cell,
-    activation_step_cell,
-    activation_temperature_cell,
-    stress_free_temperature_cell,
-    solidification_step_cell,
-    material_state_cell,
-    max_temperature_cell,
-    eqp_quad,
-    mechanics_valid,
-    mechanics_source_step,
-    mode_id,
-):
-    if quad_stress is None:
-        quad_stress = empty_quad_stress(fe.num_cells, dT_quad.shape[1])
-    eqp_cell = np.mean(eqp_quad[:, :, 0], axis=1)
-    point_infos = [("T", T_new), ("u", u)]
-    cell_infos = [
-        ("active", np.asarray(active_cell, dtype=np.float64)),
-        ("printed", np.asarray(printed_cell, dtype=np.float64)),
-        ("cooling_only", np.asarray(cooling_only_cell, dtype=np.float64)),
-        ("layer_id", np.asarray(layer_id_cell, dtype=np.float64)),
-        ("activation_step", np.asarray(activation_step_cell, dtype=np.float64)),
-        ("activation_temperature", np.asarray(activation_temperature_cell, dtype=np.float64)),
-        ("stress_free_temperature", np.asarray(stress_free_temperature_cell, dtype=np.float64)),
-        ("solidification_step", np.asarray(solidification_step_cell, dtype=np.float64)),
-        ("material_state", np.asarray(material_state_cell, dtype=np.float64)),
-        ("dT", np.mean(dT_quad[:, :, 0], axis=1)),
-        ("eq_plastic_strain", eqp_cell),
-        ("max_temperature_history", np.asarray(max_temperature_cell, dtype=np.float64)),
-        ("mechanics_valid", np.full(fe.num_cells, float(mechanics_valid), dtype=np.float64)),
-        ("mechanics_source_step", np.full(fe.num_cells, float(mechanics_source_step), dtype=np.float64)),
-        ("mode_id", np.full(fe.num_cells, float(mode_id), dtype=np.float64)),
-    ]
-    cell_infos.extend(make_quad_stress_cell_infos(quad_stress))
-    save_sol(
-        fe,
-        T_new,
-        vtk_path,
-        point_infos=point_infos,
-        cell_infos=cell_infos,
-    )
-
-
-def write_used_config(args, output_dir, derived):
-    os.makedirs(output_dir, exist_ok=True)
-    data = dict(vars(args))
-    data["derived"] = derived
-    with open(os.path.join(output_dir, "used_config.json"), "w") as f:
-        json.dump(data, f, indent=2, sort_keys=True)
-
-
-def write_path_output(args, output_dir, step_states):
-    if not args.path_output:
-        return
-    path = args.path_output
-    if not os.path.isabs(path):
-        path = os.path.join(output_dir, path)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    current_time = 0.0
-    with open(path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            "step",
-            "time",
-            "mode",
-            "layer",
-            "hatch",
-            "scan",
-            "x",
-            "y",
-            "z",
-            "front_coord",
-            "power",
-            "laser_on",
-            "dt",
-            "scan_frac",
-            "hatch_frac",
-        ])
-        for state in step_states:
-            current_time += state.dt
-            writer.writerow([
-                state.global_step,
-                current_time,
-                state.mode,
-                state.layer_idx + 1,
-                state.hatch_idx + 1,
-                state.scan_idx + 1,
-                float(state.laser_center[0]),
-                float(state.laser_center[1]),
-                float(state.laser_center[2]),
-                state.front_coord,
-                state.laser_power,
-                state.laser_switch,
-                state.dt,
-                state.scan_frac,
-                state.hatch_frac,
-            ])
-    print(f"path_output: {path}")
-
-
-def write_calibration_template(args):
-    if args.calibration_dir is None:
-        return
-    os.makedirs(args.calibration_dir, exist_ok=True)
-    path = os.path.join(args.calibration_dir, "calibration_notes.md")
-    if os.path.exists(path):
-        return
-    with open(path, "w") as f:
-        f.write("# Calibration Notes\n\n")
-        f.write("- melt pool width:\n- melt pool depth:\n- peak temperature:\n")
-        f.write("- cooling rate:\n- final distortion:\n- residual stress:\n")
-
-
-def print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, selected_cells, points, thermal, mechanics, derived):
-    print("inp:", args.inp)
-    print("selected_cells:", selected_cells)
-    print("points:", len(points))
-    print("raw_pmin:", raw_pmin)
-    print("raw_pmax:", raw_pmax)
-    print("mesh_length_scale:", args.mesh_length_scale)
-    print("path_length_scale:", args.mesh_length_scale if args.path_length_scale is None else args.path_length_scale)
-    print("scaled_pmin:", pmin)
-    print("scaled_pmax:", pmax)
-    print("part_pmin:", part_pmin)
-    print("part_pmax:", part_pmax)
-    print("thermal_dofs:", thermal.num_total_dofs_all_vars)
-    print("mechanical_dofs:", mechanics.num_total_dofs_all_vars)
-    print("build_axis:", args.build_axis)
-    print("base_side:", args.base_side)
-    print("build_direction:", f"+{args.build_axis}" if args.base_side == "min" else f"-{args.build_axis}")
-    print("plane_axes:", derived["plane_axes"])
-    print("scan_axis:", derived["scan_axis"])
-    print("hatch_axis:", derived["hatch_axis"])
-    print("layers:", args.layers)
-    print("layer_thickness:", args.layer_thickness)
-    print("hatch_lines_per_layer:", args.hatch_lines_per_layer)
-    print("hatch_spacing:", args.hatch_spacing)
-    print("scan_pattern:", args.scan_pattern)
-    print("scan_rotation_per_layer:", args.scan_rotation_per_layer)
-    print("jump_speed:", args.jump_speed)
-    print("scan_steps_per_layer:", args.scan_steps_per_layer)
-    print("total_thermal_steps:", derived["total_steps"])
-    print("scan_length:", derived["scan_length"])
-    print("scan_speed:", args.scan_speed)
-    print("actual_scan_speed:", derived["actual_scan_speed"])
-    print("dt:", args.dt)
-    print("laser_power:", args.laser_power)
-    print("absorptivity:", args.absorptivity)
-    print("effective_laser_power_nominal:", args.absorptivity * args.laser_power)
-    print("heat_source_normalization:", "2*P/(pi*r_b^2*source_depth)")
-    print("beam_radius:", args.beam_radius)
-    print("source_depth:", args.source_depth)
-    print("powder_mode:", args.powder_mode)
-    print("inactive_thermal_factor:", args.inactive_thermal_factor)
-    print("inactive_mechanics_factor:", args.inactive_mechanics_factor)
-    print("rho_solid:", args.rho_solid if args.rho_solid is not None else args.rho)
-    print("cp_solid:", args.cp_solid if args.cp_solid is not None else args.cp)
-    print("conductivity_solid:", args.conductivity_solid if args.conductivity_solid is not None else args.conductivity)
-    print("rho_powder:", args.rho_powder)
-    print("cp_powder:", args.cp_powder)
-    print("conductivity_powder:", args.conductivity_powder)
-    print("rho_liquid:", args.rho_liquid if args.rho_liquid is not None else (args.rho_solid if args.rho_solid is not None else args.rho))
-    print("cp_liquid:", args.cp_liquid if args.cp_liquid is not None else (args.cp_solid if args.cp_solid is not None else args.cp))
-    print("conductivity_liquid:", args.conductivity_liquid if args.conductivity_liquid is not None else (args.conductivity_solid if args.conductivity_solid is not None else args.conductivity))
-    print("emissivity:", args.emissivity)
-    print("bottom_thermal_bc:", args.bottom_thermal_bc)
-    print("bottom_temperature_effective:", derived["bottom_temperature_effective"])
-    print("front_surface_loss_h:", args.front_surface_loss_h)
-    print("front_surface_loss_thickness:", args.front_surface_loss_thickness)
-    print("front_surface_loss_radiation:", args.front_surface_loss_radiation)
-    print("mechanics_model:", args.mechanics_model)
-    print("mushy_mechanics_factor:", args.mushy_mechanics_factor)
-    print("liquid_mechanics_factor:", args.liquid_mechanics_factor)
-    print("reset_plastic_on_melt:", args.reset_plastic_on_melt)
-    print("active_window_below_layers:", args.active_window_below_layers)
-    print("old_layer_thermal_factor:", args.old_layer_thermal_factor)
-    print("old_layer_cooling_h:", args.old_layer_cooling_h)
-    print("layer_activation_mode:", args.layer_activation_mode)
-    print("future_layer_mode:", args.future_layer_mode)
-    print("layer_activation_geometry:", args.layer_activation_geometry)
-    if args.mechanics_model == "j2_plastic":
-        print("WARNING: j2_plastic is a simplified stress-clipping/radial-return approximation; do not use as industrial-grade quantitative residual stress.")
-    print("thermal_boundary_face_counts:", [len(x) for x in thermal.boundary_inds_list])
-    print("thermal_dirichlet_node_counts:", [len(x) for x in thermal.fes[0].node_inds_list])
-    print("mechanical_dirichlet_node_counts:", [len(x) for x in mechanics.fes[0].node_inds_list])
-    print("output_dir:", args.output_dir)
 
 
 def run_mechanics(mechanics, u_guess, params, newton_overrides=None):

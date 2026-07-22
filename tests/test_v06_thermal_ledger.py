@@ -9,9 +9,9 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "159_local"))
+sys.path.insert(0, str(ROOT))
 
-from v06.verification.thermal_ledger import (  # noqa: E402
+from jax_fem_am.verification.thermal_ledger import (  # noqa: E402
     EnergyLedgerRecorder,
     extract_solver_step,
     integrate_surface_exchange,

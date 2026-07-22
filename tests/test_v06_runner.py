@@ -16,9 +16,9 @@ class V06RunnerContractTest(unittest.TestCase):
 
         self.assertIn("v06/driver.py", text)
         self.assertIn("unit_cube_6tet.inp", text)
-        self.assertIn("v06.verification.run_audit", text)
-        self.assertIn("v06.measurement.xrd_vtu", text)
-        self.assertIn("v06.provenance", text)
+        self.assertIn("jax_fem_am.verification.run_audit", text)
+        self.assertIn("jax_fem_am.verification.xrd_vtu", text)
+        self.assertIn("jax_fem_am.verification.provenance", text)
         self.assertIn("LASER_POWER_W", text)
         self.assertIn("refusing existing OUT_ROOT", text)
         self.assertNotIn("v05/am_thermal", text)

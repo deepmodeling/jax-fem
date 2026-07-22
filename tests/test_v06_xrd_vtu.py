@@ -9,9 +9,9 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "159_local"))
+sys.path.insert(0, str(ROOT))
 
-from v06.measurement.xrd_vtu import predict_vtu_gauges  # noqa: E402
+from jax_fem_am.verification.xrd_vtu import predict_vtu_gauges  # noqa: E402
 
 
 class XrdVtuPipelineTest(unittest.TestCase):
@@ -24,7 +24,7 @@ class XrdVtuPipelineTest(unittest.TestCase):
     ):
         source = (
             ROOT
-            / "159_local/v06/verification/fixtures/unit_cube_6tet.inp"
+            / "jax_fem_am/verification/fixtures/unit_cube_6tet.inp"
         )
         mesh = meshio.read(source)
         cells = np.asarray(mesh.cells_dict["tetra"]).copy()

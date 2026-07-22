@@ -213,7 +213,7 @@ finalize_manifest() {
   local prior_status=$?
   trap - EXIT
   set +e
-  "${PYTHON_BIN}" -m v06.provenance \
+  "${PYTHON_BIN}" -m jax_fem_am.verification.provenance \
     --repo-root "${REPO_ROOT}" \
     --work-root "${WORK_ROOT}" \
     --run-dir "${OUT_ROOT}" \
@@ -243,19 +243,19 @@ LAST_COOLING_VTU="$(ls "${OUT_ROOT}"/step_*_cooling.vtu 2>/dev/null | sort | tai
 
 # NOTE: no --source-free-upper-bound here (laser is ON); undershoot and
 # invariant gates still apply inside run_audit.
-"${PYTHON_BIN}" -m v06.verification.run_audit "${OUT_ROOT}" \
+"${PYTHON_BIN}" -m jax_fem_am.verification.run_audit "${OUT_ROOT}" \
   --output "${OUT_ROOT}/v06_run_audit.json" \
   --ambient "${ROOM_TEMP_K}" \
   --quality-threshold 0.05
 
 # Output name must be xrd_operator_smoke.json: that is the artifact role
-# filename v06.provenance requires for a complete claim. Best-effort: a
+# filename jax_fem_am.verification.provenance requires for a complete claim. Best-effort: a
 # measurement-operator failure (e.g. gauge volume in void on truncated
 # smoke runs) must not abort the remaining verification artifacts; the
 # manifest then simply reports the missing XRD artifact.
 if [[ -n "${LAST_COOLING_VTU}" ]]; then
   set +e
-  "${PYTHON_BIN}" -m v06.measurement.xrd_vtu \
+  "${PYTHON_BIN}" -m jax_fem_am.verification.xrd_vtu \
     --vtu "${LAST_COOLING_VTU}" \
     --protocol "${XRD_PROTOCOL}" \
     --quality-threshold 0.05 \
@@ -267,6 +267,6 @@ if [[ -n "${LAST_COOLING_VTU}" ]]; then
   fi
 fi
 
-"${PYTHON_BIN}" -m v06.verification.response_gate \
+"${PYTHON_BIN}" -m jax_fem_am.verification.response_gate \
   --run-dir "${OUT_ROOT}" \
   --output "${OUT_ROOT}/v06_response_gate.json"

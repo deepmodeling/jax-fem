@@ -6,15 +6,15 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "159_local"))
+sys.path.insert(0, str(ROOT))
 
-from v06.measurement.xrd import (  # noqa: E402
+from jax_fem_am.verification.xrd import (  # noqa: E402
     gauge_volume_average,
     project_normal_microstrain,
     project_normal_strain,
 )
-from v06.verification.mesh_quality import audit_tet_mesh  # noqa: E402
-from v06.verification.weighted import weighted_mean, weighted_quantile  # noqa: E402
+from jax_fem_am.verification.mesh_quality import audit_tet_mesh  # noqa: E402
+from jax_fem_am.verification.weighted import weighted_mean, weighted_quantile  # noqa: E402
 
 
 def regular_tetrahedron():

@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT / "159_local"))
 sys.path.insert(0, str(ROOT / "159_local" / "v01"))
 
 from v06 import driver  # noqa: E402
-from v06.mechanics.j2 import equivalent_stress  # noqa: E402
+from jax_fem_am.materials.j2 import equivalent_stress  # noqa: E402
 
 
 def load_fresh_v03(name):

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from v06.verification.mesh_quality import audit_tet_mesh
+from jax_fem_am.verification.mesh_quality import audit_tet_mesh
 
 from .xrd import compute_gauge_weights, predict_gauge_microstrain
 

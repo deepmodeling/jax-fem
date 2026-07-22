@@ -102,7 +102,7 @@ class TestJ2JacobianAtZeroState(unittest.TestCase):
     def _stress_of_strain(self):
         import jax
         import jax.numpy as jnp
-        from v06.mechanics.j2 import PlasticState, radial_return
+        from jax_fem_am.materials.j2 import PlasticState, radial_return
 
         def stress_of(strain):
             update = radial_return(
@@ -131,7 +131,7 @@ class TestJ2JacobianAtZeroState(unittest.TestCase):
 
     def test_primal_unchanged_in_plastic_regime(self):
         import jax.numpy as jnp
-        from v06.mechanics.j2 import PlasticState, radial_return
+        from jax_fem_am.materials.j2 import PlasticState, radial_return
 
         strain = jnp.asarray([[5.0e-3, 0.0, 0.0],
                               [0.0, -1.5e-3, 0.0],
@@ -146,7 +146,7 @@ class TestJ2JacobianAtZeroState(unittest.TestCase):
             hardening=4.0e8,
         )
         self.assertGreater(float(update.delta_eqp), 0.0)
-        from v06.mechanics.j2 import equivalent_stress
+        from jax_fem_am.materials.j2 import equivalent_stress
         q = float(equivalent_stress(update.stress))
         expected = 5.0e8 + 4.0e8 * float(update.state.eqp)
         self.assertAlmostEqual(q / expected, 1.0, places=6)

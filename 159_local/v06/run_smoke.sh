@@ -14,8 +14,8 @@ SOURCE_DEPTH_M="${SOURCE_DEPTH_M:-0}"
 RUN_LABEL="${RUN_LABEL:-v06-smoke-cube}"
 
 MATERIAL_CONFIG="${MATERIAL_CONFIG:-${WORK_ROOT}/materials/Ti-6Al-4V/ti64_material_config_physfix.json}"
-MESH_FILE="${SCRIPT_DIR}/verification/fixtures/unit_cube_6tet.inp"
-XRD_PROTOCOL="${SCRIPT_DIR}/verification/fixtures/unit_cube_xrd_protocol.json"
+MESH_FILE="${REPO_ROOT}/jax_fem_am/verification/fixtures/unit_cube_6tet.inp"
+XRD_PROTOCOL="${REPO_ROOT}/jax_fem_am/verification/fixtures/unit_cube_xrd_protocol.json"
 
 if [[ ! -f "${MATERIAL_CONFIG}" ]]; then
   echo "v06 smoke: material config not found: ${MATERIAL_CONFIG}" >&2
@@ -87,7 +87,7 @@ finalize_manifest() {
   local prior_status=$?
   trap - EXIT
   set +e
-  "${PYTHON_BIN}" -m v06.provenance \
+  "${PYTHON_BIN}" -m jax_fem_am.verification.provenance \
     --repo-root "${REPO_ROOT}" \
     --work-root "${WORK_ROOT}" \
     --run-dir "${OUT_ROOT}" \
@@ -117,18 +117,18 @@ trap finalize_manifest EXIT
 
 "${SOLVER_CMD[@]}"
 
-"${PYTHON_BIN}" -m v06.verification.run_audit "${OUT_ROOT}" \
+"${PYTHON_BIN}" -m jax_fem_am.verification.run_audit "${OUT_ROOT}" \
   --output "${OUT_ROOT}/v06_run_audit.json" \
   --ambient 300 \
   --quality-threshold 0.05 \
   --source-free-upper-bound 1100
 
-"${PYTHON_BIN}" -m v06.measurement.xrd_vtu \
+"${PYTHON_BIN}" -m jax_fem_am.verification.xrd_vtu \
   --vtu "${OUT_ROOT}/step_000002_cooling.vtu" \
   --protocol "${XRD_PROTOCOL}" \
   --quality-threshold 0.05 \
   --output "${OUT_ROOT}/xrd_operator_smoke.json"
 
-"${PYTHON_BIN}" -m v06.verification.response_gate \
+"${PYTHON_BIN}" -m jax_fem_am.verification.response_gate \
   --run-dir "${OUT_ROOT}" \
   --output "${OUT_ROOT}/v06_response_gate.json"

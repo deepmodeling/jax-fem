@@ -9,9 +9,9 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "159_local"))
+sys.path.insert(0, str(ROOT))
 
-from v06.verification.mesh_audit import summarize_tet_mesh  # noqa: E402
+from jax_fem_am.verification.mesh_audit import summarize_tet_mesh  # noqa: E402
 
 
 def regular_tetrahedron(offset):
@@ -55,7 +55,7 @@ class MeshAuditSummaryTest(unittest.TestCase):
 
     def test_v06_smoke_fixture_has_complete_fixed_base_and_valid_tets(self):
         path = (
-            ROOT / "159_local" / "v06" / "verification" / "fixtures"
+            ROOT / "jax_fem_am" / "verification" / "fixtures"
             / "unit_cube_6tet.inp"
         )
         mesh = meshio.read(path)

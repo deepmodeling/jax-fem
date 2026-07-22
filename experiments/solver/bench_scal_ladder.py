@@ -40,7 +40,7 @@ def main() -> int:
              "solve_calls": 0, "solve_seconds": 0.0}
 
     if arm == "phase23":
-        from pardiso_variants import VariantSolver
+        from jax_fem_am.solvers.pardiso import VariantSolver
 
         variant = VariantSolver("phase23")
 

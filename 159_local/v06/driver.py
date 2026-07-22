@@ -19,17 +19,17 @@ REPO_ROOT = SCRIPT_DIR.parents[1]
 if str(LOCAL_ROOT) not in sys.path:
     sys.path.insert(0, str(LOCAL_ROOT))
 
-from v06.mechanics.j2 import (  # noqa: E402
+from jax_fem_am.materials.j2 import (  # noqa: E402
     PlasticState,
     elastic_strain_from_stress,
     radial_return,
 )
-from v06.mechanics.lifecycle import (  # noqa: E402
+from jax_fem_am.domain.lifecycle import (  # noqa: E402
     effective_thermal_increment,
     update_stress_free_reference,
 )
-from v06.material_validation import validate_material_inputs  # noqa: E402
-from v06.verification.thermal_ledger import (  # noqa: E402
+from jax_fem_am.materials.material_validation import validate_material_inputs  # noqa: E402
+from jax_fem_am.verification.thermal_ledger import (  # noqa: E402
     EnergyLedgerRecorder,
     extract_solver_step,
 )

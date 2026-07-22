@@ -16,8 +16,8 @@ jax.config.update("jax_enable_x64", True)
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "159_local"))
 
-from v06.mechanics.j2 import PlasticState, radial_return  # noqa: E402
-from v06.mechanics.lifecycle import (  # noqa: E402
+from jax_fem_am.materials.j2 import PlasticState, radial_return  # noqa: E402
+from jax_fem_am.domain.lifecycle import (  # noqa: E402
     effective_thermal_increment,
     update_stress_free_reference,
 )

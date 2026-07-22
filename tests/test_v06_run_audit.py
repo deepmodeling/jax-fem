@@ -8,9 +8,9 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "159_local"))
+sys.path.insert(0, str(ROOT))
 
-from v06.verification.run_audit import audit_run, audit_solution_fields  # noqa: E402
+from jax_fem_am.verification.run_audit import audit_run, audit_solution_fields  # noqa: E402
 
 
 def regular_tetrahedron(offset):

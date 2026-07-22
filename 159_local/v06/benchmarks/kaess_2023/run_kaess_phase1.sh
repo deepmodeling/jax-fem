@@ -162,7 +162,7 @@ finalize_manifest() {
   local prior_status=$?
   trap - EXIT
   set +e
-  "${PYTHON_BIN}" -m v06.provenance \
+  "${PYTHON_BIN}" -m jax_fem_am.verification.provenance \
     --repo-root "${REPO_ROOT}" \
     --work-root "${WORK_ROOT}" \
     --run-dir "${OUT_ROOT}" \
@@ -190,20 +190,20 @@ trap finalize_manifest EXIT
 
 LAST_COOLING_VTU="$(ls "${OUT_ROOT}"/step_*_cooling.vtu 2>/dev/null | sort | tail -1)"
 
-"${PYTHON_BIN}" -m v06.verification.run_audit "${OUT_ROOT}" \
+"${PYTHON_BIN}" -m jax_fem_am.verification.run_audit "${OUT_ROOT}" \
   --output "${OUT_ROOT}/v06_run_audit.json" \
   --ambient "${ROOM_TEMP_K}" \
   --quality-threshold 0.05 \
   --source-free-upper-bound "${RESET_TEMP_K}"
 
 if [[ -n "${LAST_COOLING_VTU}" ]]; then
-  "${PYTHON_BIN}" -m v06.measurement.xrd_vtu \
+  "${PYTHON_BIN}" -m jax_fem_am.verification.xrd_vtu \
     --vtu "${LAST_COOLING_VTU}" \
     --protocol "${XRD_PROTOCOL}" \
     --quality-threshold 0.05 \
     --output "${OUT_ROOT}/xrd_operator_kaess.json"
 fi
 
-"${PYTHON_BIN}" -m v06.verification.response_gate \
+"${PYTHON_BIN}" -m jax_fem_am.verification.response_gate \
   --run-dir "${OUT_ROOT}" \
   --output "${OUT_ROOT}/v06_response_gate.json"

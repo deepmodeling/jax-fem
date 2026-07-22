@@ -130,7 +130,7 @@ class _PardisoCustomSolver:
 
     def _maybe_v07_variant(self):
         # V07 ablation hook: V07_PARDISO_MODE selects an experimental
-        # solver ladder from 159_local/v07/pardiso_variants.py. Unset (or
+        # solver ladder from jax_fem_am/solvers/pardiso.py. Unset (or
         # "base") keeps this class's behaviour untouched.
         if self._v07_variant is None:
             import os
@@ -139,20 +139,9 @@ class _PardisoCustomSolver:
             if not mode or mode == "base":
                 self._v07_variant = False
             else:
-                import importlib.util
-                from pathlib import Path
+                from jax_fem_am.solvers.pardiso import VariantSolver
 
-                vpath = (
-                    Path(__file__).resolve().parents[1]
-                    / "v07"
-                    / "pardiso_variants.py"
-                )
-                spec = importlib.util.spec_from_file_location(
-                    "v07_pardiso_variants", vpath
-                )
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
-                self._v07_variant = module.VariantSolver(mode)
+                self._v07_variant = VariantSolver(mode)
         return self._v07_variant
 
     def __call__(self, A, b, x0, linear_options):

@@ -53,7 +53,7 @@ def main() -> int:
     elif arm in ("pardiso", "phase23"):
         if arm == "phase23":
             sys.path.insert(0, v07_dir)
-            from pardiso_variants import VariantSolver
+            from jax_fem_am.solvers.pardiso import VariantSolver
 
             variant = VariantSolver("phase23")
 

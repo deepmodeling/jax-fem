@@ -7,9 +7,9 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "159_local"))
+sys.path.insert(0, str(ROOT))
 
-from v06.measurement.xrd import (  # noqa: E402
+from jax_fem_am.verification.xrd import (  # noqa: E402
     compute_gauge_weights,
     predict_gauge_microstrain,
     tetra_box_intersection,
@@ -86,7 +86,7 @@ class GaugePredictionTest(unittest.TestCase):
     def test_six_tet_cube_has_full_coverage_and_recovers_constant_field(self):
         fixture = (
             ROOT
-            / "159_local/v06/verification/fixtures/unit_cube_6tet.inp"
+            / "jax_fem_am/verification/fixtures/unit_cube_6tet.inp"
         )
         mesh = meshio.read(fixture)
         points = np.asarray(mesh.points)
@@ -119,7 +119,7 @@ class GaugePredictionTest(unittest.TestCase):
     def test_partial_material_coverage_is_reported_and_not_silently_normalized(self):
         fixture = (
             ROOT
-            / "159_local/v06/verification/fixtures/unit_cube_6tet.inp"
+            / "jax_fem_am/verification/fixtures/unit_cube_6tet.inp"
         )
         mesh = meshio.read(fixture)
         cells = np.asarray(mesh.cells_dict["tetra"])
@@ -144,7 +144,7 @@ class GaugePredictionTest(unittest.TestCase):
     def test_overlapping_tetrahedra_are_not_accepted_as_full_gauge_coverage(self):
         fixture = (
             ROOT
-            / "159_local/v06/verification/fixtures/unit_cube_6tet.inp"
+            / "jax_fem_am/verification/fixtures/unit_cube_6tet.inp"
         )
         mesh = meshio.read(fixture)
         cells = np.asarray(mesh.cells_dict["tetra"])

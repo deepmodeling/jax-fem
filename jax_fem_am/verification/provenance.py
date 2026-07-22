@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Iterable, Optional, Sequence
 
 
-SCHEMA_VERSION = "v06.provenance/2"
+SCHEMA_VERSION = "jax_fem_am.verification.provenance/2"
 COMPLETE_CLAIM_LEVEL = "numerical_smoke_only"
 INCOMPLETE_CLAIM_LEVEL = "forensic_manifest_only"
 
@@ -389,26 +389,26 @@ def build_manifest(
         "v06_j2_kernel": repo_root / "159_local/v06/mechanics/j2.py",
         "v06_mechanical_lifecycle": repo_root
         / "159_local/v06/mechanics/lifecycle.py",
-        "v06_material_validation": repo_root
-        / "159_local/v06/material_validation.py",
+        "am_material_validation": repo_root
+        / "jax_fem_am/materials/material_validation.py",
         "v06_runner": repo_root / "159_local/v06/run_smoke.sh",
         "v06_nonzero_runner": repo_root
         / "159_local/v06/run_nonzero_smoke.sh",
-        "v06_provenance": repo_root / "159_local/v06/provenance.py",
+        "am_provenance": repo_root / "jax_fem_am/verification/provenance.py",
         "v06_run_audit": repo_root
-        / "159_local/v06/verification/run_audit.py",
+        / "jax_fem_am/verification/run_audit.py",
         "v06_mesh_quality": repo_root
-        / "159_local/v06/verification/mesh_quality.py",
+        / "jax_fem_am/verification/mesh_quality.py",
         "v06_weighted_statistics": repo_root
-        / "159_local/v06/verification/weighted.py",
+        / "jax_fem_am/verification/weighted.py",
         "v06_thermal_balance": repo_root
-        / "159_local/v06/verification/thermal_balance.py",
+        / "jax_fem_am/verification/thermal_balance.py",
         "v06_thermal_ledger": repo_root
-        / "159_local/v06/verification/thermal_ledger.py",
+        / "jax_fem_am/verification/thermal_ledger.py",
         "v06_response_gate": repo_root
-        / "159_local/v06/verification/response_gate.py",
-        "v06_xrd_geometry": repo_root / "159_local/v06/measurement/xrd.py",
-        "v06_xrd_vtu": repo_root / "159_local/v06/measurement/xrd_vtu.py",
+        / "jax_fem_am/verification/response_gate.py",
+        "v06_xrd_geometry": repo_root / "jax_fem_am/verification/xrd.py",
+        "v06_xrd_vtu": repo_root / "jax_fem_am/verification/xrd_vtu.py",
         "v04_runtime_wrapper": repo_root
         / "159_local/v04/am_thermal_stress_macro_intersection_mech100_XLA.py",
         "v03_base_solver": repo_root
@@ -428,6 +428,7 @@ def build_manifest(
             repo_root / "159_local/v03",
             repo_root / "159_local/v04",
             repo_root / "159_local/v06",
+            repo_root / "jax_fem_am",
         ],
         repo_root,
     )

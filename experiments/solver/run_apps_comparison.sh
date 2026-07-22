@@ -9,7 +9,7 @@ export MPLBACKEND=Agg
 export PYTHONPATH=/home/user/work/159/jax-fem
 OUT=output/05_bench/v07_apps
 mkdir -p $OUT
-H=159_local/v07/bench_apps.py
+H=experiments/solver/bench_apps.py
 
 run_case () {  # name app_path arm timeout snapshot_src
   local name=$1 app=$2 arm=$3 to=$4 snap=$5

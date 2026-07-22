@@ -4,9 +4,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "159_local"))
+sys.path.insert(0, str(ROOT))
 
-from v06.verification.response_gate import evaluate_response_gate  # noqa: E402
+from jax_fem_am.verification.response_gate import evaluate_response_gate  # noqa: E402
 
 
 class ManufacturedResponseGateTest(unittest.TestCase):

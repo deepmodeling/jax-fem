@@ -53,7 +53,7 @@ def main() -> int:
 
     variant = None
     if arm in ("phase23", "phase23T"):
-        from pardiso_variants import VariantSolver
+        from jax_fem_am.solvers.pardiso import VariantSolver
 
         variant = VariantSolver("phase23")
 

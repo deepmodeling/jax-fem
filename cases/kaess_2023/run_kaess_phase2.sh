@@ -37,6 +37,15 @@ ROOM_TEMP_K="${ROOM_TEMP_K:-293.15}"      # final plate cooldown target (paper 2
 RELAX_TEMP_K="${RELAX_TEMP_K:-0}"
 POWER_TAG="${POWER_TAG:-P250}"
 PATH_ARGS="${PATH_ARGS:-}"
+# The reference case is 10 x 30 um.  Keep those defaults, but expose both
+# values so reduced-order launchers can cover the same 0.3 mm build height
+# with a smaller number of explicitly documented macro layers.
+BUILD_LAYERS="${BUILD_LAYERS:-10}"
+LAYER_THICKNESS="${LAYER_THICKNESS:-3.0e-5}"
+RECOAT_TIME="${RECOAT_TIME:-10.0}"
+RECOAT_STEPS="${RECOAT_STEPS:-10}"
+COOLING_STEPS="${COOLING_STEPS:-30}"
+COOLING_DT="${COOLING_DT:-1.0}"
 MECH_EVERY="${MECH_EVERY:-20}"
 # DEVIATION (documented): G1 activation undershoot drives freshly activated
 # quads below 0 K; the floor keeps the mechanics chain (thermal strain +
@@ -72,7 +81,7 @@ THERMAL_LUMPING="${THERMAL_LUMPING:-1}"
 ELEMENT_TYPE="${ELEMENT_TYPE:-c3d8}"
 RUN_ID="${RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_ROOT="${OUT_ROOT:-${WORK_ROOT}/output/kaess_p2_T${PLATE_TEMP_C}C_${POWER_TAG}_${ELEMENT_TYPE}_${RUN_ID}}"
-RUN_LABEL="kaess-2023-phase2-T${PLATE_TEMP_C}C-${POWER_TAG}-${ELEMENT_TYPE}"
+RUN_LABEL="${RUN_LABEL:-kaess-2023-phase2-T${PLATE_TEMP_C}C-${POWER_TAG}-${ELEMENT_TYPE}}"
 
 MATERIAL_CONFIG="${MATERIAL_CONFIG:-${WORK_ROOT}/materials/316L/ss316l_material_config_kaess.json}"
 # POWDER_SOLID=1: paper-parity weak-solid powder (E=10 GPa / sigma_y=1 MPa,
@@ -112,9 +121,13 @@ if ! mkdir "${OUT_ROOT}" 2>/dev/null; then
   exit 2
 fi
 
-# scan path generated per-run so PATH_ARGS (power/speed/layers) are recorded
+# Scan path generated per-run so PATH_ARGS (power/speed/layers) are recorded.
+# Base layer arguments mirror the solver.  Trailing PATH_ARGS may explicitly
+# override path-only layers for legacy truncated smoke wrappers.
 PATH_FILE="${OUT_ROOT}/kaess_path.csv"
 "${PYTHON_BIN}" "${SCRIPT_DIR}/make_kaess_path.py" \
+  --layers "${BUILD_LAYERS}" \
+  --layer-thickness "${LAYER_THICKNESS}" \
   --output "${PATH_FILE}" ${PATH_ARGS}
 
 XRD_PROTOCOL="${OUT_ROOT}/kaess_xrd_protocol.json"
@@ -162,8 +175,8 @@ SOLVER_CMD=(
   --xla-linear-solver "${LINEAR_SOLVER}"
   --build-axis z
   --base-side min
-  --layer-thickness 3.0e-5
-  --layers 10
+  --layer-thickness "${LAYER_THICKNESS}"
+  --layers "${BUILD_LAYERS}"
   --support-thickness 3.0e-4
   --path-file "${PATH_FILE}"
   --path-length-scale 1.0
@@ -186,9 +199,9 @@ SOLVER_CMD=(
   --stress-relaxation-temperature "${RELAX_TEMP_K}"
   --reset-activation-temperature
   --activation-reset-temperature "${PLATE_TEMP_K}"
-  --recoat-time 10.0
-  --recoat-steps 10
-  --cooling-steps 30 --cooling-dt 1.0
+  --recoat-time "${RECOAT_TIME}"
+  --recoat-steps "${RECOAT_STEPS}"
+  --cooling-steps "${COOLING_STEPS}" --cooling-dt "${COOLING_DT}"
   --final-cooldown-temperature "${ROOM_TEMP_K}"
   --mechanics-model j2_plastic
   # full clamp: see run_kaess_phase1.sh note (elastic foundation leaves x/y

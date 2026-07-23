@@ -2,8 +2,9 @@
 
 Contract: `acceptance=None` (default) preserves the legacy single-residual
 loop bit-for-bit, including the max_iter RuntimeError; the opt-in 'abaqus'
-mode accepts j2 stall-floor states via the dual force/displacement criteria
-with the linear-convergence fallback (experiments/solver/ABAQUS_SOLVER_NOTES.md).
+mode keeps the configured strict residual exit and additionally accepts j2
+stall-floor states via the dual force/displacement criteria with the
+linear-convergence fallback (experiments/solver/ABAQUS_SOLVER_NOTES.md).
 """
 
 import sys

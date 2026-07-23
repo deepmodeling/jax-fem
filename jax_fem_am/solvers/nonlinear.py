@@ -28,10 +28,12 @@ def mechanics_newton_overrides_from_args(args):
     if getattr(args, "mechanics_residual_only_check", False):
         overrides["residual_only_check"] = True
     if getattr(args, "mechanics_acceptance", "legacy") == "abaqus":
-        # Abaqus/Standard-style dual criteria (usb 7.2.3): max-norm force
-        # residual vs the increment's out-of-balance force scale (0.5%),
-        # displacement-correction check (1%), and the linear-convergence
-        # fallback (2e-2 after iteration 9). Rationale and provenance:
+        # Hybrid strict-residual OR Abaqus/Standard-style dual criteria
+        # (usb 7.2.3): configured tol/rel_tol remain a conservative exit;
+        # otherwise use max-norm force residual vs the increment's
+        # out-of-balance force scale (0.5%), displacement-correction check
+        # (1%), and the linear-convergence fallback (2e-2 after iteration 9).
+        # Rationale and provenance:
         # experiments/solver/ABAQUS_SOLVER_NOTES.md (P0).
         overrides["acceptance"] = {
             "force_frac": float(args.mechanics_acceptance_force_frac),

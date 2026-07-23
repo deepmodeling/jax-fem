@@ -236,9 +236,11 @@ def build_parser(config=None):
                         dest="mechanics_residual_only_check", action="store_false")
     parser.add_argument("--mechanics-acceptance", choices=("legacy", "abaqus"),
                         default=cfg(config, "mechanics_acceptance", "legacy"),
-                        help="Newton acceptance criteria for mechanics solves. 'legacy' = single "
-                             "relative-residual test (bitwise-preserving default). 'abaqus' = "
-                             "Abaqus/Standard-style dual criteria: max-norm force residual vs the "
+                        help="Newton acceptance criteria for mechanics solves. 'legacy' = "
+                             "relative/absolute residual test (bitwise-preserving default). 'abaqus' = "
+                             "hybrid strict-residual OR Abaqus/Standard-style dual criteria: "
+                             "configured tol/rel_tol remain a conservative acceptance exit; "
+                             "otherwise use max-norm force residual vs the "
                              "increment's out-of-balance force scale, displacement-correction check, "
                              "and a linear-convergence fallback - accepts the j2 stall-floor and "
                              "near-perfectly-plastic powder states that the reference solver treats "

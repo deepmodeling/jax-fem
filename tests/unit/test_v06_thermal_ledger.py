@@ -129,6 +129,78 @@ class ThermalLedgerRecorderTest(unittest.TestCase):
 
 
 class ThermalLedgerSolverExtractionTest(unittest.TestCase):
+    def test_exact_zero_future_void_is_excluded_from_coefficient_validation(self):
+        class FE:
+            JxW = np.ones((2, 1))
+            cells = np.asarray([[0], [1]])
+            node_inds_list = [np.asarray([0, 1])]
+            vec_inds_list = [np.asarray([0, 0])]
+            vals_list = [np.asarray([300.0, 300.0])]
+
+            @staticmethod
+            def convert_from_dof_to_quad(values):
+                return np.asarray(values)[:, None, :]
+
+        class Problem:
+            fes = [FE()]
+            physical_quad_points = np.zeros((2, 1, 3))
+            internal_vars = [
+                300.0 * np.ones((2, 1, 1)),
+                np.ones((2, 1, 1)),
+                np.zeros((2, 1, 3)),
+                np.zeros((2, 1, 1)),
+                np.ones((2, 1, 1)),
+                np.ones((2, 1, 1)),
+                np.zeros((2, 1, 1)),
+                np.asarray([[[1.0]], [[0.0]]]),
+                np.asarray([[[2.0]], [[0.0]]]),
+                np.asarray([[[3.0]], [[0.0]]]),
+                np.asarray([[[1.0]], [[0.0]]]),
+                np.zeros((2, 1, 1)),
+                np.zeros((2, 1, 1)),
+                np.zeros((2, 1, 1)),
+            ]
+            boundary_inds_list = []
+            selected_face_shape_vals = []
+            nanson_scale = []
+            internal_vars_surfaces = []
+            convection_h = 0.0
+            ambient = 300.0
+            emissivity = 0.0
+            stefan_boltzmann = 5.67e-8
+            build_axis_id = 2
+            plane_axis0_id = 0
+            plane_axis1_id = 1
+            build_sign = 1.0
+            front_surface_loss_h = 0.0
+            front_surface_loss_thickness = 1.0
+            front_surface_loss_radiation = False
+
+            @staticmethod
+            def compute_residual(_solution):
+                return [np.zeros((2, 1))]
+
+        row = extract_solver_step(
+            Problem(),
+            [300.0 * np.ones((2, 1))],
+            step_index=0,
+            step_state=SimpleNamespace(
+                global_step=0,
+                mode="cooling",
+                layer_idx=0,
+                hatch_idx=0,
+                scan_idx=0,
+                laser_power=0.0,
+                laser_switch=0.0,
+            ),
+            absorptivity=0.5,
+            previous_solution=None,
+            temperature_atol_k=1.0e-3,
+        )
+
+        self.assertEqual(row["storage_j"], 0.0)
+        self.assertTrue(row["temperature_invariants_valid"])
+
     def test_dirichlet_reaction_closes_constant_storage_step(self):
         class FE:
             JxW = np.asarray([[2.0]])

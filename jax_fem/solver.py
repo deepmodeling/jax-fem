@@ -584,6 +584,7 @@ def _single_var_bc_flat(problem):
     signature = (
         vec,
         offset,
+        int(getattr(fe, '_dirichlet_bc_version', 0)),
         tuple(
             (
                 _bc_array_signature(node_inds),
@@ -927,6 +928,17 @@ class _PetscTangentCache:
         self.mat = PETSc.Mat().createAIJ(size=(n, n))
         self.mat.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)
         self.mat.setPreallocationCOO(coo_i, coo_j)
+        self.bc_versions = None
+        self.bc_row_inds_list = []
+        self._refresh_bc_rows(problem)
+
+    def _refresh_bc_rows(self, problem):
+        versions = tuple(
+            getattr(fe, '_dirichlet_bc_version', 0)
+            for fe in problem.fes
+        )
+        if versions == self.bc_versions:
+            return
         self.bc_row_inds_list = []
         for ind, fe in enumerate(problem.fes):
             for i in range(len(fe.node_inds_list)):
@@ -935,8 +947,10 @@ class _PetscTangentCache:
                     dtype=onp.int32,
                 )
                 self.bc_row_inds_list.append(row_inds)
+        self.bc_versions = versions
 
     def update(self, problem):
+        self._refresh_bc_rows(problem)
         values = onp.asarray(problem.V, dtype=onp.float64)
         self.mat.setValuesCOO(values)
         self.mat.assemble()

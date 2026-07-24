@@ -10,6 +10,7 @@ import jax.numpy as np
 import numpy as onp
 
 from jax_fem_am.materials.tables import eval_property
+from jax_fem_am.process.activation import uses_strict_active_domain
 
 
 MODE_TO_ID = {
@@ -105,12 +106,21 @@ def thermal_material_quads(T_old_quad, active_quad, phase_quad, args, tables, pr
     if cooling_only_quad is None:
         cooling_only_quad = np.zeros_like(active_quad)
 
-    inactive_mass_factor = getattr(args, "inactive_mass_factor", None)
-    if inactive_mass_factor is None:
-        inactive_mass_factor = args.inactive_thermal_factor
-    rho_void = rho_solid * inactive_mass_factor
-    cp_void = cp_solid * np.ones_like(T_old_quad)
-    k_void = k_solid * args.inactive_thermal_factor * np.ones_like(T_old_quad)
+    if uses_strict_active_domain(args):
+        rho_void = np.zeros_like(T_old_quad)
+        cp_void = np.zeros_like(T_old_quad)
+        k_void = np.zeros_like(T_old_quad)
+    else:
+        inactive_mass_factor = getattr(args, "inactive_mass_factor", None)
+        if inactive_mass_factor is None:
+            inactive_mass_factor = args.inactive_thermal_factor
+        rho_void = rho_solid * inactive_mass_factor
+        cp_void = cp_solid * np.ones_like(T_old_quad)
+        k_void = (
+            k_solid
+            * args.inactive_thermal_factor
+            * np.ones_like(T_old_quad)
+        )
 
     if args.liquidus_temperature > args.solidus_temperature:
         mushy_frac = np.clip(
@@ -221,13 +231,25 @@ def mechanics_material_quads(T_quad, active_quad, phase_quad, args, tables):
     is_solid_like = (phase_quad == STATE_SOLID) | (phase_quad == STATE_SUBSTRATE) | (phase_quad == STATE_SUPPORT)
     is_mushy = phase_quad == STATE_MUSHY
     is_liquid = phase_quad == STATE_LIQUID
+    inactive_factor = (
+        0.0
+        if uses_strict_active_domain(args)
+        else args.inactive_mechanics_factor
+    )
 
     active_factor_quad = np.where(
         is_solid_like,
         1.0,
-        np.where(is_mushy, args.mushy_mechanics_factor, np.where(is_liquid, args.liquid_mechanics_factor, args.inactive_mechanics_factor)),
+        np.where(
+            is_mushy,
+            args.mushy_mechanics_factor,
+            np.where(is_liquid, args.liquid_mechanics_factor, inactive_factor),
+        ),
     )
-    active_factor_quad = active_factor_quad * active_quad + args.inactive_mechanics_factor * (1.0 - active_quad)
+    active_factor_quad = (
+        active_factor_quad * active_quad
+        + inactive_factor * (1.0 - active_quad)
+    )
     alpha_quad = np.where(is_solid_like, alpha_base, np.zeros_like(alpha_base))
     if getattr(args, "powder_solid_E", None) is not None:
         # Weak-solid powder (Kaess 2023): constant E/sigma_y, no hardening,
@@ -240,7 +262,7 @@ def mechanics_material_quads(T_quad, active_quad, phase_quad, args, tables):
             is_powder, getattr(args, "powder_solid_hardening", 1.0e7), hardening_quad)
         active_factor_quad = np.where(
             is_powder,
-            active_quad + args.inactive_mechanics_factor * (1.0 - active_quad),
+            active_quad + inactive_factor * (1.0 - active_quad),
             active_factor_quad,
         )
     return active_factor_quad, E_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad

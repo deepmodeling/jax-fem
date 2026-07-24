@@ -73,16 +73,27 @@ def integrate_volume_terms(
     latent_cp = _field("latent_cp", latent_cp, shape)
     active = _field("active", active, shape)
     cooling_only = _field("cooling_only", cooling_only, shape)
-    if np.any(rho <= 0.0):
-        raise ValueError("rho must be positive")
-    if np.any(cp <= 0.0) or np.any(cp + latent_cp <= 0.0):
-        raise ValueError("cp and cp + latent_cp must be positive")
+    if np.any(rho < 0.0):
+        raise ValueError("rho must be nonnegative")
+    if np.any(cp < 0.0):
+        raise ValueError("cp must be nonnegative")
     if np.any(latent_cp < 0.0):
         raise ValueError("latent_cp must be nonnegative")
     if not np.all(np.isin(active, (0.0, 1.0))) or not np.all(
         np.isin(cooling_only, (0.0, 1.0))
     ):
         raise ValueError("active and cooling_only must be binary")
+    material_support = rho > 0.0
+    if np.any(material_support & (cp <= 0.0)):
+        raise ValueError("cp must be positive on the thermal material domain")
+    if np.any((~material_support) & ((cp != 0.0) | (latent_cp != 0.0))):
+        raise ValueError(
+            "exact-zero void must have rho, cp, and latent_cp equal to zero"
+        )
+    if np.any(((active > 0.5) | (cooling_only > 0.5)) & (~material_support)):
+        raise ValueError(
+            "active and cooling-only quadrature points require thermal material"
+        )
 
     laser_center = np.asarray(laser_center, dtype=np.float64)
     scalars = {
@@ -359,9 +370,27 @@ def extract_solver_step(
     source_depth = _uniform_scalar("source depth", source_depth_quad)
     laser_switch = _uniform_scalar("laser switch", switch_quad)
     old_layer_h = _uniform_scalar("old layer cooling coefficient", old_layer_h_quad)
+    rho = np.asarray(rho_quad, dtype=np.float64)[..., 0]
+    cp = np.asarray(cp_quad, dtype=np.float64)[..., 0]
+    latent_cp = np.asarray(latent_cp_quad, dtype=np.float64)[..., 0]
     conductivity = np.asarray(conductivity_quad, dtype=np.float64)[..., 0]
-    if not np.all(np.isfinite(conductivity)) or np.any(conductivity <= 0.0):
-        raise ValueError("thermal conductivity must be finite and positive")
+    if (
+        conductivity.shape != rho.shape
+        or not np.all(np.isfinite(conductivity))
+        or np.any(conductivity < 0.0)
+    ):
+        raise ValueError(
+            "thermal conductivity must be a finite, nonnegative material field"
+        )
+    material_support = rho > 0.0
+    if np.any(material_support & (conductivity <= 0.0)):
+        raise ValueError(
+            "thermal conductivity must be positive on the material domain"
+        )
+    if np.any((~material_support) & (conductivity != 0.0)):
+        raise ValueError(
+            "exact-zero void must have zero thermal conductivity"
+        )
     laser_center = np.asarray(laser_center_quad, dtype=np.float64)[0, 0]
     fe = problem.fes[0]
     temperature_new_quad = np.asarray(
@@ -372,9 +401,9 @@ def extract_solver_step(
         points=np.asarray(problem.physical_quad_points, dtype=np.float64),
         temperature_old=np.asarray(temperature_old_quad, dtype=np.float64)[..., 0],
         temperature_new=temperature_new_quad,
-        rho=np.asarray(rho_quad, dtype=np.float64)[..., 0],
-        cp=np.asarray(cp_quad, dtype=np.float64)[..., 0],
-        latent_cp=np.asarray(latent_cp_quad, dtype=np.float64)[..., 0],
+        rho=rho,
+        cp=cp,
+        latent_cp=latent_cp,
         laser_center=laser_center,
         effective_laser_power_w=effective_power,
         beam_radius_m=beam_radius,

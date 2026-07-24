@@ -328,9 +328,12 @@ class InactiveMassFactorTest(unittest.TestCase):
             old_layer_thermal_factor=1e-6,
             solidus_temperature=0.0, liquidus_temperature=0.0,
             latent_heat=0.0,
-            layer_activation_mode="layer_on_scan",
+            # Preserve coverage of the historical ersatz behavior. The
+            # paper-reproduction layer_on_scan + future void path now has an
+            # exact zero-contribution contract instead.
+            layer_activation_mode="front",
             future_layer_mode="void",
-            powder_mode="powder",
+            powder_mode="void",
         )
         for key, value in overrides.items():
             setattr(args, key, value)

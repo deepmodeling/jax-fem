@@ -77,12 +77,18 @@ from jax_fem_am.physics.release import (
 )
 from jax_fem_am.physics.thermal import TransientThermal
 from jax_fem_am.process.activation import (
+    contributing_cell_mask,
     compute_active_cell,
     compute_layer_on_scan_cells,
     compute_layer_on_scan_cells_by_intersection,
     compute_moving_window_cells,
     compute_moving_window_cells_by_intersection,
+    make_inactive_node_dirichlet_bc,
+    merge_dirichlet_bcs,
+    physical_node_mask,
+    resolve_surface_active_mask,
     should_activate_layer_for_state,
+    uses_strict_active_domain,
 )
 from jax_fem_am.process.scan_path import (
     append_jump_states,
@@ -189,6 +195,7 @@ def run_mechanics_with_cutback(mechanics, u_guess, params, newton_overrides, arg
 
 def main():
     args = parse_args()
+    strict_active_domain = uses_strict_active_domain(args)
     if args.steps is not None:
         print("WARNING: --steps is treated as an alias for --layers in this version.")
         args.layers = args.steps
@@ -252,11 +259,7 @@ def main():
 
     initial_temperature = args.preheat_temperature if args.preheat_temperature is not None else args.ambient
     bottom_temperature_effective = args.bottom_temperature if args.bottom_temperature is not None else initial_temperature
-    surface_active_mask_enabled = (
-        args.surface_active_mask
-        if args.surface_active_mask is not None
-        else args.surface_selection == "exterior"
-    )
+    surface_active_mask_enabled = resolve_surface_active_mask(args)
     mechanics_newton_overrides = mechanics_newton_overrides_from_args(args)
 
     if args.surface_selection == "exterior":
@@ -401,7 +404,9 @@ def main():
     # Fixture cells are not printed part layers. Keep their layer id at 0 for
     # clearer ParaView interpretation.
     layer_id_cell = onp.asarray(layer_id_cell, dtype=onp.int32)
-    layer_id_cell[substrate_cell | support_cell] = 0
+    layer_id_cell[
+        substrate_cell | support_cell | permanent_powder_cell
+    ] = 0
     physical_layer_id_cell = compute_physical_layer_id_cell(
         cell_build_coord,
         build_axis_id,
@@ -411,7 +416,9 @@ def main():
         args,
     )
     physical_layer_id_cell = onp.asarray(physical_layer_id_cell, dtype=onp.int32)
-    physical_layer_id_cell[substrate_cell | support_cell] = 0
+    physical_layer_id_cell[
+        substrate_cell | support_cell | permanent_powder_cell
+    ] = 0
     if args.layer_thickness is not None and args.layer_thickness > 0.0:
         # For physical-layer runs, report the real layer id instead of mapping
         # the full build height into the truncated --max-print-layers range.
@@ -430,7 +437,9 @@ def main():
     )
     if args.layer_activation_geometry == "intersection" and args.layer_thickness is not None and args.layer_thickness > 0.0:
         layer_id_cell = compute_nominal_layer_id_from_interval(cell_d_min, cell_d_max, args)
-        layer_id_cell[substrate_cell | support_cell] = 0
+        layer_id_cell[
+            substrate_cell | support_cell | permanent_powder_cell
+        ] = 0
 
     T_old = initial_temperature * np.ones((len(points), 1))
     u_guess = [np.zeros((len(points), 3))]
@@ -445,6 +454,7 @@ def main():
     solidification_step_cell[initially_active] = 0
     previous_active = initially_active.copy()
     phase_cell_init = initial_phase_cell(initially_active, substrate_cell, support_cell, args)
+    phase_cell_init[permanent_powder_cell] = STATE_POWDER
     phase_quad = make_quad_scalar(phase_cell_init, thermal.fes[0].num_quads)
     T_ref_quad = initial_temperature * np.ones_like(eqp_quad)
 
@@ -477,6 +487,7 @@ def main():
         "layer_activation_mode": args.layer_activation_mode,
         "future_layer_mode": args.future_layer_mode,
         "layer_activation_geometry": args.layer_activation_geometry,
+        "strict_active_domain": strict_active_domain,
     }
     write_used_config(args, args.output_dir, derived)
     print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, selected_cells, points, thermal, mechanics, derived)
@@ -550,8 +561,22 @@ def main():
             active_cell = printed_cell
             cooling_only_cell = onp.zeros_like(active_cell, dtype=bool)
 
-        active_quad = make_quad_scalar(active_cell.astype(onp.float64), thermal.fes[0].num_quads)
+        # A named permanent-powder ELSET is a separate, step-0 physical domain:
+        # it is never printed and never enters the part phase-history update.
+        # Keep it out of layer masks even when its geometric layer interval
+        # intersects the current recoated layer.
+        printed_cell &= ~permanent_powder_cell
+        active_cell &= ~permanent_powder_cell
+        cooling_only_cell &= ~permanent_powder_cell
+        thermal_active_cell = active_cell | permanent_powder_cell
+        thermal_physical_cell = printed_cell | permanent_powder_cell
+
+        active_quad = make_quad_scalar(thermal_active_cell.astype(onp.float64), thermal.fes[0].num_quads)
         printed_quad = make_quad_scalar(printed_cell.astype(onp.float64), thermal.fes[0].num_quads)
+        thermal_physical_quad = make_quad_scalar(
+            thermal_physical_cell.astype(onp.float64),
+            thermal.fes[0].num_quads,
+        )
         cooling_only_quad = make_quad_scalar(cooling_only_cell.astype(onp.float64), thermal.fes[0].num_quads)
         # Layer activation means the quadrature point now contains powder.
         # It becomes solid only after passing through liquid/mushy and cooling.
@@ -574,9 +599,14 @@ def main():
             phase_quad,
             args,
             tables,
-            printed_quad=printed_quad,
+            printed_quad=thermal_physical_quad,
             cooling_only_quad=cooling_only_quad,
         )
+        thermal_contributing_cell = contributing_cell_mask(
+            rho_quad * (cp_quad + latent_cp_quad),
+            conductivity_quad,
+        )
+        thermal_step_bc = thermal_bc
         if final_cooldown_enabled and state.mode == "cooling" and n_cooling_steps > 0:
             cooling_step_counter += 1
             ramp = cooling_step_counter / float(n_cooling_steps)
@@ -588,13 +618,36 @@ def main():
             def ramped_bottom_value(_point, _value=ramped_bottom_temperature):
                 return _value
 
+            thermal_step_bc = [[bottom], [0], [ramped_bottom_value]]
+
+        if strict_active_domain:
+            # Preserve the full, static mesh shape for JAX while making its
+            # algebra identical to deleting future cells. Shared interface
+            # nodes remain in the physical solve; only inactive-only nodes are
+            # prescribed until their first recoating event.
+            thermal_physical_nodes = physical_node_mask(
+                cells,
+                thermal_contributing_cell,
+                num_nodes=len(points),
+            )
+            inactive_thermal_bc = make_inactive_node_dirichlet_bc(
+                ~thermal_physical_nodes,
+                vec=1,
+                value=initial_temperature,
+            )
+            thermal_step_bc = merge_dirichlet_bcs(
+                thermal_step_bc,
+                inactive_thermal_bc,
+            )
+
+        if strict_active_domain or thermal_step_bc is not thermal_bc:
             thermal.fes[0].update_Dirichlet_boundary_conditions(
-                [[bottom], [0], [ramped_bottom_value]]
+                thermal_step_bc
             )
 
         effective_laser_power = args.absorptivity * state.laser_power
         if surface_active_mask_enabled:
-            surface_mask_quad = printed_quad
+            surface_mask_quad = thermal_physical_quad
         else:
             surface_mask_quad = np.ones_like(printed_quad)
         thermal.set_params(
@@ -652,6 +705,9 @@ def main():
         T_mech_quad = clamp_mechanics_temperature(T_quad, args.mechanics_temperature_floor)
         dT_quad = (T_mech_quad - T_ref_quad) * mechanical_active_quad
         active_factor_quad, E_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad = mechanics_material_quads(T_mech_quad, mechanical_active_quad, phase_quad, args, tables)
+        mechanical_contributing_cell = contributing_cell_mask(
+            active_factor_quad
+        )
         mechanics_params = [
             T_mech_quad,
             dT_quad,
@@ -667,6 +723,23 @@ def main():
         is_last = state.global_step == step_states[-1].global_step
         did_mechanics = should_run_mechanics(state.global_step, args) or (is_last and args.mechanics_every > 0)
         if did_mechanics:
+            if strict_active_domain:
+                mechanical_physical_nodes = physical_node_mask(
+                    cells,
+                    mechanical_contributing_cell,
+                    num_nodes=len(points),
+                )
+                inactive_mechanics_bc = make_inactive_node_dirichlet_bc(
+                    ~mechanical_physical_nodes,
+                    vec=3,
+                    value=0.0,
+                )
+                mechanics.fes[0].update_Dirichlet_boundary_conditions(
+                    merge_dirichlet_bcs(
+                        mechanics_bc,
+                        inactive_mechanics_bc,
+                    )
+                )
             # Lateral powder springs follow the printed state: only faces of
             # printed cells are embedded in powder and receive support.
             mechanics.set_powder_surface_mask(printed_cell)
@@ -768,7 +841,11 @@ def main():
                 mechanics_params = list(mechanics_params)
                 mechanics_params[2] = np.where(
                     cut_quad > 0.5,
-                    args.inactive_mechanics_factor,
+                    (
+                        0.0
+                        if strict_active_domain
+                        else args.inactive_mechanics_factor
+                    ),
                     mechanics_params[2],
                 )
         if args.powder_solid_E is not None and permanent_powder_cell.any():
@@ -779,8 +856,29 @@ def main():
             mechanics_params = list(mechanics_params)
             mechanics_params[2] = np.where(
                 permanent_powder_quad > 0.5,
-                args.inactive_mechanics_factor,
+                (
+                    0.0
+                    if strict_active_domain
+                    else args.inactive_mechanics_factor
+                ),
                 mechanics_params[2],
+            )
+        if strict_active_domain:
+            release_contributing_cell = contributing_cell_mask(
+                mechanics_params[2]
+            )
+            release_physical_nodes = physical_node_mask(
+                cells,
+                release_contributing_cell,
+                num_nodes=len(points),
+            )
+            release_bc = merge_dirichlet_bcs(
+                release_bc,
+                make_inactive_node_dirichlet_bc(
+                    ~release_physical_nodes,
+                    vec=3,
+                    value=0.0,
+                ),
             )
         release_mechanics = ThermoMechanical(
             mesh=mesh,

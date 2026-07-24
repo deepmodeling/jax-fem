@@ -13,6 +13,7 @@ import scipy.sparse
 from jax_fem.generate_mesh import Mesh
 from jax_fem.solver import solver
 from jax_fem_am.materials.phases import (
+    STATE_POWDER,
     STATE_SOLID,
     STATE_VOID,
     make_quad_scalar,
@@ -25,9 +26,11 @@ from jax_fem_am.simulation import acceleration
 
 try:
     from jax_fem_am.process.activation import (
+        contributing_cell_mask,
         make_inactive_node_dirichlet_bc,
         merge_dirichlet_bcs,
         physical_node_mask,
+        resolve_surface_active_mask,
     )
 except ImportError:
     # RED baseline: express the expected active-domain contract locally so the
@@ -40,6 +43,16 @@ except ImportError:
             num_nodes = int(cells.max()) + 1
         mask = np.zeros(num_nodes, dtype=bool)
         mask[np.unique(cells[physical_cell])] = True
+        return mask
+
+    def contributing_cell_mask(*quad_fields):
+        mask = np.zeros(len(quad_fields[0]), dtype=bool)
+        for field in quad_fields:
+            values = np.asarray(field)
+            mask |= np.any(
+                values != 0,
+                axis=tuple(range(1, values.ndim)),
+            )
         return mask
 
     def make_inactive_node_dirichlet_bc(
@@ -71,6 +84,19 @@ except ImportError:
                 target.extend(values)
         return merged if merged[0] else None
 
+    def resolve_surface_active_mask(args):
+        strict = (
+            args.layer_activation_mode == "layer_on_scan"
+            and args.future_layer_mode == "void"
+        )
+        if strict and args.surface_active_mask is False:
+            raise ValueError
+        if strict:
+            return True
+        if args.surface_active_mask is not None:
+            return args.surface_active_mask
+        return args.surface_selection == "exterior"
+
 
 POINTS = np.asarray(
     [
@@ -86,7 +112,10 @@ CELLS = np.asarray([[0, 1, 2, 3], [1, 2, 3, 4]], dtype=np.int32)
 PHYSICAL_CELL = np.asarray([True, False])
 
 
-def _thermal_args(inactive_mass_factor):
+def _thermal_args(
+    inactive_mass_factor,
+    inactive_thermal_factor=1.0e-4,
+):
     return SimpleNamespace(
         rho=4.0,
         cp=5.0,
@@ -100,7 +129,7 @@ def _thermal_args(inactive_mass_factor):
         rho_powder=2.0,
         cp_powder=3.0,
         conductivity_powder=1.0,
-        inactive_thermal_factor=1.0e-4,
+        inactive_thermal_factor=inactive_thermal_factor,
         inactive_mass_factor=inactive_mass_factor,
         old_layer_thermal_factor=1.0,
         solidus_temperature=0.0,
@@ -167,6 +196,7 @@ def _set_thermal_state(
     old_temperature,
     physical_cell,
     inactive_mass_factor,
+    inactive_thermal_factor=1.0e-4,
 ):
     physical_cell = np.asarray(physical_cell, dtype=bool)
     active_quad = make_quad_scalar(
@@ -181,7 +211,10 @@ def _set_thermal_state(
         jnp.zeros_like(active_quad),
         active_quad,
         phase_quad,
-        _thermal_args(inactive_mass_factor),
+        _thermal_args(
+            inactive_mass_factor,
+            inactive_thermal_factor,
+        ),
         _thermal_tables(),
         printed_quad=active_quad,
     )
@@ -207,7 +240,13 @@ def _set_thermal_state(
     return rho, conductivity
 
 
-def _solve_thermal(points, cells, physical_cell, inactive_mass_factor):
+def _solve_thermal(
+    points,
+    cells,
+    physical_cell,
+    inactive_mass_factor,
+    inactive_thermal_factor=1.0e-4,
+):
     physical_cell = np.asarray(physical_cell, dtype=bool)
     node_mask = physical_node_mask(
         cells,
@@ -229,6 +268,7 @@ def _solve_thermal(points, cells, physical_cell, inactive_mass_factor):
         jnp.zeros((len(points), 1), dtype=jnp.float64),
         physical_cell,
         inactive_mass_factor,
+        inactive_thermal_factor,
     )
     solution = solver(
         problem,
@@ -237,13 +277,13 @@ def _solve_thermal(points, cells, physical_cell, inactive_mass_factor):
     return np.asarray(solution), (np.asarray(rho), np.asarray(conductivity))
 
 
-def _mechanics_args():
+def _mechanics_args(inactive_mechanics_factor=1.0e-3):
     return SimpleNamespace(
         young=1_000.0,
         alpha=0.0,
         poisson=0.3,
         mechanics_model="linear_elastic",
-        inactive_mechanics_factor=1.0e-3,
+        inactive_mechanics_factor=inactive_mechanics_factor,
         mushy_mechanics_factor=1.0e-3,
         liquid_mechanics_factor=1.0e-6,
         powder_solid_E=None,
@@ -263,7 +303,13 @@ def _make_mechanics(points, cells):
     )
 
 
-def _mechanics_residual_and_tangent(points, cells, physical_cell, displacement):
+def _mechanics_residual_and_tangent(
+    points,
+    cells,
+    physical_cell,
+    displacement,
+    inactive_mechanics_factor=1.0e-3,
+):
     problem = _make_mechanics(points, cells)
     active_quad = make_quad_scalar(
         np.asarray(physical_cell, dtype=np.float64),
@@ -284,7 +330,7 @@ def _mechanics_residual_and_tangent(points, cells, physical_cell, displacement):
         jnp.zeros_like(active_quad),
         active_quad,
         phase_quad,
-        _mechanics_args(),
+        _mechanics_args(inactive_mechanics_factor),
         {"E": None, "alpha": None, "poisson": None},
     )
     problem.set_params(
@@ -331,6 +377,7 @@ def test_strict_thermal_domain_matches_physical_cell_deletion():
         CELLS,
         PHYSICAL_CELL,
         inactive_mass_factor=1.0e-12,
+        inactive_thermal_factor=1.0e-12,
     )
 
     relative_error = np.linalg.norm(full[:4] - deleted) / np.linalg.norm(deleted)
@@ -351,6 +398,15 @@ def test_strict_mechanics_domain_has_zero_residual_and_tangent_contribution():
             CELLS,
             PHYSICAL_CELL,
             full_displacement,
+        )
+    )
+    alternate_residual, alternate_tangent, _ = (
+        _mechanics_residual_and_tangent(
+            POINTS,
+            CELLS,
+            PHYSICAL_CELL,
+            full_displacement,
+            inactive_mechanics_factor=1.0,
         )
     )
     deleted_residual, deleted_tangent, _ = _mechanics_residual_and_tangent(
@@ -390,6 +446,11 @@ def test_strict_mechanics_domain_has_zero_residual_and_tangent_contribution():
         0.0,
     )
     assert np.count_nonzero(active_factor[1]) == 0
+    np.testing.assert_array_equal(alternate_residual, full_residual)
+    np.testing.assert_array_equal(
+        alternate_tangent.toarray(),
+        full_tangent.toarray(),
+    )
 
 
 def test_inactive_constraint_mask_contains_only_exclusive_nodes():
@@ -417,6 +478,101 @@ def test_inactive_constraint_mask_contains_only_exclusive_nodes():
     np.testing.assert_array_equal(
         selected,
         [False, False, False, False, True],
+    )
+
+
+def test_strict_domain_requires_surface_flux_masking():
+    strict = SimpleNamespace(
+        layer_activation_mode="layer_on_scan",
+        future_layer_mode="void",
+        surface_selection="box",
+        surface_active_mask=None,
+    )
+    assert resolve_surface_active_mask(strict) is True
+
+    strict.surface_active_mask = False
+    with np.testing.assert_raises_regex(
+        ValueError,
+        "incompatible",
+    ):
+        resolve_surface_active_mask(strict)
+
+    legacy = SimpleNamespace(
+        layer_activation_mode="front",
+        future_layer_mode="void",
+        surface_selection="box",
+        surface_active_mask=None,
+    )
+    assert resolve_surface_active_mask(legacy) is False
+
+
+def test_mechanics_dofs_follow_nonzero_stiffness_not_printed_label():
+    active = make_quad_scalar(
+        np.asarray([1.0, 1.0]),
+        num_quads=1,
+    )
+    phase = make_quad_scalar(
+        np.asarray([STATE_SOLID, STATE_POWDER]),
+        num_quads=1,
+    )
+    active_factor, *_ = mechanics_material_quads(
+        jnp.zeros_like(active),
+        active,
+        phase,
+        _mechanics_args(),
+        {"E": None, "alpha": None, "poisson": None},
+    )
+
+    contributing_cell = contributing_cell_mask(active_factor)
+    np.testing.assert_array_equal(contributing_cell, [True, False])
+    np.testing.assert_array_equal(
+        physical_node_mask(
+            CELLS,
+            contributing_cell,
+            num_nodes=len(POINTS),
+        ),
+        [True, True, True, True, False],
+    )
+
+
+def test_permanent_powder_is_physical_only_when_its_model_contributes():
+    active = make_quad_scalar(np.ones(2), num_quads=1)
+    phase = make_quad_scalar(
+        np.asarray([STATE_SOLID, STATE_POWDER]),
+        num_quads=1,
+    )
+    thermal_args = _thermal_args(inactive_mass_factor=1.0)
+    rho, cp, conductivity, _ = thermal_material_quads(
+        jnp.zeros_like(active),
+        active,
+        phase,
+        thermal_args,
+        _thermal_tables(),
+        printed_quad=active,
+    )
+    np.testing.assert_array_equal(
+        contributing_cell_mask(rho * cp, conductivity),
+        [True, True],
+    )
+    assert float(rho[1, 0, 0]) == thermal_args.rho_powder
+    assert float(conductivity[1, 0, 0]) == (
+        thermal_args.conductivity_powder
+    )
+
+    mechanics_args = _mechanics_args()
+    mechanics_args.powder_solid_E = 10.0
+    mechanics_args.powder_solid_yield = 1.0
+    mechanics_args.powder_solid_hardening = 0.1
+    active_factor, *_ = mechanics_material_quads(
+        jnp.zeros_like(active),
+        active,
+        phase,
+        mechanics_args,
+        {"E": None, "alpha": None, "poisson": None},
+    )
+    np.testing.assert_array_equal(
+        contributing_cell_mask(active_factor),
+        [True, True],
     )
 
 
@@ -489,12 +645,46 @@ def test_dynamic_activation_refreshes_linear_system_constraint_rows():
     )
 
 
+def test_all_inactive_merge_has_unique_dofs_and_preserves_physical_bc():
+    inactive_bc = make_inactive_node_dirichlet_bc(
+        np.ones(len(POINTS), dtype=bool),
+        vec=1,
+        value=0.0,
+    )
+    problem = _make_thermal(
+        POINTS,
+        CELLS,
+        merge_dirichlet_bcs(_bottom_temperature_bc(), inactive_bc),
+    )
+    fe = problem.fes[0]
+    flat_dofs = np.concatenate(
+        [
+            np.asarray(nodes) * fe.vec + np.asarray(components)
+            for nodes, components in zip(
+                fe.node_inds_list,
+                fe.vec_inds_list,
+            )
+        ]
+    )
+    values = np.concatenate([np.asarray(item) for item in fe.vals_list])
+
+    assert len(flat_dofs) == len(np.unique(flat_dofs))
+    value_by_dof = dict(zip(flat_dofs.tolist(), values.tolist()))
+    assert value_by_dof == {
+        0: 1.0,
+        1: 0.0,
+        2: 1.0,
+        3: 1.0,
+        4: 0.0,
+    }
+
+
 def test_accelerated_material_kernels_keep_strict_zero_semantics():
     base = SimpleNamespace(
         jax=jax,
         np=jnp,
         STATE_VOID=STATE_VOID,
-        STATE_POWDER=1.0,
+        STATE_POWDER=STATE_POWDER,
         STATE_SOLID=STATE_SOLID,
         STATE_MUSHY=3.0,
         STATE_LIQUID=4.0,
@@ -536,3 +726,43 @@ def test_accelerated_material_kernels_keep_strict_zero_semantics():
     )
     active_factor, *_ = mechanics_kernel(temperature, active, phase)
     np.testing.assert_array_equal(np.asarray(active_factor[1]), 0.0)
+
+
+def test_accelerated_weak_solid_powder_matches_reference_material_path():
+    base = SimpleNamespace(
+        jax=jax,
+        np=jnp,
+        STATE_VOID=STATE_VOID,
+        STATE_POWDER=STATE_POWDER,
+        STATE_SOLID=STATE_SOLID,
+        STATE_MUSHY=3.0,
+        STATE_LIQUID=4.0,
+        STATE_SUBSTRATE=5.0,
+        STATE_SUPPORT=6.0,
+    )
+    args = _mechanics_args()
+    args.powder_solid_E = 10.0
+    args.powder_solid_yield = 1.0
+    args.powder_solid_hardening = 0.1
+    temperature = jnp.zeros((1, 1, 1), dtype=jnp.float64)
+    active = jnp.ones_like(temperature)
+    phase = STATE_POWDER * jnp.ones_like(temperature)
+
+    expected = mechanics_material_quads(
+        temperature,
+        active,
+        phase,
+        args,
+        {"E": None, "alpha": None, "poisson": None},
+    )
+    key = acceleration._mechanics_material_key(args, base)
+    kernel = acceleration._make_jit_mechanics_material_kernel(base, key)
+    actual = kernel(temperature, active, phase)
+
+    for actual_field, expected_field in zip(actual, expected):
+        np.testing.assert_allclose(
+            np.asarray(actual_field),
+            np.asarray(expected_field),
+            rtol=0.0,
+            atol=0.0,
+        )

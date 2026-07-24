@@ -2486,6 +2486,7 @@ def _thermal_material_key(
             "inactive_mass_factor",
             _float_arg(args, "inactive_thermal_factor", 1e-6),
         ),
+        bool(future_layers_are_void),
         _float_arg(args, "solidus_temperature", 0.0),
         _float_arg(args, "liquidus_temperature", 0.0),
         _float_arg(args, "old_layer_thermal_factor", 1e-6),
@@ -2504,6 +2505,7 @@ def _mechanics_material_key(
 ) -> Optional[tuple[Any, ...]]:
     if getattr(args, "mechanics_model", "linear_elastic") != "linear_elastic":
         return None
+    powder_solid_E = _optional_float(args, "powder_solid_E")
     return (
         _float_arg(args, "young", 2.0e11),
         _float_arg(args, "alpha", 1.2e-5),
@@ -2511,6 +2513,16 @@ def _mechanics_material_key(
         _float_arg(args, "mushy_mechanics_factor", 1e-2),
         _float_arg(args, "liquid_mechanics_factor", 1e-4),
         _float_arg(args, "inactive_mechanics_factor", 1e-9),
+        bool(
+            getattr(args, "layer_activation_mode", "front")
+            == "layer_on_scan"
+            and getattr(args, "future_layer_mode", "void") == "void"
+        ),
+        powder_solid_E is not None,
+        0.0 if powder_solid_E is None else powder_solid_E,
+        _float_arg(args, "powder_solid_yield", 1.0e6),
+        _float_arg(args, "powder_solid_hardening", 1.0e7),
+        float(base_module.STATE_POWDER),
         float(base_module.STATE_SOLID),
         float(base_module.STATE_MUSHY),
         float(base_module.STATE_LIQUID),
@@ -2550,6 +2562,7 @@ def _make_jit_thermal_material_kernel(base_module, key: tuple[Any, ...]):
         k_powder,
         inactive_thermal_factor,
         inactive_mass_factor,
+        strict_active_domain,
         solidus_temperature,
         liquidus_temperature,
         old_layer_thermal_factor,
@@ -2578,9 +2591,18 @@ def _make_jit_thermal_material_kernel(base_module, key: tuple[Any, ...]):
         cp_liquid_quad = cp_liquid * jnp.ones_like(T_old_quad)
         k_liquid_quad = k_liquid * jnp.ones_like(T_old_quad)
 
-        rho_void = rho_solid * inactive_mass_factor
-        cp_void = cp_solid * jnp.ones_like(T_old_quad)
-        k_void = k_solid * inactive_thermal_factor * jnp.ones_like(T_old_quad)
+        if strict_active_domain:
+            rho_void = jnp.zeros_like(T_old_quad)
+            cp_void = jnp.zeros_like(T_old_quad)
+            k_void = jnp.zeros_like(T_old_quad)
+        else:
+            rho_void = rho_solid * inactive_mass_factor
+            cp_void = cp_solid * jnp.ones_like(T_old_quad)
+            k_void = (
+                k_solid
+                * inactive_thermal_factor
+                * jnp.ones_like(T_old_quad)
+            )
 
         if has_phase_interval:
             mushy_frac = jnp.clip(
@@ -2717,6 +2739,12 @@ def _make_jit_mechanics_material_kernel(base_module, key: tuple[Any, ...]):
         mushy_mechanics_factor,
         liquid_mechanics_factor,
         inactive_mechanics_factor,
+        strict_active_domain,
+        has_powder_solid,
+        powder_solid_E,
+        powder_solid_yield,
+        powder_solid_hardening,
+        state_powder,
         state_solid,
         state_mushy,
         state_liquid,
@@ -2726,6 +2754,9 @@ def _make_jit_mechanics_material_kernel(base_module, key: tuple[Any, ...]):
 
     @jax_module.jit
     def kernel(T_quad, active_quad, phase_quad):
+        inactive_factor = (
+            0.0 if strict_active_domain else inactive_mechanics_factor
+        )
         E_quad = young * jnp.ones_like(T_quad)
         alpha_base = alpha * jnp.ones_like(T_quad)
         poisson_quad = poisson * jnp.ones_like(T_quad)
@@ -2739,6 +2770,7 @@ def _make_jit_mechanics_material_kernel(base_module, key: tuple[Any, ...]):
         )
         is_mushy = phase_quad == state_mushy
         is_liquid = phase_quad == state_liquid
+        is_powder = phase_quad == state_powder
 
         active_factor_quad = jnp.where(
             is_solid_like,
@@ -2749,19 +2781,36 @@ def _make_jit_mechanics_material_kernel(base_module, key: tuple[Any, ...]):
                 jnp.where(
                     is_liquid,
                     liquid_mechanics_factor,
-                    inactive_mechanics_factor,
+                    inactive_factor,
                 ),
             ),
         )
         active_factor_quad = (
             active_factor_quad * active_quad
-            + inactive_mechanics_factor * (1.0 - active_quad)
+            + inactive_factor * (1.0 - active_quad)
         )
         alpha_quad = jnp.where(
             is_solid_like,
             alpha_base,
             jnp.zeros_like(alpha_base),
         )
+        if has_powder_solid:
+            E_quad = jnp.where(is_powder, powder_solid_E, E_quad)
+            yield_quad = jnp.where(
+                is_powder,
+                powder_solid_yield,
+                yield_quad,
+            )
+            hardening_quad = jnp.where(
+                is_powder,
+                powder_solid_hardening,
+                hardening_quad,
+            )
+            active_factor_quad = jnp.where(
+                is_powder,
+                active_quad + inactive_factor * (1.0 - active_quad),
+                active_factor_quad,
+            )
         return (
             active_factor_quad,
             E_quad,

@@ -101,6 +101,7 @@ class FiniteElement:
         self.num_face_quads = self.face_quad_weights.shape[1]
 
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(self.dirichlet_bc_info)
+        self._dirichlet_bc_version = 0
         
         end = time.time()
         compute_time = end - start
@@ -267,6 +268,7 @@ class FiniteElement:
             [location_fns, vecs, value_fns]
         """
         self.node_inds_list, self.vec_inds_list, self.vals_list = self.Dirichlet_boundary_conditions(dirichlet_bc_info)
+        self._dirichlet_bc_version += 1
 
     def get_exterior_face_flags(self):
         """Boolean flags of mesh-exterior faces, shape (num_cells, num_faces).

@@ -1,0 +1,88 @@
+{
+  "_format": "JSON-compatible YAML 1.2",
+  "schema_version": "kaess.deviations/1",
+  "protocol_id": "kaess-2023-public-v1",
+  "deviations": [
+    {
+      "deviation_id": "P0-BC",
+      "paper_requirement": "All bottom nodes restrained in z with partial in-plane freedom.",
+      "implemented_behavior": "Build mechanics currently uses a full ux/uy/uz bottom clamp.",
+      "severity": "P0",
+      "affected_qoi_ids": ["sigma_x_depth_curve", "front_bending_curve", "max_front_bending"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/physics/release.py", "specs/001-kaess-paper-reproduction/research.md"]
+    },
+    {
+      "deviation_id": "P0-HS",
+      "paper_requirement": "Equation (1) hemispherical three-dimensional Gaussian source.",
+      "implemented_behavior": "Plane Gaussian multiplied by one-sided exponential depth decay.",
+      "severity": "P0",
+      "affected_qoi_ids": ["peak_temperature", "melt_volume", "thermal_energy_closure"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/physics/thermal.py", "cases/kaess_2023/references/cases/kaess_2023_paper.pdf"]
+    },
+    {
+      "deviation_id": "P0-ACT",
+      "paper_requirement": "Abaqus MODEL CHANGE removes inactive elements from the physical equations.",
+      "implemented_behavior": "Future elements retain thermal mass, weak conductivity/stiffness, and global DOFs.",
+      "severity": "P0",
+      "affected_qoi_ids": ["peak_temperature", "thermal_energy_closure", "sigma_x_depth_curve", "front_bending_curve"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/materials/phases.py", "jax_fem_am/simulation/stepper.py"]
+    },
+    {
+      "deviation_id": "P0-SURF",
+      "paper_requirement": "Film and radiation act on the current active top element layer.",
+      "implemented_behavior": "Static complete-mesh exterior faces omit active/future internal interfaces; a volumetric front sink is optional.",
+      "severity": "P0",
+      "affected_qoi_ids": ["peak_temperature", "thermal_energy_closure", "sigma_x_depth_curve"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/physics/thermal.py", "jax_fem_am/simulation/stepper.py"]
+    },
+    {
+      "deviation_id": "P0-COOL",
+      "paper_requirement": "Cooling boundary conditions ramp from process conditions to room temperature.",
+      "implemented_behavior": "Bottom temperature ramps, while convection/radiation ambient remains fixed at preheat.",
+      "severity": "P0",
+      "affected_qoi_ids": ["thermal_energy_closure", "sigma_x_depth_curve", "front_bending_curve"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/simulation/stepper.py", "cases/kaess_2023/references/cases/kaess_2023_paper.pdf"]
+    },
+    {
+      "deviation_id": "P0-MAT",
+      "paper_requirement": "Temperature-dependent powder conductivity, shared specific heat/latent heat, and source-backed high-temperature tables.",
+      "implemented_behavior": "Current run uses old-temperature coefficients within an increment, so a first melt-crossing step can skip latent heat; extra mushy/liquid scaling is configurable.",
+      "severity": "P0",
+      "affected_qoi_ids": ["peak_temperature", "melt_volume", "thermal_energy_closure", "sigma_x_depth_curve"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/materials/phases.py", "jax_fem_am/simulation/stepper.py", "specs/001-kaess-paper-reproduction/research.md"]
+    },
+    {
+      "deviation_id": "P0-J2",
+      "paper_requirement": "Published temperature-dependent flow curves and consistent incremental plastic update.",
+      "implemented_behavior": "Current path uses simplified hardening inputs; residual/tangent consistency has not passed a V-shaped finite-difference gate.",
+      "severity": "P0",
+      "affected_qoi_ids": ["sigma_x_depth_curve", "front_bending_curve", "max_front_bending"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/materials/j2.py", "jax_fem_am/physics/mechanics.py"]
+    },
+    {
+      "deviation_id": "P0-HIST",
+      "paper_requirement": "Irreversible powder-to-solid transition without an unreported stress/plastic-history reset.",
+      "implemented_behavior": "Stress-reference and eqp reset options exist and have no identified support in the paper.",
+      "severity": "P0",
+      "affected_qoi_ids": ["sigma_x_depth_curve", "front_bending_curve", "max_front_bending"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/domain/events.py", "jax_fem_am/materials/phases.py"]
+    },
+    {
+      "deviation_id": "P0-REL",
+      "paper_requirement": "Predefined support elements are deleted for the Figure 7 partial separation.",
+      "implemented_behavior": "Current release uses geometric boxes/centroids and ersatz stiffness rather than a frozen explicit cell set.",
+      "severity": "P0",
+      "affected_qoi_ids": ["front_bending_curve", "max_front_bending", "release_direction"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/physics/release.py", "jax_fem_am/simulation/stepper.py"]
+    }
+  ]
+}

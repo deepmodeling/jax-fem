@@ -96,6 +96,36 @@
       "sha256": "13cdb0c278820b3bee44cda094b4881e96dcb4729dac6e9f669cf4cd1ddb9b1b",
       "impact": "critical",
       "status": "inferred"
+    },
+    {
+      "evidence_id": "assumptions-register",
+      "quantity": "unpublished-input assumptions and sensitivity obligations",
+      "source_class": "assumption",
+      "source_locator": "Spec Kit Phase 0 source freeze",
+      "repository_path": "cases/kaess_2023/inputs/assumptions.yaml",
+      "sha256": "38eff82bc9fd4d951ed9c0affc11bb85bcdefc3de971e1ad107d7c8b4910f0be",
+      "impact": "critical",
+      "status": "assumed"
+    },
+    {
+      "evidence_id": "deviations-register",
+      "quantity": "current implementation differences from the published model",
+      "source_class": "inferred",
+      "source_locator": "Spec Kit research review and live source inspection",
+      "repository_path": "cases/kaess_2023/inputs/deviations.yaml",
+      "sha256": "0a17ca11ff26314378af2ac86f6d7f8537d69447a2429e547fc37bd9a3115006",
+      "impact": "critical",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "author-input-request-register",
+      "quantity": "unpublished author assets requested before claim upgrades",
+      "source_class": "assumption",
+      "source_locator": "Spec Kit unresolved-author-input review",
+      "repository_path": "cases/kaess_2023/inputs/author-input-requests.md",
+      "sha256": "35b29a7b6aeaa33e17bbc99b3a3f066ae602f8da66de2e93a9fe38214d10c94e",
+      "impact": "high",
+      "status": "assumed"
     }
   ]
 }

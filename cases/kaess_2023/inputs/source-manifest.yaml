@@ -1,0 +1,81 @@
+{
+  "_format": "JSON-compatible YAML 1.2; intentionally readable with the Python standard library",
+  "schema_version": "kaess.source-manifest/1",
+  "protocol_id": "kaess-2023-public-v1",
+  "claim_level": "public_code_to_code",
+  "paper_doi": "10.3390/ma16062321",
+  "hash_algorithm": "sha256",
+  "created_utc": "2026-07-24T00:00:00Z",
+  "evidence": [
+    {
+      "evidence_id": "paper-pdf",
+      "quantity": "authoritative published model and reported results",
+      "source_class": "paper_text",
+      "source_locator": "Kaess et al. (2023), Materials 16(6):2321, pp. 1-16",
+      "repository_path": "cases/kaess_2023/references/cases/kaess_2023_paper.pdf",
+      "sha256": "8bf5e7c2f744a55b9c4e40bbe5f17a5cb6e1649d668132edc961ecb5c3d5e941",
+      "impact": "critical",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "paper-fulltext",
+      "quantity": "searchable extraction of the published paper",
+      "source_class": "paper_text",
+      "source_locator": "Europe PMC PMC10055713 full-text XML retrieved 2026-07-16",
+      "repository_path": "cases/kaess_2023/references/cases/kaess_2023_fulltext.txt",
+      "sha256": "afeba3510f9ae7793184dc7a9e704504a089d1510d6df9df403cf137fccb7ade",
+      "impact": "high",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "benchmark-metadata",
+      "quantity": "current parameter, geometry, and digitization register",
+      "source_class": "inferred",
+      "source_locator": "repository benchmark metadata; values trace to paper text and Figures 3-9",
+      "repository_path": "cases/kaess_2023/references/cases/kaess_2023.json",
+      "sha256": "e6b5ff938c7a8dd0c7650d5fdc8055ff7f9a6843271aff924b2108900767bb19",
+      "impact": "high",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "reference-hex-mesh",
+      "quantity": "29,568-element C3D8 powder-margin mesh reconstruction",
+      "source_class": "inferred",
+      "source_locator": "paper pp. 4-5 and Figure 3; element partition inferred from published dimensions and count",
+      "repository_path": "cases/kaess_2023/kaess_cantilever_c3d8_powder_margin.inp",
+      "sha256": "d2283a3d3f9f133d80bb630ac8f4068f15d266a538aaceb14f8d27f9f9c08cb8",
+      "impact": "critical",
+      "status": "inferred"
+    },
+    {
+      "evidence_id": "mesh-reconstruction",
+      "quantity": "deterministic Kaess mesh generator",
+      "source_class": "inferred",
+      "source_locator": "repository implementation of the Figure 3 geometry reconstruction",
+      "repository_path": "cases/kaess_2023/make_kaess_mesh.py",
+      "sha256": "85b00c7729e19c9152e659c0acbfa799fafebdb59f10f551b245ea2e2feb8294",
+      "impact": "high",
+      "status": "inferred"
+    },
+    {
+      "evidence_id": "formal-material-config",
+      "quantity": "current 316L thermal-mechanical material configuration candidate",
+      "source_class": "assumption",
+      "source_locator": "external project asset; paper pp. 5-7, Figure 4, Tables 1-2",
+      "external_path": "/home/user/work/159/materials/316L/ss316l_material_config_kaess.json",
+      "sha256": "d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f",
+      "impact": "critical",
+      "status": "assumed"
+    },
+    {
+      "evidence_id": "scan-path-reconstruction",
+      "quantity": "linear hatch path and 67-degree layer rotation reconstruction",
+      "source_class": "inferred",
+      "source_locator": "paper pp. 7-8 and Figure 6; within-layer start/order remains inferred",
+      "repository_path": "cases/kaess_2023/make_kaess_path.py",
+      "sha256": "13cdb0c278820b3bee44cda094b4881e96dcb4729dac6e9f669cf4cd1ddb9b1b",
+      "impact": "critical",
+      "status": "inferred"
+    }
+  ]
+}

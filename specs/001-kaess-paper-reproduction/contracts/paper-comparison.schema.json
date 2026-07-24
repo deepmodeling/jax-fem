@@ -1,0 +1,1431 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.jax-fem/specs/001-kaess-paper-reproduction/paper-comparison.schema.json",
+  "title": "Kaess Paper Comparison Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_id",
+    "case_id",
+    "run_id",
+    "run_manifest",
+    "claim_boundary",
+    "reference",
+    "threshold_set",
+    "comparisons",
+    "uncertainty",
+    "semantic_validation",
+    "verdict"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kaess.paper-comparison/2"
+    },
+    "protocol_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_manifest": {
+      "$ref": "#/$defs/artifact"
+    },
+    "claim_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reproduction_level",
+        "experimental_validation"
+      ],
+      "properties": {
+        "reproduction_level": {
+          "enum": [
+            "public_code_to_code",
+            "author_input_equivalent"
+          ]
+        },
+        "experimental_validation": {
+          "const": false
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "doi",
+        "source_sha256",
+        "digitized_data"
+      ],
+      "properties": {
+        "doi": {
+          "const": "10.3390/ma16062321"
+        },
+        "source_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "digitized_data": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/digitizedArtifact"
+          },
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "figure": {
+                    "const": "Figure 8"
+                  }
+                },
+                "required": [
+                  "figure"
+                ]
+              },
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "figure": {
+                    "const": "Figure 9"
+                  }
+                },
+                "required": [
+                  "figure"
+                ]
+              },
+              "minContains": 1
+            }
+          ]
+        }
+      }
+    },
+    "threshold_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "threshold_set_id",
+        "version",
+        "threshold_set_artifact",
+        "approved",
+        "approved_by",
+        "approved_utc",
+        "approval_artifact",
+        "metrics"
+      ],
+      "properties": {
+        "threshold_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "threshold_set_artifact": {
+          "$ref": "#/$defs/artifact"
+        },
+        "approved": {
+          "type": "boolean"
+        },
+        "approved_by": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "approved_utc": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "approval_artifact": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/artifact"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "metrics": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/thresholdMetric"
+          },
+          "allOf": [
+            {
+              "$ref": "#/$defs/containsThresholdFigure8Sign"
+            },
+            {
+              "$ref": "#/$defs/containsThresholdFigure8Peak"
+            },
+            {
+              "$ref": "#/$defs/containsThresholdFigure8Trough"
+            },
+            {
+              "$ref": "#/$defs/containsThresholdFigure8ZeroCrossing"
+            },
+            {
+              "$ref": "#/$defs/containsThresholdFigure9Curve"
+            },
+            {
+              "$ref": "#/$defs/containsThresholdFigure9MaximumRelative"
+            },
+            {
+              "$ref": "#/$defs/containsThresholdFigure9MaximumAbsolute"
+            },
+            {
+              "$ref": "#/$defs/containsThresholdFigure9Direction"
+            }
+          ]
+        }
+      }
+    },
+    "comparisons": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/comparison"
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/containsComparisonFigure8Sign"
+        },
+        {
+          "$ref": "#/$defs/containsComparisonFigure8Peak"
+        },
+        {
+          "$ref": "#/$defs/containsComparisonFigure8Trough"
+        },
+        {
+          "$ref": "#/$defs/containsComparisonFigure8ZeroCrossing"
+        },
+        {
+          "$ref": "#/$defs/containsComparisonFigure9Curve"
+        },
+        {
+          "$ref": "#/$defs/containsComparisonFigure9MaximumRelative"
+        },
+        {
+          "$ref": "#/$defs/containsComparisonFigure9MaximumAbsolute"
+        },
+        {
+          "$ref": "#/$defs/containsComparisonFigure9Direction"
+        }
+      ]
+    },
+    "uncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "digitization",
+        "discretization",
+        "repeatability",
+        "input_assumptions",
+        "combination_method"
+      ],
+      "properties": {
+        "digitization": {
+          "$ref": "#/$defs/uncertaintyComponent"
+        },
+        "discretization": {
+          "$ref": "#/$defs/uncertaintyComponent"
+        },
+        "repeatability": {
+          "$ref": "#/$defs/uncertaintyComponent"
+        },
+        "input_assumptions": {
+          "$ref": "#/$defs/uncertaintyComponent"
+        },
+        "combination_method": {
+          "enum": [
+            "root_sum_square",
+            "linear_conservative",
+            "reported_separately"
+          ]
+        }
+      }
+    },
+    "semantic_validation": {
+      "$ref": "#/$defs/semanticValidation"
+    },
+    "verdict": {
+      "enum": [
+        "pass",
+        "partial",
+        "fail",
+        "blocked"
+      ]
+    },
+    "deviations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "verdict": {
+            "enum": [
+              "pass",
+              "partial",
+              "fail"
+            ]
+          }
+        },
+        "required": [
+          "verdict"
+        ]
+      },
+      "then": {
+        "properties": {
+          "threshold_set": {
+            "properties": {
+              "approved": {
+                "const": true
+              },
+              "approved_utc": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "approved_by": {
+                "type": "string",
+                "minLength": 1
+              },
+              "approval_artifact": {
+                "$ref": "#/$defs/artifact"
+              }
+            }
+          },
+          "semantic_validation": {
+            "properties": {
+              "status": {
+                "const": "pass"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "verdict": {
+            "const": "pass"
+          }
+        },
+        "required": [
+          "verdict"
+        ]
+      },
+      "then": {
+        "properties": {
+          "comparisons": {
+            "items": {
+              "properties": {
+                "status": {
+                  "const": "pass"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "verdict": {
+            "const": "partial"
+          }
+        },
+        "required": [
+          "verdict"
+        ]
+      },
+      "then": {
+        "properties": {
+          "comparisons": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "status": {
+                      "const": "pass"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                },
+                "minContains": 1
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "fail",
+                        "not_comparable"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                },
+                "minContains": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "verdict": {
+            "const": "fail"
+          }
+        },
+        "required": [
+          "verdict"
+        ]
+      },
+      "then": {
+        "properties": {
+          "comparisons": {
+            "contains": {
+              "properties": {
+                "status": {
+                  "const": "fail"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "minContains": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "digitizedArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "figure",
+        "path",
+        "sha256",
+        "size_bytes",
+        "uncertainty"
+      ],
+      "properties": {
+        "figure": {
+          "enum": [
+            "Figure 8",
+            "Figure 9"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "uncertainty": {
+          "$ref": "#/$defs/uncertaintyComponent"
+        }
+      }
+    },
+    "uncertaintyComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applicability",
+        "method",
+        "value",
+        "unit",
+        "evidence"
+      ],
+      "properties": {
+        "applicability": {
+          "enum": [
+            "applied",
+            "bounded",
+            "not_available",
+            "not_applicable"
+          ]
+        },
+        "method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "array",
+              "minItems": 1
+            },
+            {
+              "type": "object",
+              "minProperties": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "enum": [
+                  "applied",
+                  "bounded"
+                ]
+              }
+            },
+            "required": [
+              "applicability"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "metricId": {
+      "enum": [
+        "figure8_sigma_x_sign_sequence",
+        "figure8_sigma_x_peak_relative_error",
+        "figure8_sigma_x_trough_relative_error",
+        "figure8_sigma_x_zero_crossing_depth_error",
+        "figure9_bending_curve_nrmse",
+        "figure9_max_front_bending_relative_error",
+        "figure9_max_front_bending_absolute_error",
+        "figure9_release_direction"
+      ]
+    },
+    "thresholdMetric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric_id",
+        "operator",
+        "limit",
+        "unit"
+      ],
+      "properties": {
+        "metric_id": {
+          "$ref": "#/$defs/metricId"
+        },
+        "operator": {
+          "enum": [
+            "<=",
+            ">=",
+            "=="
+          ]
+        },
+        "limit": {
+          "type": [
+            "number",
+            "string",
+            "boolean"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "metric_id": {
+                "const": "figure8_sigma_x_sign_sequence"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "operator": {
+                "const": "=="
+              },
+              "limit": {
+                "const": "surface_tension_interior_compression_interface_tension"
+              },
+              "unit": {
+                "const": null
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "metric_id": {
+                "enum": [
+                  "figure8_sigma_x_peak_relative_error",
+                  "figure8_sigma_x_trough_relative_error",
+                  "figure9_bending_curve_nrmse",
+                  "figure9_max_front_bending_relative_error"
+                ]
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "operator": {
+                "const": "<="
+              },
+              "limit": {
+                "type": "number",
+                "minimum": 0
+              },
+              "unit": {
+                "const": "dimensionless"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "metric_id": {
+                "const": "figure8_sigma_x_zero_crossing_depth_error"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "operator": {
+                "const": "<="
+              },
+              "limit": {
+                "type": "number",
+                "minimum": 0
+              },
+              "unit": {
+                "const": "mm"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "metric_id": {
+                "const": "figure9_max_front_bending_absolute_error"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "operator": {
+                "const": "<="
+              },
+              "limit": {
+                "type": "number",
+                "minimum": 0
+              },
+              "unit": {
+                "const": "um"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "metric_id": {
+                "const": "figure9_release_direction"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "operator": {
+                "const": "=="
+              },
+              "limit": {
+                "const": "upward"
+              },
+              "unit": {
+                "const": null
+              }
+            }
+          }
+        }
+      ]
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "comparison_id",
+        "qoi_id",
+        "paper_location",
+        "metric",
+        "value",
+        "threshold_metric_id",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "comparison_id": {
+          "$ref": "#/$defs/metricId"
+        },
+        "qoi_id": {
+          "enum": [
+            "sigma_x_depth_curve",
+            "sigma_x_zero_crossing",
+            "front_bending_curve",
+            "max_front_bending",
+            "release_direction"
+          ]
+        },
+        "paper_location": {
+          "enum": [
+            "Figure 8",
+            "Figure 9"
+          ]
+        },
+        "metric": {
+          "enum": [
+            "sign_sequence",
+            "relative_error",
+            "absolute_error",
+            "nrmse",
+            "direction"
+          ]
+        },
+        "value": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "threshold_metric_id": {
+          "$ref": "#/$defs/metricId"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_comparable"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/bindFigure8Sign"
+        },
+        {
+          "$ref": "#/$defs/bindFigure8Peak"
+        },
+        {
+          "$ref": "#/$defs/bindFigure8Trough"
+        },
+        {
+          "$ref": "#/$defs/bindFigure8ZeroCrossing"
+        },
+        {
+          "$ref": "#/$defs/bindFigure9Curve"
+        },
+        {
+          "$ref": "#/$defs/bindFigure9MaximumRelative"
+        },
+        {
+          "$ref": "#/$defs/bindFigure9MaximumAbsolute"
+        },
+        {
+          "$ref": "#/$defs/bindFigure9Direction"
+        }
+      ]
+    },
+    "semanticValidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "validator_id",
+        "validator_version",
+        "status",
+        "validated_payload_sha256",
+        "run_manifest_sha256",
+        "threshold_set_sha256",
+        "artifact"
+      ],
+      "properties": {
+        "validator_id": {
+          "const": "kaess-paper-comparison-semantic-validator"
+        },
+        "validator_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_run"
+          ]
+        },
+        "validated_payload_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "run_manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "threshold_set_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "artifact": {
+          "$ref": "#/$defs/artifact"
+        }
+      }
+    },
+    "bindFigure8Sign": {
+      "if": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure8_sigma_x_sign_sequence"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "then": {
+        "properties": {
+          "qoi_id": {
+            "const": "sigma_x_depth_curve"
+          },
+          "paper_location": {
+            "const": "Figure 8"
+          },
+          "metric": {
+            "const": "sign_sequence"
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1
+          },
+          "threshold_metric_id": {
+            "const": "figure8_sigma_x_sign_sequence"
+          }
+        }
+      }
+    },
+    "bindFigure8Peak": {
+      "if": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure8_sigma_x_peak_relative_error"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "then": {
+        "$ref": "#/$defs/figure8PeakBinding"
+      }
+    },
+    "figure8PeakBinding": {
+      "properties": {
+        "qoi_id": {
+          "const": "sigma_x_depth_curve"
+        },
+        "paper_location": {
+          "const": "Figure 8"
+        },
+        "metric": {
+          "const": "relative_error"
+        },
+        "value": {
+          "type": "number",
+          "minimum": 0
+        },
+        "threshold_metric_id": {
+          "const": "figure8_sigma_x_peak_relative_error"
+        }
+      }
+    },
+    "bindFigure8Trough": {
+      "if": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure8_sigma_x_trough_relative_error"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "then": {
+        "properties": {
+          "qoi_id": {
+            "const": "sigma_x_depth_curve"
+          },
+          "paper_location": {
+            "const": "Figure 8"
+          },
+          "metric": {
+            "const": "relative_error"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0
+          },
+          "threshold_metric_id": {
+            "const": "figure8_sigma_x_trough_relative_error"
+          }
+        }
+      }
+    },
+    "bindFigure8ZeroCrossing": {
+      "if": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure8_sigma_x_zero_crossing_depth_error"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "then": {
+        "properties": {
+          "qoi_id": {
+            "const": "sigma_x_zero_crossing"
+          },
+          "paper_location": {
+            "const": "Figure 8"
+          },
+          "metric": {
+            "const": "absolute_error"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0
+          },
+          "threshold_metric_id": {
+            "const": "figure8_sigma_x_zero_crossing_depth_error"
+          }
+        }
+      }
+    },
+    "bindFigure9Curve": {
+      "if": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure9_bending_curve_nrmse"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "then": {
+        "properties": {
+          "qoi_id": {
+            "const": "front_bending_curve"
+          },
+          "paper_location": {
+            "const": "Figure 9"
+          },
+          "metric": {
+            "const": "nrmse"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0
+          },
+          "threshold_metric_id": {
+            "const": "figure9_bending_curve_nrmse"
+          }
+        }
+      }
+    },
+    "bindFigure9MaximumRelative": {
+      "if": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure9_max_front_bending_relative_error"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "then": {
+        "properties": {
+          "qoi_id": {
+            "const": "max_front_bending"
+          },
+          "paper_location": {
+            "const": "Figure 9"
+          },
+          "metric": {
+            "const": "relative_error"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0
+          },
+          "threshold_metric_id": {
+            "const": "figure9_max_front_bending_relative_error"
+          }
+        }
+      }
+    },
+    "bindFigure9MaximumAbsolute": {
+      "if": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure9_max_front_bending_absolute_error"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "then": {
+        "properties": {
+          "qoi_id": {
+            "const": "max_front_bending"
+          },
+          "paper_location": {
+            "const": "Figure 9"
+          },
+          "metric": {
+            "const": "absolute_error"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0
+          },
+          "threshold_metric_id": {
+            "const": "figure9_max_front_bending_absolute_error"
+          }
+        }
+      }
+    },
+    "bindFigure9Direction": {
+      "if": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure9_release_direction"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "then": {
+        "properties": {
+          "qoi_id": {
+            "const": "release_direction"
+          },
+          "paper_location": {
+            "const": "Figure 9"
+          },
+          "metric": {
+            "const": "direction"
+          },
+          "value": {
+            "enum": [
+              "upward",
+              "downward",
+              "indeterminate"
+            ]
+          },
+          "threshold_metric_id": {
+            "const": "figure9_release_direction"
+          }
+        }
+      }
+    },
+    "containsThresholdFigure8Sign": {
+      "$ref": "#/$defs/containsMetricFigure8Sign"
+    },
+    "containsThresholdFigure8Peak": {
+      "$ref": "#/$defs/containsMetricFigure8Peak"
+    },
+    "containsThresholdFigure8Trough": {
+      "$ref": "#/$defs/containsMetricFigure8Trough"
+    },
+    "containsThresholdFigure8ZeroCrossing": {
+      "$ref": "#/$defs/containsMetricFigure8ZeroCrossing"
+    },
+    "containsThresholdFigure9Curve": {
+      "$ref": "#/$defs/containsMetricFigure9Curve"
+    },
+    "containsThresholdFigure9MaximumRelative": {
+      "$ref": "#/$defs/containsMetricFigure9MaximumRelative"
+    },
+    "containsThresholdFigure9MaximumAbsolute": {
+      "$ref": "#/$defs/containsMetricFigure9MaximumAbsolute"
+    },
+    "containsThresholdFigure9Direction": {
+      "$ref": "#/$defs/containsMetricFigure9Direction"
+    },
+    "containsComparisonFigure8Sign": {
+      "$ref": "#/$defs/containsComparisonIdFigure8Sign"
+    },
+    "containsComparisonFigure8Peak": {
+      "$ref": "#/$defs/containsComparisonIdFigure8Peak"
+    },
+    "containsComparisonFigure8Trough": {
+      "$ref": "#/$defs/containsComparisonIdFigure8Trough"
+    },
+    "containsComparisonFigure8ZeroCrossing": {
+      "$ref": "#/$defs/containsComparisonIdFigure8ZeroCrossing"
+    },
+    "containsComparisonFigure9Curve": {
+      "$ref": "#/$defs/containsComparisonIdFigure9Curve"
+    },
+    "containsComparisonFigure9MaximumRelative": {
+      "$ref": "#/$defs/containsComparisonIdFigure9MaximumRelative"
+    },
+    "containsComparisonFigure9MaximumAbsolute": {
+      "$ref": "#/$defs/containsComparisonIdFigure9MaximumAbsolute"
+    },
+    "containsComparisonFigure9Direction": {
+      "$ref": "#/$defs/containsComparisonIdFigure9Direction"
+    },
+    "containsMetricFigure8Sign": {
+      "contains": {
+        "properties": {
+          "metric_id": {
+            "const": "figure8_sigma_x_sign_sequence"
+          }
+        },
+        "required": [
+          "metric_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsMetricFigure8Peak": {
+      "contains": {
+        "properties": {
+          "metric_id": {
+            "const": "figure8_sigma_x_peak_relative_error"
+          }
+        },
+        "required": [
+          "metric_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsMetricFigure8Trough": {
+      "contains": {
+        "properties": {
+          "metric_id": {
+            "const": "figure8_sigma_x_trough_relative_error"
+          }
+        },
+        "required": [
+          "metric_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsMetricFigure8ZeroCrossing": {
+      "contains": {
+        "properties": {
+          "metric_id": {
+            "const": "figure8_sigma_x_zero_crossing_depth_error"
+          }
+        },
+        "required": [
+          "metric_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsMetricFigure9Curve": {
+      "contains": {
+        "properties": {
+          "metric_id": {
+            "const": "figure9_bending_curve_nrmse"
+          }
+        },
+        "required": [
+          "metric_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsMetricFigure9MaximumRelative": {
+      "contains": {
+        "properties": {
+          "metric_id": {
+            "const": "figure9_max_front_bending_relative_error"
+          }
+        },
+        "required": [
+          "metric_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsMetricFigure9MaximumAbsolute": {
+      "contains": {
+        "properties": {
+          "metric_id": {
+            "const": "figure9_max_front_bending_absolute_error"
+          }
+        },
+        "required": [
+          "metric_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsMetricFigure9Direction": {
+      "contains": {
+        "properties": {
+          "metric_id": {
+            "const": "figure9_release_direction"
+          }
+        },
+        "required": [
+          "metric_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsComparisonIdFigure8Sign": {
+      "contains": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure8_sigma_x_sign_sequence"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsComparisonIdFigure8Peak": {
+      "contains": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure8_sigma_x_peak_relative_error"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsComparisonIdFigure8Trough": {
+      "contains": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure8_sigma_x_trough_relative_error"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsComparisonIdFigure8ZeroCrossing": {
+      "contains": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure8_sigma_x_zero_crossing_depth_error"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsComparisonIdFigure9Curve": {
+      "contains": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure9_bending_curve_nrmse"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsComparisonIdFigure9MaximumRelative": {
+      "contains": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure9_max_front_bending_relative_error"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsComparisonIdFigure9MaximumAbsolute": {
+      "contains": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure9_max_front_bending_absolute_error"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "containsComparisonIdFigure9Direction": {
+      "contains": {
+        "properties": {
+          "comparison_id": {
+            "const": "figure9_release_direction"
+          }
+        },
+        "required": [
+          "comparison_id"
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    }
+  }
+}

@@ -1,0 +1,1368 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.jax-fem/specs/001-kaess-paper-reproduction/run-manifest.schema.json",
+  "title": "Kaess Paper Reproduction Run Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "case_id",
+    "claim_level",
+    "status",
+    "created_utc",
+    "code",
+    "environment",
+    "backend",
+    "command",
+    "inputs",
+    "phase_gates",
+    "qoi",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kaess.run-manifest/1"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claim_level": {
+      "enum": [
+        "verification_only",
+        "public_code_to_code",
+        "author_input_equivalent"
+      ]
+    },
+    "status": {
+      "enum": [
+        "planned",
+        "running",
+        "completed",
+        "failed",
+        "unsupported",
+        "accepted",
+        "rejected"
+      ]
+    },
+    "created_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_utc": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "code": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "checkout_path",
+        "branch",
+        "commit",
+        "dirty"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string"
+        },
+        "checkout_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "branch": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "dirty": {
+          "type": "boolean"
+        },
+        "dirty_diff_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "python",
+        "jax",
+        "jaxlib",
+        "platform",
+        "hardware",
+        "variables"
+      ],
+      "properties": {
+        "python": {
+          "type": "string"
+        },
+        "jax": {
+          "type": "string"
+        },
+        "jaxlib": {
+          "type": "string"
+        },
+        "pardiso": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mkl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cuda": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "driver": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "platform": {
+          "type": "string"
+        },
+        "hardware": {
+          "type": "object"
+        },
+        "variables": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "jax_platform",
+        "orchestration_backend",
+        "full_loop_xla",
+        "precision",
+        "cpu_threads",
+        "mkl_threads",
+        "omp_threads",
+        "thermal",
+        "mechanics",
+        "release",
+        "host_device_transfers",
+        "expected_cpu_operations",
+        "unexpected_fallbacks"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "cpu_reference",
+            "cpu_performance_control",
+            "hybrid_gpu_assembly_cpu_pardiso",
+            "gpu_dominant_experimental",
+            "full_gpu"
+          ]
+        },
+        "jax_platform": {
+          "enum": [
+            "cpu",
+            "gpu"
+          ]
+        },
+        "orchestration_backend": {
+          "enum": [
+            "host_python",
+            "xla_loop"
+          ]
+        },
+        "full_loop_xla": {
+          "type": "boolean"
+        },
+        "precision": {
+          "const": "float64"
+        },
+        "cpu_threads": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mkl_threads": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "omp_threads": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "device_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "thermal": {
+          "$ref": "#/$defs/stagePlacement"
+        },
+        "mechanics": {
+          "$ref": "#/$defs/stagePlacement"
+        },
+        "release": {
+          "$ref": "#/$defs/stagePlacement"
+        },
+        "host_device_transfers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "measured",
+            "count",
+            "bytes"
+          ],
+          "properties": {
+            "measured": {
+              "type": "boolean"
+            },
+            "count": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "bytes": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "evidence": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/fileIdentity"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "expected_cpu_operations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unexpected_fallbacks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "operation",
+              "reason"
+            ],
+            "properties": {
+              "operation": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "qualification_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "qualification_bundle_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "exit_code": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/fileIdentity"
+      }
+    },
+    "phase_gates": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/gate"
+      }
+    },
+    "qoi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "qoi_id",
+          "stage",
+          "unit",
+          "value"
+        ],
+        "properties": {
+          "qoi_id": {
+            "type": "string"
+          },
+          "stage": {
+            "enum": [
+              "build_complete",
+              "cooling_complete",
+              "release_complete"
+            ]
+          },
+          "unit": {
+            "type": "string"
+          },
+          "value": {},
+          "uncertainty": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "artifact": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fileIdentity"
+      }
+    },
+    "resource_usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wall_seconds",
+        "peak_ram_bytes",
+        "peak_vram_bytes"
+      ],
+      "properties": {
+        "wall_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "peak_ram_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "peak_vram_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "code": {
+            "properties": {
+              "dirty": {
+                "const": true
+              }
+            },
+            "required": [
+              "dirty"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "then": {
+        "properties": {
+          "code": {
+            "required": [
+              "dirty_diff_sha256"
+            ],
+            "properties": {
+              "dirty_diff_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "backend": {
+            "properties": {
+              "mode": {
+                "const": "cpu_reference"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "claim_level": {
+            "const": "verification_only"
+          },
+          "backend": {
+            "properties": {
+              "jax_platform": {
+                "const": "cpu"
+              },
+              "mkl_threads": {
+                "const": 1
+              },
+              "omp_threads": {
+                "const": 1
+              },
+              "thermal": {
+                "$ref": "#/$defs/cpuOrNotApplicableStagePlacement"
+              },
+              "mechanics": {
+                "$ref": "#/$defs/cpuOrNotApplicableStagePlacement"
+              },
+              "release": {
+                "$ref": "#/$defs/cpuOrNotApplicableStagePlacement"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "backend": {
+            "properties": {
+              "mode": {
+                "const": "cpu_performance_control"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "claim_level": {
+            "const": "verification_only"
+          },
+          "backend": {
+            "properties": {
+              "jax_platform": {
+                "const": "cpu"
+              },
+              "thermal": {
+                "$ref": "#/$defs/cpuOrNotApplicableStagePlacement"
+              },
+              "mechanics": {
+                "$ref": "#/$defs/cpuOrNotApplicableStagePlacement"
+              },
+              "release": {
+                "$ref": "#/$defs/cpuOrNotApplicableStagePlacement"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "backend": {
+            "properties": {
+              "mode": {
+                "const": "gpu_dominant_experimental"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "claim_level": {
+            "const": "verification_only"
+          },
+          "backend": {
+            "properties": {
+              "jax_platform": {
+                "const": "gpu"
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "enum": [
+                    "completed",
+                    "accepted",
+                    "rejected"
+                  ]
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "properties": {
+                "backend": {
+                  "anyOf": [
+                    {
+                      "properties": {
+                        "thermal": {
+                          "$ref": "#/$defs/gpuObservedStagePlacement"
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "mechanics": {
+                          "$ref": "#/$defs/gpuObservedStagePlacement"
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "release": {
+                          "$ref": "#/$defs/gpuObservedStagePlacement"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "backend": {
+            "properties": {
+              "mode": {
+                "const": "hybrid_gpu_assembly_cpu_pardiso"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "backend": {
+            "properties": {
+              "jax_platform": {
+                "const": "gpu"
+              },
+              "full_loop_xla": {
+                "const": false
+              },
+              "thermal": {
+                "$ref": "#/$defs/hybridOrNotRunStagePlacement"
+              },
+              "mechanics": {
+                "$ref": "#/$defs/hybridOrNotRunStagePlacement"
+              },
+              "release": {
+                "$ref": "#/$defs/hybridOrNotRunStagePlacement"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "backend": {
+            "properties": {
+              "mode": {
+                "const": "full_gpu"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "backend": {
+            "properties": {
+              "jax_platform": {
+                "const": "gpu"
+              },
+              "thermal": {
+                "$ref": "#/$defs/fullGpuOrNotRunStagePlacement"
+              },
+              "mechanics": {
+                "$ref": "#/$defs/fullGpuOrNotRunStagePlacement"
+              },
+              "release": {
+                "$ref": "#/$defs/fullGpuOrNotRunStagePlacement"
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "allOf": [
+                {
+                  "properties": {
+                    "status": {
+                      "const": "accepted"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                },
+                {
+                  "properties": {
+                    "claim_level": {
+                      "enum": [
+                        "public_code_to_code",
+                        "author_input_equivalent"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "claim_level"
+                  ]
+                }
+              ]
+            },
+            "then": {
+              "properties": {
+                "backend": {
+                  "properties": {
+                    "thermal": {
+                      "$ref": "#/$defs/fullGpuStagePlacement"
+                    },
+                    "mechanics": {
+                      "$ref": "#/$defs/fullGpuStagePlacement"
+                    },
+                    "release": {
+                      "$ref": "#/$defs/fullGpuStagePlacement"
+                    },
+                    "unexpected_fallbacks": {
+                      "maxItems": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "backend": {
+                  "properties": {
+                    "orchestration_backend": {
+                      "const": "xla_loop"
+                    }
+                  },
+                  "required": [
+                    "orchestration_backend"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "backend": {
+                  "properties": {
+                    "full_loop_xla": {
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "backend": {
+                  "properties": {
+                    "orchestration_backend": {
+                      "const": "host_python"
+                    }
+                  },
+                  "required": [
+                    "orchestration_backend"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "backend": {
+                  "properties": {
+                    "full_loop_xla": {
+                      "const": false
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "accepted"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "completed_utc",
+          "exit_code",
+          "resource_usage"
+        ],
+        "properties": {
+          "completed_utc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "exit_code": {
+            "const": 0
+          },
+          "phase_gates": {
+            "minProperties": 1
+          },
+          "qoi": {
+            "minItems": 1
+          },
+          "artifacts": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "accepted"
+              }
+            }
+          },
+          {
+            "properties": {
+              "claim_level": {
+                "enum": [
+                  "public_code_to_code",
+                  "author_input_equivalent"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "environment": {
+            "required": [
+              "cuda",
+              "driver"
+            ],
+            "properties": {
+              "cuda": {
+                "type": "string",
+                "minLength": 1
+              },
+              "driver": {
+                "type": "string",
+                "minLength": 1
+              },
+              "hardware": {
+                "minProperties": 1
+              }
+            }
+          },
+          "backend": {
+            "required": [
+              "qualification_id",
+              "qualification_bundle_sha256",
+              "device_ids"
+            ],
+            "properties": {
+              "mode": {
+                "enum": [
+                  "hybrid_gpu_assembly_cpu_pardiso",
+                  "full_gpu"
+                ]
+              },
+              "qualification_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "qualification_bundle_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "device_ids": {
+                "minItems": 1
+              },
+              "host_device_transfers": {
+                "properties": {
+                  "measured": {
+                    "const": true
+                  },
+                  "count": {
+                    "type": "integer"
+                  },
+                  "bytes": {
+                    "type": "integer"
+                  },
+                  "evidence": {
+                    "$ref": "#/$defs/fileIdentity"
+                  }
+                }
+              },
+              "unexpected_fallbacks": {
+                "maxItems": 0
+              }
+            }
+          },
+          "phase_gates": {
+            "required": [
+              "build_complete",
+              "cooling_complete",
+              "release_complete",
+              "energy_audit",
+              "convergence_audit"
+            ],
+            "properties": {
+              "build_complete": {
+                "$ref": "#/$defs/passedGate"
+              },
+              "cooling_complete": {
+                "$ref": "#/$defs/passedGate"
+              },
+              "release_complete": {
+                "$ref": "#/$defs/passedGate"
+              },
+              "energy_audit": {
+                "$ref": "#/$defs/passedGate"
+              },
+              "convergence_audit": {
+                "$ref": "#/$defs/passedGate"
+              }
+            }
+          },
+          "artifacts": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "const": "mechanics_convergence_ledger"
+                    }
+                  }
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "const": "backend_qualification"
+                    }
+                  }
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "const": "native_float64_checkpoint"
+                    }
+                  }
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "role": {
+                      "const": "backend_qualification_validation"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "backend": {
+                  "properties": {
+                    "mode": {
+                      "const": "hybrid_gpu_assembly_cpu_pardiso"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "backend": {
+                  "properties": {
+                    "thermal": {
+                      "$ref": "#/$defs/hybridStagePlacement"
+                    },
+                    "mechanics": {
+                      "$ref": "#/$defs/hybridStagePlacement"
+                    },
+                    "release": {
+                      "$ref": "#/$defs/hybridStagePlacement"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "stagePlacement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "local_assembly_backend",
+        "global_matrix_backend",
+        "linear_solver_backend",
+        "state_residency_backend"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "used",
+            "not_run",
+            "not_applicable"
+          ]
+        },
+        "local_assembly_backend": {
+          "enum": [
+            "cpu",
+            "gpu",
+            "mixed",
+            "not_applicable"
+          ]
+        },
+        "global_matrix_backend": {
+          "enum": [
+            "cpu",
+            "gpu",
+            "mixed",
+            "not_applicable"
+          ]
+        },
+        "linear_solver_backend": {
+          "enum": [
+            "cpu_pardiso",
+            "cpu_scipy",
+            "gpu_jax",
+            "gpu_petsc",
+            "gpu_amgx",
+            "not_applicable"
+          ]
+        },
+        "state_residency_backend": {
+          "enum": [
+            "cpu",
+            "gpu",
+            "mixed",
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "cpuOrNotApplicableStagePlacement": {
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/stagePlacement"
+            },
+            {
+              "properties": {
+                "status": {
+                  "const": "used"
+                },
+                "local_assembly_backend": {
+                  "const": "cpu"
+                },
+                "global_matrix_backend": {
+                  "const": "cpu"
+                },
+                "linear_solver_backend": {
+                  "enum": [
+                    "cpu_pardiso",
+                    "cpu_scipy"
+                  ]
+                },
+                "state_residency_backend": {
+                  "const": "cpu"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/stagePlacement"
+            },
+            {
+              "properties": {
+                "status": {
+                  "enum": [
+                    "not_run",
+                    "not_applicable"
+                  ]
+                },
+                "local_assembly_backend": {
+                  "const": "not_applicable"
+                },
+                "global_matrix_backend": {
+                  "const": "not_applicable"
+                },
+                "linear_solver_backend": {
+                  "const": "not_applicable"
+                },
+                "state_residency_backend": {
+                  "const": "not_applicable"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "hybridStagePlacement": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/stagePlacement"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "used"
+            },
+            "local_assembly_backend": {
+              "const": "gpu"
+            },
+            "global_matrix_backend": {
+              "const": "cpu"
+            },
+            "linear_solver_backend": {
+              "const": "cpu_pardiso"
+            },
+            "state_residency_backend": {
+              "enum": [
+                "cpu",
+                "mixed"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "hybridOrNotRunStagePlacement": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/hybridStagePlacement"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/stagePlacement"
+            },
+            {
+              "properties": {
+                "status": {
+                  "enum": [
+                    "not_run",
+                    "not_applicable"
+                  ]
+                },
+                "local_assembly_backend": {
+                  "const": "not_applicable"
+                },
+                "global_matrix_backend": {
+                  "const": "not_applicable"
+                },
+                "linear_solver_backend": {
+                  "const": "not_applicable"
+                },
+                "state_residency_backend": {
+                  "const": "not_applicable"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "gpuObservedStagePlacement": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/stagePlacement"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "used"
+            }
+          },
+          "anyOf": [
+            {
+              "properties": {
+                "local_assembly_backend": {
+                  "enum": [
+                    "gpu",
+                    "mixed"
+                  ]
+                }
+              }
+            },
+            {
+              "properties": {
+                "global_matrix_backend": {
+                  "enum": [
+                    "gpu",
+                    "mixed"
+                  ]
+                }
+              }
+            },
+            {
+              "properties": {
+                "state_residency_backend": {
+                  "enum": [
+                    "gpu",
+                    "mixed"
+                  ]
+                }
+              }
+            },
+            {
+              "properties": {
+                "linear_solver_backend": {
+                  "enum": [
+                    "gpu_jax",
+                    "gpu_petsc",
+                    "gpu_amgx"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "fullGpuStagePlacement": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/stagePlacement"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "used"
+            },
+            "local_assembly_backend": {
+              "const": "gpu"
+            },
+            "global_matrix_backend": {
+              "const": "gpu"
+            },
+            "linear_solver_backend": {
+              "enum": [
+                "gpu_jax",
+                "gpu_petsc",
+                "gpu_amgx"
+              ]
+            },
+            "state_residency_backend": {
+              "const": "gpu"
+            }
+          }
+        }
+      ]
+    },
+    "fullGpuOrNotRunStagePlacement": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/fullGpuStagePlacement"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/stagePlacement"
+            },
+            {
+              "properties": {
+                "status": {
+                  "enum": [
+                    "not_run",
+                    "not_applicable"
+                  ]
+                },
+                "local_assembly_backend": {
+                  "const": "not_applicable"
+                },
+                "global_matrix_backend": {
+                  "const": "not_applicable"
+                },
+                "linear_solver_backend": {
+                  "const": "not_applicable"
+                },
+                "state_residency_backend": {
+                  "const": "not_applicable"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_run",
+            "pass",
+            "fail",
+            "not_applicable"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/fileIdentity"
+          }
+        }
+      }
+    },
+    "passedGate": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/gate"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "pass"
+            }
+          }
+        }
+      ]
+    },
+    "fileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "path",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

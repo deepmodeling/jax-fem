@@ -126,6 +126,16 @@
       "sha256": "35b29a7b6aeaa33e17bbc99b3a3f066ae602f8da66de2e93a9fe38214d10c94e",
       "impact": "high",
       "status": "assumed"
+    },
+    {
+      "evidence_id": "paper-parity-config-candidate",
+      "quantity": "candidate QoI, path, threshold, case-split, and stop-rule protocol",
+      "source_class": "assumption",
+      "source_locator": "Spec Kit T006 candidate; human approval remains required",
+      "repository_path": "cases/kaess_2023/inputs/paper-parity-config.yaml",
+      "sha256": "dc53dae262f848748d0985bdcd17aca6e7d53a43bac08b2c02d33107eea5c139",
+      "impact": "critical",
+      "status": "assumed"
     }
   ]
 }

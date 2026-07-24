@@ -1,0 +1,215 @@
+{
+  "_format": "JSON-compatible YAML 1.2",
+  "schema_version": "kaess.paper-parity-config/1",
+  "protocol_id": "kaess-2023-public-v1",
+  "claim_level": "public_code_to_code",
+  "paper_doi": "10.3390/ma16062321",
+  "status": "review_required",
+  "standard_case_id": "standard-10x30-t150-p250-v850",
+  "approval": {
+    "approved_by": null,
+    "approved_utc": null,
+    "approval_record_sha256": null
+  },
+  "material_freeze": {
+    "mode": "external_sha256",
+    "path": "/home/user/work/159/materials/316L/ss316l_material_config_kaess.json",
+    "sha256": "d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f",
+    "status": "review_required"
+  },
+  "path_definitions": {
+    "figure7-stress-path-v1": {
+      "paper_locator": "paper p. 9, Figure 7 black arrow",
+      "coordinate_system": "mesh_xyz_m",
+      "direction": "negative_z",
+      "surface_origin": "active cantilever top at cooling_complete",
+      "lateral_coordinates": "pending Figure 7 mesh registration",
+      "mask": "printed_and_active",
+      "status": "review_required"
+    },
+    "figure7-bending-path-v1": {
+      "paper_locator": "paper p. 9, Figure 7 parallel red lines",
+      "coordinate_system": "mesh_xyz_m",
+      "direction": "positive_x",
+      "surface": "cantilever top surface after release",
+      "transverse_aggregation": "mean over the frozen red-line set",
+      "mask": "printed_and_active",
+      "status": "review_required"
+    }
+  },
+  "quantities_of_interest": {
+    "sigma_x_depth_curve": {
+      "stage": "cooling_complete",
+      "unit": "MPa_vs_mm",
+      "path_id": "figure7-stress-path-v1",
+      "interpolation": "piecewise_linear_without_extrapolation",
+      "checkpoint_dtype": "float64"
+    },
+    "sigma_x_zero_crossing": {
+      "stage": "cooling_complete",
+      "unit": "mm",
+      "path_id": "figure7-stress-path-v1",
+      "interpolation": "first_tension_to_compression_crossing_piecewise_linear",
+      "checkpoint_dtype": "float64"
+    },
+    "front_bending_curve": {
+      "stage": "release_complete",
+      "unit": "um_vs_mm",
+      "path_id": "figure7-bending-path-v1",
+      "interpolation": "piecewise_linear_without_extrapolation",
+      "checkpoint_dtype": "float64"
+    },
+    "max_front_bending": {
+      "stage": "release_complete",
+      "unit": "um",
+      "path_id": "figure7-bending-path-v1",
+      "interpolation": "front_endpoint_transverse_mean",
+      "checkpoint_dtype": "float64"
+    },
+    "release_direction": {
+      "stage": "release_complete",
+      "unit": "upward_or_downward",
+      "path_id": "figure7-bending-path-v1",
+      "interpolation": "sign_of_front_endpoint_transverse_mean",
+      "checkpoint_dtype": "float64"
+    }
+  },
+  "threshold_set": {
+    "threshold_set_id": "kaess-first-pass-v1",
+    "version": "1.0.0-candidate",
+    "status": "proposed",
+    "approved_by": null,
+    "approved_utc": null,
+    "approval_record_sha256": null,
+    "content_sha256": null,
+    "metrics": [
+      {
+        "metric_id": "heat_source_relative_integral_error",
+        "operator": "less_than_or_equal",
+        "value": 0.005,
+        "unit": "fraction"
+      },
+      {
+        "metric_id": "latent_heat_relative_integral_error",
+        "operator": "less_than_or_equal",
+        "value": 0.005,
+        "unit": "fraction"
+      },
+      {
+        "metric_id": "thermal_energy_closure",
+        "operator": "less_than_or_equal",
+        "value": 0.01,
+        "unit": "fraction"
+      },
+      {
+        "metric_id": "active_domain_deleted_reference_relative_error",
+        "operator": "less_than_or_equal",
+        "value": 1e-8,
+        "unit": "fraction"
+      },
+      {
+        "metric_id": "time_path_mesh_refinement_qoi_difference",
+        "operator": "less_than_or_equal",
+        "value": 0.02,
+        "unit": "fraction"
+      },
+      {
+        "metric_id": "solver_tolerance_qoi_difference",
+        "operator": "less_than_or_equal",
+        "value": 0.01,
+        "unit": "fraction"
+      },
+      {
+        "metric_id": "cpu_repeat_active_displacement_absolute",
+        "operator": "less_than_or_equal",
+        "value": 0.1,
+        "unit": "um",
+        "combined_with": "cpu_repeat_active_displacement_relative",
+        "combination": "maximum"
+      },
+      {
+        "metric_id": "cpu_repeat_active_displacement_relative",
+        "operator": "less_than_or_equal",
+        "value": 0.01,
+        "unit": "fraction",
+        "combined_with": "cpu_repeat_active_displacement_absolute",
+        "combination": "maximum"
+      },
+      {
+        "metric_id": "figure9_bending_curve_nrmse",
+        "operator": "less_than_or_equal",
+        "value": 0.10,
+        "unit": "fraction",
+        "combined_with": "two_times_digitization_uncertainty",
+        "combination": "maximum"
+      },
+      {
+        "metric_id": "figure8_stress_peak_trough_amplitude_error",
+        "operator": "less_than_or_equal",
+        "value": 0.15,
+        "unit": "fraction"
+      },
+      {
+        "metric_id": "figure8_zero_crossing_depth_error",
+        "operator": "less_than_or_equal",
+        "value": 1.0,
+        "unit": "local_element_height"
+      },
+      {
+        "metric_id": "hybrid_temperature_qoi_difference",
+        "operator": "less_than_or_equal",
+        "value": 0.001,
+        "unit": "fraction"
+      },
+      {
+        "metric_id": "hybrid_stress_qoi_difference",
+        "operator": "less_than_or_equal",
+        "value": 0.01,
+        "unit": "fraction"
+      },
+      {
+        "metric_id": "hybrid_release_displacement_absolute",
+        "operator": "less_than_or_equal",
+        "value": 0.5,
+        "unit": "um",
+        "combined_with": "hybrid_release_displacement_relative",
+        "combination": "maximum"
+      },
+      {
+        "metric_id": "hybrid_release_displacement_relative",
+        "operator": "less_than_or_equal",
+        "value": 0.02,
+        "unit": "fraction",
+        "combined_with": "hybrid_release_displacement_absolute",
+        "combination": "maximum"
+      },
+      {
+        "metric_id": "accelerated_wall_speedup",
+        "operator": "greater_than_or_equal",
+        "value": 1.20,
+        "unit": "ratio",
+        "sample_count": 2
+      },
+      {
+        "metric_id": "accelerated_linear_solve_increase",
+        "operator": "less_than_or_equal",
+        "value": 0.10,
+        "unit": "fraction"
+      }
+    ]
+  },
+  "calibration_case_ids": [],
+  "held_out_case_ids": [
+    "standard-10x30-t150-p250-v850"
+  ],
+  "stop_rules": {
+    "require_g0_before_solver_changes": true,
+    "require_g2_before_cpu_reference": true,
+    "require_g3_before_accelerated_qualification": true,
+    "require_g4_before_scale_bridge": true,
+    "require_build_and_cooling_before_release": true,
+    "reject_threshold_changes_after_formal_results": true,
+    "reject_backend_pair_on_identity_mismatch": true,
+    "reject_formal_matrix_unless_g5_passes": true
+  }
+}

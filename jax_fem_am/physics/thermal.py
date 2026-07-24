@@ -1,4 +1,4 @@
-"""Transient thermal problem with moving Gaussian laser source.
+"""Transient thermal problem with selectable moving volumetric laser source.
 
 Extracted verbatim from legacy/v03/am_thermal_stress_macro_intersection_mech100.py.
 """
@@ -6,6 +6,9 @@ Extracted verbatim from legacy/v03/am_thermal_stress_macro_intersection_mech100.
 import jax.numpy as np
 
 from jax_fem.problem import Problem
+
+
+SOURCE_MODELS = frozenset(("legacy", "paper_hemispherical"))
 
 
 class TransientThermal(Problem):
@@ -23,6 +26,7 @@ class TransientThermal(Problem):
         front_surface_loss_h,
         front_surface_loss_thickness,
         front_surface_loss_radiation,
+        source_model="legacy",
     ):
         self.convection_h = convection_h
         self.ambient = ambient
@@ -40,6 +44,12 @@ class TransientThermal(Problem):
         self.front_surface_loss_h = float(front_surface_loss_h)
         self.front_surface_loss_thickness = float(front_surface_loss_thickness)
         self.front_surface_loss_radiation = bool(front_surface_loss_radiation)
+        if source_model not in SOURCE_MODELS:
+            raise ValueError(
+                f"source_model must be one of {sorted(SOURCE_MODELS)}, "
+                f"got {source_model!r}"
+            )
+        self.source_model = source_model
 
     def get_tensor_map(self):
         def heat_flux(
@@ -64,6 +74,13 @@ class TransientThermal(Problem):
         return heat_flux
 
     def get_mass_map(self):
+        source_model = getattr(self, "source_model", "legacy")
+        if source_model not in SOURCE_MODELS:
+            raise ValueError(
+                f"source_model must be one of {sorted(SOURCE_MODELS)}, "
+                f"got {source_model!r}"
+            )
+
         def heat_capacity(
             T,
             x,
@@ -86,19 +103,45 @@ class TransientThermal(Problem):
             r1 = x[self.plane_axis1_id] - laser_center[self.plane_axis1_id]
             r2 = r0**2 + r1**2
             depth = self.build_sign * (laser_center[self.build_axis_id] - x[self.build_axis_id])
-            q_depth = np.where(depth >= 0.0, np.exp(-depth / source_depth[0]), 0.0)
-            # The in-plane Gaussian integrates to pi*r_b^2/2 and the one-sided
-            # exponential depth decay integrates to source_depth. The factor 2
-            # therefore makes the volume integral equal the absorbed laser power.
-            q_vol = (
-                2.0
-                * laser_power[0]
-                / (np.pi * beam_radius[0] ** 2 * source_depth[0])
-                * np.exp(-2.0 * r2 / beam_radius[0] ** 2)
-                * q_depth
-                * laser_switch[0]
-                * active[0]
-            )
+            if source_model == "paper_hemispherical":
+                # Kaess et al. (2023), Equation (1): a spherically symmetric
+                # three-dimensional Gaussian truncated to the material-side
+                # half-space. The normalization integrates to P_abs over that
+                # half-space; laser_power is already absorptivity * commanded
+                # power, so no second efficiency factor belongs here.
+                radius = beam_radius[0]
+                q_shape = np.where(
+                    depth >= 0.0,
+                    np.exp(-3.0 * (r2 + depth**2) / radius**2),
+                    0.0,
+                )
+                q_vol = (
+                    6.0
+                    * np.sqrt(3.0)
+                    * laser_power[0]
+                    / (np.pi * np.sqrt(np.pi) * radius**3)
+                    * q_shape
+                    * laser_switch[0]
+                    * active[0]
+                )
+            else:
+                q_depth = np.where(
+                    depth >= 0.0,
+                    np.exp(-depth / source_depth[0]),
+                    0.0,
+                )
+                # The in-plane Gaussian integrates to pi*r_b^2/2 and the
+                # one-sided exponential depth decay integrates to source_depth.
+                # The factor 2 makes the integral equal the absorbed power.
+                q_vol = (
+                    2.0
+                    * laser_power[0]
+                    / (np.pi * beam_radius[0] ** 2 * source_depth[0])
+                    * np.exp(-2.0 * r2 / beam_radius[0] ** 2)
+                    * q_depth
+                    * laser_switch[0]
+                    * active[0]
+                )
 
             if self.front_surface_loss_h > 0.0 and self.front_surface_loss_thickness > 0.0:
                 front_band = np.where(

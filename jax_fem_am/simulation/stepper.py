@@ -314,6 +314,7 @@ def main():
             args.front_surface_loss_h,
             args.front_surface_loss_thickness,
             args.front_surface_loss_radiation,
+            args.source_model,
         ),
     )
     if args.thermal_mass_lumping:

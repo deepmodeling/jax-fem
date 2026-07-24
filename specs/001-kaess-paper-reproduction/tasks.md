@@ -135,11 +135,13 @@ may proceed through its failing-test gates
   - **Files**: `jax_fem_am/config/schema.py`, `jax_fem_am/physics/release.py`,
     `jax_fem_am/simulation/runner.py`, `tests/unit/test_kaess_paper_bottom_bc.py`
 
-- [ ] T015 [P] [US2] 实现论文半球三维高斯热源 — 新增显式 source model，保持 legacy source 可选。
+- [x] T015 [P] [US2] 实现论文半球三维高斯热源 — 新增显式 source model，保持 legacy source 可选。
   - **Acceptance**: 公式采样和功率积分误差≤0.5%。
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_hemispherical_source.py`
   - **Files**: `jax_fem_am/config/schema.py`, `jax_fem_am/physics/thermal.py`,
-    `jax_fem_am/simulation/runner.py`, `tests/unit/test_kaess_hemispherical_source.py`
+    `jax_fem_am/simulation/stepper.py`,
+    `jax_fem_am/verification/thermal_ledger.py`, `jax_fem_am/io/vtu.py`,
+    `tests/unit/test_kaess_hemispherical_source.py`
 
 - [ ] T016 [US2] 实现未激活单元零贡献活动域 — 热容、导热、刚度、残差和求解 DOF 均遵循冻结活动域语义。
   - **Acceptance**: 小网格删除参考相对差≤`1e-8`，占位因子不影响 QoI。

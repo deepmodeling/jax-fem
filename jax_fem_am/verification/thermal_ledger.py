@@ -56,6 +56,7 @@ def integrate_volume_terms(
     front_loss_radiation,
     emissivity,
     stefan_boltzmann,
+    source_model="legacy",
 ):
     """Integrate the explicit volume terms used by the v03 weak form."""
     jxw = np.asarray(jxw, dtype=np.float64)
@@ -117,6 +118,10 @@ def integrate_volume_terms(
         raise ValueError("front loss thickness must be positive when enabled")
     if not 0.0 <= scalars["emissivity"] <= 1.0:
         raise ValueError("emissivity must lie in [0, 1]")
+    if source_model not in ("legacy", "paper_hemispherical"):
+        raise ValueError(
+            "source_model must be 'legacy' or 'paper_hemispherical'"
+        )
 
     build_axis = int(build_axis)
     plane_axes = tuple(int(axis) for axis in plane_axes)
@@ -130,24 +135,41 @@ def integrate_volume_terms(
     depth = scalars["build_sign"] * (
         laser_center[build_axis] - points[..., build_axis]
     )
-    q_depth = np.where(
-        depth >= 0.0,
-        np.exp(-depth / scalars["source_depth_m"]),
-        0.0,
-    )
-    q_laser = (
-        2.0
-        * scalars["effective_laser_power_w"]
-        / (
-            np.pi
-            * scalars["beam_radius_m"] ** 2
-            * scalars["source_depth_m"]
+    if source_model == "paper_hemispherical":
+        radius = scalars["beam_radius_m"]
+        q_shape = np.where(
+            depth >= 0.0,
+            np.exp(-3.0 * (r0**2 + r1**2 + depth**2) / radius**2),
+            0.0,
         )
-        * np.exp(-2.0 * (r0**2 + r1**2) / scalars["beam_radius_m"] ** 2)
-        * q_depth
-        * scalars["laser_switch"]
-        * active
-    )
+        q_laser = (
+            6.0
+            * np.sqrt(3.0)
+            * scalars["effective_laser_power_w"]
+            / (np.pi * np.sqrt(np.pi) * radius**3)
+            * q_shape
+            * scalars["laser_switch"]
+            * active
+        )
+    else:
+        q_depth = np.where(
+            depth >= 0.0,
+            np.exp(-depth / scalars["source_depth_m"]),
+            0.0,
+        )
+        q_laser = (
+            2.0
+            * scalars["effective_laser_power_w"]
+            / (
+                np.pi
+                * scalars["beam_radius_m"] ** 2
+                * scalars["source_depth_m"]
+            )
+            * np.exp(-2.0 * (r0**2 + r1**2) / scalars["beam_radius_m"] ** 2)
+            * q_depth
+            * scalars["laser_switch"]
+            * active
+        )
 
     if scalars["front_loss_h"] > 0.0:
         front_band = np.where(
@@ -370,6 +392,7 @@ def extract_solver_step(
         front_loss_radiation=problem.front_surface_loss_radiation,
         emissivity=problem.emissivity,
         stefan_boltzmann=problem.stefan_boltzmann,
+        source_model=getattr(problem, "source_model", "legacy"),
     )
     surface_loss = _surface_exchange_from_problem(
         problem, temperature_new, dt_s

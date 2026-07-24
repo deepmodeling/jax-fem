@@ -142,6 +142,16 @@ def build_parser(config=None):
 
     parser.add_argument("--laser-power", type=float, default=cfg(config, "laser_power", 1.0))
     parser.add_argument("--absorptivity", type=float, default=cfg(config, "absorptivity", 0.35))
+    parser.add_argument(
+        "--source-model",
+        choices=("legacy", "paper_hemispherical"),
+        default=cfg(config, "source_model", "legacy"),
+        help=(
+            "Volumetric laser source: legacy uses an in-plane Gaussian with "
+            "exponential depth decay; paper_hemispherical uses Kaess (2023) "
+            "Equation (1)."
+        ),
+    )
     parser.add_argument("--beam-radius", type=float, default=cfg(config, "beam_radius", 1.0e-4))
     parser.add_argument("--source-depth", type=float, default=cfg(config, "source_depth", 6.0e-5))
 

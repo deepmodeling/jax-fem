@@ -226,7 +226,14 @@ def print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, se
     print("laser_power:", args.laser_power)
     print("absorptivity:", args.absorptivity)
     print("effective_laser_power_nominal:", args.absorptivity * args.laser_power)
-    print("heat_source_normalization:", "2*P/(pi*r_b^2*source_depth)")
+    print("source_model:", args.source_model)
+    if args.source_model == "paper_hemispherical":
+        print(
+            "heat_source_normalization:",
+            "6*sqrt(3)*P_abs/(pi*sqrt(pi)*r_b^3)",
+        )
+    else:
+        print("heat_source_normalization:", "2*P_abs/(pi*r_b^2*source_depth)")
     print("beam_radius:", args.beam_radius)
     print("source_depth:", args.source_depth)
     print("powder_mode:", args.powder_mode)

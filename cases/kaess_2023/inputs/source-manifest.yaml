@@ -33,8 +33,28 @@
       "source_class": "inferred",
       "source_locator": "repository benchmark metadata; values trace to paper text and Figures 3-9",
       "repository_path": "cases/kaess_2023/references/cases/kaess_2023.json",
-      "sha256": "e6b5ff938c7a8dd0c7650d5fdc8055ff7f9a6843271aff924b2108900767bb19",
+      "sha256": "25d301bdddc98458fedef1f857b6493d3792fce1fd56914cc70a4b7fc3c88063",
       "impact": "high",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "figure-8-digitized-anchors",
+      "quantity": "Figure 8b 150 C sigma_x depth-profile anchors and reading uncertainty",
+      "source_class": "figure_digitized",
+      "source_locator": "paper p. 10, Figure 8b; anchor-only digitization",
+      "repository_path": "cases/kaess_2023/references/digitized/fig8_sigma_x.csv",
+      "sha256": "ef97e0dad7ae3fbc48c86c00eab336ced24d4b2d40e581aaece1e7c9df0ae314",
+      "impact": "critical",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "figure-9-digitized-bending",
+      "quantity": "Figure 9a/9b maximum front-bending values and reading uncertainty",
+      "source_class": "figure_digitized",
+      "source_locator": "paper p. 11, Figure 9a/9b",
+      "repository_path": "cases/kaess_2023/references/digitized/fig9_bending.csv",
+      "sha256": "a886dd4bdfac3ce78c548a79b82478391695289afa8dd8cdd5575f40be57c128",
+      "impact": "critical",
       "status": "verified"
     },
     {

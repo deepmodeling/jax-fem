@@ -1,0 +1,5 @@
+series_id,build_plate_temp_c,layer_thickness_um,depth_mm,sigma_x_mpa,point_role,reading_error_depth_mm,reading_error_sigma_mpa,source_page,source_figure,source_class
+plate150_layer30,150,30,0.00,250,surface,0.01,50,10,Figure 8b,figure_digitized
+plate150_layer30,150,30,-0.15,650,peak,0.01,50,10,Figure 8b,figure_digitized
+plate150_layer30,150,30,-0.21,0,zero_crossing,0.01,50,10,Figure 8b,figure_digitized
+plate150_layer30,150,30,-0.30,-450,trough,0.01,50,10,Figure 8b,figure_digitized

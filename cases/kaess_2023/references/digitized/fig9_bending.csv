@@ -1,0 +1,13 @@
+series_id,x_quantity,x_value,x_unit,max_front_bending_um,reading_error_um,source_page,source_figure,source_class
+plate_temperature_fixed_p250_v850,build_plate_temperature,20,degC,14.6,0.3,11,Figure 9a,figure_digitized
+plate_temperature_fixed_p250_v850,build_plate_temperature,50,degC,14.5,0.3,11,Figure 9a,figure_digitized
+plate_temperature_fixed_p250_v850,build_plate_temperature,150,degC,14.0,0.3,11,Figure 9a,figure_digitized
+plate_temperature_fixed_p250_v850,build_plate_temperature,300,degC,12.7,0.3,11,Figure 9a,figure_digitized
+plate_temperature_fixed_p250_v850,build_plate_temperature,450,degC,11.9,0.3,11,Figure 9a,figure_digitized
+plate_temperature_fixed_p250_v850,build_plate_temperature,600,degC,10.5,0.3,11,Figure 9a,figure_digitized
+plate_temperature_fixed_p250_v850,build_plate_temperature,750,degC,8.7,0.3,11,Figure 9a,figure_digitized
+plate_temperature_fixed_p250_v850,build_plate_temperature,900,degC,6.1,0.3,11,Figure 9a,figure_digitized
+power_fixed_v850,laser_power,100,W,15.5,0.3,11,Figure 9b,figure_digitized
+power_fixed_v850,laser_power,350,W,13.0,0.3,11,Figure 9b,figure_digitized
+power_constant_led_0p29_j_per_mm,laser_power,100,W,12.0,0.3,11,Figure 9b,figure_digitized
+power_constant_led_0p29_j_per_mm,laser_power,350,W,14.3,0.3,11,Figure 9b,figure_digitized

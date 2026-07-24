@@ -12,7 +12,7 @@
       "pmc": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10055713/",
       "publisher": "https://www.mdpi.com/1996-1944/16/6/2321"
     },
-    "verification_status": "setup parameters verified against EuropePMC fulltext 2026-07-16; figure-level quantitative values NOT yet digitized"
+    "verification_status": "setup parameters verified against EuropePMC fulltext 2026-07-16; Figure 8/9 digitized anchors frozen as CSV with explicit reading uncertainty 2026-07-24"
   },
   "reference_model": {
     "code": "Abaqus, weakly-coupled (sequential) thermomechanical, implicit both passes, line search for convergence",
@@ -85,7 +85,7 @@
       "source_location": "Introduction (Buchbinder) and Results depth profiles"
     }
   ],
-  "quantitative_anchors_status": "UNLOCKED 2026-07-16: author PDF obtained (kaess_2023_paper.pdf), figures rendered to kaess_2023_figures/, Fig 4/9a digitized visually (reading error noted); Fig 8 curves available for profile-level comparison",
+  "quantitative_anchors_status": "FROZEN 2026-07-24: current Figure 8b anchor points and Figure 9a/9b values exported to references/digitized CSV with reading uncertainty; full pixel-level Figure 8 curve remains a separate digitization task",
   "digitized_reference_results": {
     "fig9a_max_front_bending_um_vs_plate_c": {
       "20": 14.6, "50": 14.5, "150": 14.0, "300": 12.7,
@@ -114,7 +114,7 @@
   "use_limitations": [
     "This is a code-to-code comparison against a published FE study, marked as 对比实验; it provides no experimental accuracy evidence.",
     "Reference powder E=10 GPa and absorption are author assumptions; quantitative mismatch does not falsify either model. Trend agreement is the acceptance criterion.",
-    "Trend-level anchors only until Figures 8-9 are digitized with pixel uncertainty.",
+    "The frozen CSV contains Figure 8 profile anchors and Figure 9 values with reading uncertainty; a full pixel-level Figure 8 curve is still required before curve-NRMSE claims.",
     "Geometry partition (cantilever vs support region) must be taken from Figure 3 before meshing; total-domain dimensions alone are insufficient."
   ]
 }

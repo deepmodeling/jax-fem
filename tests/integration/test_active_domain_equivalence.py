@@ -162,24 +162,13 @@ def _make_thermal(points, cells, boundary):
     )
 
 
-def _solve_thermal(points, cells, physical_cell, inactive_mass_factor):
+def _set_thermal_state(
+    problem,
+    old_temperature,
+    physical_cell,
+    inactive_mass_factor,
+):
     physical_cell = np.asarray(physical_cell, dtype=bool)
-    node_mask = physical_node_mask(
-        cells,
-        physical_cell,
-        num_nodes=len(points),
-    )
-    inactive_bc = make_inactive_node_dirichlet_bc(
-        ~node_mask,
-        vec=1,
-        value=0.0,
-    )
-    problem = _make_thermal(
-        points,
-        cells,
-        merge_dirichlet_bcs(_bottom_temperature_bc(), inactive_bc),
-    )
-
     active_quad = make_quad_scalar(
         physical_cell.astype(np.float64),
         problem.fes[0].num_quads,
@@ -198,7 +187,7 @@ def _solve_thermal(points, cells, physical_cell, inactive_mass_factor):
     )
     problem.set_params(
         [
-            jnp.zeros((len(points), 1), dtype=jnp.float64),
+            jnp.asarray(old_temperature, dtype=jnp.float64),
             0.1,
             jnp.zeros(3, dtype=jnp.float64),
             0.0,
@@ -214,6 +203,32 @@ def _solve_thermal(points, cells, physical_cell, inactive_mass_factor):
             0.0,
             active_quad,
         ]
+    )
+    return rho, conductivity
+
+
+def _solve_thermal(points, cells, physical_cell, inactive_mass_factor):
+    physical_cell = np.asarray(physical_cell, dtype=bool)
+    node_mask = physical_node_mask(
+        cells,
+        physical_cell,
+        num_nodes=len(points),
+    )
+    inactive_bc = make_inactive_node_dirichlet_bc(
+        ~node_mask,
+        vec=1,
+        value=0.0,
+    )
+    problem = _make_thermal(
+        points,
+        cells,
+        merge_dirichlet_bcs(_bottom_temperature_bc(), inactive_bc),
+    )
+    rho, conductivity = _set_thermal_state(
+        problem,
+        jnp.zeros((len(points), 1), dtype=jnp.float64),
+        physical_cell,
+        inactive_mass_factor,
     )
     solution = solver(
         problem,
@@ -402,6 +417,75 @@ def test_inactive_constraint_mask_contains_only_exclusive_nodes():
     np.testing.assert_array_equal(
         selected,
         [False, False, False, False, True],
+    )
+
+
+def test_dynamic_activation_refreshes_linear_system_constraint_rows():
+    initially_physical = np.asarray([True, False])
+    initial_nodes = physical_node_mask(
+        CELLS,
+        initially_physical,
+        num_nodes=len(POINTS),
+    )
+    problem = _make_thermal(
+        POINTS,
+        CELLS,
+        merge_dirichlet_bcs(
+            _bottom_temperature_bc(),
+            make_inactive_node_dirichlet_bc(
+                ~initial_nodes,
+                vec=1,
+                value=0.0,
+            ),
+        ),
+    )
+    _set_thermal_state(
+        problem,
+        np.zeros((len(POINTS), 1)),
+        initially_physical,
+        inactive_mass_factor=1.0,
+    )
+    first_solution = solver(
+        problem,
+        solver_options={"newton": {"linear": {"spsolve_solver": {}}}},
+    )[0]
+
+    all_physical = np.asarray([True, True])
+    problem.fes[0].update_Dirichlet_boundary_conditions(
+        _bottom_temperature_bc()
+    )
+    _set_thermal_state(
+        problem,
+        first_solution,
+        all_physical,
+        inactive_mass_factor=1.0,
+    )
+    reused_solution = solver(
+        problem,
+        solver_options={"newton": {"linear": {"spsolve_solver": {}}}},
+    )[0]
+
+    fresh_problem = _make_thermal(
+        POINTS,
+        CELLS,
+        _bottom_temperature_bc(),
+    )
+    _set_thermal_state(
+        fresh_problem,
+        first_solution,
+        all_physical,
+        inactive_mass_factor=1.0,
+    )
+    fresh_solution = solver(
+        fresh_problem,
+        solver_options={"newton": {"linear": {"spsolve_solver": {}}}},
+    )[0]
+
+    np.testing.assert_allclose(
+        np.asarray(reused_solution),
+        np.asarray(fresh_solution),
+        rtol=1.0e-10,
+        atol=1.0e-12,
     )
 
 

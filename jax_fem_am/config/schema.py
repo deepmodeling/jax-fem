@@ -213,11 +213,14 @@ def build_parser(config=None):
                              "thermal load step that stalls the mechanics Newton solve.")
     parser.add_argument("--release-after-cooling", dest="release_after_cooling", action="store_true", default=cfg(config, "release_after_cooling", False))
     parser.add_argument("--no-release-after-cooling", dest="release_after_cooling", action="store_false")
-    parser.add_argument("--release-anchor-mode", choices=("rigid_body", "box"),
+    parser.add_argument("--release-anchor-mode",
+                        choices=("rigid_body", "box", "paper_minimal_root"),
                         default=cfg(config, "release_anchor_mode", "rigid_body"),
                         help="rigid_body (default): free-free release with 3-point rigid-body anchors (full removal "
                              "from the plate). box: clamp all nodes inside --release-anchor-box (u=0), modeling a "
-                             "partial EDM/saw cut that leaves a root attachment (Kaess 2023 cantilever semantics).")
+                             "partial EDM/saw cut that leaves a root attachment. paper_minimal_root: restrain the "
+                             "retained release-root bottom only in the build direction plus three in-plane rigid "
+                             "DOFs (formal Kaess 2023 cantilever semantics; requires --release-cell-set).")
     parser.add_argument("--release-anchor-box", type=float, nargs=6, metavar=("XMIN", "XMAX", "YMIN", "YMAX", "ZMIN", "ZMAX"),
                         default=cfg(config, "release_anchor_box", None),
                         help="Axis-aligned box (mesh coordinates) whose nodes stay clamped during a box-mode release.")
@@ -226,6 +229,11 @@ def build_parser(config=None):
                         help="Cells whose centroid lies inside this box (mesh coordinates) are deactivated in the "
                              "release solve (stiffness AND locked-in stress scaled by the inactive factor) - the "
                              "equivalent of deleting sawed-off support elements (Kaess 2023 Fig 7 semantics).")
+    parser.add_argument("--release-cell-set",
+                        default=cfg(config, "release_cell_set", None),
+                        help="Content-addressed JSON artifact containing the exact zero-based solver cells "
+                             "removed for release. Mutually exclusive with --release-cut-box; formal "
+                             "paper runs must use this option instead of an unverified geometric box.")
     parser.add_argument("--final-cooldown-temperature", type=float,
                         default=cfg(config, "final_cooldown_temperature", None),
                         help="Ramp the fixed bottom temperature linearly to this value (K) across the final cooling "

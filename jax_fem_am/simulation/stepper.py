@@ -1,5 +1,6 @@
 import argparse
 import csv
+import hashlib
 import json
 import math
 import os
@@ -70,10 +71,15 @@ from jax_fem_am.domain.events import update_phase_reference_and_eqp
 from jax_fem_am.domain.state import StepState, reset_new_cell_nodal_temperature
 from jax_fem_am.physics.mechanics import ThermoMechanical
 from jax_fem_am.physics.release import (
+    load_release_cell_set,
     make_anchor_mechanics_bc,
     make_box_anchor_mechanics_bc,
     make_full_bottom_mechanics_bc,
     make_paper_minimal_bottom_mechanics_bc,
+    make_root_minimal_release_mechanics_bc,
+    validate_release_anchor_protocol,
+    validate_release_cell_set,
+    zero_exact_release_cells,
 )
 from jax_fem_am.physics.thermal import TransientThermal
 from jax_fem_am.process.activation import (
@@ -193,9 +199,54 @@ def run_mechanics_with_cutback(mechanics, u_guess, params, newton_overrides, arg
     raise last_exc
 
 
+def validate_release_configuration(args, strict_active_domain):
+    """Fail closed when a formal exact cut is paired with a legacy anchor."""
+
+    if args.release_cell_set is not None and args.release_cut_box is not None:
+        raise ValueError(
+            "--release-cell-set and --release-cut-box are mutually exclusive"
+        )
+    if args.release_cell_set is not None and not args.release_after_cooling:
+        raise ValueError(
+            "--release-cell-set requires --release-after-cooling"
+        )
+    if args.release_cell_set is not None and not strict_active_domain:
+        raise ValueError(
+            "--release-cell-set requires the strict layer_on_scan/void "
+            "active domain so removed cells have exactly zero contribution"
+        )
+    if (
+        args.release_cell_set is not None
+        and args.release_anchor_mode != "paper_minimal_root"
+    ):
+        raise ValueError(
+            "--release-cell-set requires --release-anchor-mode "
+            "paper_minimal_root; rigid-body and fully clamped box anchors "
+            "are diagnostic-only"
+        )
+    if (
+        args.release_cell_set is not None
+        and args.bottom_mechanics_bc != "paper_minimal"
+    ):
+        raise ValueError(
+            "--release-cell-set requires --bottom-mechanics-bc "
+            "paper_minimal so the surviving root anchors are continuous "
+            "from build through release"
+        )
+    if (
+        args.release_anchor_mode == "paper_minimal_root"
+        and args.release_cell_set is None
+    ):
+        raise ValueError(
+            "--release-anchor-mode paper_minimal_root requires "
+            "--release-cell-set"
+        )
+
+
 def main():
     args = parse_args()
     strict_active_domain = uses_strict_active_domain(args)
+    validate_release_configuration(args, strict_active_domain)
     if args.steps is not None:
         print("WARNING: --steps is treated as an alias for --layers in this version.")
         args.layers = args.steps
@@ -323,6 +374,72 @@ def main():
     )
     if args.thermal_mass_lumping:
         apply_thermal_mass_lumping(thermal)
+
+    release_cell_set = None
+    exact_release_bc = None
+    args.paper_minimal_release_resolved_bc = None
+    if args.release_cell_set is not None:
+        with open(args.inp, "rb") as mesh_stream:
+            mesh_sha256 = hashlib.sha256(mesh_stream.read()).hexdigest()
+        release_cell_set = load_release_cell_set(
+            args.release_cell_set,
+            expected_mesh_sha256=mesh_sha256,
+            num_cells=len(cells),
+        )
+        args.release_cell_set_sha256 = release_cell_set.artifact_sha256
+        args.release_cell_set_removed_count = int(
+            len(release_cell_set.removed_cell_ids)
+        )
+        anchor_protocol = release_cell_set.document.get("anchor_protocol")
+        if not isinstance(anchor_protocol, dict):
+            raise ValueError(
+                "formal release artifact requires an anchor_protocol object"
+            )
+        try:
+            release_base_coord = float(anchor_protocol["base_coord_m"])
+            release_base_tolerance = float(
+                anchor_protocol["base_tolerance_m"]
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                "release anchor protocol requires a finite base plane"
+            ) from exc
+        if (
+            not onp.isfinite(release_base_coord)
+            or not onp.isfinite(release_base_tolerance)
+            or release_base_tolerance < 0.0
+        ):
+            raise ValueError(
+                "release anchor protocol requires a finite base plane"
+            )
+        (
+            exact_release_bc,
+            args.paper_minimal_release_resolved_bc,
+        ) = make_root_minimal_release_mechanics_bc(
+            points,
+            cells,
+            release_cell_set.retained_root_cell_ids,
+            build_axis_id=build_axis_id,
+            plane_axis_ids=plane_axis_ids,
+            base_coord=release_base_coord,
+            base_tolerance=release_base_tolerance,
+            anchor_corner=args.paper_minimal_anchor_corner,
+            return_metadata=True,
+        )
+        validate_release_anchor_protocol(
+            release_cell_set,
+            args.paper_minimal_release_resolved_bc,
+            anchor_corner=args.paper_minimal_anchor_corner,
+        )
+        print(
+            "release cell set: "
+            f"{args.release_cell_set_removed_count} exact cells; "
+            f"sha256={args.release_cell_set_sha256}"
+        )
+    else:
+        args.release_cell_set_sha256 = None
+        args.release_cell_set_removed_count = 0
+
     # write_used_config() serializes vars(args), including the resolved node
     # identity needed to audit/reproduce a paper-minimal anchor selection.
     args.paper_minimal_resolved_bc = None
@@ -340,8 +457,36 @@ def main():
             build_axis_id=build_axis_id,
             plane_axis_ids=plane_axis_ids,
             anchor_corner=args.paper_minimal_anchor_corner,
+            anchor_candidate_node_ids=(
+                args.paper_minimal_release_resolved_bc[
+                    "root_bottom_node_ids"
+                ]
+                if release_cell_set is not None
+                else None
+            ),
             return_metadata=True,
         )
+        if (
+            release_cell_set is not None
+            and (
+                args.paper_minimal_resolved_bc["anchor_node_ids"]
+                != args.paper_minimal_release_resolved_bc[
+                    "anchor_node_ids"
+                ]
+                or args.paper_minimal_resolved_bc["rotation_component"]
+                != args.paper_minimal_release_resolved_bc[
+                    "rotation_component"
+                ]
+            )
+        ):
+            raise ValueError(
+                "build and release must preserve the same physical "
+                "in-plane anchor DOFs"
+            )
+        if release_cell_set is not None:
+            args.paper_minimal_release_resolved_bc[
+                "constraint_continuity"
+            ] = "release_physical_dofs_are_build_dof_subset"
         mechanics_location_fns = []
         mechanics_foundation = 0.0
     else:
@@ -488,6 +633,18 @@ def main():
         "future_layer_mode": args.future_layer_mode,
         "layer_activation_geometry": args.layer_activation_geometry,
         "strict_active_domain": strict_active_domain,
+        "release_cell_set_sha256": args.release_cell_set_sha256,
+        "release_cell_set_removed_count": args.release_cell_set_removed_count,
+        "release_selection_mode": (
+            "exact_cell_set"
+            if release_cell_set is not None
+            else (
+                "geometric_box_diagnostic"
+                if args.release_cut_box is not None
+                else "none"
+            )
+        ),
+        "paper_release_gate_eligible": release_cell_set is not None,
     }
     write_used_config(args, args.output_dir, derived)
     print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, selected_cells, points, thermal, mechanics, derived)
@@ -813,32 +970,119 @@ def main():
         T_old = T_new
 
     if args.release_after_cooling:
+        release_point_fields = None
         printed_node_ids = onp.unique(
             onp.asarray(cells)[onp.asarray(last_printed_cell, dtype=bool)].reshape(-1)
         )
-        if args.release_anchor_mode == "box":
+        if release_cell_set is not None:
+            release_bc = exact_release_bc
+        elif args.release_anchor_mode == "box":
             if args.release_anchor_box is None:
                 raise ValueError("--release-anchor-mode box requires --release-anchor-box")
             release_bc = make_box_anchor_mechanics_bc(points, args.release_anchor_box)
         else:
             release_bc = make_anchor_mechanics_bc(points, candidate_node_ids=printed_node_ids)
-        if args.release_cut_box is not None:
+        release_cut_cell = onp.zeros(len(cells), dtype=bool)
+        if release_cell_set is not None:
+            release_cut_cell = onp.asarray(
+                release_cell_set.cell_mask,
+                dtype=bool,
+            )
+            anchor_nodes, anchor_components, _ = (
+                mechanics.fes[0].Dirichlet_boundary_conditions(release_bc)
+            )
+            anchor_pair_blocks = [
+                onp.column_stack(
+                    (
+                        onp.asarray(node_ids, dtype=onp.int64),
+                        onp.asarray(components, dtype=onp.int64),
+                    )
+                )
+                for node_ids, components in zip(
+                    anchor_nodes,
+                    anchor_components,
+                )
+                if len(node_ids)
+            ]
+            anchor_dof_pairs = (
+                onp.concatenate(anchor_pair_blocks, axis=0)
+                if anchor_pair_blocks
+                else onp.empty((0, 2), dtype=onp.int64)
+            )
+            expected_dof_pairs = {
+                tuple(pair)
+                for pair in args.paper_minimal_release_resolved_bc[
+                    "constrained_dof_pairs"
+                ]
+            }
+            actual_dof_pairs = {
+                tuple(pair) for pair in anchor_dof_pairs.tolist()
+            }
+            if actual_dof_pairs != expected_dof_pairs:
+                raise ValueError(
+                    "resolved release anchor DOFs differ from the frozen "
+                    "paper-minimal-root contract"
+                )
+            release_point_fields = {}
+            root_bottom_mask = onp.zeros(len(points), dtype=onp.float64)
+            root_bottom_mask[
+                args.paper_minimal_release_resolved_bc[
+                    "root_bottom_node_ids"
+                ]
+            ] = 1.0
+            release_point_fields[
+                f"release_bottom_u{ID_TO_AXIS[build_axis_id]}"
+            ] = root_bottom_mask
+            for component in plane_axis_ids:
+                component_mask = onp.zeros(
+                    len(points),
+                    dtype=onp.float64,
+                )
+                component_nodes = anchor_dof_pairs[
+                    anchor_dof_pairs[:, 1] == component,
+                    0,
+                ]
+                component_mask[component_nodes] = 1.0
+                release_point_fields[
+                    f"release_anchor_u{ID_TO_AXIS[component]}"
+                ] = component_mask
+            anchor_node_ids = onp.unique(anchor_dof_pairs[:, 0])
+            validate_release_cell_set(
+                release_cell_set,
+                cells=cells,
+                points=points,
+                removable_cell_mask=support_cell,
+                protected_cell_mask=last_printed_cell & (~support_cell),
+                anchor_node_ids=anchor_node_ids,
+                anchor_dof_pairs=anchor_dof_pairs,
+            )
+            print(
+                "release exact cell set: deactivating "
+                f"{int(release_cut_cell.sum())} validated support cells"
+            )
+        elif args.release_cut_box is not None:
             cut = [float(v) for v in args.release_cut_box]
             lo = onp.asarray(cut[0::2])
             hi = onp.asarray(cut[1::2])
-            cut_cell = onp.all(
+            release_cut_cell = onp.all(
                 (cell_centroids >= lo[None, :]) & (cell_centroids <= hi[None, :]),
                 axis=1,
             )
-            n_cut = int(cut_cell.sum())
+            n_cut = int(release_cut_cell.sum())
             print(f"release cut box: deactivating {n_cut} cells in {cut}")
-            if n_cut:
-                cut_quad = make_quad_scalar(
-                    cut_cell.astype(onp.float64),
-                    mechanics.fes[0].num_quads,
+        if release_cut_cell.any():
+            cut_quad = make_quad_scalar(
+                release_cut_cell.astype(onp.float64),
+                mechanics.fes[0].num_quads,
+            )
+            # Kill both stiffness and locked-in stress of sawed-off cells.
+            mechanics_params = list(mechanics_params)
+            if release_cell_set is not None:
+                mechanics_params[2] = zero_exact_release_cells(
+                    mechanics_params[2],
+                    cut_quad,
                 )
-                # kill both stiffness and locked-in stress of sawed-off cells
-                mechanics_params = list(mechanics_params)
+            else:
                 mechanics_params[2] = np.where(
                     cut_quad > 0.5,
                     (
@@ -914,6 +1158,8 @@ def main():
             1.0,
             step_states[-1].global_step + 1 if step_states else 0,
             MODE_TO_ID["release"],
+            release_cut_cell,
+            release_point_fields,
         )
         print(f"release_vtk={vtk_path} release_u_max={float(np.max(np.abs(u_release[0]))):.12g}")
 

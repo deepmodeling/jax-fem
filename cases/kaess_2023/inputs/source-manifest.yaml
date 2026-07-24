@@ -68,6 +68,26 @@
       "status": "inferred"
     },
     {
+      "evidence_id": "figure-7-release-cellset",
+      "quantity": "content-addressed W1/W2 removed, W3 retained and four-variant paper-minimal root-anchor protocol",
+      "source_class": "inferred",
+      "source_locator": "paper pp. 5 and 9, Sections 2.4 and 3, Figure 7; registered to the frozen C3D8 mesh",
+      "repository_path": "cases/kaess_2023/inputs/release-cellset.json",
+      "sha256": "3eed36636b680e8ba865de0920a153c81abd42a21dafcc71ac9d9596d4d23437",
+      "impact": "critical",
+      "status": "inferred"
+    },
+    {
+      "evidence_id": "figure-7-release-generator",
+      "quantity": "deterministic Figure 7 release partition and paper-minimal root-anchor generator",
+      "source_class": "inferred",
+      "source_locator": "repository implementation of the registered W1/W2 cut and W3 retained-root assumption",
+      "repository_path": "cases/kaess_2023/make_release_cellset.py",
+      "sha256": "073bd378be20482bb6183b224bb4fbeef606bb7d6edcf121eb46434cd150b196",
+      "impact": "high",
+      "status": "inferred"
+    },
+    {
       "evidence_id": "mesh-reconstruction",
       "quantity": "deterministic Kaess mesh generator",
       "source_class": "inferred",
@@ -103,7 +123,7 @@
       "source_class": "assumption",
       "source_locator": "Spec Kit Phase 0 source freeze",
       "repository_path": "cases/kaess_2023/inputs/assumptions.yaml",
-      "sha256": "4f081191f28a773177901f8d1442d1375cc788b6e0e2f5d8cfe3511bd6631929",
+      "sha256": "f328429f4a79a95edc377233c6dbc01929a060e584b593d20246f75d98ad68d8",
       "impact": "critical",
       "status": "assumed"
     },
@@ -113,7 +133,7 @@
       "source_class": "inferred",
       "source_locator": "Spec Kit research review and live source inspection",
       "repository_path": "cases/kaess_2023/inputs/deviations.yaml",
-      "sha256": "d86e3819ad1f6fe3d11726b5a3ac5ea0e6df76660e805c177f6f9e74e397903d",
+      "sha256": "42a74740adc14c3f314706b67c32ed9c03bbf39b948f31469b743a053c4d6d8c",
       "impact": "critical",
       "status": "verified"
     },

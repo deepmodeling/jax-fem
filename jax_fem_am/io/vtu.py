@@ -88,6 +88,8 @@ def save_step(
     mechanics_valid,
     mechanics_source_step,
     mode_id,
+    release_removed_cell=None,
+    release_point_fields=None,
 ):
     if quad_stress is None:
         quad_stress = empty_quad_stress(fe.num_cells, dT_quad.shape[1])
@@ -110,6 +112,28 @@ def save_step(
         ("mechanics_source_step", np.full(fe.num_cells, float(mechanics_source_step), dtype=np.float64)),
         ("mode_id", np.full(fe.num_cells, float(mode_id), dtype=np.float64)),
     ]
+    if release_removed_cell is not None:
+        cell_infos.append(
+            (
+                "release_removed",
+                np.asarray(release_removed_cell, dtype=np.float64),
+            )
+        )
+    if release_point_fields is not None:
+        if not isinstance(release_point_fields, dict):
+            raise ValueError("release point fields must be a name-to-array map")
+        for name, values in release_point_fields.items():
+            if not (
+                name.startswith("release_bottom_u")
+                or name.startswith("release_anchor_u")
+            ):
+                raise ValueError(f"invalid release point field name: {name}")
+            values = np.asarray(values, dtype=np.float64)
+            if values.shape != (len(T_new),):
+                raise ValueError(
+                    f"release point field {name} must have one value per node"
+                )
+            point_infos.append((name, values))
     cell_infos.extend(make_quad_stress_cell_infos(quad_stress))
     save_sol(
         fe,

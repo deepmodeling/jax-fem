@@ -109,9 +109,26 @@ else
   MESH_FILE="${MESH_FILE:-${SCRIPT_DIR}/kaess_cantilever_${ELEMENT_TYPE}.inp}"
   POWDER_ARGS=()
 fi
+RELEASE_CELL_SET="${RELEASE_CELL_SET:-${SCRIPT_DIR}/inputs/release-cellset.json}"
+REFERENCE_POWDER_MESH="${SCRIPT_DIR}/kaess_cantilever_c3d8_powder_margin.inp"
+if [[ "$(realpath "${MESH_FILE}")" == "$(realpath "${REFERENCE_POWDER_MESH}")" ]]; then
+  # Formal 29,568-cell reference mesh: use the exact content-addressed
+  # Figure-7 partition. The JSON keeps W3 attached and removes W1/W2 only;
+  # the same W3 minimal in-plane anchors persist from build through release.
+  RELEASE_ARGS=(--release-anchor-mode paper_minimal_root
+                --release-cell-set "${RELEASE_CELL_SET}")
+else
+  # Non-reference/TET diagnostic meshes have different cell identities and
+  # cannot consume the formal artifact. Their box cut is never promotion
+  # eligible and remains an explicitly labelled legacy comparison arm.
+  RELEASE_ARGS=(--release-anchor-mode box
+                --release-anchor-box 7.75e-4 9.75e-4 0 5.0e-4 -1.0e-9 1.0e-9
+                --release-cut-box 0 7.0e-4 0 5.0e-4 0 2.999e-4)
+  echo "kaess p2: DIAGNOSTIC_ONLY geometric release box; paper release gate is ineligible" >&2
+fi
 EXTRA_ARGS="${EXTRA_ARGS:-}"
 
-for f in "${MATERIAL_CONFIG}" "${MESH_FILE}"; do
+for f in "${MATERIAL_CONFIG}" "${MESH_FILE}" "${RELEASE_CELL_SET}"; do
   [[ -f "$f" ]] || { echo "kaess p2: missing input: $f" >&2; exit 2; }
 done
 
@@ -218,11 +235,7 @@ SOLVER_CMD=(
   ${THERMAL_LUMPING:+--thermal-mass-lumping}
   ${POWDER_ARGS[@]+"${POWDER_ARGS[@]}"}
   --release-after-cooling
-  --release-anchor-mode box
-  # saw cut per paper Fig 7: root wall keeps its plate connection,
-  # sawed-off walls W1/W2 are deactivated in the release solve
-  --release-anchor-box 7.75e-4 9.75e-4 0 5.0e-4 -1.0e-9 1.0e-9
-  --release-cut-box 0 7.0e-4 0 5.0e-4 0 2.999e-4
+  "${RELEASE_ARGS[@]}"
   --thermal-output-every 200
   --mechanics-output-every 200
   --summary-every 100

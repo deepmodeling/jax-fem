@@ -346,10 +346,15 @@ def test_frozen_kaess_mesh_resolves_exact_auditable_anchor_nodes():
     )
     registered_primary = anchor_assumption["range"]["primary"]
     assert registered_primary["anchor_corner"] == "min_min"
-    assert registered_primary["anchor_node_ids"] == metadata["anchor_node_ids"]
+    assert registered_primary["anchor_domain"].startswith(
+        "retained W3 root bottom"
+    )
+    assert registered_primary["root_bottom_node_count"] == 189
+    assert registered_primary["physical_release_dof_count"] == 192
+    assert registered_primary["anchor_node_ids"] == [231, 239]
     np.testing.assert_allclose(
         registered_primary["anchor_coordinates_m"],
-        metadata["anchor_coordinates"],
+        [[7.75e-4, 0.0, 0.0], [9.75e-4, 0.0, 0.0]],
         rtol=0.0,
         atol=1.0e-15,
     )
@@ -378,6 +383,15 @@ def test_cli_keeps_fixed_default_and_exposes_paper_minimal_anchor_variants():
     assert default_args.paper_minimal_anchor_corner == "min_min"
     assert paper_args.bottom_mechanics_bc == "paper_minimal"
     assert paper_args.paper_minimal_anchor_corner == "max_max"
+
+
+def test_cli_exposes_paper_minimal_root_release_mode():
+    parser = build_parser()
+    args = parser.parse_args(
+        ["--release-anchor-mode", "paper_minimal_root"]
+    )
+
+    assert args.release_anchor_mode == "paper_minimal_root"
 
 
 @pytest.mark.parametrize(

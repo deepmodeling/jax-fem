@@ -6,7 +6,7 @@
     {
       "deviation_id": "P0-BC",
       "paper_requirement": "All bottom nodes restrained in z with partial in-plane freedom.",
-      "implemented_behavior": "Kaess phase 1 and phase 2 use a paper-minimal build boundary: all bottom nodes are restrained in z, one deterministic corner node is restrained in x and y, and a second aligned node is restrained in y. The paper does not publish the exact in-plane anchors, so the frozen min_min anchor choice remains subject to the required G2 four-corner sensitivity check.",
+      "implemented_behavior": "Kaess phase 1 uses a paper-minimal global-bottom boundary. On the formal phase-2 exact-release path, all build-stage bottom nodes are restrained in z while the three in-plane rigid-body DOFs are selected from the retained W3 root; release retains exactly those same W3 in-plane DOFs and the 189 W3-bottom z restraints (192 physical DOFs total), so no new zero-displacement anchor is introduced at cutting. The paper does not publish the exact in-plane anchors, so the frozen min_min choice remains subject to the required G2 four-corner sensitivity check.",
       "severity": "P0",
       "affected_qoi_ids": ["sigma_x_depth_curve", "front_bending_curve", "max_front_bending"],
       "resolution": "accepted_assumption",
@@ -78,11 +78,11 @@
     {
       "deviation_id": "P0-REL",
       "paper_requirement": "Predefined support elements are deleted for the Figure 7 partial separation.",
-      "implemented_behavior": "Current release uses geometric boxes/centroids and ersatz stiffness rather than a frozen explicit cell set.",
+      "implemented_behavior": "The frozen 29,568-cell C3D8 paper workflow reads a mesh-bound, content-addressed release artifact, removes exactly 1,920 W1/W2 support cells with zero contribution, retains 1,920 W3 root cells, derives and verifies the hashed 189-node/192-DOF paper-minimal root anchor protocol, writes the release mask to VTU, and rejects protected-cell cuts, disconnected load-bearing components, non-root anchors, anchor discontinuity and deficient actual constrained DOFs. Other meshes retain a geometric-box diagnostic arm that is explicitly ineligible for the paper release gate.",
       "severity": "P0",
       "affected_qoi_ids": ["front_bending_curve", "max_front_bending", "release_direction"],
-      "resolution": "open",
-      "evidence_paths": ["jax_fem_am/physics/release.py", "jax_fem_am/simulation/stepper.py"]
+      "resolution": "accepted_assumption",
+      "evidence_paths": ["cases/kaess_2023/inputs/release-cellset.json", "cases/kaess_2023/make_release_cellset.py", "jax_fem_am/physics/release.py", "jax_fem_am/simulation/stepper.py", "tests/integration/test_kaess_release_cellset.py", "tests/integration/test_v06_run_audit.py"]
     }
   ]
 }

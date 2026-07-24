@@ -255,6 +255,76 @@ class RunAuditTest(unittest.TestCase):
         self.assertEqual(result["transient"]["invalid_step_count"], 1)
         self.assertEqual(result["transient"]["minimum_temperature"], -1.0)
 
+    def test_hex8_release_audit_excludes_exact_removed_cells(self):
+        points = np.asarray(
+            [
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+                [1.0, 0.0, 1.0],
+                [1.0, 1.0, 1.0],
+                [0.0, 1.0, 1.0],
+                [2.0, 0.0, 0.0],
+                [2.0, 1.0, 0.0],
+                [2.0, 0.0, 1.0],
+                [2.0, 1.0, 1.0],
+            ],
+            dtype=float,
+        )
+        cells = np.asarray(
+            [
+                [0, 1, 2, 3, 4, 5, 6, 7],
+                [1, 8, 9, 2, 5, 10, 11, 6],
+            ],
+            dtype=np.int64,
+        )
+
+        def write_vtu(path, release_removed):
+            meshio.write(
+                path,
+                meshio.Mesh(
+                    points=points,
+                    cells=[("hexahedron", cells)],
+                    point_data={
+                        "T": np.full(len(points), 300.0),
+                        "u": np.zeros((len(points), 3)),
+                    },
+                    cell_data={
+                        "vm_quad": [
+                            np.where(
+                                np.asarray(release_removed, dtype=bool),
+                                np.nan,
+                                np.asarray([1000.0, 10.0]),
+                            )
+                        ],
+                        "eq_plastic_strain": [np.zeros(2)],
+                        "printed": [np.ones(2)],
+                        "mechanics_valid": [
+                            1.0 - np.asarray(release_removed, dtype=float)
+                        ],
+                        "release_removed": [
+                            np.asarray(release_removed, dtype=float)
+                        ],
+                    },
+                ),
+            )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            run_dir = Path(temporary)
+            write_vtu(run_dir / "step_000000_cooling.vtu", [0.0, 0.0])
+            write_vtu(run_dir / "release.vtu", [1.0, 0.0])
+            result = audit_run(run_dir, ambient=300.0)
+
+        self.assertEqual(result["release"]["mesh"]["cell_type"], "hexahedron")
+        self.assertEqual(result["release"]["mesh"]["audited_cell_count"], 1)
+        self.assertTrue(result["release"]["valid"])
+        self.assertEqual(
+            result["release"]["stress"]["diagnostic_global_max"],
+            10.0,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

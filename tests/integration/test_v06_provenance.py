@@ -237,8 +237,25 @@ class V06ProvenanceTest(unittest.TestCase):
             table.write_text("T,E\n300,1.0e11\n", encoding="utf-8")
             config = material_dir / "config.json"
             config.write_text("{}\n", encoding="utf-8")
+            release_cell_set = repo_root / "release-cellset.json"
+            release_cell_set.write_text(
+                '{"schema_version":"kaess.release-cellset/1"}\n',
+                encoding="utf-8",
+            )
+            release_hash = sha256_file(release_cell_set)
             (run_dir / "used_config.json").write_text(
-                json.dumps({"E_table": "materials/E.csv", "layers": 1}),
+                json.dumps(
+                    {
+                        "E_table": "materials/E.csv",
+                        "layers": 1,
+                        "release_cell_set": str(release_cell_set),
+                        "release_cell_set_sha256": release_hash,
+                        "derived": {
+                            "release_selection_mode": "exact_cell_set",
+                            "paper_release_gate_eligible": True,
+                        },
+                    }
+                ),
                 encoding="utf-8",
             )
             (run_dir / "v06_run_audit.json").write_text(
@@ -267,6 +284,50 @@ class V06ProvenanceTest(unittest.TestCase):
         )
         self.assertIn("v06_run_audit", manifest["artifacts"])
         self.assertIn("used_config", manifest["inputs"])
+        self.assertEqual(
+            manifest["inputs"]["release_cell_set"]["sha256"],
+            release_hash,
+        )
+        self.assertTrue(manifest["paper_release_gate"]["eligible"])
+
+    def test_geometric_release_box_is_not_paper_gate_eligible(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repo_root = Path(temporary) / "jax-fem"
+            run_dir = Path(temporary) / "run"
+            repo_root.mkdir()
+            run_dir.mkdir()
+            mesh = repo_root / "mesh.inp"
+            config = repo_root / "material.json"
+            mesh.write_text("*HEADING\n", encoding="utf-8")
+            config.write_text("{}\n", encoding="utf-8")
+            (run_dir / "used_config.json").write_text(
+                json.dumps(
+                    {
+                        "release_cut_box": [0, 1, 0, 1, 0, 1],
+                        "derived": {
+                            "release_selection_mode": (
+                                "geometric_box_diagnostic"
+                            ),
+                            "paper_release_gate_eligible": False,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            manifest = build_manifest(
+                repo_root=repo_root,
+                run_dir=run_dir,
+                mesh=mesh,
+                material_config=config,
+                label="diagnostic-release",
+            )
+
+        self.assertFalse(manifest["paper_release_gate"]["eligible"])
+        self.assertEqual(
+            manifest["paper_release_gate"]["selection_mode"],
+            "geometric_box_diagnostic",
+        )
 
     def test_malformed_used_config_degrades_to_forensic_manifest(self):
         with tempfile.TemporaryDirectory() as temporary:

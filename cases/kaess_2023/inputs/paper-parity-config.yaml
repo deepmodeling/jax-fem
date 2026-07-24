@@ -4,12 +4,12 @@
   "protocol_id": "kaess-2023-public-v1",
   "claim_level": "public_code_to_code",
   "paper_doi": "10.3390/ma16062321",
-  "status": "review_required",
+  "status": "approved",
   "standard_case_id": "standard-10x30-t150-p250-v850",
   "approval": {
-    "approved_by": null,
-    "approved_utc": null,
-    "approval_record_sha256": null
+    "approved_by": "project_owner",
+    "approved_utc": "2026-07-24T03:03:18Z",
+    "approval_record_sha256": "206d7af567f0ee4d9113e8780b67b503936030538f266114834aa63052390839"
   },
   "material_freeze": {
     "mode": "external_sha256",
@@ -17,7 +17,7 @@
     "environment_variable": "KAESS_MATERIAL_CONFIG",
     "source_manifest_evidence_id": "formal-material-config",
     "sha256": "d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f",
-    "status": "review_required"
+    "status": "approved"
   },
   "path_definitions": {
     "figure7-stress-path-v1": {
@@ -27,7 +27,7 @@
       "surface_origin": "active cantilever top at cooling_complete",
       "lateral_coordinates": "pending Figure 7 mesh registration",
       "mask": "printed_and_active",
-      "status": "review_required"
+      "status": "approved_assumption"
     },
     "figure7-bending-path-v1": {
       "paper_locator": "paper p. 9, Figure 7 parallel red lines",
@@ -36,7 +36,7 @@
       "surface": "cantilever top surface after release",
       "transverse_aggregation": "mean over the frozen red-line set",
       "mask": "printed_and_active",
-      "status": "review_required"
+      "status": "approved_assumption"
     }
   },
   "quantities_of_interest": {
@@ -78,12 +78,12 @@
   },
   "threshold_set": {
     "threshold_set_id": "kaess-first-pass-v1",
-    "version": "1.0.0-candidate",
-    "status": "proposed",
-    "approved_by": null,
-    "approved_utc": null,
-    "approval_record_sha256": null,
-    "content_sha256": null,
+    "version": "1.0.0",
+    "status": "approved",
+    "approved_by": "project_owner",
+    "approved_utc": "2026-07-24T03:03:18Z",
+    "approval_record_sha256": "206d7af567f0ee4d9113e8780b67b503936030538f266114834aa63052390839",
+    "content_sha256": "8841c86850f1d5f8f74b8d0be000010f1466331017df390f3125c06cc0cfe275",
     "metrics": [
       {
         "metric_id": "heat_source_relative_integral_error",

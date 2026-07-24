@@ -6,8 +6,8 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
 
 **Input**: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`
 
-**Status**: G0 in progress — source/protocol artifacts are being implemented;
-solver changes remain blocked until Review Gate approval
+**Status**: G0 approved on 2026-07-24 — T005 contract hardening remains the
+last Phase 1 task before solver implementation
 
 **Organization**: 任务按 user story 和科学 gate 组织。`[P]` 表示不同文件、
 无前置依赖时可并行；测试任务必须先失败，再实现对应能力。
@@ -75,9 +75,12 @@ solver changes remain blocked until Review Gate approval
 
 ### Checkpoint G0 — Human Source Review
 
-- CHK023–CHK030 全部批准。
-- `paper-parity-config.yaml` 为 immutable candidate。
-- 外部材料输入的冻结方式已决定。
+- [x] CHK023–CHK030 全部批准。
+- [x] `paper-parity-config.yaml` 为 immutable approved protocol。
+- [x] 外部材料输入冻结为 `KAESS_MATERIAL_CONFIG` 指向的外部文件及
+  SHA-256。
+- [x] 审批证据冻结在 `cases/kaess_2023/inputs/g0-approval.json`，阈值
+  artifact 冻结在 `cases/kaess_2023/inputs/threshold-set.json`。
 - 未达到本 checkpoint 时，Phase 2 只允许编写失败测试，不允许正式实现。
 
 ## Phase 2 — Foundational Failing Tests for P0 Physics

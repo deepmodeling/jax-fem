@@ -19,6 +19,7 @@ ALLOWED_SOURCE_CLASSES = {
     "author_artifact",
     "inferred",
     "assumption",
+    "project_decision",
 }
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
@@ -64,6 +65,9 @@ def _validate_manifest(manifest: dict) -> None:
         "reference-hex-mesh",
         "formal-material-config",
         "scan-path-reconstruction",
+        "paper-parity-config-approved",
+        "g0-approval-record",
+        "approved-threshold-set",
     }
     assert required_ids <= set(evidence_ids)
 

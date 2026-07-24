@@ -128,14 +128,34 @@
       "status": "assumed"
     },
     {
-      "evidence_id": "paper-parity-config-candidate",
-      "quantity": "candidate QoI, path, threshold, case-split, and stop-rule protocol",
-      "source_class": "assumption",
-      "source_locator": "Spec Kit T006 candidate; human approval remains required",
+      "evidence_id": "paper-parity-config-approved",
+      "quantity": "approved QoI, path, threshold, case-split, and stop-rule protocol",
+      "source_class": "project_decision",
+      "source_locator": "Spec Kit T006 protocol approved at G0 on 2026-07-24",
       "repository_path": "cases/kaess_2023/inputs/paper-parity-config.yaml",
-      "sha256": "295b404547fb7d25883f084f410d2643525342269ce77cb770ee0119f5995af8",
+      "sha256": "7e777d73f736d72578bcfccb80199e36163d9b2f60fdb08e9e8b3d2fa56320f7",
       "impact": "critical",
-      "status": "assumed"
+      "status": "verified"
+    },
+    {
+      "evidence_id": "g0-approval-record",
+      "quantity": "human Review Gate decision and approved scope",
+      "source_class": "project_decision",
+      "source_locator": "Project-owner approval in Codex task on 2026-07-24",
+      "repository_path": "cases/kaess_2023/inputs/g0-approval.json",
+      "sha256": "206d7af567f0ee4d9113e8780b67b503936030538f266114834aa63052390839",
+      "impact": "critical",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "approved-threshold-set",
+      "quantity": "immutable numerical acceptance thresholds",
+      "source_class": "project_decision",
+      "source_locator": "G0-approved Kaess first-pass threshold set v1.0.0",
+      "repository_path": "cases/kaess_2023/inputs/threshold-set.json",
+      "sha256": "8841c86850f1d5f8f74b8d0be000010f1466331017df390f3125c06cc0cfe275",
+      "impact": "critical",
+      "status": "verified"
     }
   ]
 }

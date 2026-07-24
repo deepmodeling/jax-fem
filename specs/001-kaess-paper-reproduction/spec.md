@@ -6,8 +6,8 @@
 
 **Created**: 2026-07-23
 
-**Status**: Draft — CPU-small/GPU-formal workflow approved; solver
-implementation remains blocked by the other Review Gate items
+**Status**: Approved — G0 passed on 2026-07-24; T005 contract hardening is
+required before solver implementation
 
 **Input**: 按照 Spec Kit 标准，为 Kaess et al. (2023) 论文级复现建立可执行、可审计的开发规格。
 
@@ -435,10 +435,13 @@ build/cooling/release 及缩减三层 history/release mini-cycle 的 CPU/GPU
 
 进入实现前必须确认：
 
-- [ ] 复现声明等级
-- [ ] 标准工况和 QoI
-- [ ] P0 物理范围
-- [ ] 误差与重复性阈值
-- [ ] 标定/留出工况划分
+- [x] 复现声明等级
+- [x] 标准工况和 QoI
+- [x] P0 物理范围
+- [x] 误差与重复性阈值
+- [x] 标定/留出工况划分
 - [x] CPU 小尺度 reference、GPU 资格和加速正式执行策略
-- [ ] 未公开输入的处理方式
+- [x] 未公开输入的处理方式
+
+审批证据：`cases/kaess_2023/inputs/g0-approval.json`。冻结阈值：
+`cases/kaess_2023/inputs/threshold-set.json`。

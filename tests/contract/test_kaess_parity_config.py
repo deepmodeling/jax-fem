@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 from pathlib import Path
 
@@ -8,6 +9,12 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = (
     REPO_ROOT / "cases" / "kaess_2023" / "inputs" / "paper-parity-config.yaml"
+)
+APPROVAL_PATH = (
+    REPO_ROOT / "cases" / "kaess_2023" / "inputs" / "g0-approval.json"
+)
+THRESHOLD_PATH = (
+    REPO_ROOT / "cases" / "kaess_2023" / "inputs" / "threshold-set.json"
 )
 REQUIRED_QOI_IDS = {
     "sigma_x_depth_curve",
@@ -27,6 +34,10 @@ REQUIRED_STOP_RULES = {
 
 def _load_config() -> dict:
     return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _validate_config(config: dict) -> None:
@@ -101,3 +112,53 @@ def test_approved_parity_config_requires_auditable_approval():
 
     with pytest.raises(AssertionError):
         _validate_config(config)
+
+
+def test_g0_approval_is_frozen_and_bound_to_threshold_artifact():
+    config = _load_config()
+    approval = json.loads(APPROVAL_PATH.read_text(encoding="utf-8"))
+    threshold = json.loads(THRESHOLD_PATH.read_text(encoding="utf-8"))
+
+    assert config["status"] == "approved"
+    assert approval["schema_version"] == "kaess.g0-approval/1"
+    assert approval["gate_id"] == "G0"
+    assert approval["decision"] == "approved"
+    assert approval["protocol_id"] == config["protocol_id"]
+    assert approval["claim_level"] == config["claim_level"]
+    assert approval["approved_checklist_items"] == [
+        f"CHK{item:03d}" for item in range(23, 31)
+    ]
+
+    approval_hash = _sha256(APPROVAL_PATH)
+    assert config["approval"]["approval_record_sha256"] == approval_hash
+    assert config["approval"]["approved_by"] == approval["approved_by"]
+    assert config["approval"]["approved_utc"] == approval["approved_utc"]
+
+    threshold_hash = _sha256(THRESHOLD_PATH)
+    assert approval["threshold_artifact"]["sha256"] == threshold_hash
+    assert config["threshold_set"]["content_sha256"] == threshold_hash
+    assert config["threshold_set"]["approval_record_sha256"] == approval_hash
+    assert config["threshold_set"]["approved_by"] == approval["approved_by"]
+    assert config["threshold_set"]["approved_utc"] == approval["approved_utc"]
+    assert config["threshold_set"]["status"] == "approved"
+
+    assert threshold["threshold_set_id"] == config["threshold_set"]["threshold_set_id"]
+    assert threshold["version"] == config["threshold_set"]["version"]
+    assert threshold["metrics"] == config["threshold_set"]["metrics"]
+    assert threshold["approved_by"] == approval["approved_by"]
+    assert threshold["approved_utc"] == approval["approved_utc"]
+
+
+def test_g0_approval_freezes_external_material_identity():
+    config = _load_config()
+    approval = json.loads(APPROVAL_PATH.read_text(encoding="utf-8"))
+
+    assert config["material_freeze"]["status"] == "approved"
+    assert approval["material_freeze"] == {
+        "mode": config["material_freeze"]["mode"],
+        "environment_variable": config["material_freeze"]["environment_variable"],
+        "source_manifest_evidence_id": config["material_freeze"][
+            "source_manifest_evidence_id"
+        ],
+        "sha256": config["material_freeze"]["sha256"],
+    }

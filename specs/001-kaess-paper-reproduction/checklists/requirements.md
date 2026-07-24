@@ -43,16 +43,16 @@
 
 ## Human Review
 
-- [ ] CHK023 用户已批准复现声明等级。
-- [ ] CHK024 用户已批准 P0 物理范围。
-- [ ] CHK025 用户已批准收敛和论文比较阈值；阈值集版本、批准者、批准
+- [x] CHK023 用户已批准复现声明等级。
+- [x] CHK024 用户已批准 P0 物理范围。
+- [x] CHK025 用户已批准收敛和论文比较阈值；阈值集版本、批准者、批准
   artifact 和 SHA-256 已冻结。
 - [x] CHK026 用户已批准“CPU 小样本 reference → GPU 资格 → 加速正式
   复现”的总体策略。
-- [ ] CHK027 用户已批准标定与留出工况划分。
-- [ ] CHK028 用户已批准外部材料输入的冻结方式。
-- [ ] CHK029 所有阻塞 Open Questions 均已解决或转为批准的假设。
-- [ ] CHK030 用户已批准 CPU/GPU 场、release、性能和线性解次数的具体
+- [x] CHK027 用户已批准标定与留出工况划分。
+- [x] CHK028 用户已批准外部材料输入的冻结方式。
+- [x] CHK029 所有阻塞 Open Questions 均已解决或转为批准的假设。
+- [x] CHK030 用户已批准 CPU/GPU 场、release、性能和线性解次数的具体
   数值阈值。
 
 ## Spec Kit Analyze Gate
@@ -61,7 +61,7 @@
 - [ ] CHK032 任务依赖顺序与 plan 的 phase/checkpoint 一致。
 - [ ] CHK033 没有任务通过参数调优绕过 physics gate。
 - [ ] CHK034 没有单任务计划修改超过约五个文件。
-- [ ] CHK035 实现前 Review Gate 已明确解除。
+- [x] CHK035 实现前 Review Gate 已明确解除。
 - [ ] CHK036 backend contract 能拒绝 hybrid 冒充 `full_gpu`。
 - [ ] CHK037 后端资格必须引用 active/printed mask 和原生 float64
   checkpoint，不能只依赖 VTU。
@@ -74,4 +74,6 @@
 
 - 勾选 `[x]` 表示证据已审阅，不表示相应求解器能力已经实现。
 - CHK023–CHK030 是人工门禁，不能由自动测试代替。
+- G0 审批记录为 `cases/kaess_2023/inputs/g0-approval.json`；批准时间
+  `2026-07-24T03:03:18Z`。
 - 任何 requirement 变更先修改 `spec.md`，再更新 plan/tasks。

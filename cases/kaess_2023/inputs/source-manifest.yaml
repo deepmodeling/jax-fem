@@ -103,7 +103,7 @@
       "source_class": "assumption",
       "source_locator": "Spec Kit Phase 0 source freeze",
       "repository_path": "cases/kaess_2023/inputs/assumptions.yaml",
-      "sha256": "38eff82bc9fd4d951ed9c0affc11bb85bcdefc3de971e1ad107d7c8b4910f0be",
+      "sha256": "4f081191f28a773177901f8d1442d1375cc788b6e0e2f5d8cfe3511bd6631929",
       "impact": "critical",
       "status": "assumed"
     },
@@ -113,7 +113,7 @@
       "source_class": "inferred",
       "source_locator": "Spec Kit research review and live source inspection",
       "repository_path": "cases/kaess_2023/inputs/deviations.yaml",
-      "sha256": "0a17ca11ff26314378af2ac86f6d7f8537d69447a2429e547fc37bd9a3115006",
+      "sha256": "585cc70fe46086b7849c1060c92e4e8db0d948171e3c5aad6e648f50a43b6918",
       "impact": "critical",
       "status": "verified"
     },

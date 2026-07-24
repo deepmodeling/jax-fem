@@ -117,10 +117,19 @@ def build_parser(config=None):
                         help="Cap on the hardened yield stress (Pa), ~UTS (Ti64: ~1.15e9). Linear isotropic hardening "
                              "extrapolated past its ~10%% strain validity produced ~2 GPa fictitious von Mises at the "
                              "bottom-clamp region; the cap saturates hardening there. None keeps unbounded legacy hardening.")
-    parser.add_argument("--bottom-mechanics-bc", choices=("fixed", "elastic"), default=cfg(config, "bottom_mechanics_bc", "fixed"),
+    parser.add_argument("--bottom-mechanics-bc", choices=("fixed", "elastic", "paper_minimal"),
+                        default=cfg(config, "bottom_mechanics_bc", "fixed"),
                         help="'fixed' rigidly clamps the base nodes (legacy; models an infinitely stiff build plate and "
                              "concentrates fictitious stress at the clamp edge). 'elastic' replaces the clamp with a "
-                             "Winkler elastic foundation on the base faces, giving the plate finite compliance.")
+                             "Winkler elastic foundation on the base faces. 'paper_minimal' restrains every bottom node "
+                             "only in the build direction and adds three deterministic in-plane scalar restraints to "
+                             "remove rigid motion while permitting thermal contraction (Kaess 2023 Section 2.3).")
+    parser.add_argument("--paper-minimal-anchor-corner",
+                        choices=("min_min", "max_min", "max_max", "min_max"),
+                        default=cfg(config, "paper_minimal_anchor_corner", "min_min"),
+                        help="Bottom-plane corner used by --bottom-mechanics-bc paper_minimal. The paper does not "
+                             "publish exact in-plane anchor nodes; the four deterministic variants support the "
+                             "required anchor-sensitivity study.")
     parser.add_argument("--bottom-foundation-stiffness", type=float, default=cfg(config, "bottom_foundation_stiffness", 1.0e12),
                         help="Foundation modulus k_s (Pa/m) for --bottom-mechanics-bc elastic. Calibration knob for the "
                              "build-plate compliance; 1e12 approximates a ~25 mm steel plate, larger values approach the "

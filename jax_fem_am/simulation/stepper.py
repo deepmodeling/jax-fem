@@ -73,6 +73,7 @@ from jax_fem_am.physics.release import (
     make_anchor_mechanics_bc,
     make_box_anchor_mechanics_bc,
     make_full_bottom_mechanics_bc,
+    make_paper_minimal_bottom_mechanics_bc,
 )
 from jax_fem_am.physics.thermal import TransientThermal
 from jax_fem_am.process.activation import (
@@ -319,10 +320,27 @@ def main():
     )
     if args.thermal_mass_lumping:
         apply_thermal_mass_lumping(thermal)
+    # write_used_config() serializes vars(args), including the resolved node
+    # identity needed to audit/reproduce a paper-minimal anchor selection.
+    args.paper_minimal_resolved_bc = None
     if args.bottom_mechanics_bc == "elastic":
         mechanics_bc = None
         mechanics_location_fns = [bottom]
         mechanics_foundation = args.bottom_foundation_stiffness
+    elif args.bottom_mechanics_bc == "paper_minimal":
+        (
+            mechanics_bc,
+            args.paper_minimal_resolved_bc,
+        ) = make_paper_minimal_bottom_mechanics_bc(
+            points,
+            bottom,
+            build_axis_id=build_axis_id,
+            plane_axis_ids=plane_axis_ids,
+            anchor_corner=args.paper_minimal_anchor_corner,
+            return_metadata=True,
+        )
+        mechanics_location_fns = []
+        mechanics_foundation = 0.0
     else:
         mechanics_bc = make_full_bottom_mechanics_bc(bottom)
         mechanics_location_fns = []

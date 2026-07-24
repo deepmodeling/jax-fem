@@ -133,10 +133,12 @@ SOLVER_CMD=(
   --cooling-steps 30 --cooling-dt 1.0
   --final-cooldown-temperature "${ROOM_TEMP_K}"
   --mechanics-model j2_plastic
-  # bottom clamp: paper fixes z (+rotation) with x/y partially permitted;
-  # elastic (normal-spring) foundation leaves x/y rigid modes exactly
-  # singular on this mesh, so full clamp is used - documented deviation.
-  --bottom-mechanics-bc fixed
+  # Paper Section 2.3 fixes the bottom normal and rotation while partially
+  # permitting in-plane contraction. Exact anchor nodes are unpublished;
+  # min_min is the frozen primary variant and the other corners are reserved
+  # for the preregistered G2 anchor-sensitivity study.
+  --bottom-mechanics-bc paper_minimal
+  --paper-minimal-anchor-corner min_min
   --mechanics-every 5
   --mechanics-rel-tol 1e-5
   --mechanics-max-iter 50

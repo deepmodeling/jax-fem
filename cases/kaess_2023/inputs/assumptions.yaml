@@ -15,7 +15,16 @@
       "impact": "critical",
       "status": "missing",
       "rationale": "The paper specifies z restraint and partial x/y freedom but not exact anchor nodes.",
-      "range": {"status": "minimal-anchor variants pending mesh-specific definition"},
+      "range": {
+        "primary": {
+          "anchor_corner": "min_min",
+          "reference_mesh": "cases/kaess_2023/kaess_cantilever_c3d8_powder_margin.inp",
+          "anchor_node_ids": [0, 48],
+          "anchor_coordinates_m": [[-0.0001, -0.0001, 0.0], [0.0011, -0.0001, 0.0]],
+          "second_anchor_constrained_axis": "y"
+        },
+        "g2_sensitivity_variants": ["min_min", "max_min", "max_max", "min_max"]
+      },
       "affected_qoi_ids": ["sigma_x_depth_curve", "front_bending_curve", "max_front_bending"],
       "sensitivity_required": true,
       "decision": "open",

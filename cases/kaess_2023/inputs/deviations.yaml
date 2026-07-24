@@ -6,11 +6,11 @@
     {
       "deviation_id": "P0-BC",
       "paper_requirement": "All bottom nodes restrained in z with partial in-plane freedom.",
-      "implemented_behavior": "Build mechanics currently uses a full ux/uy/uz bottom clamp.",
+      "implemented_behavior": "Kaess phase 1 and phase 2 use a paper-minimal build boundary: all bottom nodes are restrained in z, one deterministic corner node is restrained in x and y, and a second aligned node is restrained in y. The paper does not publish the exact in-plane anchors, so the frozen min_min anchor choice remains subject to the required G2 four-corner sensitivity check.",
       "severity": "P0",
       "affected_qoi_ids": ["sigma_x_depth_curve", "front_bending_curve", "max_front_bending"],
-      "resolution": "open",
-      "evidence_paths": ["jax_fem_am/physics/release.py", "specs/001-kaess-paper-reproduction/research.md"]
+      "resolution": "accepted_assumption",
+      "evidence_paths": ["jax_fem_am/physics/release.py", "jax_fem_am/simulation/stepper.py", "tests/unit/test_kaess_paper_bottom_bc.py", "specs/001-kaess-paper-reproduction/research.md"]
     },
     {
       "deviation_id": "P0-HS",

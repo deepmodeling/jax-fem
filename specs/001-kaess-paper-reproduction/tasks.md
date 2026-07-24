@@ -96,7 +96,7 @@ may proceed through its failing-test gates
 
 ## Phase 2 — Foundational Failing Tests for P0 Physics
 
-- [ ] T007 [P] [US2] 编写论文式底面 BC 失败测试 — 测试全底面 `uz=0`、最小 `x/y` 锚点、满秩和自由冷缩。
+- [x] T007 [P] [US2] 编写论文式底面 BC 失败测试 — 测试全底面 `uz=0`、最小 `x/y` 锚点、满秩和自由冷缩。
   - **Acceptance**: 当前 full clamp 因面内过约束而按预期失败。
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_paper_bottom_bc.py`
   - **Files**: `tests/unit/test_kaess_paper_bottom_bc.py`
@@ -141,11 +141,16 @@ may proceed through its failing-test gates
 
 ## Phase 3 — User Story 2: P0 Physics Implementation
 
-- [ ] T014 [US2] 实现论文式最小刚体底面 BC — 增加 `paper_minimal` BC 配置和节点选择，不改变 legacy `fixed`。
-  - **Acceptance**: 满秩、自由冷缩和等价锚点敏感性测试通过。
+- [x] T014 [US2] 实现论文式最小刚体底面 BC — 增加 `paper_minimal` BC 配置和节点选择，不改变 legacy `fixed`。
+  - **Acceptance**: 满秩、自由冷缩和四个等价角点锚定变体测试通过；
+    used config 记录实际 bottom-node count、锚点 node ids/coordinates 和
+    rotation component。论文未公开的精确锚点仍保留为 G2 物理敏感性义务。
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_paper_bottom_bc.py tests/integration/test_v06_release_anchor_box.py`
   - **Files**: `jax_fem_am/config/schema.py`, `jax_fem_am/physics/release.py`,
-    `jax_fem_am/simulation/runner.py`, `tests/unit/test_kaess_paper_bottom_bc.py`
+    `jax_fem_am/simulation/stepper.py`,
+    `cases/kaess_2023/run_kaess_phase1.sh`,
+    `cases/kaess_2023/run_kaess_phase2.sh`,
+    `tests/unit/test_kaess_paper_bottom_bc.py`
 
 - [x] T015 [P] [US2] 实现论文半球三维高斯热源 — 新增显式 source model，保持 legacy source 可选。
   - **Acceptance**: 公式采样和功率积分误差≤0.5%。

@@ -204,9 +204,10 @@ SOLVER_CMD=(
   --cooling-steps "${COOLING_STEPS}" --cooling-dt "${COOLING_DT}"
   --final-cooldown-temperature "${ROOM_TEMP_K}"
   --mechanics-model j2_plastic
-  # full clamp: see run_kaess_phase1.sh note (elastic foundation leaves x/y
-  # rigid modes singular here)
-  --bottom-mechanics-bc fixed
+  # Paper Section 2.3 minimal-rigid-body bottom restraint. The exact
+  # in-plane nodes are unpublished; min_min is the frozen primary variant.
+  --bottom-mechanics-bc paper_minimal
+  --paper-minimal-anchor-corner min_min
   --mechanics-every "${MECH_EVERY}"
   --mechanics-rel-tol "${MECH_REL_TOL}"
   --mechanics-acceptance "${MECH_ACCEPTANCE}"

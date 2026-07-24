@@ -124,7 +124,8 @@ An independent review recomputed the formal C3D8 topology:
   unconstrained zero-row nodes;
 - release after cut/depowder: 9,920 contributing cells, 20,944 constrained
   removed nodes and zero unconstrained zero-row nodes;
-- all 189 frozen box-anchor nodes belong to the retained domain.
+- all 189 retained W3 root-bottom nodes later consumed by T020 belong to the
+  retained domain.
 
 ## Supplementary official-runner smoke
 

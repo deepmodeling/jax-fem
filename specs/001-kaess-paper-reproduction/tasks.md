@@ -111,22 +111,22 @@ implementation continues through its failing-test gates
   - **Verify**: `python -m pytest -q tests/integration/test_active_domain_equivalence.py`
   - **Files**: `tests/integration/test_active_domain_equivalence.py`
 
-- [ ] T010 [P] [US2] 编写动态暴露顶面和冷却环境失败测试 — 测试未来层不遮挡活动顶面、表面积分和冷却 ambient 切换。
+- [x] T010 [P] [US2] 编写动态暴露顶面和冷却环境失败测试 — 测试未来层不遮挡活动顶面、表面积分和冷却 ambient 切换。
   - **Acceptance**: 当前静态 exterior face 和固定 ambient 按预期失败。
   - **Verify**: `python -m pytest -q tests/integration/test_active_surface_boundary.py`
   - **Files**: `tests/integration/test_active_surface_boundary.py`
 
-- [ ] T011 [P] [US2] 编写材料/相态历史失败测试 — 测试粉末 `k(T)`、潜热、不可逆 powder→solid 和循环熔化历史。
+- [x] T011 [P] [US2] 编写材料/相态历史失败测试 — 测试粉末 `k(T)`、潜热、不可逆 powder→solid 和循环熔化历史。
   - **Acceptance**: 无来源二次缩放或 history reset 会导致测试失败。
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_material_history.py`
   - **Files**: `tests/unit/test_kaess_material_history.py`
 
-- [ ] T012 [P] [US2] 编写 J2 曲线和一致切线失败测试 — 测试单轴加载—卸载—再加载、温变曲线和有限差分/V 形谷。
+- [x] T012 [P] [US2] 编写 J2 曲线和一致切线失败测试 — 测试单轴加载—卸载—再加载、温变曲线和有限差分/V 形谷。
   - **Acceptance**: 残差与切线异源时给出可定位失败。
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_j2_tangent.py`
   - **Files**: `tests/unit/test_kaess_j2_tangent.py`
 
-- [ ] T013 [P] [US2] 编写精确 release cell-set 失败测试 — 测试 cell-set 身份、范围、保留根墙、刚体约束和解析悬臂方向。
+- [x] T013 [P] [US2] 编写精确 release cell-set 失败测试 — 测试 cell-set 身份、范围、保留根墙、刚体约束和解析悬臂方向。
   - **Acceptance**: 未验证 box 选择不能通过 paper release gate。
   - **Verify**: `python -m pytest -q tests/integration/test_kaess_release_cellset.py`
   - **Files**: `tests/integration/test_kaess_release_cellset.py`
@@ -191,7 +191,7 @@ implementation continues through its failing-test gates
     `jax_fem_am/materials/material_validation.py`,
     `tests/unit/test_kaess_j2_tangent.py`
 
-- [ ] T020 [US2] 实现显式 release cell set — 从冻结输入读取、可视化和哈希切割/锚定 cell set。
+- [x] T020 [US2] 实现显式 release cell set — 从冻结输入读取、可视化和哈希切割/锚定 cell set。
   - **Acceptance**: 空集、越界、零件本体误切和刚体漂移被拒绝。
   - **Verify**: `python -m pytest -q tests/integration/test_kaess_release_cellset.py tests/integration/test_v06_release_anchor_box.py`
   - **Files**: `jax_fem_am/physics/release.py`, `jax_fem_am/simulation/stepper.py`,

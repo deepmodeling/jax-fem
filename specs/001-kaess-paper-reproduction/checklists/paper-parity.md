@@ -20,7 +20,7 @@
 
 ## G1/G2 — P0 Physics and Code Verification
 
-- [ ] PAR010 底面全部 `uz=0`，最小 `x/y` 锚点消除刚体模态。
+- [x] PAR010 底面全部 `uz=0`，最小 `x/y` 锚点消除刚体模态。
 - [ ] PAR011 等价锚点改变远场应力/翘曲不超过批准阈值。
 - [ ] PAR012 半球三维高斯热源解析分布测试通过。
 - [ ] PAR013 热源体积分与吸收功率相差不超过 0.5%。
@@ -36,7 +36,7 @@
 - [ ] PAR023 B-bar 均匀应变、近不可压缩和零能模态测试通过。
 - [ ] PAR024 不存在无来源 liquid/mushy 二次刚度缩放。
 - [ ] PAR025 不存在无来源 stress-free/eqp 历史重置。
-- [ ] PAR026 release 使用显式、可视化、可哈希 cell set。
+- [x] PAR026 release 使用显式、可视化、可哈希 cell set。
 - [ ] PAR027 release 前后无新增刚体漂移。
 
 ## G3 — CPU Small-Scale Verification Baseline

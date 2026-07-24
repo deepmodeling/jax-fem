@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.jax-fem/specs/001-kaess-paper-reproduction/energy-audit-evidence.schema.json",
+  "title": "Kaess Thermal Energy Audit Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "threshold_set_sha256",
+    "threshold_metric_id",
+    "runs"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kaess.energy-audit-evidence/1"
+    },
+    "qualification_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "threshold_set_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "threshold_metric_id": {
+      "const": "thermal_energy_closure"
+    },
+    "runs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/runEvidence"
+      }
+    }
+  },
+  "$defs": {
+    "fileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "runEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "ledger",
+        "summary",
+        "run_audit"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ledger": {
+          "$ref": "#/$defs/fileIdentity"
+        },
+        "summary": {
+          "$ref": "#/$defs/fileIdentity"
+        },
+        "run_audit": {
+          "$ref": "#/$defs/fileIdentity"
+        }
+      }
+    }
+  }
+}

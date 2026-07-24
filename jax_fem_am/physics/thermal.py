@@ -3,12 +3,45 @@
 Extracted verbatim from legacy/v03/am_thermal_stress_macro_intersection_mech100.py.
 """
 
+import math
+import numbers
+
 import jax.numpy as np
+import numpy as onp
 
 from jax_fem.problem import Problem
 
 
 SOURCE_MODELS = frozenset(("legacy", "paper_hemispherical"))
+
+
+def _concrete_scalar(value):
+    """Return a host scalar only when ``value`` is already concrete on host.
+
+    In particular, do not call ``asarray``/``float`` on JAX arrays or tracers:
+    ``set_params`` is on the per-step path and materializing those values would
+    introduce a device-to-host synchronization on GPU.
+    """
+
+    if isinstance(value, numbers.Real) and not isinstance(
+        value, (bool, onp.bool_)
+    ):
+        return float(value)
+    if isinstance(value, onp.ndarray) and value.size == 1:
+        scalar = value.reshape(-1)[0]
+        if isinstance(scalar, numbers.Real) and not isinstance(
+            scalar, (bool, onp.bool_)
+        ):
+            return float(scalar)
+    return None
+
+
+def _validate_concrete_length_scale(value, name):
+    concrete = _concrete_scalar(value)
+    if concrete is None:
+        return
+    if not math.isfinite(concrete) or concrete <= 0.0:
+        raise ValueError(f"{name} must be finite and positive")
 
 
 class TransientThermal(Problem):
@@ -208,6 +241,13 @@ class TransientThermal(Problem):
             old_layer_cooling_h,
             surface_mask_quad,
         ) = params
+        # The configured runner supplies these two lengths as Python floats.
+        # Validate such host-concrete values cheaply, but deliberately leave
+        # JAX arrays/tracers on device: coercing them here would synchronize
+        # every thermal step on GPU.
+        _validate_concrete_length_scale(beam_radius, "beam_radius")
+        if self.source_model == "legacy":
+            _validate_concrete_length_scale(source_depth, "source_depth")
 
         num_cells = self.fes[0].num_cells
         num_quads = self.fes[0].num_quads

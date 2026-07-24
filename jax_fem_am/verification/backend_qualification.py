@@ -14,6 +14,8 @@ from typing import Any
 import numpy as np
 from jsonschema import Draft202012Validator
 
+from .thermal_balance import compute_discrete_balance
+
 
 CONTRACT_ROOT = (
     Path(__file__).resolve().parents[2]
@@ -61,6 +63,14 @@ BACKEND_METRIC_UNITS = {
     "front_bending_curve_relative_l2": ("um", "fraction"),
     "max_front_bending_error": ("um", "um"),
     "linear_solve_count_delta_fraction": ("count", "fraction"),
+}
+
+CHECKPOINT_FLOAT64_QOI_ARRAYS = {
+    "temperature",
+    "sigma_x_mpa",
+    "eqp",
+    "displacement_um",
+    "front_bending_curve_um",
 }
 
 
@@ -114,6 +124,95 @@ def manifest_input_bundle_sha256(manifest: Mapping[str, Any]) -> str:
     return canonical_json_sha256(ordered)
 
 
+# Only placement, resource, and solver-family controls may differ.  In
+# particular, tolerances, iteration limits, residual/fallback controls,
+# surrogate flags, and opaque external solver configs stay in the physics /
+# acceptance identity.
+_NONPHYSICS_CONFIG_KEYS = {
+    "config",
+    "inp",
+    "output_dir",
+    "path_file",
+    "path_output",
+    "profile_json",
+    "profile_label",
+    "xla_cell_num_cuts",
+    "xla_cell_target_batch_size",
+    "xla_dof_to_quad_cache",
+    "xla_dry_run",
+    "xla_jax_gmres_restart",
+    "xla_jax_gmres_solve_method",
+    "xla_jax_method",
+    "xla_jax_precond",
+    "xla_jit_loop_kernels",
+    "xla_lazy_output_postprocess",
+    "xla_linear_solver",
+    "xla_mem_fraction",
+    "xla_pardiso_mode",
+    "xla_petsc_gpu",
+    "xla_petsc_ksp_type",
+    "xla_petsc_pc_type",
+    "xla_platform",
+    "xla_preallocate",
+    "xla_quiet_jax_fem_logs",
+    "xla_show_devices",
+    "xla_skip_unused_mechanics_material",
+    "xla_step_predicate_cache",
+    "xla_thermal_warm_start",
+}
+
+
+def _physics_config_view(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {
+            str(key): _physics_config_view(nested)
+            for key, nested in sorted(value.items(), key=lambda item: str(item[0]))
+            if str(key) not in _NONPHYSICS_CONFIG_KEYS
+        }
+    if isinstance(value, list):
+        return [_physics_config_view(item) for item in value]
+    return value
+
+
+def physics_input_bundle_sha256(
+    manifest: Mapping[str, Any],
+    artifact_root: Path,
+) -> str:
+    """Hash frozen physics inputs while normalizing allowed backend controls."""
+    inputs = _input_by_role(manifest)
+    used_config_record = inputs.get("used_config")
+    if used_config_record is None:
+        raise _error(
+            "runtime_input_identity",
+            "manifest is missing the final used_config input",
+        )
+    used_config_path = _validate_file_identity(
+        used_config_record,
+        artifact_root,
+        code="runtime_input_identity",
+    )
+    used_config = _require_mapping(
+        load_json_strict(used_config_path),
+        code="runtime_input_identity",
+        description="used config",
+    )
+    physics_records = [
+        {
+            "role": role,
+            "sha256": record.get("sha256"),
+            "size_bytes": record.get("size_bytes"),
+        }
+        for role, record in sorted(inputs.items())
+        if role not in {"solver_command", "used_config"}
+    ]
+    return canonical_json_sha256(
+        {
+            "input_records": physics_records,
+            "normalized_used_config": _physics_config_view(used_config),
+        }
+    )
+
+
 def manifest_acceptance_model_sha256(manifest: Mapping[str, Any]) -> str:
     required_roles = {
         "paper_parity_config",
@@ -160,6 +259,20 @@ def inspect_native_checkpoint(path: Path) -> dict[str, Any]:
             names = tuple(checkpoint.files)
             if not names:
                 raise _error("checkpoint_shape", f"{path}: checkpoint is empty")
+            invalid_qoi = {
+                name: str(checkpoint[name].dtype)
+                for name in CHECKPOINT_FLOAT64_QOI_ARRAYS & set(names)
+                if (
+                    checkpoint[name].dtype != np.dtype(np.float64)
+                    or checkpoint[name].size == 0
+                )
+            }
+            if invalid_qoi:
+                raise _error(
+                    "checkpoint_dtype",
+                    f"{path}: native QoI arrays must be non-empty float64 "
+                    f"{invalid_qoi}",
+                )
             floating = {
                 name: checkpoint[name]
                 for name in names
@@ -251,6 +364,13 @@ def _reject_constant(token: str) -> None:
     raise _error("nonfinite_number", f"non-finite JSON number {token!r}")
 
 
+def _strict_float(token: str) -> float:
+    value = float(token)
+    if not np.isfinite(value):
+        raise _error("nonfinite_number", f"non-finite JSON number {token!r}")
+    return value
+
+
 def load_json_strict(path: Path) -> Any:
     """Load finite RFC JSON and reject duplicate keys at every object level."""
     path = Path(path)
@@ -263,11 +383,45 @@ def load_json_strict(path: Path) -> Any:
             text,
             object_pairs_hook=_strict_object,
             parse_constant=_reject_constant,
+            parse_float=_strict_float,
         )
     except ContractValidationError:
         raise
     except json.JSONDecodeError as exc:
         raise _error("json_syntax", f"{path}: {exc}") from exc
+
+
+def load_jsonl_strict(path: Path) -> list[Any]:
+    """Load non-empty finite RFC JSON objects from a JSON Lines artifact."""
+    path = Path(path)
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise _error("json_read", f"{path}: {exc}") from exc
+    if not lines or any(not line.strip() for line in lines):
+        raise _error(
+            "energy_audit_evidence",
+            f"{path}: JSON Lines evidence must be non-empty without blank rows",
+        )
+    rows: list[Any] = []
+    for index, line in enumerate(lines):
+        try:
+            rows.append(
+                json.loads(
+                    line,
+                    object_pairs_hook=_strict_object,
+                    parse_constant=_reject_constant,
+                    parse_float=_strict_float,
+                )
+            )
+        except ContractValidationError:
+            raise
+        except json.JSONDecodeError as exc:
+            raise _error(
+                "json_syntax",
+                f"{path}:{index + 1}: {exc}",
+            ) from exc
+    return rows
 
 
 def validate_json_contract(payload: Any, schema_name: str) -> None:
@@ -389,6 +543,17 @@ def _require_equal(
         )
 
 
+def _require_mapping(
+    value: Any,
+    *,
+    code: str,
+    description: str,
+) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping):
+        raise _error(code, f"{description} must be a JSON object")
+    return value
+
+
 def _raw_identity(path: Path) -> tuple[str, int]:
     path = Path(path).resolve()
     return sha256_file(path), path.stat().st_size
@@ -453,9 +618,21 @@ def _load_g0_performance_protocol(
     threshold_set_path: Path,
     approval_record_path: Path,
 ) -> dict[str, float | int]:
-    config = load_json_strict(parity_config_path)
-    threshold = load_json_strict(threshold_set_path)
-    approval = load_json_strict(approval_record_path)
+    config = _require_mapping(
+        load_json_strict(parity_config_path),
+        code="performance_protocol_identity",
+        description="paper parity config",
+    )
+    threshold = _require_mapping(
+        load_json_strict(threshold_set_path),
+        code="performance_protocol_identity",
+        description="threshold set",
+    )
+    approval = _require_mapping(
+        load_json_strict(approval_record_path),
+        code="performance_protocol_identity",
+        description="G0 approval record",
+    )
     threshold_hash = sha256_file(threshold_set_path)
     approval_hash = sha256_file(approval_record_path)
     _require_equal(
@@ -641,10 +818,26 @@ def validate_paper_comparison_bundle(
 
     report = load_json_strict(report_path)
     manifest = load_json_strict(run_manifest_path)
-    config = load_json_strict(parity_config_path)
-    threshold = load_json_strict(threshold_set_path)
-    approval = load_json_strict(approval_record_path)
-    source_manifest = load_json_strict(source_manifest_path)
+    config = _require_mapping(
+        load_json_strict(parity_config_path),
+        code="paper_parity_config",
+        description="paper parity config",
+    )
+    threshold = _require_mapping(
+        load_json_strict(threshold_set_path),
+        code="threshold_artifact_binding",
+        description="threshold set",
+    )
+    approval = _require_mapping(
+        load_json_strict(approval_record_path),
+        code="g0_approval_binding",
+        description="G0 approval record",
+    )
+    source_manifest = _require_mapping(
+        load_json_strict(source_manifest_path),
+        code="paper_source_identity",
+        description="source manifest",
+    )
 
     validate_json_contract(report, "paper-comparison.schema.json")
     validate_json_contract(manifest, "run-manifest.schema.json")
@@ -869,11 +1062,6 @@ def validate_paper_comparison_bundle(
         "run_source_manifest_binding",
     )
 
-    if not isinstance(source_manifest, Mapping):
-        raise _error(
-            "paper_source_identity",
-            "source manifest must be a JSON object",
-        )
     _require_equal(
         source_manifest.get("schema_version"),
         "kaess.source-manifest/1",
@@ -1048,7 +1236,7 @@ def validate_paper_comparison_bundle(
         raise _error(
             "paper_metric_evidence",
             f"{comparison_id}: comparable paper values require a typed raw "
-            "QoI evidence artifact; T036 has not produced one",
+            "QoI evidence artifact; T032/T035 have not produced one",
         )
 
     expected_verdict = _expected_paper_verdict(comparisons)
@@ -1176,6 +1364,64 @@ def _checkpoint_metric_truth(
             f"native checkpoints are missing metric arrays: {', '.join(missing)}",
         )
 
+    for role, state in (
+        ("CPU", cpu_state),
+        ("candidate", candidate_state),
+    ):
+        for array_name in CHECKPOINT_FLOAT64_QOI_ARRAYS:
+            continuous = np.asarray(state[array_name])
+            if (
+                continuous.dtype != np.dtype(np.float64)
+                or continuous.size == 0
+                or not np.all(np.isfinite(continuous))
+            ):
+                raise _error(
+                    "checkpoint_dtype",
+                    f"{role} {array_name} must be a non-empty finite float64 "
+                    "array",
+                )
+
+    for array_name in (
+        "activation_events",
+        "phase_state",
+        "accepted_increments",
+        "fallback_events",
+    ):
+        discrete = np.asarray(cpu_state[array_name])
+        candidate_discrete = np.asarray(candidate_state[array_name])
+        for role, value in (
+            ("CPU", discrete),
+            ("candidate", candidate_discrete),
+        ):
+            if (
+                value.ndim < 1
+                or not np.issubdtype(value.dtype, np.integer)
+                or np.issubdtype(value.dtype, np.bool_)
+            ):
+                raise _error(
+                    "checkpoint_discrete_state",
+                    f"{role} {array_name} must be a non-scalar integer array",
+                )
+    solve_counts: dict[str, int] = {}
+    for role, value in (
+        ("CPU", np.asarray(cpu_state["linear_solve_count"])),
+        (
+            "candidate",
+            np.asarray(candidate_state["linear_solve_count"]),
+        ),
+    ):
+        if (
+            value.ndim != 0
+            or not np.issubdtype(value.dtype, np.integer)
+            or np.issubdtype(value.dtype, np.bool_)
+            or int(value.item()) < 0
+        ):
+            raise _error(
+                "checkpoint_discrete_state",
+                f"{role} linear_solve_count must be a nonnegative integer scalar",
+            )
+        solve_counts[role] = int(value.item())
+
     cpu_mask = np.asarray(cpu_state["active_mask"])
     candidate_mask = np.asarray(candidate_state["active_mask"])
     if (
@@ -1290,10 +1536,8 @@ def _checkpoint_metric_truth(
             ),
         }
 
-    cpu_solves = int(np.asarray(cpu_state["linear_solve_count"]).item())
-    candidate_solves = int(
-        np.asarray(candidate_state["linear_solve_count"]).item()
-    )
+    cpu_solves = solve_counts["CPU"]
+    candidate_solves = solve_counts["candidate"]
     solve_error = (
         max(0.0, (candidate_solves - cpu_solves) / abs(cpu_solves))
         if cpu_solves
@@ -1307,51 +1551,84 @@ def _checkpoint_metric_truth(
     return truth
 
 
-def _validate_checkpoint_pair_thresholds(
+def _checkpoint_pair_parity_passes(
     truth: Mapping[str, Mapping[str, Any]],
     frozen_thresholds: Mapping[str, Mapping[str, Any]],
-    *,
-    pair_label: str,
-) -> None:
+) -> bool:
+    """Return threshold truth; malformed evidence still fails closed."""
+    passed = True
     for metric_id, threshold_metric_id in BACKEND_THRESHOLD_BINDINGS.items():
+        if metric_id == "linear_solve_count_delta_fraction":
+            continue
         metric_truth = truth[metric_id]
         threshold = frozen_thresholds[threshold_metric_id].get("value")
+        if not isinstance(threshold, (int, float)) or isinstance(
+            threshold, bool
+        ):
+            raise _error(
+                "metric_recalculation",
+                f"{threshold_metric_id}: frozen threshold is not numeric",
+            )
         if metric_id == "max_front_bending_error":
-            relative_threshold = frozen_thresholds[
-                "hybrid_release_displacement_relative"
-            ].get("value")
+            relative_threshold = frozen_thresholds.get(
+                "hybrid_release_displacement_relative", {}
+            ).get("value")
+            if not isinstance(relative_threshold, (int, float)) or isinstance(
+                relative_threshold, bool
+            ):
+                raise _error(
+                    "metric_recalculation",
+                    "max front bending relative threshold is missing",
+                )
             threshold = max(
                 float(threshold),
                 float(relative_threshold)
                 * abs(float(metric_truth["cpu_value"])),
             )
-        if (
-            not isinstance(threshold, (int, float))
-            or float(metric_truth["error"]) > float(threshold)
-        ):
-            raise _error(
-                "metric_recalculation",
-                f"{pair_label}: {metric_id} exceeds the frozen threshold",
-            )
+        if float(metric_truth["error"]) > float(threshold):
+            passed = False
     for metric_id in (
         "activation_event_digest_match",
         "active_element_digest_match",
         "phase_state_digest_match",
-        "accepted_increment_digest_match",
-        "fallback_event_digest_match",
     ):
         metric_truth = truth[metric_id]
         if metric_truth["cpu_sha256"] != metric_truth["candidate_sha256"]:
-            raise _error(
-                "metric_recalculation",
-                f"{pair_label}: {metric_id} differs",
-            )
+            passed = False
     release = truth["release_direction_match"]
     if release["cpu_value"] != release["candidate_value"]:
+        passed = False
+    return passed
+
+
+def _checkpoint_pair_convergence_passes(
+    truth: Mapping[str, Mapping[str, Any]],
+    frozen_thresholds: Mapping[str, Mapping[str, Any]],
+) -> bool:
+    solve_threshold = frozen_thresholds.get(
+        "accelerated_linear_solve_increase", {}
+    ).get("value")
+    if (
+        not isinstance(solve_threshold, (int, float))
+        or isinstance(solve_threshold, bool)
+        or not np.isfinite(solve_threshold)
+    ):
         raise _error(
             "metric_recalculation",
-            f"{pair_label}: release direction differs",
+            "accelerated linear-solve threshold is not finite numeric",
         )
+    return bool(
+        truth["linear_solve_count_delta_fraction"]["error"]
+        <= float(solve_threshold)
+        and all(
+            truth[metric_id]["cpu_sha256"]
+            == truth[metric_id]["candidate_sha256"]
+            for metric_id in (
+                "accepted_increment_digest_match",
+                "fallback_event_digest_match",
+            )
+        )
+    )
 
 
 def _validate_metric_truth(
@@ -1455,17 +1732,7 @@ def _validate_metric_truth(
                 f"{metric_id}: reported threshold {threshold!r} != frozen "
                 f"threshold {expected_threshold!r}",
             )
-        if operator == "<=":
-            passed = error <= threshold
-        elif operator == ">=":
-            passed = error >= threshold
-        elif operator == "==":
-            passed = error == threshold
-        else:
-            raise _error(
-                "metric_recalculation",
-                f"{metric_id}: unsupported operator {operator!r}",
-            )
+        passed = error <= threshold
         expected_status = "pass" if passed else "fail"
         _require_equal(
             status,
@@ -1537,17 +1804,709 @@ def _validate_metric_truth(
         )
 
 
+def _energy_number(
+    payload: Mapping[str, Any],
+    key: str,
+    *,
+    nonnegative: bool = False,
+) -> float:
+    value = payload.get(key)
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not np.isfinite(value)
+        or (nonnegative and float(value) < 0.0)
+    ):
+        domain = "finite nonnegative" if nonnegative else "finite"
+        raise _error(
+            "energy_audit_evidence",
+            f"{key} must be a {domain} JSON number",
+        )
+    return float(value)
+
+
+def _require_close(
+    observed: Any,
+    expected: float,
+    *,
+    description: str,
+) -> None:
+    if (
+        not isinstance(observed, (int, float))
+        or isinstance(observed, bool)
+        or not np.isfinite(observed)
+        or not np.isclose(
+            float(observed),
+            float(expected),
+            rtol=1.0e-12,
+            atol=1.0e-12,
+        )
+    ):
+        raise _error(
+            "energy_audit_evidence",
+            f"{description}: observed {observed!r}, expected {expected!r}",
+        )
+
+
+def _validate_energy_run_truth(
+    *,
+    ledger_path: Path,
+    summary_path: Path,
+    audit_path: Path,
+    threshold: float,
+    expected_thermal_solve_count: int,
+) -> bool:
+    if (
+        not isinstance(expected_thermal_solve_count, int)
+        or isinstance(expected_thermal_solve_count, bool)
+        or expected_thermal_solve_count < 1
+    ):
+        raise _error(
+            "energy_audit_evidence",
+            "expected thermal solve count must be a positive integer",
+        )
+    rows = load_jsonl_strict(ledger_path)
+    summary = _require_mapping(
+        load_json_strict(summary_path),
+        code="energy_audit_evidence",
+        description="thermal energy summary",
+    )
+    audit = _require_mapping(
+        load_json_strict(audit_path),
+        code="energy_audit_evidence",
+        description="run audit",
+    )
+    _require_equal(
+        summary.get("schema_version"),
+        "v06.thermal-energy-ledger-summary/1",
+        "energy_audit_evidence",
+        "thermal energy summary schema",
+    )
+    _require_equal(
+        audit.get("schema_version"),
+        "v06.run-audit.2",
+        "energy_audit_evidence",
+        "run audit schema",
+    )
+    transient = _require_mapping(
+        audit.get("transient"),
+        code="energy_audit_evidence",
+        description="run audit transient section",
+    )
+    output_step_count = transient.get("step_count")
+    if (
+        not isinstance(output_step_count, int)
+        or isinstance(output_step_count, bool)
+        or output_step_count < 0
+    ):
+        raise _error(
+            "energy_audit_evidence",
+            "run audit transient step_count must be a nonnegative integer",
+        )
+    recorded_step_count = summary.get("recorded_step_count")
+    expected_step_count = summary.get("expected_step_count")
+    if (
+        not isinstance(recorded_step_count, int)
+        or isinstance(recorded_step_count, bool)
+        or not isinstance(expected_step_count, int)
+        or isinstance(expected_step_count, bool)
+        or recorded_step_count < 1
+        or expected_step_count < 1
+        or recorded_step_count != len(rows)
+        or expected_step_count != expected_thermal_solve_count
+        or recorded_step_count != expected_step_count
+    ):
+        raise _error(
+            "energy_audit_evidence",
+            "ledger row count does not match its recorded/expected thermal "
+            "solve counts",
+        )
+
+    balance_passes: list[bool] = []
+    assembly_passes: list[bool] = []
+    state_override_passes: list[bool] = []
+    temperature_passes: list[bool] = []
+    relative_errors: list[float] = []
+    absolute_errors: list[float] = []
+    assembly_errors: list[float] = []
+    state_override_values: list[float] = []
+    for index, raw_row in enumerate(rows):
+        row = _require_mapping(
+            raw_row,
+            code="energy_audit_evidence",
+            description=f"thermal ledger row {index}",
+        )
+        _require_equal(
+            row.get("schema_version"),
+            "v06.thermal-energy-ledger-step/1",
+            "energy_audit_evidence",
+            f"thermal ledger row {index} schema",
+        )
+        _require_equal(
+            row.get("step_index"),
+            index,
+            "energy_audit_evidence",
+            f"thermal ledger row {index} index",
+        )
+        try:
+            balance = compute_discrete_balance(
+                storage_j=_energy_number(row, "storage_j"),
+                laser_deposited_j=_energy_number(
+                    row, "laser_deposited_j", nonnegative=True
+                ),
+                laser_commanded_j=(
+                    None
+                    if row.get("laser_commanded_j") is None
+                    else _energy_number(
+                        row, "laser_commanded_j", nonnegative=True
+                    )
+                ),
+                laser_absorbed_nominal_j=_energy_number(
+                    row, "laser_absorbed_nominal_j", nonnegative=True
+                ),
+                front_loss_j=_energy_number(row, "front_loss_j"),
+                old_layer_loss_j=_energy_number(row, "old_layer_loss_j"),
+                surface_loss_j=_energy_number(row, "surface_loss_j"),
+                dirichlet_exchange_into_domain_j=_energy_number(
+                    row, "dirichlet_exchange_into_domain_j"
+                ),
+                assembly_identity_error_j=_energy_number(
+                    row, "assembly_identity_error_j", nonnegative=True
+                ),
+                free_residual_l1_j=_energy_number(
+                    row, "free_residual_l1_j", nonnegative=True
+                ),
+                free_residual_l2_j=_energy_number(
+                    row, "free_residual_l2_j", nonnegative=True
+                ),
+            )
+        except ValueError as exc:
+            raise _error(
+                "energy_audit_evidence",
+                f"thermal ledger row {index}: {exc}",
+            ) from exc
+        _require_close(
+            row.get("balance_error_j"),
+            balance.balance_error_j,
+            description=f"thermal ledger row {index} balance error",
+        )
+        _require_close(
+            row.get("relative_balance_error"),
+            balance.relative_balance_error,
+            description=f"thermal ledger row {index} relative balance error",
+        )
+        balance_scale = (
+            abs(balance.storage_j)
+            + abs(balance.laser_deposited_j)
+            + abs(balance.front_loss_j)
+            + abs(balance.old_layer_loss_j)
+            + abs(balance.surface_loss_j)
+            + abs(balance.dirichlet_exchange_into_domain_j)
+        )
+        _require_close(
+            row.get("balance_scale_j"),
+            balance_scale,
+            description=f"thermal ledger row {index} balance scale",
+        )
+        free_node_count = row.get("free_node_count")
+        if (
+            not isinstance(free_node_count, int)
+            or isinstance(free_node_count, bool)
+            or free_node_count < 0
+        ):
+            raise _error(
+                "energy_audit_evidence",
+                f"thermal ledger row {index} free_node_count must be a "
+                "nonnegative integer",
+            )
+        dt_s = _energy_number(row, "dt_s")
+        if dt_s <= 0.0:
+            raise _error(
+                "energy_audit_evidence",
+                f"thermal ledger row {index} dt_s must be positive",
+            )
+        residual_tolerance_w = _energy_number(
+            row,
+            "solver_residual_tolerance_w",
+            nonnegative=True,
+        )
+        recorded_absolute_tolerance = _energy_number(
+            row,
+            "absolute_balance_tolerance_j",
+            nonnegative=True,
+        )
+        absolute_tolerance = (
+            np.sqrt(max(free_node_count, 1))
+            * dt_s
+            * residual_tolerance_w
+        )
+        _require_close(
+            recorded_absolute_tolerance,
+            absolute_tolerance,
+            description=(
+                f"thermal ledger row {index} absolute balance tolerance"
+            ),
+        )
+        relative_tolerance = _energy_number(
+            row,
+            "relative_balance_tolerance",
+            nonnegative=True,
+        )
+        balance_passed = bool(
+            abs(balance.balance_error_j)
+            <= absolute_tolerance + relative_tolerance * balance_scale
+        )
+        _require_equal(
+            row.get("balance_within_solver_tolerance"),
+            balance_passed,
+            "energy_audit_evidence",
+            f"thermal ledger row {index} balance status",
+        )
+
+        assembly_signed = _energy_number(
+            row, "assembly_identity_signed_j"
+        )
+        _require_close(
+            balance.assembly_identity_error_j,
+            abs(assembly_signed),
+            description=f"thermal ledger row {index} assembly error",
+        )
+        recorded_assembly_tolerance = _energy_number(
+            row,
+            "assembly_identity_tolerance_j",
+            nonnegative=True,
+        )
+        explicit_total = (
+            balance.storage_j
+            - balance.laser_deposited_j
+            + balance.front_loss_j
+            + balance.old_layer_loss_j
+            + balance.surface_loss_j
+        )
+        residual_total = explicit_total - assembly_signed
+        assembly_tolerance = 1.0e-12 + 1.0e-10 * max(
+            abs(explicit_total),
+            abs(residual_total),
+            np.finfo(np.float64).tiny,
+        )
+        _require_close(
+            recorded_assembly_tolerance,
+            assembly_tolerance,
+            description=(
+                f"thermal ledger row {index} assembly tolerance"
+            ),
+        )
+        assembly_passed = abs(assembly_signed) <= assembly_tolerance
+        _require_equal(
+            row.get("assembly_identity_within_tolerance"),
+            assembly_passed,
+            "energy_audit_evidence",
+            f"thermal ledger row {index} assembly status",
+        )
+
+        state_override = row.get("pre_solve_state_override_j")
+        if state_override is not None:
+            state_override = _energy_number(
+                row, "pre_solve_state_override_j"
+            )
+            state_override_values.append(state_override)
+        recorded_state_override_tolerance = _energy_number(
+            row,
+            "state_override_tolerance_j",
+            nonnegative=True,
+        )
+        state_override_tolerance = max(absolute_tolerance, 1.0e-12)
+        _require_close(
+            recorded_state_override_tolerance,
+            state_override_tolerance,
+            description=(
+                f"thermal ledger row {index} state-override tolerance"
+            ),
+        )
+        state_override_passed = bool(
+            state_override is None
+            or abs(state_override) <= state_override_tolerance
+        )
+        _require_equal(
+            row.get("state_override_within_tolerance"),
+            state_override_passed,
+            "energy_audit_evidence",
+            f"thermal ledger row {index} state-override status",
+        )
+
+        invariants = _require_mapping(
+            row.get("temperature_invariants"),
+            code="energy_audit_evidence",
+            description=f"thermal ledger row {index} temperature invariants",
+        )
+        _require_equal(
+            invariants.get("claim_level"),
+            "physical_temperature_invariant_diagnostic",
+            "energy_audit_evidence",
+            f"thermal ledger row {index} temperature-invariant claim",
+        )
+        coefficient_preconditions = invariants.get(
+            "coefficient_preconditions_valid"
+        )
+        temperatures_finite = invariants.get(
+            "all_new_temperatures_finite"
+        )
+        source_free = invariants.get("source_free")
+        if any(
+            not isinstance(value, bool)
+            for value in (
+                coefficient_preconditions,
+                temperatures_finite,
+                source_free,
+            )
+        ):
+            raise _error(
+                "energy_audit_evidence",
+                f"thermal ledger row {index} invariant preconditions must be "
+                "boolean",
+            )
+        expected_source_free = (
+            balance.laser_deposited_j <= np.finfo(np.float64).eps
+        )
+        _require_equal(
+            source_free,
+            expected_source_free,
+            "energy_audit_evidence",
+            f"thermal ledger row {index} source-free status",
+        )
+        lower_bound = _energy_number(invariants, "lower_bound_k")
+        upper_bound = invariants.get("upper_bound_k")
+        if source_free:
+            upper_bound = _energy_number(invariants, "upper_bound_k")
+            if lower_bound > upper_bound:
+                raise _error(
+                    "energy_audit_evidence",
+                    f"thermal ledger row {index} invariant bounds are reversed",
+                )
+        elif upper_bound is not None:
+            raise _error(
+                "energy_audit_evidence",
+                f"thermal ledger row {index} source-bearing upper bound must "
+                "be null",
+            )
+        violation_counts = (
+            invariants.get("lower_violation_count"),
+            invariants.get("upper_violation_count"),
+        )
+        lower_count, upper_count = violation_counts
+        if (
+            not isinstance(lower_count, int)
+            or isinstance(lower_count, bool)
+            or lower_count < 0
+            or (
+                source_free
+                and (
+                    not isinstance(upper_count, int)
+                    or isinstance(upper_count, bool)
+                    or upper_count < 0
+                )
+            )
+            or (not source_free and upper_count is not None)
+        ):
+            raise _error(
+                "energy_audit_evidence",
+                f"thermal ledger row {index} invariant violation counts are "
+                "invalid",
+            )
+        _energy_number(invariants, "atol_k", nonnegative=True)
+        temperature_passed = bool(
+            coefficient_preconditions
+            and temperatures_finite
+            and lower_count == 0
+            and upper_count in (None, 0)
+        )
+        _require_equal(
+            invariants.get("valid"),
+            temperature_passed,
+            "energy_audit_evidence",
+            f"thermal ledger row {index} nested temperature status",
+        )
+        _require_equal(
+            row.get("temperature_invariants_valid"),
+            temperature_passed,
+            "energy_audit_evidence",
+            f"thermal ledger row {index} temperature status",
+        )
+
+        balance_passes.append(balance_passed)
+        assembly_passes.append(assembly_passed)
+        state_override_passes.append(state_override_passed)
+        temperature_passes.append(temperature_passed)
+        relative_errors.append(balance.relative_balance_error)
+        absolute_errors.append(abs(balance.balance_error_j))
+        assembly_errors.append(balance.assembly_identity_error_j)
+
+    summary_expected = {
+        "recorded_step_count": len(rows),
+        "expected_step_count": expected_thermal_solve_count,
+        "all_balance_steps_within_tolerance": all(balance_passes),
+        "all_assembly_identities_within_tolerance": all(assembly_passes),
+        "all_pre_solve_state_overrides_within_tolerance": all(
+            state_override_passes
+        ),
+        "all_temperature_invariants_valid": all(temperature_passes),
+    }
+    for field, expected in summary_expected.items():
+        _require_equal(
+            summary.get(field),
+            expected,
+            "energy_audit_evidence",
+            f"thermal energy summary {field}",
+        )
+    solver_completed = summary.get("solver_completed")
+    if not isinstance(solver_completed, bool):
+        raise _error(
+            "energy_audit_evidence",
+            "thermal energy summary solver_completed must be boolean",
+        )
+    complete = bool(solver_completed and all(summary_expected.values()))
+    _require_equal(
+        summary.get("complete"),
+        complete,
+        "energy_audit_evidence",
+        "thermal energy summary complete flag",
+    )
+    maximum_relative = max(relative_errors)
+    for field, expected in (
+        ("maximum_relative_balance_error", maximum_relative),
+        ("maximum_absolute_balance_error_j", max(absolute_errors)),
+        ("maximum_assembly_identity_error_j", max(assembly_errors)),
+        (
+            "cumulative_pre_solve_state_override_j",
+            sum(state_override_values),
+        ),
+    ):
+        _require_close(
+            summary.get(field),
+            expected,
+            description=f"thermal energy summary {field}",
+        )
+    return bool(complete and maximum_relative <= threshold)
+
+
+def _validate_energy_audit_truth(
+    qualification: Mapping[str, Any],
+    *,
+    manifests_by_id: Mapping[str, Mapping[str, Any]],
+    frozen_thresholds: Mapping[str, Mapping[str, Any]],
+    threshold_set_path: Path,
+    artifact_root: Path,
+) -> bool:
+    energy_gate = qualification.get("stage_gates", {}).get("energy_audit")
+    if not isinstance(energy_gate, Mapping):
+        raise _error(
+            "energy_audit_evidence",
+            "evaluated qualification is missing the energy audit gate",
+        )
+    evidence = energy_gate.get("evidence")
+    if not isinstance(evidence, list) or len(evidence) != 1:
+        raise _error(
+            "energy_audit_evidence",
+            "energy audit gate requires exactly one typed evidence wrapper",
+        )
+    wrapper_path = _validate_file_identity(
+        evidence[0],
+        artifact_root,
+        code="energy_audit_evidence",
+    )
+    wrapper = _require_mapping(
+        load_json_strict(wrapper_path),
+        code="energy_audit_evidence",
+        description="energy audit evidence wrapper",
+    )
+    validate_json_contract(wrapper, "energy-audit-evidence.schema.json")
+    _require_equal(
+        wrapper.get("qualification_id"),
+        qualification.get("qualification_id"),
+        "energy_audit_evidence",
+        "energy evidence qualification id",
+    )
+    _require_equal(
+        wrapper.get("threshold_set_sha256"),
+        sha256_file(threshold_set_path),
+        "energy_audit_evidence",
+        "energy evidence threshold set",
+    )
+    threshold_record = frozen_thresholds.get("thermal_energy_closure")
+    if not isinstance(threshold_record, Mapping):
+        raise _error(
+            "energy_audit_evidence",
+            "frozen thermal_energy_closure threshold is missing",
+        )
+    _require_equal(
+        threshold_record.get("operator"),
+        "less_than_or_equal",
+        "energy_audit_evidence",
+        "thermal energy threshold operator",
+    )
+    _require_equal(
+        threshold_record.get("unit"),
+        "fraction",
+        "energy_audit_evidence",
+        "thermal energy threshold unit",
+    )
+    threshold = _energy_number(
+        threshold_record,
+        "value",
+        nonnegative=True,
+    )
+
+    run_records = wrapper.get("runs", [])
+    run_ids = [
+        str(record.get("run_id"))
+        for record in run_records
+        if isinstance(record, Mapping)
+    ]
+    if (
+        len(run_ids) != len(run_records)
+        or len(set(run_ids)) != len(run_ids)
+        or set(run_ids) != set(manifests_by_id)
+    ):
+        raise _error(
+            "energy_audit_evidence",
+            "energy evidence runs must uniquely and exactly cover qualification "
+            "CPU/candidate runs",
+        )
+    used_paths: set[Path] = set()
+    run_passes: list[bool] = []
+    role_fields = {
+        "ledger": "thermal_energy_ledger",
+        "summary": "thermal_energy_ledger_summary",
+        "run_audit": "v06_run_audit",
+    }
+    for run_record in run_records:
+        run_id = str(run_record["run_id"])
+        manifest = manifests_by_id[run_id]
+        resolved: dict[str, Path] = {}
+        for field, role in role_fields.items():
+            wrapper_record = run_record[field]
+            manifest_record = _artifact_by_role(manifest, role)
+            manifest_path = _validate_file_identity(
+                manifest_record,
+                artifact_root,
+                code="energy_audit_evidence",
+            )
+            wrapper_path_for_role = _validate_file_identity_at(
+                wrapper_record,
+                manifest_path,
+                artifact_root,
+                code="energy_audit_evidence",
+            )
+            if wrapper_path_for_role in used_paths:
+                raise _error(
+                    "energy_audit_evidence",
+                    "different qualification runs must not reuse thermal "
+                    "energy evidence paths",
+                )
+            used_paths.add(wrapper_path_for_role)
+            resolved[field] = wrapper_path_for_role
+        used_config_path = _validate_file_identity(
+            _input_by_role(manifest)["used_config"],
+            artifact_root,
+            code="energy_audit_evidence",
+        )
+        used_config = _require_mapping(
+            load_json_strict(used_config_path),
+            code="energy_audit_evidence",
+            description=f"{run_id} used config",
+        )
+        derived = _require_mapping(
+            used_config.get("derived"),
+            code="energy_audit_evidence",
+            description=f"{run_id} used config derived section",
+        )
+        expected_thermal_solve_count = derived.get("total_steps")
+        if (
+            not isinstance(expected_thermal_solve_count, int)
+            or isinstance(expected_thermal_solve_count, bool)
+            or expected_thermal_solve_count < 1
+        ):
+            raise _error(
+                "energy_audit_evidence",
+                f"{run_id} used config derived.total_steps must be a "
+                "positive integer",
+            )
+        run_passes.append(
+            _validate_energy_run_truth(
+                ledger_path=resolved["ledger"],
+                summary_path=resolved["summary"],
+                audit_path=resolved["run_audit"],
+                threshold=threshold,
+                expected_thermal_solve_count=expected_thermal_solve_count,
+            )
+        )
+    energy_passed = all(run_passes)
+    _require_equal(
+        energy_gate.get("status"),
+        "pass" if energy_passed else "fail",
+        "energy_audit_evidence",
+        "energy audit gate status",
+    )
+    return energy_passed
+
+
+def _validate_checkpoint_gate_evidence(
+    qualification: Mapping[str, Any],
+    *,
+    evidence_by_run: Mapping[str, Mapping[str, Any]],
+    artifact_root: Path,
+) -> None:
+    expected_paths = {
+        Path(evidence["checkpoint_path"]).resolve()
+        for evidence in evidence_by_run.values()
+    }
+    for gate_id in ("backend_parity", "convergence_audit"):
+        gate = qualification.get("stage_gates", {}).get(gate_id)
+        records = gate.get("evidence") if isinstance(gate, Mapping) else None
+        if not isinstance(records, list):
+            raise _error(
+                "gate_evidence_binding",
+                f"{gate_id} evidence must be an array",
+            )
+        observed_paths = {
+            _validate_file_identity(
+                record,
+                artifact_root,
+                code="gate_evidence_binding",
+            ).resolve()
+            for record in records
+            if isinstance(record, Mapping)
+        }
+        if (
+            len(observed_paths) != len(records)
+            or observed_paths != expected_paths
+        ):
+            raise _error(
+                "gate_evidence_binding",
+                f"{gate_id} evidence must exactly cover every native "
+                "qualification checkpoint",
+            )
+
+
 def _validate_gate_truth(
     qualification: Mapping[str, Any],
     validation: Mapping[str, Any],
 ) -> None:
     """Reject a passing verdict when any declared gate or level failed."""
     if qualification.get("verdict") == "pass":
+        required_gate_ids = {
+            "backend_parity",
+            "energy_audit",
+            "convergence_audit",
+        }
         for gate_id, gate in qualification.get("stage_gates", {}).items():
-            if (
-                not isinstance(gate, Mapping)
-                or gate.get("status") not in {"pass", "not_applicable"}
-            ):
+            allowed_statuses = (
+                {"pass"} if gate_id in required_gate_ids
+                else {"pass", "not_applicable"}
+            )
+            if not isinstance(gate, Mapping) or gate.get(
+                "status"
+            ) not in allowed_statuses:
                 raise _error(
                     "gate_consistency",
                     f"{gate_id}: passing qualification cannot contain a "
@@ -1566,6 +2525,21 @@ def _validate_gate_truth(
                     "gate_consistency",
                     f"{check_id}: passing validation requires a passing check",
                 )
+
+
+def _reject_untyped_stage_promotion(
+    qualification: Mapping[str, Any],
+    validation: Mapping[str, Any],
+) -> None:
+    if (
+        qualification.get("promotion_eligible") is True
+        or formal_promotion_allowed(validation)
+    ):
+        raise _error(
+            "stage_gate_evidence",
+            "formal promotion is blocked until T028/T031 produce typed, "
+            "recomputable build/cooling/release stage evidence",
+        )
 
 
 def _validate_level_membership(
@@ -1870,10 +2844,11 @@ def _validate_profiler_placement(
 def _load_performance_evidence(
     qualification: Mapping[str, Any],
     *,
-    cpu_run_ids: set[str],
-    candidate_run_ids: set[str],
     cpu_threads: int,
     artifact_root: Path,
+    execution_intervals: Mapping[str, tuple[datetime, datetime]],
+    linear_solve_counts: Mapping[str, int],
+    manifests_by_id: Mapping[str, Mapping[str, Any]],
 ) -> Mapping[str, Any]:
     performance = qualification.get("performance", {})
     records = performance.get("evidence", [])
@@ -1911,18 +2886,6 @@ def _load_performance_evidence(
         "performance evidence schema",
     )
     _require_equal(
-        set(evidence.get("cpu_run_ids", [])),
-        cpu_run_ids,
-        "performance_recalculation",
-        "performance evidence CPU runs",
-    )
-    _require_equal(
-        set(evidence.get("candidate_run_ids", [])),
-        candidate_run_ids,
-        "performance_recalculation",
-        "performance evidence candidate runs",
-    )
-    _require_equal(
         evidence.get("cpu_threads"),
         cpu_threads,
         "thread_budget",
@@ -1934,6 +2897,119 @@ def _load_performance_evidence(
         "performance_recalculation",
         "performance measured flag",
     )
+    measured = evidence.get("measured") is True
+    if measured:
+        performance_pair = qualification.get("level_run_pairs", {}).get(
+            "performance_pair"
+        )
+        if not isinstance(performance_pair, Mapping):
+            raise _error(
+                "performance_protocol_identity",
+                "measured performance requires a performance_pair level",
+            )
+        expected_cpu_run_ids = [
+            str(run_id)
+            for run_id in performance_pair.get("cpu_run_ids", [])
+        ]
+        expected_candidate_run_ids = [
+            str(run_id)
+            for run_id in performance_pair.get("candidate_run_ids", [])
+        ]
+    else:
+        expected_cpu_run_ids = []
+        expected_candidate_run_ids = []
+    _require_equal(
+        evidence.get("cpu_run_ids"),
+        expected_cpu_run_ids,
+        "performance_recalculation",
+        "performance evidence CPU runs",
+    )
+    _require_equal(
+        evidence.get("candidate_run_ids"),
+        expected_candidate_run_ids,
+        "performance_recalculation",
+        "performance evidence candidate runs",
+    )
+
+    def expected_wall_seconds(run_ids: list[str]) -> list[float]:
+        values: list[float] = []
+        starts: list[datetime] = []
+        for run_id in run_ids:
+            interval = execution_intervals.get(run_id)
+            if interval is None:
+                raise _error(
+                    "performance_protocol_identity",
+                    f"performance run {run_id!r} has no execution interval",
+                )
+            started, completed = interval
+            manifest = manifests_by_id.get(run_id)
+            if not isinstance(manifest, Mapping):
+                raise _error(
+                    "performance_protocol_identity",
+                    f"performance run {run_id!r} has no run manifest",
+                )
+            try:
+                manifest_completed = datetime.fromisoformat(
+                    str(manifest.get("completed_utc")).replace("Z", "+00:00")
+                )
+            except ValueError as exc:
+                raise _error(
+                    "performance_protocol_identity",
+                    f"performance run {run_id!r} has no valid completed_utc",
+                ) from exc
+            if manifest_completed != completed:
+                raise _error(
+                    "performance_protocol_identity",
+                    f"performance run {run_id!r} completion time is not bound "
+                    "to its manifest",
+                )
+            resource_usage = manifest.get("resource_usage")
+            wall_seconds = (
+                resource_usage.get("wall_seconds")
+                if isinstance(resource_usage, Mapping)
+                else None
+            )
+            duration = float((completed - started).total_seconds())
+            if (
+                not isinstance(wall_seconds, (int, float))
+                or isinstance(wall_seconds, bool)
+                or not np.isfinite(wall_seconds)
+                or not np.isclose(
+                    float(wall_seconds),
+                    duration,
+                    rtol=1e-12,
+                    atol=1e-12,
+                )
+            ):
+                raise _error(
+                    "performance_protocol_identity",
+                    f"performance run {run_id!r} wall time is not bound to "
+                    "its manifest resource usage",
+                )
+            starts.append(started)
+            values.append(duration)
+        if starts != sorted(starts):
+            raise _error(
+                "performance_protocol_identity",
+                "performance run IDs must follow execution order",
+            )
+        return values
+
+    expected_sequences = {
+        "cpu_wall_seconds_samples": expected_wall_seconds(
+            expected_cpu_run_ids
+        ),
+        "candidate_wall_seconds_samples": expected_wall_seconds(
+            expected_candidate_run_ids
+        ),
+        "cpu_linear_solve_count_samples": [
+            linear_solve_counts[run_id] for run_id in expected_cpu_run_ids
+        ],
+        "candidate_linear_solve_count_samples": [
+            linear_solve_counts[run_id]
+            for run_id in expected_candidate_run_ids
+        ],
+    }
     for field in (
         "cpu_wall_seconds_samples",
         "candidate_wall_seconds_samples",
@@ -1946,6 +3022,26 @@ def _load_performance_evidence(
             "performance_recalculation",
             f"performance evidence {field}",
         )
+        observed = evidence.get(field)
+        expected = expected_sequences[field]
+        if (
+            not isinstance(observed, list)
+            or len(observed) != len(expected)
+            or any(
+                not isinstance(value, (int, float)) or isinstance(value, bool)
+                for value in observed
+            )
+            or not np.allclose(
+                np.asarray(observed, dtype=np.float64),
+                np.asarray(expected, dtype=np.float64),
+                rtol=1e-12,
+                atol=1e-12,
+            )
+        ):
+            raise _error(
+                "performance_recalculation",
+                f"{field} is not bound to execution/checkpoint evidence",
+            )
     return evidence
 
 
@@ -1987,6 +3083,8 @@ def _validate_performance_truth(
         )
     cpu_median = float(statistics.median(cpu_samples))
     candidate_median = float(statistics.median(candidate_samples))
+    candidate_cold = float(candidate_samples[0])
+    candidate_steady = float(statistics.median(candidate_samples[1:]))
     speedup = cpu_median / candidate_median
     cpu_solve_median = float(statistics.median(cpu_solves))
     candidate_solve_median = float(statistics.median(candidate_solves))
@@ -1996,6 +3094,16 @@ def _validate_performance_truth(
         else (0.0 if candidate_solve_median == 0 else float("inf"))
     )
     for observed, expected, name in (
+        (
+            performance.get("cold_wall_seconds"),
+            candidate_cold,
+            "qualification cold wall time",
+        ),
+        (
+            performance.get("steady_wall_seconds"),
+            candidate_steady,
+            "qualification steady wall time",
+        ),
         (performance.get("speedup"), speedup, "qualification speedup"),
         (
             performance.get("linear_solve_count_delta_fraction"),
@@ -2216,6 +3324,14 @@ def validate_backend_qualification_bundle(
     cpu_manifest = cpu_manifests_by_id[current_cpu_run_id]
 
     all_manifests = (*candidate_manifests, *cpu_manifests)
+    required_runtime_input_roles = {
+        "mesh",
+        "material_config",
+        "scan_path",
+        "solver_command",
+        "used_config",
+        "xrd_protocol",
+    }
     for manifest in all_manifests:
         if manifest.get("status") not in {"completed", "accepted"}:
             raise _error(
@@ -2223,6 +3339,15 @@ def validate_backend_qualification_bundle(
                 f"qualification run {manifest.get('run_id')!r} is not complete",
             )
         inputs = _input_by_role(manifest)
+        missing_runtime_roles = sorted(
+            required_runtime_input_roles - set(inputs)
+        )
+        if missing_runtime_roles:
+            raise _error(
+                "runtime_input_identity",
+                f"run {manifest.get('run_id')!r} is missing runtime inputs: "
+                f"{', '.join(missing_runtime_roles)}",
+            )
         for role, path in (
             ("paper_parity_config", parity_config_path),
             ("threshold_set", threshold_set_path),
@@ -2235,9 +3360,103 @@ def validate_backend_qualification_bundle(
                 artifact_root,
                 "acceptance_model_identity",
             )
+        used_config_path = _validate_file_identity(
+            inputs["used_config"],
+            artifact_root,
+            code="runtime_input_identity",
+        )
+        used_config = _require_mapping(
+            load_json_strict(used_config_path),
+            code="runtime_input_identity",
+            description=f"run {manifest.get('run_id')!r} used config",
+        )
+        scan_path = _validate_file_identity(
+            inputs["scan_path"],
+            artifact_root,
+            code="runtime_input_identity",
+        )
+        mesh_path = _validate_file_identity(
+            inputs["mesh"],
+            artifact_root,
+            code="runtime_input_identity",
+        )
+        material_path = _validate_file_identity(
+            inputs["material_config"],
+            artifact_root,
+            code="runtime_input_identity",
+        )
+        configured_material_path = used_config.get("config")
+        if (
+            not isinstance(configured_material_path, str)
+            or not Path(configured_material_path).is_absolute()
+        ):
+            raise _error(
+                "runtime_input_identity",
+                f"run {manifest.get('run_id')!r} used config must record an "
+                "absolute config path",
+            )
+        _require_equal(
+            Path(configured_material_path).resolve(),
+            material_path,
+            "runtime_input_identity",
+            f"run {manifest.get('run_id')!r} material config path",
+        )
+        configured_mesh_path = used_config.get("inp")
+        if (
+            not isinstance(configured_mesh_path, str)
+            or not Path(configured_mesh_path).is_absolute()
+        ):
+            raise _error(
+                "runtime_input_identity",
+                f"run {manifest.get('run_id')!r} used config must record an "
+                "absolute inp path",
+            )
+        _require_equal(
+            Path(configured_mesh_path).resolve(),
+            mesh_path,
+            "runtime_input_identity",
+            f"run {manifest.get('run_id')!r} mesh path",
+        )
+        configured_scan_path = used_config.get("path_file")
+        if (
+            not isinstance(configured_scan_path, str)
+            or not Path(configured_scan_path).is_absolute()
+        ):
+            raise _error(
+                "runtime_input_identity",
+                f"run {manifest.get('run_id')!r} used config must record an "
+                "absolute path_file",
+            )
+        _require_equal(
+            Path(configured_scan_path).resolve(),
+            scan_path,
+            "runtime_input_identity",
+            f"run {manifest.get('run_id')!r} scan path",
+        )
+        command_path = _validate_file_identity(
+            inputs["solver_command"],
+            artifact_root,
+            code="runtime_input_identity",
+        )
+        try:
+            recorded_command = command_path.read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise _error(
+                "runtime_input_identity",
+                f"{command_path}: cannot read solver command: {exc}",
+            ) from exc
+        _require_equal(
+            recorded_command,
+            manifest.get("command"),
+            "runtime_input_identity",
+            f"run {manifest.get('run_id')!r} solver command",
+        )
     manifests_by_id = {
         str(manifest.get("run_id")): manifest for manifest in all_manifests
     }
+    level_threshold_truth: dict[str, bool] = {}
+    level_parity_truth: dict[str, bool] = {}
+    level_convergence_truth: dict[str, bool] = {}
     for level_id, pair in qualification.get("level_run_pairs", {}).items():
         level_case_ids: set[str] = set()
         for run_id in (
@@ -2310,7 +3529,10 @@ def validate_backend_qualification_bundle(
     }
     for level_id, pair in qualification.get("level_run_pairs", {}).items():
         level_input_hashes = {
-            manifest_input_bundle_sha256(manifests_by_id[str(run_id)])
+            physics_input_bundle_sha256(
+                manifests_by_id[str(run_id)],
+                artifact_root,
+            )
             for run_id in (
                 *pair.get("cpu_run_ids", []),
                 *pair.get("candidate_run_ids", []),
@@ -2351,8 +3573,8 @@ def validate_backend_qualification_bundle(
     commit = next(iter(commits))
     dirty_diff = next(iter(dirty_states))[1]
     current_input_hashes = {
-        manifest_input_bundle_sha256(candidate),
-        manifest_input_bundle_sha256(cpu_manifest),
+        physics_input_bundle_sha256(candidate, artifact_root),
+        physics_input_bundle_sha256(cpu_manifest, artifact_root),
     }
     if len(current_input_hashes) != 1:
         raise _error(
@@ -2597,6 +3819,10 @@ def validate_backend_qualification_bundle(
                 "performance_protocol_identity",
                 f"runs {previous[2]!r} and {current[2]!r} overlap",
             )
+    execution_intervals = {
+        run_id: (started, completed)
+        for started, completed, run_id in intervals
+    }
 
     evidence_by_run: dict[str, dict[str, Any]] = {}
     for manifest in all_manifests:
@@ -2635,6 +3861,15 @@ def validate_backend_qualification_bundle(
             "mask_path": mask_path,
             "mask_sha256": sha256_file(mask_path),
         }
+    checkpoint_paths = {
+        evidence["checkpoint_path"] for evidence in evidence_by_run.values()
+    }
+    if len(checkpoint_paths) != len(evidence_by_run):
+        raise _error(
+            "checkpoint_identity",
+            "each qualification run must have a distinct native checkpoint "
+            "artifact path",
+        )
 
     for level_id, pair in qualification.get("level_run_pairs", {}).items():
         cpu_shapes = {
@@ -2666,19 +3901,38 @@ def validate_backend_qualification_bundle(
                 "comparison_mask_identity",
                 f"{level_id}: CPU/candidate comparison masks differ",
             )
+        parity_passed = True
+        convergence_passed = True
         for cpu_run_id in pair.get("cpu_run_ids", []):
             for candidate_run_id in pair.get("candidate_run_ids", []):
                 pair_truth = _checkpoint_metric_truth(
                     evidence_by_run[str(cpu_run_id)]["checkpoint"],
                     evidence_by_run[str(candidate_run_id)]["checkpoint"],
                 )
-                _validate_checkpoint_pair_thresholds(
-                    pair_truth,
-                    frozen_thresholds,
-                    pair_label=(
-                        f"{level_id}:{cpu_run_id}->{candidate_run_id}"
-                    ),
+                parity_passed = (
+                    _checkpoint_pair_parity_passes(
+                        pair_truth,
+                        frozen_thresholds,
+                    )
+                    and parity_passed
                 )
+                convergence_passed = (
+                    _checkpoint_pair_convergence_passes(
+                        pair_truth,
+                        frozen_thresholds,
+                    )
+                    and convergence_passed
+                )
+        level_passed = parity_passed and convergence_passed
+        level_threshold_truth[str(level_id)] = level_passed
+        level_parity_truth[str(level_id)] = parity_passed
+        level_convergence_truth[str(level_id)] = convergence_passed
+        _require_equal(
+            pair.get("status"),
+            "pass" if level_passed else "fail",
+            "metric_recalculation",
+            f"{level_id} level status",
+        )
 
     candidate_evidence = evidence_by_run[str(candidate.get("run_id"))]
     cpu_evidence = evidence_by_run[current_cpu_run_id]
@@ -2762,10 +4016,52 @@ def validate_backend_qualification_bundle(
     )
     raw_performance = _load_performance_evidence(
         qualification,
-        cpu_run_ids=cpu_run_ids,
-        candidate_run_ids=candidate_run_ids,
         cpu_threads=int(cpu_threads),
         artifact_root=artifact_root,
+        execution_intervals=execution_intervals,
+        linear_solve_counts={
+            run_id: int(
+                np.asarray(
+                    evidence["checkpoint"]["state"]["linear_solve_count"]
+                ).item()
+            )
+            for run_id, evidence in evidence_by_run.items()
+        },
+        manifests_by_id=manifests_by_id,
+    )
+    _validate_checkpoint_gate_evidence(
+        qualification,
+        evidence_by_run=evidence_by_run,
+        artifact_root=artifact_root,
+    )
+    energy_passed = _validate_energy_audit_truth(
+        qualification,
+        manifests_by_id=manifests_by_id,
+        frozen_thresholds=frozen_thresholds,
+        threshold_set_path=threshold_set_path,
+        artifact_root=artifact_root,
+    )
+    levels_passed = all(level_threshold_truth.values())
+    parity_passed = all(level_parity_truth.values())
+    stage_gates = qualification.get("stage_gates", {})
+    _require_equal(
+        stage_gates.get("backend_parity", {}).get("status"),
+        "pass" if parity_passed else "fail",
+        "gate_consistency",
+        "backend parity gate status",
+    )
+    convergence_passed = all(level_convergence_truth.values())
+    _require_equal(
+        stage_gates.get("convergence_audit", {}).get("status"),
+        "pass" if convergence_passed else "fail",
+        "gate_consistency",
+        "convergence audit gate status",
+    )
+    _require_equal(
+        qualification.get("numerically_qualified"),
+        bool(levels_passed and energy_passed and convergence_passed),
+        "metric_recalculation",
+        "qualification numerical status",
     )
     _validate_gate_truth(qualification, validation)
     for key in (
@@ -2790,6 +4086,7 @@ def validate_backend_qualification_bundle(
 
     qualification_promotes = qualification.get("promotion_eligible") is True
     validation_promotes = formal_promotion_allowed(validation)
+    _reject_untyped_stage_promotion(qualification, validation)
     if qualification_promotes != validation_promotes:
         raise _error(
             "promotion_two_condition",

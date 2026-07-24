@@ -104,10 +104,16 @@ def integrate_volume_terms(
         raise ValueError("laser_center must be a finite 3-vector")
     if not all(np.isfinite(value) for value in scalars.values()):
         raise ValueError("thermal ledger scalar inputs must be finite")
+    if source_model not in ("legacy", "paper_hemispherical"):
+        raise ValueError(
+            "source_model must be 'legacy' or 'paper_hemispherical'"
+        )
     if scalars["dt_s"] <= 0.0:
         raise ValueError("dt_s must be positive")
-    if scalars["beam_radius_m"] <= 0.0 or scalars["source_depth_m"] <= 0.0:
-        raise ValueError("beam_radius_m and source_depth_m must be positive")
+    if scalars["beam_radius_m"] <= 0.0:
+        raise ValueError("beam_radius_m must be positive")
+    if source_model == "legacy" and scalars["source_depth_m"] <= 0.0:
+        raise ValueError("source_depth_m must be positive for legacy source")
     if scalars["effective_laser_power_w"] < 0.0:
         raise ValueError("effective_laser_power_w must be nonnegative")
     if not 0.0 <= scalars["laser_switch"] <= 1.0:
@@ -118,11 +124,6 @@ def integrate_volume_terms(
         raise ValueError("front loss thickness must be positive when enabled")
     if not 0.0 <= scalars["emissivity"] <= 1.0:
         raise ValueError("emissivity must lie in [0, 1]")
-    if source_model not in ("legacy", "paper_hemispherical"):
-        raise ValueError(
-            "source_model must be 'legacy' or 'paper_hemispherical'"
-        )
-
     build_axis = int(build_axis)
     plane_axes = tuple(int(axis) for axis in plane_axes)
     if sorted((*plane_axes, build_axis)) != [0, 1, 2] or len(plane_axes) != 2:
@@ -529,6 +530,11 @@ def extract_solver_step(
                 state_override_within_tolerance
             ),
             "balance_scale_j": float(balance_scale),
+            "free_node_count": int(np.count_nonzero(~constrained)),
+            "dt_s": float(dt_s),
+            "solver_residual_tolerance_w": float(
+                solver_residual_tolerance_w
+            ),
             "absolute_balance_tolerance_j": float(
                 absolute_balance_tolerance
             ),

@@ -13,7 +13,10 @@ import numpy as np
 import pytest
 
 from jax_fem_am.config.schema import build_parser
-from jax_fem_am.physics.thermal import TransientThermal
+from jax_fem_am.physics.thermal import (
+    TransientThermal,
+    _validate_concrete_length_scale,
+)
 from jax_fem_am.verification.thermal_ledger import integrate_volume_terms
 
 
@@ -147,6 +150,48 @@ def test_source_model_cli_keeps_legacy_default_and_requires_explicit_paper_mode(
         parser.parse_args(["--source-model", "unknown"])
 
 
+@pytest.mark.parametrize(
+    ("source_model", "beam_radius", "source_depth", "message"),
+    [
+        ("paper_hemispherical", 0.0, BEAM_RADIUS_M, "beam_radius"),
+        ("paper_hemispherical", math.inf, BEAM_RADIUS_M, "beam_radius"),
+        ("paper_hemispherical", math.nan, BEAM_RADIUS_M, "beam_radius"),
+        ("legacy", BEAM_RADIUS_M, 0.0, "source_depth"),
+        ("legacy", BEAM_RADIUS_M, math.inf, "source_depth"),
+        ("legacy", BEAM_RADIUS_M, math.nan, "source_depth"),
+    ],
+)
+def test_source_parameters_reject_nonpositive_length_scales(
+    source_model,
+    beam_radius,
+    source_depth,
+    message,
+):
+    problem = object.__new__(TransientThermal)
+    problem.source_model = source_model
+    params = [None] * 15
+    params[4] = np.asarray([beam_radius])
+    params[5] = np.asarray([source_depth])
+
+    with pytest.raises(ValueError, match=message):
+        problem.set_params(tuple(params))
+
+
+def test_length_scale_guard_does_not_materialize_jax_values_on_host():
+    class DeviceScalarSentinel:
+        def __array__(self, *_args, **_kwargs):
+            raise AssertionError("device value was materialized on host")
+
+    _validate_concrete_length_scale(
+        DeviceScalarSentinel(),
+        "beam_radius",
+    )
+    _validate_concrete_length_scale(
+        jnp.asarray([math.nan]),
+        "beam_radius",
+    )
+
+
 def test_legacy_gaussian_exponential_source_remains_available():
     expected = 2.0 * ABSORBED_POWER_W / (
         math.pi * BEAM_RADIUS_M**3
@@ -171,7 +216,7 @@ def test_thermal_ledger_uses_the_selected_paper_source_equation():
         laser_center=np.zeros(3),
         effective_laser_power_w=ABSORBED_POWER_W,
         beam_radius_m=BEAM_RADIUS_M,
-        source_depth_m=BEAM_RADIUS_M,
+        source_depth_m=0.0,
         laser_switch=1.0,
         active=np.ones((1, 1)),
         cooling_only=np.zeros((1, 1)),

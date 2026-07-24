@@ -53,13 +53,21 @@ may proceed through its failing-test gates
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_reference_data.py`
   - **Files**: `cases/kaess_2023/references/cases/kaess_2023.json`
 
-- [x] T005 [P] [US5] 为四个 JSON contracts 和跨文件语义验证器增加失败测试 — 验证最小有效对象、缺字段、错误 hash/claim/精度、kernel-only 或 experimental promotion、未类型化 metric、hybrid 冒充 full-GPU、Figure 8/9 漏项、阈值错绑、空不确定度和 all-fail partial。
+- [x] T005 [P] [US5] 为五个 JSON contracts 和跨文件语义验证器增加失败测试 — 验证最小有效对象、缺字段、错误 hash/claim/精度、kernel-only 或 experimental promotion、未类型化 metric、hybrid 冒充 full-GPU、Figure 8/9 漏项、阈值错绑、空不确定度和 all-fail partial。
   - **Acceptance**: schema 形状与跨文件身份/哈希/dtype/run-id/placement/
     threshold/status 反例均被拒绝；阈值 artifact/hash/approver 必须绑定
     G0 配置和当前 run manifest；validation verdict/promotion 双条件、
     dirty diff、float64、线程预算、环境/硬件与顺序执行身份均有失败测试；
     数值指标由原生 checkpoint 重算，性能由独立 raw evidence 重算；
-    T036 产生 typed QoI evidence 前，paper comparison 必须保持
+    `mesh`、`scan_path`、material、最终 used config 与实际 command 均须
+    作为内容寻址 input，used config 内 `config/inp/path_file` 必须回指对应
+    artifact；energy gate 必须逐 run 绑定 typed ledger/summary/run-audit
+    wrapper，并按冻结的 `thermal_energy_closure` 阈值重算；
+    `performance_pair` 必须唯一绑定有序 CPU/candidate run ids，wall-time
+    样本由 rehashed execution-order 区间重算，并与对应 manifest 的
+    `completed_utc/resource_usage.wall_seconds` 交叉绑定；线性求解次数由
+    checkpoint `linear_solve_count` 重算；T032/T035 产生并接入 typed QoI evidence
+    前，paper comparison 必须保持
     `blocked`；新增依赖前必须询问用户。
   - **Verify**: `python -m pytest -q tests/contract/test_kaess_contracts.py`
   - **Files**: `tests/contract/test_kaess_contracts.py`,
@@ -67,6 +75,7 @@ may proceed through its failing-test gates
     `specs/001-kaess-paper-reproduction/contracts/run-manifest.schema.json`,
     `specs/001-kaess-paper-reproduction/contracts/paper-comparison.schema.json`,
     `specs/001-kaess-paper-reproduction/contracts/backend-qualification.schema.json`,
+    `specs/001-kaess-paper-reproduction/contracts/energy-audit-evidence.schema.json`,
     `specs/001-kaess-paper-reproduction/contracts/backend-qualification-validation.schema.json`
 
 - [x] T006 [US1] 冻结 paper-parity protocol — 创建标准工况、QoI、阈值、标定/留出和 stop rules 的机器可读配置。
@@ -124,8 +133,11 @@ may proceed through its failing-test gates
 
 ### Checkpoint — Red Tests Confirmed
 
-- Red-test set `T007–T013` 均因预期物理差异失败，而非导入/路径错误。
-- 保存 failure summary，审核后才进入实现。
+- 每个实现任务 `T014–T020` 仅依赖其对应红测 `T007–T013` 已因预期
+  物理差异失败，而非导入/路径错误；允许按单项 red → green 闭环推进，
+  不要求等待全部红测完成。
+- 在关闭 G1/G2 前，`T007–T013` 的全部 red evidence 与对应 green
+  regression 必须齐备并保存 failure summary。
 
 ## Phase 3 — User Story 2: P0 Physics Implementation
 
@@ -246,11 +258,20 @@ may proceed through its failing-test gates
     `cases/kaess_2023/inputs/paper-parity-config.yaml`
 
 - [ ] T028 [P] [US5] 扩展正式 run manifest — 捕获 dirty diff、实际 checkout、环境、硬件、线程、输入/输出 hash、逐增量收敛 ledger 和三阶段 gate。
-  - **Acceptance**: 逐阶段记录 assembly/global-matrix/linear-solver/state residency、host transfer、fallback 和原生 float64 checkpoint；正式加速结果只接受 `verdict=pass_promotion_eligible` 且 `promotion_eligible=true` 的 semantic-validation artifact；失败也生成 forensic manifest。
+  - **Acceptance**: 逐阶段记录 assembly/global-matrix/linear-solver/state
+    residency、host transfer、fallback 和原生 float64 checkpoint；
+    build/cooling/release 必须各自提供 typed stage evidence，语义验证器
+    逐项复哈希并从原始状态复算 gate；在 T031 接入三阶段 typed
+    evidence 前 promotion 必须 fail closed；正式加速结果只接受
+    `verdict=pass_promotion_eligible` 且 `promotion_eligible=true` 的
+    semantic-validation artifact；失败也生成 forensic manifest。
   - **Verify**: `python -m pytest -q tests/integration/test_kaess_formal_manifest.py`
   - **Files**: `jax_fem_am/verification/provenance.py`,
     `jax_fem_am/verification/run_audit.py`,
     `jax_fem_am/verification/checkpoints.py`,
+    `jax_fem_am/verification/backend_qualification.py`,
+    `specs/001-kaess-paper-reproduction/contracts/backend-qualification.schema.json`,
+    `tests/contract/test_kaess_contracts.py`,
     `tests/integration/test_kaess_formal_manifest.py`
 
 - [ ] T029 [US3] 导入并复核 G3 冻结 CPU small-reference suite — 选择已批准的 kernel、small-domain、real-DOF prefix、1层 build/cooling/release 和三层 mini-cycle run ids，不重复生成另一套“参考”；只有 identity stale 时回退 G3 重跑。
@@ -268,12 +289,22 @@ may proceed through its failing-test gates
 - [ ] T031 [US4] 实现并裁决 backend qualification — 在原生 float64 active/printed 域比较温度、应力、eqp、位移、事件、能量、收敛和 release，并顺序比较同线程预算性能。
   - **Acceptance**: scientific/performance verdict 分离；hybrid 名称准确；
     六级 qualification bundle 完整；跨文件 validator 实际复算 artifacts；
+    温度/位移分别绑定 `active_node_mask`，应力/eqp 分别绑定
+    `active_element_mask`；若先投影到共同比较实体，必须记录投影算法和
+    identity/hash，禁止让单一 mask 跨 node/element 实体复用，维度不符
+    时 fail closed；`performance_pair` 唯一绑定有序 CPU/candidate run
+    ids，wall-time 样本从 rehashed execution-order 区间重算，并与
+    manifest completion/resource usage 交叉绑定，线性求解次数从
+    checkpoint 重算；energy typed wrapper 必须逐 run 覆盖且从 ledger
+    重算闭合；build/cooling/release typed stage evidence 必须逐阶段、
+    逐 run 覆盖并从原始状态复算，未接入时 promotion 必须 fail closed；
     两个性能样本满足批准的 speedup 与迭代增幅门。
   - **Verify**: `python -m pytest -q tests/regression/test_kaess_backend_qualification.py`
   - **Files**: `cases/kaess_2023/analysis/compare_backends.py`,
     `jax_fem_am/verification/backend_qualification.py`,
     `tests/regression/test_kaess_backend_qualification.py`,
-    `specs/001-kaess-paper-reproduction/contracts/backend-qualification.schema.json`
+    `specs/001-kaess-paper-reproduction/contracts/backend-qualification.schema.json`,
+    `specs/001-kaess-paper-reproduction/contracts/energy-audit-evidence.schema.json`
 
 ### Checkpoint G4 — Accelerated Backend Qualification
 
@@ -286,10 +317,17 @@ may proceed through its failing-test gates
 ## Phase 6 — User Story 3: Accelerated Scale Bridge and Paper Comparison
 
 - [ ] T032 [P] [US3] 实现冻结路径 QoI 和论文误差提取 — 提取 Figure 8 `σx`、Figure 9 bending，计算标量误差、NRMSE、峰谷和过零深度。
-  - **Acceptance**: 单位/插值/mask 显式；同一 checkpoint 结果确定；合成样例已知答案通过。
+  - **Acceptance**: 单位/插值与 node/element mask 或共同实体投影显式；
+    同一 checkpoint 结果确定；合成样例已知答案通过；输出 typed QoI
+    evidence，绑定 run/checkpoint、提取器版本、比较实体、单位、原始
+    提取向量及 artifact hash，generic/任意 JSON 不可作为 paper metric
+    evidence。
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_qoi_extraction.py tests/unit/test_kaess_paper_metrics.py`
   - **Files**: `cases/kaess_2023/analysis/extract_qoi.py`,
     `jax_fem_am/verification/metrics.py`,
+    `jax_fem_am/verification/backend_qualification.py`,
+    `specs/001-kaess-paper-reproduction/contracts/paper-comparison.schema.json`,
+    `tests/contract/test_kaess_contracts.py`,
     `tests/unit/test_kaess_qoi_extraction.py`,
     `tests/unit/test_kaess_paper_metrics.py`
 
@@ -305,12 +343,19 @@ may proceed through its failing-test gates
 
 - [ ] T035 [US3] 生成加速标准工况 paper-comparison report — 分解 digitization、discretization、CPU-reference repeatability 和 input assumption，不手工抄数。
   - **Acceptance**: JSON 覆盖冻结的八个 Figure 8/9 比较项并通过 schema；
-    语义验证器复算 threshold/status 与 evidence hash，并确认 threshold
-    artifact/hash/approval 与 G0 配置、run manifest 一致；verdict 由冻结
-    threshold set 产生，失败/partial 不改阈值。
+    只接受 T032 typed QoI evidence；语义验证器复哈希 typed evidence，
+    从其原始提取量复算 metric/threshold/status，并确认 threshold
+    artifact/hash/approval 与 G0 配置、run manifest 一致；verdict 由
+    冻结 threshold set 产生，失败/partial 不改阈值；Figure 8/9
+    digitized artifacts 必须精确绑定 source manifest 的 evidence id、
+    path 与 hash；uncertainty 必须校验单位、区间次序，并从原始分量复算
+    `2u_c` 聚合值。
   - **Verify**: `python -m pytest -q tests/integration/test_kaess_paper_report.py`
   - **Files**: `cases/kaess_2023/analysis/compare_paper.py`,
     `cases/kaess_2023/analysis/uncertainty.py`,
+    `jax_fem_am/verification/backend_qualification.py`,
+    `specs/001-kaess-paper-reproduction/contracts/paper-comparison.schema.json`,
+    `tests/contract/test_kaess_contracts.py`,
     `tests/integration/test_kaess_paper_report.py`
 
 ### Checkpoint G5 — Accelerated Paper Result

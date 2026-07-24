@@ -756,7 +756,7 @@
           "$ref": "#/$defs/gate"
         },
         "energy_audit": {
-          "$ref": "#/$defs/gate"
+          "$ref": "#/$defs/energyAuditGate"
         },
         "convergence_audit": {
           "$ref": "#/$defs/gate"
@@ -808,6 +808,21 @@
           "properties": {
             "status": {
               "const": "pass"
+            }
+          }
+        }
+      ]
+    },
+    "energyAuditGate": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/gate"
+        },
+        {
+          "properties": {
+            "evidence": {
+              "minItems": 1,
+              "maxItems": 1
             }
           }
         }

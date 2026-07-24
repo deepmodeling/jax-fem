@@ -164,9 +164,185 @@
           "type": "array",
           "minItems": 17,
           "maxItems": 17,
-          "items": {
-            "$ref": "#/$defs/approvedThresholdMetric"
-          }
+          "allOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/approvedThresholdMetric"
+              }
+            }
+          ],
+          "prefixItems": [
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "heat_source_relative_integral_error"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "latent_heat_relative_integral_error"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "thermal_energy_closure"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "active_domain_deleted_reference_relative_error"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "time_path_mesh_refinement_qoi_difference"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "solver_tolerance_qoi_difference"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "cpu_repeat_active_displacement_absolute"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "cpu_repeat_active_displacement_relative"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "figure9_bending_curve_nrmse"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "figure8_stress_peak_trough_amplitude_error"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "figure8_zero_crossing_depth_error"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "hybrid_temperature_qoi_difference"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "hybrid_stress_qoi_difference"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "hybrid_release_displacement_absolute"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "hybrid_release_displacement_relative"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "accelerated_wall_speedup"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            },
+            {
+              "properties": {
+                "metric_id": {
+                  "const": "accelerated_linear_solve_increase"
+                }
+              },
+              "required": [
+                "metric_id"
+              ]
+            }
+          ]
         }
       }
     },

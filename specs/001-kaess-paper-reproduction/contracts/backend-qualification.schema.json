@@ -1169,7 +1169,9 @@
         "metric_kind",
         "cpu_value",
         "candidate_value",
+        "value_unit",
         "error",
+        "error_unit",
         "threshold",
         "comparison_operator",
         "status",
@@ -1189,9 +1191,24 @@
         "candidate_value": {
           "type": "number"
         },
+        "value_unit": {
+          "enum": [
+            "K",
+            "MPa",
+            "fraction",
+            "um",
+            "count"
+          ]
+        },
         "error": {
           "type": "number",
           "minimum": 0
+        },
+        "error_unit": {
+          "enum": [
+            "fraction",
+            "um"
+          ]
         },
         "threshold": {
           "type": "number",

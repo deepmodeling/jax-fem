@@ -24,5 +24,10 @@ classifiers = [
   "Programming Language :: Python :: 3"
 ]
 
+[project.optional-dependencies]
+verification = [
+  "jsonschema[format-nongpl]>=4.26,<5",
+]
+
 [tool.setuptools]
 packages = ["jax_fem"]

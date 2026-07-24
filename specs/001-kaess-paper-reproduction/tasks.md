@@ -6,8 +6,8 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
 
 **Input**: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`
 
-**Status**: G0 approved on 2026-07-24 — T005 contract hardening remains the
-last Phase 1 task before solver implementation
+**Status**: G0 approved and T005 complete on 2026-07-24 — P0 implementation
+may proceed through its failing-test gates
 
 **Organization**: 任务按 user story 和科学 gate 组织。`[P]` 表示不同文件、
 无前置依赖时可并行；测试任务必须先失败，再实现对应能力。
@@ -53,15 +53,17 @@ last Phase 1 task before solver implementation
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_reference_data.py`
   - **Files**: `cases/kaess_2023/references/cases/kaess_2023.json`
 
-- [ ] T005 [P] [US5] 为四个 JSON contracts 和跨文件语义验证器增加失败测试 — 验证最小有效对象、缺字段、错误 hash/claim/精度、kernel-only 或 experimental promotion、未类型化 metric、hybrid 冒充 full-GPU、Figure 8/9 漏项、阈值错绑、空不确定度和 all-fail partial。
+- [x] T005 [P] [US5] 为四个 JSON contracts 和跨文件语义验证器增加失败测试 — 验证最小有效对象、缺字段、错误 hash/claim/精度、kernel-only 或 experimental promotion、未类型化 metric、hybrid 冒充 full-GPU、Figure 8/9 漏项、阈值错绑、空不确定度和 all-fail partial。
   - **Acceptance**: schema 形状与跨文件身份/哈希/dtype/run-id/placement/
     threshold/status 反例均被拒绝；阈值 artifact/hash/approver 必须绑定
     G0 配置和当前 run manifest；validation verdict/promotion 双条件、
     dirty diff、float64、线程预算、环境/硬件与顺序执行身份均有失败测试；
-    新增依赖前必须询问用户。
+    数值指标由原生 checkpoint 重算，性能由独立 raw evidence 重算；
+    T036 产生 typed QoI evidence 前，paper comparison 必须保持
+    `blocked`；新增依赖前必须询问用户。
   - **Verify**: `python -m pytest -q tests/contract/test_kaess_contracts.py`
   - **Files**: `tests/contract/test_kaess_contracts.py`,
-    `jax_fem_am/verification/backend_qualification.py`,
+    `jax_fem_am/verification/backend_qualification.py`, `pyproject.toml`,
     `specs/001-kaess-paper-reproduction/contracts/run-manifest.schema.json`,
     `specs/001-kaess-paper-reproduction/contracts/paper-comparison.schema.json`,
     `specs/001-kaess-paper-reproduction/contracts/backend-qualification.schema.json`,

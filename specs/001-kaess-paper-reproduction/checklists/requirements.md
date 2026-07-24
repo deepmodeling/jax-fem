@@ -62,10 +62,10 @@
 - [ ] CHK033 没有任务通过参数调优绕过 physics gate。
 - [ ] CHK034 没有单任务计划修改超过约五个文件。
 - [x] CHK035 实现前 Review Gate 已明确解除。
-- [ ] CHK036 backend contract 能拒绝 hybrid 冒充 `full_gpu`。
-- [ ] CHK037 后端资格必须引用 active/printed mask 和原生 float64
+- [x] CHK036 backend contract 能拒绝 hybrid 冒充 `full_gpu`。
+- [x] CHK037 后端资格必须引用 active/printed mask 和原生 float64
   checkpoint，不能只依赖 VTU。
-- [ ] CHK038 跨文件语义验证器及其输出 contract 能拒绝 mode 伪装、
+- [x] CHK038 跨文件语义验证器及其输出 contract 能拒绝 mode 伪装、
   kernel-only promotion、错误 artifact/threshold hash、错误 dtype、冲突
   gate、不公平性能协议、仅 `pass_not_promotion_eligible` 的记录和不含
   当前 run id 的资格包。

@@ -6,8 +6,8 @@
 
 **Created**: 2026-07-23
 
-**Status**: Approved — G0 passed on 2026-07-24; T005 contract hardening is
-required before solver implementation
+**Status**: Approved — G0 and T005 passed on 2026-07-24; P0 implementation is
+in progress through test-first slices
 
 **Input**: 按照 Spec Kit 标准，为 Kaess et al. (2023) 论文级复现建立可执行、可审计的开发规格。
 

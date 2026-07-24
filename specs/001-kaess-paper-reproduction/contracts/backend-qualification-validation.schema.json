@@ -12,6 +12,7 @@
     "qualification_id",
     "qualification_artifact",
     "qualification_candidate_run_id",
+    "qualification_cpu_reference_run_id",
     "qualification_candidate_manifest_artifact",
     "execution_mode",
     "identity",
@@ -44,6 +45,10 @@
       "$ref": "#/$defs/fileIdentity"
     },
     "qualification_candidate_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "qualification_cpu_reference_run_id": {
       "type": "string",
       "minLength": 1
     },

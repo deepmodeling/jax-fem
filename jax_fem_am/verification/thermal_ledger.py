@@ -292,12 +292,17 @@ def _surface_exchange_from_problem(problem, temperature_new, dt_s):
         if not surface_vars:
             raise ValueError("thermal surface is missing its active mask")
         active = np.asarray(surface_vars[0], dtype=np.float64)[..., 0]
+        ambient_k = (
+            _uniform_scalar("surface ambient", surface_vars[1])
+            if len(surface_vars) > 1
+            else float(problem.ambient)
+        )
         total += integrate_surface_exchange(
             temperature_face=temperature_face,
             surface_jxw=surface_jxw,
             active=active,
             convection_h=problem.convection_h,
-            ambient_k=problem.ambient,
+            ambient_k=ambient_k,
             emissivity=problem.emissivity,
             stefan_boltzmann=problem.stefan_boltzmann,
             dt_s=dt_s,
@@ -346,7 +351,7 @@ def extract_solver_step(
     if temperature_new.ndim != 2 or temperature_new.shape[1] != 1:
         raise ValueError("thermal solution must have shape (nodes, 1)")
     internal = list(problem.internal_vars)
-    if len(internal) != 14:
+    if len(internal) not in (14, 15):
         raise ValueError("unexpected TransientThermal internal variable contract")
     (
         temperature_old_quad,
@@ -363,7 +368,12 @@ def extract_solver_step(
         latent_cp_quad,
         cooling_only_quad,
         old_layer_h_quad,
-    ) = internal
+    ) = internal[:14]
+    environment_ambient = (
+        _uniform_scalar("environment ambient", internal[14])
+        if len(internal) == 15
+        else float(problem.ambient)
+    )
     dt_s = _uniform_scalar("dt", dt_quad)
     effective_power = _uniform_scalar("effective laser power", effective_power_quad)
     beam_radius = _uniform_scalar("beam radius", beam_radius_quad)
@@ -412,7 +422,7 @@ def extract_solver_step(
         active=np.asarray(active_quad, dtype=np.float64)[..., 0],
         cooling_only=np.asarray(cooling_only_quad, dtype=np.float64)[..., 0],
         old_layer_cooling_h=old_layer_h,
-        ambient_k=problem.ambient,
+        ambient_k=environment_ambient,
         dt_s=dt_s,
         build_axis=problem.build_axis_id,
         plane_axes=(problem.plane_axis0_id, problem.plane_axis1_id),
@@ -513,7 +523,7 @@ def extract_solver_step(
     invariants = check_temperature_invariants(
         np.asarray(temperature_old_quad, dtype=np.float64)[..., 0],
         temperature_new,
-        ambient=problem.ambient,
+        ambient=environment_ambient,
         dirichlet_values=dirichlet_values,
         deposited_source_j=volume["laser_deposited_j"],
         coefficients_valid=True,

@@ -4,6 +4,7 @@ Extracted verbatim from legacy/v03/am_thermal_stress_macro_intersection_mech100.
 """
 
 from dataclasses import dataclass
+from typing import Optional
 
 import jax.numpy as np
 import numpy as onp
@@ -24,6 +25,8 @@ class StepState:
     hatch_frac: float
     front_coord: float
     layer_frac: float
+    ambient_temperature: Optional[float] = None
+    bottom_temperature: Optional[float] = None
 
 
 def reset_new_cell_nodal_temperature(T_old, cells, newly_printed_cell, previous_active_cell, value):

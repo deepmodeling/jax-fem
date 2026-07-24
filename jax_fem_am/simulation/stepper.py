@@ -111,7 +111,11 @@ from jax_fem_am.process.scan_path import (
     resolve_scan_and_hatch_axes,
     update_layers_from_thickness,
 )
-from jax_fem_am.process.schedule import should_run_mechanics, should_save_step
+from jax_fem_am.process.schedule import (
+    apply_stage_temperature_schedule,
+    should_run_mechanics,
+    should_save_step,
+)
 from jax_fem_am.solvers.nonlinear import mechanics_newton_overrides_from_args
 from jax_fem.generate_mesh import Mesh
 from jax_fem.problem import Problem
@@ -310,12 +314,36 @@ def main():
 
     initial_temperature = args.preheat_temperature if args.preheat_temperature is not None else args.ambient
     bottom_temperature_effective = args.bottom_temperature if args.bottom_temperature is not None else initial_temperature
+    final_cooldown_enabled = (
+        args.final_cooldown_temperature is not None
+        and args.bottom_thermal_bc == "fixed"
+    )
+    if (
+        args.final_cooldown_temperature is not None
+        and args.bottom_thermal_bc != "fixed"
+    ):
+        print(
+            "WARNING: --final-cooldown-temperature requires "
+            "--bottom-thermal-bc fixed; ignoring."
+        )
+    apply_stage_temperature_schedule(
+        step_states,
+        process_ambient=args.ambient,
+        process_bottom_temperature=bottom_temperature_effective,
+        final_cooldown_temperature=(
+            args.final_cooldown_temperature
+            if final_cooldown_enabled
+            else None
+        ),
+    )
     surface_active_mask_enabled = resolve_surface_active_mask(args)
     mechanics_newton_overrides = mechanics_newton_overrides_from_args(args)
 
     if args.surface_selection == "exterior":
-        # Every mesh-exterior face above the base plane exchanges heat with the
-        # environment. The base plane itself is handled by the bottom BC below.
+        # Kaess et al. (2023), Section 2.3, applies chamber heat loss to the
+        # "top active element layer": https://doi.org/10.3390/ma16062321
+        # Keep all potential upward faces in a fixed superset; the
+        # owner/neighbor activity mask exposes the correct one each step.
         span_for_tol = max(float(onp.max(pmax - pmin)), 1.0)
         base_tol = (
             float(args.boundary_tol)
@@ -327,6 +355,10 @@ def main():
             return build_sign * (point[build_axis_id] - base_coord) > base_tol
 
         exterior_above_base.exterior_only = True
+        exterior_above_base.active_domain_exterior = True
+        exterior_above_base.active_domain_top_only = True
+        exterior_above_base.active_domain_build_axis = build_axis_id
+        exterior_above_base.active_domain_build_sign = build_sign
         location_fns = [exterior_above_base]
 
         def exterior_bottom(point):
@@ -645,18 +677,28 @@ def main():
             )
         ),
         "paper_release_gate_eligible": release_cell_set is not None,
+        "cooling_temperature_schedule": {
+            "mode": (
+                "linear_k_over_n_to_final"
+                if final_cooldown_enabled
+                else "constant_process_temperature"
+            ),
+            "process_ambient_k": float(args.ambient),
+            "process_bottom_temperature_k": float(
+                bottom_temperature_effective
+            ),
+            "final_temperature_k": (
+                float(args.final_cooldown_temperature)
+                if final_cooldown_enabled
+                else None
+            ),
+            "cooling_step_count": sum(
+                1 for state in step_states if state.mode == "cooling"
+            ),
+        },
     }
     write_used_config(args, args.output_dir, derived)
     print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, selected_cells, points, thermal, mechanics, derived)
-
-    final_cooldown_enabled = (
-        args.final_cooldown_temperature is not None
-        and args.bottom_thermal_bc == "fixed"
-    )
-    if args.final_cooldown_temperature is not None and args.bottom_thermal_bc != "fixed":
-        print("WARNING: --final-cooldown-temperature requires --bottom-thermal-bc fixed; ignoring.")
-    n_cooling_steps = sum(1 for s in step_states if s.mode == "cooling")
-    cooling_step_counter = 0
 
     quad_stress = None
     last_mechanics_step = -1
@@ -764,15 +806,11 @@ def main():
             conductivity_quad,
         )
         thermal_step_bc = thermal_bc
-        if final_cooldown_enabled and state.mode == "cooling" and n_cooling_steps > 0:
-            cooling_step_counter += 1
-            ramp = cooling_step_counter / float(n_cooling_steps)
-            ramped_bottom_temperature = (
-                bottom_temperature_effective
-                + ramp * (float(args.final_cooldown_temperature) - bottom_temperature_effective)
-            )
-
-            def ramped_bottom_value(_point, _value=ramped_bottom_temperature):
+        if final_cooldown_enabled and state.mode == "cooling":
+            def ramped_bottom_value(
+                _point,
+                _value=state.bottom_temperature,
+            ):
                 return _value
 
             thermal_step_bc = [[bottom], [0], [ramped_bottom_value]]
@@ -824,6 +862,7 @@ def main():
                 cooling_only_quad,
                 args.old_layer_cooling_h,
                 surface_mask_quad,
+                state.ambient_temperature,
             ]
         )
         T_new = solver(thermal, solver_options={"newton": {"linear": {"spsolve_solver": {}}}})[0]

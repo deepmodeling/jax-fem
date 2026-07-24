@@ -105,7 +105,8 @@
   "v06_adaptation_gaps": [
     "RESOLVED 2026-07-16: 316L tables built and recalibrated against digitized Fig 4 (materials/316L/)",
     "RESOLVED 2026-07-16: geometry v2 - three support walls per Fig 3/5 (W1 0.025-0.125, W2 0.425-0.525, W3-root 0.775-0.975 mm, +-25um pixel estimate), root-wall-only release anchor per Fig 7 (--release-anchor-mode box)",
-    "RESOLVED 2026-07-16: final plate cooldown to room temperature implemented (--final-cooldown-temperature, ramped bottom Dirichlet); ambient for film/radiation NOT ramped (conduction-dominated, documented approximation)",
+    "RESOLVED 2026-07-24: film/radiation follows the current physical upward active top through a fixed-shape owner/neighbor face mask (HEX8/TET4, either build direction)",
+    "RESOLVED 2026-07-24: final plate cooldown to room temperature uses the same frozen linear k/N schedule for the bottom Dirichlet and film/radiation ambient",
     "OPEN: moving Gaussian heat source (phase 2) exercises the known activation-undershoot weak point; audits expected to gate first attempts",
     "OPEN: explicit weak-solid powder state (phase 3); interim comparison uses void powder (k=0 between support walls vs paper 0.15-0.6 W/mK)",
     "OPEN: TET4 vs reference C3D8 hex stiffness difference; alpha secant-vs-incremental convention difference",

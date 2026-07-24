@@ -178,6 +178,8 @@ def write_path_output(args, output_dir, step_states):
             "dt",
             "scan_frac",
             "hatch_frac",
+            "ambient_temperature",
+            "bottom_temperature",
         ])
         for state in step_states:
             current_time += state.dt
@@ -197,6 +199,8 @@ def write_path_output(args, output_dir, step_states):
                 state.dt,
                 state.scan_frac,
                 state.hatch_frac,
+                state.ambient_temperature,
+                state.bottom_temperature,
             ])
     print(f"path_output: {path}")
 

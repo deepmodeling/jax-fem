@@ -1,3 +1,4 @@
+import csv
 import sys
 
 import jax
@@ -63,15 +64,33 @@ def _stacked_hex_mesh():
     return points, cells
 
 
+def _single_tet_mesh():
+    points = np.asarray(
+        [
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0],
+            [0.0, 1.0, 1.0],
+            [0.0, 0.0, 2.0],
+        ],
+        dtype=np.float64,
+    )
+    cells = np.asarray([[0, 1, 2, 3]], dtype=np.int32)
+    return points, cells
+
+
 def _make_static_exterior_problem():
     points, cells = _stacked_hex_mesh()
 
     def exterior_above_base(point):
         return point[2] > 1.0e-10
 
-    # This is the production exterior selector used by the stepper. It sees
-    # only the exterior of the complete mesh, not an active/future interface.
+    # The static face superset includes active/future interfaces. The thermal
+    # problem applies an owner/neighbor activity mask at each step.
     exterior_above_base.exterior_only = True
+    exterior_above_base.active_domain_exterior = True
+    exterior_above_base.active_domain_top_only = True
+    exterior_above_base.active_domain_build_axis = 2
+    exterior_above_base.active_domain_build_sign = 1.0
     return TransientThermal(
         mesh=Mesh(points, cells, ele_type="HEX8"),
         vec=1,
@@ -89,6 +108,43 @@ def _make_static_exterior_problem():
             0,
             1,
             1.0,
+            1,
+            0.0,
+            1.0,
+            False,
+            "paper_hemispherical",
+        ),
+    )
+
+
+def _make_tet_top_problem(build_sign):
+    points, cells = _single_tet_mesh()
+
+    def top_candidates(point):
+        return jnp.isfinite(point[2])
+
+    top_candidates.exterior_only = True
+    top_candidates.active_domain_exterior = True
+    top_candidates.active_domain_top_only = True
+    top_candidates.active_domain_build_axis = 2
+    top_candidates.active_domain_build_sign = build_sign
+    return TransientThermal(
+        mesh=Mesh(points, cells, ele_type="TET4"),
+        vec=1,
+        dim=3,
+        ele_type="TET4",
+        quadrature_order=2,
+        dirichlet_bc_info=None,
+        location_fns=[top_candidates],
+        additional_info=(
+            2.0,
+            300.0,
+            0.0,
+            5.670374419e-8,
+            2,
+            0,
+            1,
+            build_sign,
             1,
             0.0,
             1.0,
@@ -157,6 +213,20 @@ def _front_area_and_loss(problem, front_z):
     return area, loss
 
 
+def _total_active_surface_area(problem):
+    area = 0.0
+    for nanson, surface_vars in zip(
+        problem.nanson_scale,
+        problem.internal_vars_surfaces,
+    ):
+        if not surface_vars:
+            continue
+        face_active = np.asarray(surface_vars[0])[..., 0]
+        surface_jxw = np.asarray(nanson)[:, 0, :]
+        area += float(np.sum(face_active * surface_jxw))
+    return area
+
+
 def test_future_layer_does_not_hide_current_active_top_surface():
     problem = _make_static_exterior_problem()
 
@@ -183,6 +253,55 @@ def test_active_top_area_and_convection_integral_follow_layer_activation():
     assert losses == pytest.approx([200.0, 200.0], rel=5.0e-3)
 
 
+def test_upward_shared_face_is_exposed_only_until_neighbor_activates():
+    problem = _make_static_exterior_problem()
+
+    areas = []
+    for physical_cells in (
+        [1.0, 0.0],
+        [1.0, 1.0],
+        [0.0, 0.0],
+    ):
+        _set_uniform_surface_state(problem, physical_cells)
+        area, _ = _front_area_and_loss(problem, front_z=1.0)
+        areas.append(area)
+
+    assert areas == pytest.approx([1.0, 0.0, 0.0], rel=5.0e-3)
+
+
+def test_dynamic_candidate_set_contains_only_upward_faces():
+    problem = _make_static_exterior_problem()
+    assert len(problem.boundary_inds_list[0]) == 2
+
+    total_areas = []
+    for physical_cells in (
+        [1.0, 0.0],
+        [0.0, 1.0],
+        [1.0, 1.0],
+        [0.0, 0.0],
+    ):
+        _set_uniform_surface_state(problem, physical_cells)
+        total_areas.append(_total_active_surface_area(problem))
+
+    assert total_areas == pytest.approx(
+        [1.0, 1.0, 1.0, 0.0],
+        rel=5.0e-3,
+    )
+
+
+@pytest.mark.parametrize("build_sign", [1.0, -1.0])
+def test_tet_top_selection_uses_physical_outward_normal(build_sign):
+    problem = _make_tet_top_problem(build_sign)
+    fe = problem.fes[0]
+    expected_local_face = 0 if build_sign > 0.0 else 3
+
+    assert int(np.sum(fe.get_build_direction_face_flags(2, build_sign))) == 1
+    np.testing.assert_array_equal(
+        np.asarray(problem.boundary_inds_list[0]),
+        np.asarray([[0, expected_local_face]], dtype=np.int32),
+    )
+
+
 def test_cooling_ramps_surface_ambient_with_the_frozen_bottom_schedule(
     tmp_path,
     monkeypatch,
@@ -191,11 +310,17 @@ def test_cooling_ramps_surface_ambient_with_the_frozen_bottom_schedule(
     output_dir = tmp_path / "output"
     inp_path.write_text(TWO_STACKED_HEX_INP, encoding="utf-8")
     ambient_trace = []
+    surface_exchange_trace = []
 
     def solver_probe(problem, solver_options=None):
         assert isinstance(problem, TransientThermal)
         ambient_trace.append(float(problem.ambient))
-        return [423.15 * jnp.ones((problem.fes[0].num_total_nodes, 1))]
+        uniform_temperature = 423.15 * jnp.ones(
+            (problem.fes[0].num_total_nodes, 1)
+        )
+        residual = problem.compute_residual([uniform_temperature])[0]
+        surface_exchange_trace.append(float(jnp.sum(residual)))
+        return [uniform_temperature]
 
     monkeypatch.setattr(stepper, "solver", solver_probe)
     monkeypatch.setattr(
@@ -261,3 +386,17 @@ def test_cooling_ramps_surface_ambient_with_the_frozen_bottom_schedule(
     stepper.main()
 
     assert ambient_trace == pytest.approx([423.15, 361.575, 300.0])
+    assert surface_exchange_trace[0] == pytest.approx(0.0, abs=1.0e-10)
+    assert surface_exchange_trace[1] > 0.0
+    assert surface_exchange_trace[2] > surface_exchange_trace[1]
+    with (output_dir / "path_used.csv").open(
+        newline="",
+        encoding="utf-8",
+    ) as stream:
+        path_rows = list(csv.DictReader(stream))
+    assert [
+        float(row["ambient_temperature"]) for row in path_rows
+    ] == pytest.approx([423.15, 361.575, 300.0])
+    assert [
+        float(row["bottom_temperature"]) for row in path_rows
+    ] == pytest.approx([423.15, 361.575, 300.0])

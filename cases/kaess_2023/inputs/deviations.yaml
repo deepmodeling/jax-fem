@@ -33,20 +33,20 @@
     {
       "deviation_id": "P0-SURF",
       "paper_requirement": "Film and radiation act on the current active top element layer.",
-      "implemented_behavior": "Static complete-mesh exterior faces omit active/future internal interfaces; a volumetric front sink is optional.",
+      "implemented_behavior": "The paper path builds a fixed upward-face superset from physical outward normals and applies a per-step owner/neighbor physical-domain mask. The current printed top is exposed exactly once, active-active and void-void internal faces are zero, and future layers do not hide the active top. HEX8 and TET4, including either build direction, are covered.",
       "severity": "P0",
       "affected_qoi_ids": ["peak_temperature", "thermal_energy_closure", "sigma_x_depth_curve"],
-      "resolution": "open",
-      "evidence_paths": ["jax_fem_am/physics/thermal.py", "jax_fem_am/simulation/stepper.py"]
+      "resolution": "fixed",
+      "evidence_paths": ["jax_fem/fe.py", "jax_fem_am/physics/thermal.py", "jax_fem_am/simulation/stepper.py", "tests/integration/test_active_surface_boundary.py", "specs/001-kaess-paper-reproduction/evidence/t010-t017-active-surface.md"]
     },
     {
       "deviation_id": "P0-COOL",
       "paper_requirement": "Cooling boundary conditions ramp from process conditions to room temperature.",
-      "implemented_behavior": "Bottom temperature ramps, while convection/radiation ambient remains fixed at preheat.",
+      "implemented_behavior": "The fixed bottom and convection/radiation ambient follow the same frozen linear k/N ramp from their process values to the final cooldown temperature. Both values are explicit StepState fields, path CSV columns, JAX cell/surface inputs and thermal-ledger inputs.",
       "severity": "P0",
       "affected_qoi_ids": ["thermal_energy_closure", "sigma_x_depth_curve", "front_bending_curve"],
-      "resolution": "open",
-      "evidence_paths": ["jax_fem_am/simulation/stepper.py", "cases/kaess_2023/references/cases/kaess_2023_paper.pdf"]
+      "resolution": "fixed",
+      "evidence_paths": ["jax_fem_am/process/schedule.py", "jax_fem_am/simulation/stepper.py", "jax_fem_am/verification/thermal_ledger.py", "tests/integration/test_active_surface_boundary.py", "specs/001-kaess-paper-reproduction/evidence/t010-t017-active-surface.md"]
     },
     {
       "deviation_id": "P0-MAT",

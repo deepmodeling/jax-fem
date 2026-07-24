@@ -236,10 +236,11 @@ def build_parser(config=None):
                              "paper runs must use this option instead of an unverified geometric box.")
     parser.add_argument("--final-cooldown-temperature", type=float,
                         default=cfg(config, "final_cooldown_temperature", None),
-                        help="Ramp the fixed bottom temperature linearly to this value (K) across the final cooling "
-                             "steps, modeling a build-plate cooldown to room temperature before release "
+                        help="Ramp the fixed bottom temperature and convection/radiation ambient linearly to this "
+                             "value (K) across the final cooling steps, modeling a build-plate and chamber cooldown "
+                             "to room temperature before release "
                              "(Kaess 2023 style). Requires --bottom-thermal-bc fixed; default keeps the bottom "
-                             "temperature constant.")
+                             "and ambient temperatures constant.")
 
     parser.add_argument("--mechanics-every", type=int, default=cfg(config, "mechanics_every", 1))
     parser.add_argument("--mechanics-tol", type=float, default=cfg(config, "mechanics_tol", None),

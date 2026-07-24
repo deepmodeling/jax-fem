@@ -171,12 +171,13 @@ implementation continues through its failing-test gates
     `tests/unit/test_v06_thermal_ledger.py`,
     `specs/001-kaess-paper-reproduction/evidence/t009-t016-active-domain.md`
 
-- [ ] T017 [US2] 实现动态暴露表面和阶段 ambient — 从活动/未激活界面构造真实暴露面；冷却切换环境时间表。
+- [x] T017 [US2] 实现动态暴露表面和阶段 ambient — 从活动/未激活界面构造真实暴露面；冷却切换环境时间表。
   - **Acceptance**: 面积及热流积分误差≤0.5%，未来层不遮挡。
   - **Verify**: `python -m pytest -q tests/integration/test_active_surface_boundary.py tests/unit/test_v06_thermal_balance.py`
   - **Files**: `jax_fem_am/physics/thermal.py`, `jax_fem_am/process/schedule.py`,
     `jax_fem_am/simulation/stepper.py`,
-    `tests/integration/test_active_surface_boundary.py`
+    `tests/integration/test_active_surface_boundary.py`,
+    `specs/001-kaess-paper-reproduction/evidence/t010-t017-active-surface.md`
 
 - [ ] T018 [P] [US2] 对齐粉末、潜热和相态历史 — 冻结 powder `k(T)` 和潜热语义；移除未获批准的二次缩放/重置。
   - **Acceptance**: 潜热积分≤0.5%，循环材料点和自由膨胀测试通过。

@@ -33,7 +33,7 @@
       "source_class": "inferred",
       "source_locator": "repository benchmark metadata; values trace to paper text and Figures 3-9",
       "repository_path": "cases/kaess_2023/references/cases/kaess_2023.json",
-      "sha256": "25d301bdddc98458fedef1f857b6493d3792fce1fd56914cc70a4b7fc3c88063",
+      "sha256": "a96715583e4616a9cd85cd3e3a843cbd439a0267bede8617b419bac44804ee51",
       "impact": "high",
       "status": "verified"
     },
@@ -133,7 +133,7 @@
       "source_class": "inferred",
       "source_locator": "Spec Kit research review and live source inspection",
       "repository_path": "cases/kaess_2023/inputs/deviations.yaml",
-      "sha256": "42a74740adc14c3f314706b67c32ed9c03bbf39b948f31469b743a053c4d6d8c",
+      "sha256": "702f299935af9233c3d345db77fef973d21cf59e4ab655d02f950b26a82c64fc",
       "impact": "critical",
       "status": "verified"
     },

@@ -288,6 +288,91 @@ class FiniteElement:
         self._exterior_face_flags_cache = flags
         return flags
 
+    def get_build_direction_face_flags(
+        self,
+        build_axis,
+        build_sign,
+        relative_tolerance=1.0e-10,
+    ):
+        """Return faces whose physical outward normal points along the build.
+
+        The normal is reconstructed from physical face nodes and oriented away
+        from the owner-cell centroid.  A centroid-height test is insufficient
+        for simplex cells: a vertical TET4 face can have a higher centroid than
+        the cell while its build-normal component is exactly zero.
+        """
+
+        if self.dim != 3:
+            raise ValueError(
+                "build-direction face selection currently requires 3D cells"
+            )
+        build_axis = int(build_axis)
+        build_sign = float(build_sign)
+        if build_axis < 0 or build_axis >= self.dim:
+            raise ValueError("build axis is outside the mesh dimension")
+        if build_sign not in (-1.0, 1.0):
+            raise ValueError("build sign must be -1 or +1")
+
+        cache = getattr(
+            self,
+            '_build_direction_face_flags_cache',
+            None,
+        )
+        if cache is None:
+            cache = {}
+            self._build_direction_face_flags_cache = cache
+        key = (build_axis, build_sign, float(relative_tolerance))
+        if key in cache:
+            return cache[key]
+
+        cells = onp.asarray(self.cells)
+        points = onp.asarray(self.points)
+        face_inds = onp.asarray(self.face_inds)
+        cell_points = points[cells]
+        face_points = cell_points[:, face_inds]
+        if face_points.shape[2] < 3:
+            raise ValueError(
+                "build-direction face selection requires at least "
+                "three nodes per face"
+            )
+
+        origin = face_points[:, :, 0, :]
+        first_edge = face_points[:, :, 1, :] - origin
+        other_edges = face_points[:, :, 2:, :] - origin[:, :, None, :]
+        cross_candidates = onp.cross(
+            first_edge[:, :, None, :],
+            other_edges,
+        )
+        candidate_norms = onp.linalg.norm(cross_candidates, axis=-1)
+        best = onp.argmax(candidate_norms, axis=-1)
+        normals = onp.take_along_axis(
+            cross_candidates,
+            best[:, :, None, None],
+            axis=2,
+        )[:, :, 0, :]
+        normal_norm = onp.linalg.norm(normals, axis=-1)
+        if onp.any(normal_norm <= onp.finfo(onp.float64).tiny):
+            raise ValueError(
+                "build-direction face selection encountered a degenerate face"
+            )
+
+        face_centers = onp.mean(face_points, axis=2)
+        cell_centers = onp.mean(cell_points, axis=1)
+        outward_hint = face_centers - cell_centers[:, None, :]
+        orientation = onp.sum(normals * outward_hint, axis=-1)
+        normals = onp.where(
+            (orientation < 0.0)[:, :, None],
+            -normals,
+            normals,
+        )
+        signed_build_component = build_sign * normals[:, :, build_axis]
+        flags = (
+            signed_build_component
+            > float(relative_tolerance) * normal_norm
+        )
+        cache[key] = flags
+        return flags
+
     def get_boundary_conditions_inds(self, location_fns):
         """Given location functions, compute which faces satisfy the condition.
 
@@ -343,7 +428,43 @@ class FiniteElement:
 
                 vvmap_on_boundary = jax.vmap(jax.vmap(on_boundary))
                 boundary_flags = vvmap_on_boundary(cell_face_points, cell_face_inds)
-                if getattr(location_fns[i], 'exterior_only', False):
+                if getattr(
+                    location_fns[i],
+                    'active_domain_top_only',
+                    False,
+                ):
+                    build_axis = int(
+                        getattr(
+                            location_fns[i],
+                            'active_domain_build_axis',
+                        )
+                    )
+                    build_sign = float(
+                        getattr(
+                            location_fns[i],
+                            'active_domain_build_sign',
+                        )
+                    )
+                    upward_flags = self.get_build_direction_face_flags(
+                        build_axis,
+                        build_sign,
+                    )
+                    boundary_flags = (
+                        np.asarray(boundary_flags)
+                        & np.asarray(upward_flags)
+                    )
+                # ``active_domain_exterior`` selects a fixed directed-face
+                # superset.  Its per-step owner/neighbor mask is applied by
+                # the thermal problem, so full-mesh exterior filtering here
+                # would permanently discard active/future-layer interfaces.
+                if (
+                    getattr(location_fns[i], 'exterior_only', False)
+                    and not getattr(
+                        location_fns[i],
+                        'active_domain_exterior',
+                        False,
+                    )
+                ):
                     boundary_flags = np.asarray(boundary_flags) & np.asarray(self.get_exterior_face_flags())
                 boundary_inds = np.argwhere(boundary_flags)  # (num_selected_faces, 2)
                 boundary_inds_list.append(boundary_inds)

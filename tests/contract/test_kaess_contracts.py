@@ -601,6 +601,29 @@ def _write_paper_bundle(tmp_path: Path) -> tuple[Path, Path]:
     return report_path, manifest_path
 
 
+def _write_paper_report_with_refreshed_semantic(
+    report_path: Path,
+    report: dict,
+) -> None:
+    report["semantic_validation"]["validated_payload_sha256"] = (
+        canonical_json_sha256(
+            {
+                key: value
+                for key, value in report.items()
+                if key != "semantic_validation"
+            }
+        )
+    )
+    semantic_path = Path(report["semantic_validation"]["artifact"]["path"])
+    semantic = json.loads(semantic_path.read_text(encoding="utf-8"))
+    for key in semantic:
+        if key != "schema_version":
+            semantic[key] = report["semantic_validation"][key]
+    _write_json(semantic_path, semantic)
+    report["semantic_validation"]["artifact"] = _real_artifact(semantic_path)
+    _write_json(report_path, report)
+
+
 def _numeric_metric(metric_id: str, evidence: dict | None = None) -> dict:
     return {
         "metric_id": metric_id,
@@ -2434,16 +2457,7 @@ def test_paper_semantics_rejects_unbound_source_hash(tmp_path):
     report_path, manifest_path = _write_paper_bundle(tmp_path)
     report = json.loads(report_path.read_text(encoding="utf-8"))
     report["reference"]["source_sha256"] = H64
-    report["semantic_validation"]["validated_payload_sha256"] = (
-        canonical_json_sha256(
-            {
-                key: value
-                for key, value in report.items()
-                if key != "semantic_validation"
-            }
-        )
-    )
-    _write_json(report_path, report)
+    _write_paper_report_with_refreshed_semantic(report_path, report)
 
     with pytest.raises(ContractValidationError, match="paper_source_identity"):
         validate_paper_comparison_bundle(
@@ -2453,6 +2467,89 @@ def test_paper_semantics_rejects_unbound_source_hash(tmp_path):
             threshold_set_path=THRESHOLD_PATH,
             approval_record_path=APPROVAL_PATH,
             source_manifest_path=SOURCE_MANIFEST_PATH,
+            artifact_root=REPO_ROOT,
+        )
+
+
+def test_paper_semantics_rejects_missing_source_manifest_input(tmp_path):
+    report_path, manifest_path = _write_paper_bundle(tmp_path)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["inputs"] = [
+        item
+        for item in manifest["inputs"]
+        if item["role"] != "source_manifest"
+    ]
+    _write_json(manifest_path, manifest)
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    _refresh_artifact_identity(report, manifest_path)
+    report["semantic_validation"]["run_manifest_sha256"] = hashlib.sha256(
+        manifest_path.read_bytes()
+    ).hexdigest()
+    _write_paper_report_with_refreshed_semantic(report_path, report)
+
+    with pytest.raises(
+        ContractValidationError,
+        match="run_source_manifest_binding",
+    ):
+        validate_paper_comparison_bundle(
+            report_path,
+            run_manifest_path=manifest_path,
+            parity_config_path=PARITY_CONFIG_PATH,
+            threshold_set_path=THRESHOLD_PATH,
+            approval_record_path=APPROVAL_PATH,
+            source_manifest_path=SOURCE_MANIFEST_PATH,
+            artifact_root=REPO_ROOT,
+        )
+
+
+@pytest.mark.parametrize("tamper", ["wrong_pdf_hash", "path_escape"])
+def test_paper_semantics_rehashes_authoritative_source_manifest(
+    tmp_path,
+    tamper,
+):
+    report_path, manifest_path = _write_paper_bundle(tmp_path)
+    source_manifest = json.loads(
+        SOURCE_MANIFEST_PATH.read_text(encoding="utf-8")
+    )
+    paper_entry = next(
+        item
+        for item in source_manifest["evidence"]
+        if item["evidence_id"] == "paper-pdf"
+    )
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    if tamper == "wrong_pdf_hash":
+        paper_entry["sha256"] = H64
+        report["reference"]["source_sha256"] = H64
+    else:
+        paper_entry["repository_path"] = "../outside-paper.pdf"
+    tampered_source_path = tmp_path / f"source-manifest-{tamper}.json"
+    _write_json(tampered_source_path, source_manifest)
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    source_record = next(
+        item
+        for item in manifest["inputs"]
+        if item["role"] == "source_manifest"
+    )
+    source_record.update(
+        _real_run_artifact("source_manifest", tampered_source_path)
+    )
+    _write_json(manifest_path, manifest)
+    _refresh_artifact_identity(report, manifest_path)
+    report["semantic_validation"]["run_manifest_sha256"] = hashlib.sha256(
+        manifest_path.read_bytes()
+    ).hexdigest()
+    _write_paper_report_with_refreshed_semantic(report_path, report)
+
+    with pytest.raises(ContractValidationError, match="paper_source_identity"):
+        validate_paper_comparison_bundle(
+            report_path,
+            run_manifest_path=manifest_path,
+            parity_config_path=PARITY_CONFIG_PATH,
+            threshold_set_path=THRESHOLD_PATH,
+            approval_record_path=APPROVAL_PATH,
+            source_manifest_path=tampered_source_path,
             artifact_root=REPO_ROOT,
         )
 

@@ -6,8 +6,8 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
 
 **Input**: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`
 
-**Status**: G0 approved and T005 complete on 2026-07-24 — P0 implementation
-may proceed through its failing-test gates
+**Status**: G0 approved; T005, T009 and T016 complete on 2026-07-24 — P0
+implementation continues through its failing-test gates
 
 **Organization**: 任务按 user story 和科学 gate 组织。`[P]` 表示不同文件、
 无前置依赖时可并行；测试任务必须先失败，再实现对应能力。
@@ -106,7 +106,7 @@ may proceed through its failing-test gates
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_hemispherical_source.py`
   - **Files**: `tests/unit/test_kaess_hemispherical_source.py`
 
-- [ ] T009 [P] [US2] 编写活动域删除等价失败测试 — 对比 masked 活动域和物理删除未激活单元的小网格。
+- [x] T009 [P] [US2] 编写活动域删除等价失败测试 — 对比 masked 活动域和物理删除未激活单元的小网格。
   - **Acceptance**: 当前 `inactive_mass_factor=1.0` 因热质量差异而失败。
   - **Verify**: `python -m pytest -q tests/integration/test_active_domain_equivalence.py`
   - **Files**: `tests/integration/test_active_domain_equivalence.py`
@@ -160,12 +160,16 @@ may proceed through its failing-test gates
     `jax_fem_am/verification/thermal_ledger.py`, `jax_fem_am/io/vtu.py`,
     `tests/unit/test_kaess_hemispherical_source.py`
 
-- [ ] T016 [US2] 实现未激活单元零贡献活动域 — 热容、导热、刚度、残差和求解 DOF 均遵循冻结活动域语义。
+- [x] T016 [US2] 实现未激活单元零贡献活动域 — 热容、导热、刚度、残差和求解 DOF 均遵循冻结活动域语义。
   - **Acceptance**: 小网格删除参考相对差≤`1e-8`，占位因子不影响 QoI。
   - **Verify**: `python -m pytest -q tests/integration/test_active_domain_equivalence.py tests/unit/test_v06_lifecycle.py`
   - **Files**: `jax_fem_am/process/activation.py`, `jax_fem_am/materials/phases.py`,
-    `jax_fem_am/simulation/stepper.py`,
-    `tests/integration/test_active_domain_equivalence.py`
+    `jax_fem_am/simulation/stepper.py`, `jax_fem_am/simulation/acceleration.py`,
+    `jax_fem_am/verification/thermal_ledger.py`, `jax_fem/fe.py`,
+    `jax_fem/solver.py`, `tests/integration/test_active_domain_equivalence.py`,
+    `tests/contract/test_jax_solver_preconditioner.py`,
+    `tests/unit/test_v06_thermal_ledger.py`,
+    `specs/001-kaess-paper-reproduction/evidence/t009-t016-active-domain.md`
 
 - [ ] T017 [US2] 实现动态暴露表面和阶段 ambient — 从活动/未激活界面构造真实暴露面；冷却切换环境时间表。
   - **Acceptance**: 面积及热流积分误差≤0.5%，未来层不遮挡。

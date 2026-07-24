@@ -24,11 +24,11 @@
     {
       "deviation_id": "P0-ACT",
       "paper_requirement": "Abaqus MODEL CHANGE removes inactive elements from the physical equations.",
-      "implemented_behavior": "Future elements retain thermal mass, weak conductivity/stiffness, and global DOFs.",
+      "implemented_behavior": "For the frozen paper workflow (layer_on_scan with future_layer_mode=void), future cells have exactly zero thermal storage, conductivity, stiffness and residual contribution. Nodes owned only by noncontributing cells are removed from the unknown set by deterministic Dirichlet identity rows until activation; shared interface nodes remain free. The static mesh shape is retained for JAX compilation, while legacy activation modes retain their historical ersatz behavior.",
       "severity": "P0",
       "affected_qoi_ids": ["peak_temperature", "thermal_energy_closure", "sigma_x_depth_curve", "front_bending_curve"],
-      "resolution": "open",
-      "evidence_paths": ["jax_fem_am/materials/phases.py", "jax_fem_am/simulation/stepper.py"]
+      "resolution": "fixed",
+      "evidence_paths": ["jax_fem_am/materials/phases.py", "jax_fem_am/process/activation.py", "jax_fem_am/simulation/stepper.py", "tests/integration/test_active_domain_equivalence.py", "specs/001-kaess-paper-reproduction/evidence/t009-t016-active-domain.md"]
     },
     {
       "deviation_id": "P0-SURF",

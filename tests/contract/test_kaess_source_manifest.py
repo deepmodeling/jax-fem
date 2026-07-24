@@ -50,6 +50,12 @@ def _validate_manifest(manifest: dict) -> None:
             path = REPO_ROOT / repository_path
             assert path.is_file(), repository_path
             assert hashlib.sha256(path.read_bytes()).hexdigest() == record["sha256"]
+        external_path = record.get("external_path")
+        if external_path is not None and Path(external_path).is_file():
+            assert (
+                hashlib.sha256(Path(external_path).read_bytes()).hexdigest()
+                == record["sha256"]
+            )
 
     required_ids = {
         "paper-pdf",

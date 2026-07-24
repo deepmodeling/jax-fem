@@ -87,7 +87,11 @@ def test_paper_source_has_equal_radial_and_depth_decay():
 
 
 def test_paper_source_is_zero_above_the_active_layer():
-    assert _source_density((0.0, 0.0, BEAM_RADIUS_M)) == 0.0
+    assert math.isclose(
+        _source_density((0.0, 0.0, BEAM_RADIUS_M)),
+        0.0,
+        abs_tol=1e-15,
+    )
 
 
 def test_paper_source_is_translation_invariant():

@@ -133,7 +133,7 @@
       "source_class": "assumption",
       "source_locator": "Spec Kit T006 candidate; human approval remains required",
       "repository_path": "cases/kaess_2023/inputs/paper-parity-config.yaml",
-      "sha256": "dc53dae262f848748d0985bdcd17aca6e7d53a43bac08b2c02d33107eea5c139",
+      "sha256": "295b404547fb7d25883f084f410d2643525342269ce77cb770ee0119f5995af8",
       "impact": "critical",
       "status": "assumed"
     }

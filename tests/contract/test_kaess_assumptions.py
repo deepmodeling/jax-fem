@@ -1,5 +1,6 @@
 import copy
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -52,9 +53,15 @@ def _validate_assumptions(document: dict, request_text: str) -> None:
         if record["impact"] == "critical" and record["decision"] == "open":
             has_author_request = bool(record.get("author_request_id"))
             has_sensitivity = bool(record.get("sensitivity_required"))
-            assert has_author_request or has_sensitivity
+            assert has_author_request or has_sensitivity, (
+                "critical open assumption must have author_request_id "
+                "or sensitivity_required"
+            )
             if has_author_request:
-                assert record["author_request_id"] in request_text
+                assert re.search(
+                    rf"\b{re.escape(record['author_request_id'])}\b",
+                    request_text,
+                ), f"author_request_id {record['author_request_id']} not found"
 
 
 def _validate_deviations(document: dict) -> None:
@@ -99,8 +106,11 @@ def test_assumptions_register_rejects_unmapped_critical_unknown():
     record["sensitivity_required"] = False
     record.pop("author_request_id", None)
 
-    with pytest.raises(AssertionError):
-        _validate_assumptions(document, AUTHOR_REQUESTS_PATH.read_text("utf-8"))
+    with pytest.raises(AssertionError, match="critical open assumption"):
+        _validate_assumptions(
+            document,
+            AUTHOR_REQUESTS_PATH.read_text(encoding="utf-8"),
+        )
 
 
 def test_deviations_register_covers_every_p0_physics_gap():

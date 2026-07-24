@@ -35,6 +35,15 @@ def _validate_config(config: dict) -> None:
     assert config["claim_level"] == "public_code_to_code"
     assert config["status"] in {"review_required", "approved"}
 
+    material_freeze = config["material_freeze"]
+    if material_freeze["mode"] == "external_sha256":
+        assert material_freeze["path"] is None
+        assert material_freeze["environment_variable"] == "KAESS_MATERIAL_CONFIG"
+        assert (
+            material_freeze["source_manifest_evidence_id"]
+            == "formal-material-config"
+        )
+
     approval = config["approval"]
     if config["status"] == "approved":
         assert approval["approved_by"]

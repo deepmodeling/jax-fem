@@ -13,7 +13,9 @@
   },
   "material_freeze": {
     "mode": "external_sha256",
-    "path": "/home/user/work/159/materials/316L/ss316l_material_config_kaess.json",
+    "path": null,
+    "environment_variable": "KAESS_MATERIAL_CONFIG",
+    "source_manifest_evidence_id": "formal-material-config",
     "sha256": "d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f",
     "status": "review_required"
   },

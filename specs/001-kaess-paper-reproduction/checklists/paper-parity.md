@@ -8,12 +8,12 @@
 
 ## G0 — Sources and Claim
 
-- [ ] PAR001 论文 PDF、全文和引用信息具有 SHA-256。
-- [ ] PAR002 来源矩阵覆盖所有 critical/high-impact 输入。
+- [x] PAR001 论文 PDF、全文和引用信息具有 SHA-256。
+- [x] PAR002 来源矩阵覆盖所有 critical/high-impact 输入。
 - [ ] PAR003 Figure 8/9 数字化 CSV 记录坐标、单位和读图误差。
-- [ ] PAR004 `kaess_2023.json` 的数字化状态字段无自相矛盾。
-- [ ] PAR005 作者输入请求和响应形成审计记录。
-- [ ] PAR006 所有未公开输入进入 assumptions register。
+- [x] PAR004 `kaess_2023.json` 的数字化状态字段无自相矛盾。
+- [x] PAR005 作者输入请求和响应形成审计记录。
+- [x] PAR006 所有未公开输入进入 assumptions register。
 - [ ] PAR007 QoI、路径、插值、阈值和不确定度组合方法已批准。
 - [ ] PAR008 标定工况和 held-out 工况已冻结。
 - [ ] PAR009 正式 claim 固定为 code-to-code，除非作者资产审批升级。

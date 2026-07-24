@@ -6,7 +6,8 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
 
 **Input**: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`
 
-**Status**: Draft — implementation blocked until Review Gate approval
+**Status**: G0 in progress — source/protocol artifacts are being implemented;
+solver changes remain blocked until Review Gate approval
 
 **Organization**: 任务按 user story 和科学 gate 组织。`[P]` 表示不同文件、
 无前置依赖时可并行；测试任务必须先失败，再实现对应能力。
@@ -22,21 +23,23 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
 
 ## Phase 1 — Source Freeze and Shared Contracts
 
-- [ ] T001 [P] [US1] 建立论文来源清单 — 在 `cases/kaess_2023/inputs/source-manifest.yaml` 记录论文、全文、图件、材料、网格和路径的来源类别及 SHA-256。
+- [x] T001 [P] [US1] 建立论文来源清单 — 在 `cases/kaess_2023/inputs/source-manifest.yaml` 记录论文、全文、图件、材料、网格和路径的来源类别及 SHA-256。
   - **Acceptance**: 每个 critical/high-impact 输入有 evidence id 和 locator。
   - **Verify**: 新增 contract test 能拒绝缺哈希或未知来源类别。
   - **Files**: `cases/kaess_2023/inputs/source-manifest.yaml`,
     `tests/contract/test_kaess_source_manifest.py`
 
 - [ ] T002 [P] [US1] 冻结 Figure 8/9 数字化数据 — 将现有 JSON 数值导出为带单位和读图误差的 CSV。
+  - **Progress**: Figure 8b 的四个锚点和 Figure 9a/9b 的现有数值已冻结；
+    完整 Figure 8 曲线的像素级数字化仍未完成。
   - **Acceptance**: Figure 8 曲线、Figure 9a/9b 标量和不确定度可独立读取。
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_reference_data.py`
   - **Files**: `cases/kaess_2023/references/digitized/fig8_sigma_x.csv`,
     `cases/kaess_2023/references/digitized/fig9_bending.csv`,
     `tests/unit/test_kaess_reference_data.py`
 
-- [ ] T003 [P] [US1] 建立 assumptions 和 deviations register — 登记锚点、时间表、路径次序、材料历史和 release cell set 未知项。
-  - [ ] 建立作者输入请求/响应日志，记录请求日期、资产、状态和取得文件哈希。
+- [x] T003 [P] [US1] 建立 assumptions 和 deviations register — 登记锚点、时间表、路径次序、材料历史和 release cell set 未知项。
+  - [x] 建立作者输入请求/响应日志，记录请求日期、资产、状态和取得文件哈希。
   - **Acceptance**: 每个假设有影响级别、范围、affected QoI 和处理状态；
     每个 critical 未知项都映射到作者请求或敏感性任务。
   - **Verify**: schema/contract test 拒绝未分类的 critical 假设。
@@ -45,7 +48,7 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
     `cases/kaess_2023/inputs/author-input-requests.md`,
     `tests/contract/test_kaess_assumptions.py`
 
-- [ ] T004 [US1] 清理 benchmark metadata — 修正 `verification_status` 与已存在数字化数据的矛盾，保留历史说明。
+- [x] T004 [US1] 清理 benchmark metadata — 修正 `verification_status` 与已存在数字化数据的矛盾，保留历史说明。
   - **Acceptance**: metadata、CSV 和 claim boundary 一致。
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_reference_data.py`
   - **Files**: `cases/kaess_2023/references/cases/kaess_2023.json`
@@ -64,7 +67,7 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
     `specs/001-kaess-paper-reproduction/contracts/backend-qualification.schema.json`,
     `specs/001-kaess-paper-reproduction/contracts/backend-qualification-validation.schema.json`
 
-- [ ] T006 [US1] 冻结 paper-parity protocol — 创建标准工况、QoI、阈值、标定/留出和 stop rules 的机器可读配置。
+- [x] T006 [US1] 冻结 paper-parity protocol — 创建标准工况、QoI、阈值、标定/留出和 stop rules 的机器可读配置。
   - **Acceptance**: Review Gate 的人工决定全部可表示并有批准字段。
   - **Verify**: contract test 和人工 diff review。
   - **Files**: `cases/kaess_2023/inputs/paper-parity-config.yaml`,
@@ -84,7 +87,7 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_paper_bottom_bc.py`
   - **Files**: `tests/unit/test_kaess_paper_bottom_bc.py`
 
-- [ ] T008 [P] [US2] 编写半球三维高斯热源失败测试 — 测试中心值、径向/深度衰减、平移不变性和吸收功率积分。
+- [x] T008 [P] [US2] 编写半球三维高斯热源失败测试 — 测试中心值、径向/深度衰减、平移不变性和吸收功率积分。
   - **Acceptance**: 当前 plane×depth source 因公式/归一化不符而失败。
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_hemispherical_source.py`
   - **Files**: `tests/unit/test_kaess_hemispherical_source.py`

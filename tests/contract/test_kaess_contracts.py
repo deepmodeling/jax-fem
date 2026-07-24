@@ -12,6 +12,7 @@ from jax_fem_am.verification.backend_qualification import (
     ContractValidationError,
     _checkpoint_metric_truth,
     _load_g0_performance_protocol,
+    _relative_l2,
     _reject_untyped_stage_promotion,
     _validate_energy_run_truth,
     canonical_json_sha256,
@@ -3703,6 +3704,18 @@ def test_backend_g0_protocol_rejects_config_metric_drift(tmp_path):
             THRESHOLD_PATH,
             APPROVAL_PATH,
         )
+
+
+def test_relative_l2_is_stable_for_extreme_finite_values():
+    cpu = np.array([1.0e308], dtype=np.float64)
+    candidate = np.array([-1.0e308], dtype=np.float64)
+
+    cpu_norm, candidate_norm, error = _relative_l2(cpu, candidate)
+
+    assert cpu_norm == pytest.approx(1.0e308)
+    assert candidate_norm == pytest.approx(1.0e308)
+    assert error == pytest.approx(2.0)
+    assert np.all(np.isfinite([cpu_norm, candidate_norm, error]))
 
 
 def test_checkpoint_metric_truth_uses_active_domain_mask():

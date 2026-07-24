@@ -1327,11 +1327,48 @@ def ndarray_sha256(array: np.ndarray) -> str:
     return hashlib.sha256(header + b"\0" + array.tobytes()).hexdigest()
 
 
-def _relative_l2(cpu: np.ndarray, candidate: np.ndarray) -> tuple[float, float, float]:
-    cpu_norm = float(np.linalg.norm(cpu))
-    candidate_norm = float(np.linalg.norm(candidate))
-    denominator = max(cpu_norm, np.finfo(np.float64).tiny)
-    error = float(np.linalg.norm(candidate - cpu) / denominator)
+def _scaled_l2_norm(values: np.ndarray) -> float:
+    """Return an L2 norm without overflowing intermediate squares."""
+    values = np.asarray(values, dtype=np.float64)
+    if values.size == 0:
+        return 0.0
+    scale = float(np.max(np.abs(values)))
+    if scale == 0.0:
+        return 0.0
+    scaled_norm = float(
+        np.sqrt(np.sum(np.square(values / scale), dtype=np.float64))
+    )
+    if (
+        scale > 1.0
+        and scaled_norm > np.finfo(np.float64).max / scale
+    ):
+        return float("inf")
+    return scale * scaled_norm
+
+
+def _relative_l2(
+    cpu: np.ndarray, candidate: np.ndarray
+) -> tuple[float, float, float]:
+    cpu = np.asarray(cpu, dtype=np.float64)
+    candidate = np.asarray(candidate, dtype=np.float64)
+    cpu_norm = _scaled_l2_norm(cpu)
+    candidate_norm = _scaled_l2_norm(candidate)
+    joint_scale = max(
+        float(np.max(np.abs(cpu))),
+        float(np.max(np.abs(candidate))),
+    )
+    if joint_scale == 0.0:
+        error = 0.0
+    else:
+        cpu_scaled_norm = _scaled_l2_norm(cpu / joint_scale)
+        difference_scaled_norm = _scaled_l2_norm(
+            candidate / joint_scale - cpu / joint_scale
+        )
+        if cpu_norm >= np.finfo(np.float64).tiny:
+            error = difference_scaled_norm / cpu_scaled_norm
+        else:
+            difference_norm = joint_scale * difference_scaled_norm
+            error = difference_norm / np.finfo(np.float64).tiny
     return cpu_norm, candidate_norm, error
 
 
@@ -1562,19 +1599,23 @@ def _checkpoint_pair_parity_passes(
             continue
         metric_truth = truth[metric_id]
         threshold = frozen_thresholds[threshold_metric_id].get("value")
-        if not isinstance(threshold, (int, float)) or isinstance(
-            threshold, bool
+        if (
+            not isinstance(threshold, (int, float))
+            or isinstance(threshold, bool)
+            or not np.isfinite(threshold)
         ):
             raise _error(
                 "metric_recalculation",
-                f"{threshold_metric_id}: frozen threshold is not numeric",
+                f"{threshold_metric_id}: frozen threshold is not finite numeric",
             )
         if metric_id == "max_front_bending_error":
             relative_threshold = frozen_thresholds.get(
                 "hybrid_release_displacement_relative", {}
             ).get("value")
-            if not isinstance(relative_threshold, (int, float)) or isinstance(
-                relative_threshold, bool
+            if (
+                not isinstance(relative_threshold, (int, float))
+                or isinstance(relative_threshold, bool)
+                or not np.isfinite(relative_threshold)
             ):
                 raise _error(
                     "metric_recalculation",
@@ -1585,7 +1626,8 @@ def _checkpoint_pair_parity_passes(
                 float(relative_threshold)
                 * abs(float(metric_truth["cpu_value"])),
             )
-        if float(metric_truth["error"]) > float(threshold):
+        metric_error = float(metric_truth["error"])
+        if not np.isfinite(metric_error) or metric_error > float(threshold):
             passed = False
     for metric_id in (
         "activation_event_digest_match",

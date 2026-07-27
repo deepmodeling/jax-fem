@@ -6,9 +6,13 @@
   "source": {
     "paper_doi": "10.3390/ma16062321",
     "paper_locator": "page 6, Figure 4(b), and Section 2.5",
+    "pdf_path": "cases/kaess_2023/references/cases/kaess_2023_paper.pdf",
+    "pdf_sha256": "8bf5e7c2f744a55b9c4e40bbe5f17a5cb6e1649d668132edc961ecb5c3d5e941",
     "image_path": "cases/kaess_2023/references/cases/kaess_2023_figures/page_06.png",
     "image_sha256": "50cec7676dd5d1286b8711a68feac5c516f2dcadb4139f0c3371cbedc5c5a79e",
-    "image_size_pixels": [1241, 1754]
+    "image_size_pixels": [1241, 1754],
+    "vector_calibration_extractor": "PyMuPDF 1.28.0",
+    "vector_calibration_spec": "cases/kaess_2023/references/figure4-vector-spec.json"
   },
   "axis_calibration": {
     "equivalent_plastic_strain": [
@@ -71,20 +75,24 @@
       "source_origin": "paper_author_assumption",
       "points": [
         {"equivalent_plastic_strain": 0.0, "flow_stress_MPa": 20.0, "pixel_estimate": [835, 591]},
-        {"equivalent_plastic_strain": 0.4, "flow_stress_MPa": 20.0, "pixel_estimate": [987, 591]}
+        {"equivalent_plastic_strain": 0.4, "flow_stress_MPa": 30.0, "pixel_estimate": [987, 588]}
       ],
-      "reading_note": "The plotted curve is near-horizontal and its endpoint increment is below reliable page-image resolution."
+      "reading_note": "The original PDF vector line maps to 19.514 MPa and 29.695 MPa; the frozen endpoints are 20 MPa and 30 MPa."
     }
   ],
   "solver_realization_nodes": [
     {
       "temperature_K": 1673.15,
+      "equivalent_plastic_strain": [0.0, 0.4],
       "flow_stress_MPa": [1.0, 1.0],
+      "source_origin": "solver_realization_melting_minimum_not_figure_node",
       "basis": "Section 2.5 says yield strength reaches a numerically realizable minimum at melting; the exact value is not published."
     },
     {
       "temperature_K": 1873.15,
+      "equivalent_plastic_strain": [0.0, 0.4],
       "flow_stress_MPa": [1.0, 1.0],
+      "source_origin": "solver_realization_high_temperature_extension",
       "basis": "High-temperature extension of the same unverified numerical floor."
     }
   ],
@@ -94,8 +102,12 @@
     "maximum_digitized_equivalent_plastic_strain": 0.4
   },
   "reading_error": {
-    "status": "unquantified_pending_independent_pixel_calibration",
-    "formal_promotion_allowed": false
+    "status": "quantified_from_pdf_vector",
+    "formal_promotion_allowed": false,
+    "equivalent_plastic_strain_absolute": 0.0032,
+    "flow_stress_absolute_MPa": 1.0,
+    "calibration_path": "flow_curve_table.pending.vector-calibration.json",
+    "calibration_sha256": "224ee3351e9b33a5125b9f579791639d954e75748ce714dbaaeab84448ec6aaf"
   },
-  "claim_boundary": "This is a Figure 4(b) digitization candidate, not the authors' original Abaqus plastic table. It cannot close A-MATERIAL-CURVES, P0-J2, PAR021, or PAR022 without review, frozen reading error, and G0 reapproval."
+  "claim_boundary": "This is a vector-calibrated Figure 4(b) candidate, not the authors' original Abaqus plastic table. The reading error is frozen, but A-MATERIAL-CURVES, P0-J2, PAR021, and PAR022 still require review, solver-realization sensitivity, and G0 reapproval."
 }

@@ -124,25 +124,51 @@ cases/kaess_2023/candidates/g0-v2-t018/
 ```
 
 It contains a bundle-local material JSON, all referenced CSV files, the exact
-powder-conductivity table, the pending Figure 4(b) flow-curve digitization and
-metadata, a per-file SHA-256 manifest, and a reapproval request. After adding
-the explicit paper-history selector, the T019 flow-curve candidate, and
-rebuilding the content-addressed chain:
+powder-conductivity table, the pending Figure 4(b) flow-curve digitization,
+independent PDF-vector calibrations for Figure 4(a--e), a reproducible PyMuPDF
+extractor/spec pair, a per-file SHA-256 manifest, and a reapproval request.
+After rebuilding the content-addressed chain:
 
 ```text
 candidate material config
-  023253394aef32e0245943c73bb2bddbaca4b31410ac2502fa986818525891fb
+  899a912609db10490872bfe8d1a738a40b5c68e03b37dafac8d4c659b8bca178
 material bundle manifest
-  fa401cee52ee2c82be833d64848ea43de805ee8cf14c7ed7304d0719cc0889b4
+  c7cc552afca8c3ebad26160e41c6aa701fc099f3b8abfd6182a6360e7258b061
 reapproval request
-  5bcd2dd3fba950fe8c9fa0a9314560d1526e1d76cccfd16fafab8eda967ef6e3
+  b94be55ed173186bea9dcacfd5fbd4044afef3187dc72fd1aa72e00ba1a211c2
 powder conductivity table
   a4e762578fd7a7dd585a315157e0423b150c4f15e235076925f1b50315a89eab
 pending flow-curve table
-  ae9b0fe8c8e30e715618ff0b6c2dcc82d1565545742b63c0578c63a8e91f8c3d
+  e97a5f79fbeaf98621ac502038a8ba615ac278df5629bc04167f04b069bb68f6
 flow-curve digitization metadata
-  0c7c8637cbdd97f0eb51dbfca6b123cb17b1dfe351e0d6b018af6882165dee0c
+  8444d400235d43143624b9da634ff7fb07fb7055e125a81b37f3d2fd1596b1b6
+independent PDF vector calibration
+  224ee3351e9b33a5125b9f579791639d954e75748ce714dbaaeab84448ec6aaf
+Figure 4(a/c/d/e) vector calibration
+  42a10c4ad615de23e7b4e7835994db64cc476d94c4dd98d25a52f8eef5822f47
+reproducible PyMuPDF extractor
+  a187f278e4760207a8daa2f3c4dd55bdaee408db138185265c0d72d2e9e669d1
+frozen vector-extraction spec
+  200ef6c1b3d7d0f9142ec4402f391ceb0796bb6ef2298967597b2485c95b08ac
 ```
+
+The vector calibration fits the original PDF axes with a maximum
+`0.513 MPa` stress residual and the curve endpoints with a maximum
+`0.486 MPa` rounding residual. It freezes conservative digitization errors of
+`±1 MPa` and `±0.0032` equivalent plastic strain. It also corrects the 1370 °C
+curve from the preliminary `20 → 20 MPa` raster reading to the vector-supported
+`20 → 30 MPa`. The unpublished original input table and the 1673.15/1873.15 K
+solver-realization nodes remain separate model-input uncertainties.
+
+The independently rerunnable Figure 4(a/c/d/e) calibration freezes reading
+limits of `±2 K`, `±0.5 GPa`, `±0.1 W/(m K)`, `±2 J/(kg K)`, and
+`±0.1e-6 /K`. It corrects the solid specific heat at the `1370 °C`
+solidus from the previous interpolated value of about `730 J/(kg K)` to the
+vector-supported `670 J/(kg K)`. The `20 °C` thermal-expansion value is
+explicitly labelled as a linear extrapolation, not a plotted author node.
+Thermal-expansion nodes above `500 °C` and the high-temperature Figure 4(b)
+curves are separately labelled as paper-author assumptions rather than
+experimental source data.
 
 Every approval field remains absent and both `status` and `decision` remain
 `pending_review`. No canonical G0 record, paper-parity config, source manifest,

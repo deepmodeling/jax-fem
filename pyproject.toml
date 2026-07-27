@@ -27,6 +27,7 @@ classifiers = [
 [project.optional-dependencies]
 verification = [
   "jsonschema[format-nongpl]>=4.26,<5",
+  "PyMuPDF==1.28.0",
 ]
 
 [tool.setuptools]

@@ -24,7 +24,7 @@ two-endpoint approximations:
 | 400 degC | 400 MPa | 500 MPa |
 | 800 degC | 300 MPa | 400 MPa |
 | 1000 degC | 150 MPa | 200 MPa |
-| 1370 degC | approximately 20 MPa | approximately 20 MPa |
+| 1370 degC | approximately 20 MPa | approximately 30 MPa |
 
 The room-temperature curve is rounded from reference 33; the higher
 temperature curves are identified by the paper itself as assumptions. The
@@ -33,8 +33,8 @@ The `1 MPa` molten minimum at 1400 degC and its higher-temperature extension
 are solver realizations, not Figure 4(b) nodes.
 
 The pending digitization records the page-image SHA-256, pixel-axis
-calibration, per-curve source origin, unquantified reading-error status, and
-solver-realization nodes in:
+calibration, per-curve source origin, independently quantified PDF-vector
+reading-error bounds, and solver-realization nodes in:
 
 ```text
 cases/kaess_2023/candidates/g0-v2-t018/
@@ -42,9 +42,10 @@ cases/kaess_2023/candidates/g0-v2-t018/
   flow_curve_table.pending.metadata.json
 ```
 
-`A-MATERIAL-CURVES` and `KAESS-AUTH-004` remain open. The candidate is not
-promotion-eligible until its reading error is independently frozen and the
-material bundle is explicitly reapproved.
+`A-MATERIAL-CURVES` and `KAESS-AUTH-004` remain open. The reading error is now
+independently frozen, but the candidate is not promotion-eligible until the
+unpublished-table uncertainty and solver-realization sensitivity are reviewed
+and the material bundle is explicitly reapproved.
 
 ## RED evidence
 
@@ -152,16 +153,28 @@ as superseded, unloaded references.
 
 ```text
 candidate material config
-  023253394aef32e0245943c73bb2bddbaca4b31410ac2502fa986818525891fb
+  899a912609db10490872bfe8d1a738a40b5c68e03b37dafac8d4c659b8bca178
 material bundle manifest
-  fa401cee52ee2c82be833d64848ea43de805ee8cf14c7ed7304d0719cc0889b4
+  c7cc552afca8c3ebad26160e41c6aa701fc099f3b8abfd6182a6360e7258b061
 reapproval request
-  5bcd2dd3fba950fe8c9fa0a9314560d1526e1d76cccfd16fafab8eda967ef6e3
+  b94be55ed173186bea9dcacfd5fbd4044afef3187dc72fd1aa72e00ba1a211c2
 pending flow-curve table
-  ae9b0fe8c8e30e715618ff0b6c2dcc82d1565545742b63c0578c63a8e91f8c3d
+  e97a5f79fbeaf98621ac502038a8ba615ac278df5629bc04167f04b069bb68f6
 digitization metadata
-  0c7c8637cbdd97f0eb51dbfca6b123cb17b1dfe351e0d6b018af6882165dee0c
+  8444d400235d43143624b9da634ff7fb07fb7055e125a81b37f3d2fd1596b1b6
+independent PDF vector calibration
+  224ee3351e9b33a5125b9f579791639d954e75748ce714dbaaeab84448ec6aaf
 ```
+
+The original PDF vector objects independently calibrate the Figure 4(b)
+axes and five line segments. The stress-axis fit residual is `0.513 MPa`;
+the largest endpoint rounding residual is `0.486 MPa`, and the largest
+line-to-declared-strain offset is `0.00290`. The candidate therefore freezes
+conservative reading errors of `±1 MPa` and `±0.0032` equivalent plastic
+strain. This also corrects the 1370 °C endpoint from the pre-calibration
+`20 → 20 MPa` approximation to the vector-supported `20 → 30 MPa`.
+These bounds quantify graph extraction only; they do not remove the
+unpublished-table or high-temperature solver-realization uncertainty.
 
 An executable contract test recomputes the complete config-to-manifest and
 manifest-to-request chain, verifies the canonical G0 reference is unchanged,

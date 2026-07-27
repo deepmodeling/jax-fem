@@ -1,6 +1,10 @@
 T,value,source
-293,15.0,digitized Kaess Fig4c 2026-07-16 (their averaged curve): 15 W/mK at 20 C (matches ref36)
-773,21.0,digitized Kaess Fig4c: ~21 W/mK at 500 C
-1273,26.5,digitized Kaess Fig4c: ~26.5 W/mK at 1000 C
-1473,29.0,digitized Kaess Fig4c: ~29 W/mK at 1200 C
-1673,31.0,digitized Kaess Fig4c: ~31 W/mK at 1400 C
+293.15,15.0,figure_node
+373.15,16.0,figure_node
+473.15,17.2,figure_node
+673.15,19.5,figure_node
+873.15,22.0,figure_node
+1073.15,24.5,figure_node
+1273.15,26.8,figure_node
+1473.15,29.0,figure_node
+1673.15,31.0,figure_node

@@ -17,7 +17,7 @@
 
   "conductivity_powder": 0.15,
   "conductivity_liquid": 31.0,
-  "cp_liquid": 755.0,
+  "cp_liquid": 750.0,
 
   "solidus_temperature": 1643.15,
   "liquidus_temperature": 1673.15,

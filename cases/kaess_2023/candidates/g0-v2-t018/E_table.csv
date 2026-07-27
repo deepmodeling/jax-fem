@@ -1,6 +1,10 @@
 T,value,source
-293,190e9,digitized Kaess Fig4a 2026-07-16: RT value ~190 GPa (Renishaw ref33 as-built, lower than wrought 200); reading error ~±3 GPa
-773,155e9,digitized Kaess Fig4a: 155 GPa at 500 C (end of ref36/37 slope segment)
-1643,90e9,digitized Kaess Fig4a: ~90 GPa at 1370 C (paper assumption segment, linear 500->1370)
-1673,10e9,digitized Kaess Fig4a: sharp drop to ~10 GPa at 1400 C (melting; numerically realizable minimum)
-1873,10e9,liquid floor to keep E>0 (Abaqus keeps properties constant beyond table range - same convention)
+293.15,190000000000.0,figure_node
+373.15,184000000000.0,figure_node
+473.15,176000000000.0,figure_node
+573.15,169000000000.0,figure_node
+673.15,162000000000.0,figure_node
+773.15,155000000000.0,figure_node
+1643.15,90000000000.0,figure_node_author_assumption
+1673.15,10000000000.0,figure_node_author_assumption
+1873.15,10000000000.0,solver_extension

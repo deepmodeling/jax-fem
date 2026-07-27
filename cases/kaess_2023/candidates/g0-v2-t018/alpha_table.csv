@@ -1,6 +1,15 @@
 T,value,source
-293,15.7e-6,extrapolation of Kaess Fig4e trend to RT; NOTE Fig4e values are mean/secant CTE while solver applies alpha(T)*dT incrementally - documented model difference (v06 science gap)
-373,16.0e-6,digitized Kaess Fig4e 2026-07-16: 16.0e-6 at 100 C (= ref36 mean CTE 20-100C)
-773,18.0e-6,digitized Kaess Fig4e: 18.0e-6 at 500 C (= ref36)
-1273,20.5e-6,digitized Kaess Fig4e: ~20.5e-6 at 1000 C (slope per ref39)
-1573,22.0e-6,digitized Kaess Fig4e: ~22.0e-6 at 1300 C (last plotted point)
+293.15,0.0000156,linear_extrapolation
+373.15,0.0000160,figure_node
+473.15,0.0000165,figure_node
+573.15,0.0000170,figure_node
+673.15,0.0000175,figure_node
+773.15,0.0000180,figure_node
+873.15,0.0000185,figure_node_author_assumption
+973.15,0.0000190,figure_node_author_assumption
+1073.15,0.0000195,figure_node_author_assumption
+1173.15,0.0000200,figure_node_author_assumption
+1273.15,0.0000205,figure_node_author_assumption
+1373.15,0.0000210,figure_node_author_assumption
+1473.15,0.0000215,figure_node_author_assumption
+1573.15,0.0000220,figure_node_author_assumption

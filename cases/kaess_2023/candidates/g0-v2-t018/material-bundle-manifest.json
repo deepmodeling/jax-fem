@@ -5,35 +5,42 @@
   "status": "pending_review",
   "promotion_eligible": false,
   "hash_algorithm": "sha256",
-  "path_base": "manifest_directory",
+  "path_bases": {
+    "material_config": "manifest_directory",
+    "files": "manifest_directory",
+    "source_evidence": {
+      "repository_paths": "repository_root",
+      "superseded_external_config_path": "absolute_path"
+    }
+  },
   "material_config": {
     "path": "ss316l_material_config_kaess.g0-v2-candidate.json",
-    "sha256": "023253394aef32e0245943c73bb2bddbaca4b31410ac2502fa986818525891fb"
+    "sha256": "899a912609db10490872bfe8d1a738a40b5c68e03b37dafac8d4c659b8bca178"
   },
   "files": [
     {
       "path": "ss316l_material_config_kaess.g0-v2-candidate.json",
       "role": "material_config",
-      "sha256": "023253394aef32e0245943c73bb2bddbaca4b31410ac2502fa986818525891fb",
+      "sha256": "899a912609db10490872bfe8d1a738a40b5c68e03b37dafac8d4c659b8bca178",
       "provenance": "derived_candidate_from_external_material_config_d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f"
     },
     {
       "path": "E_table.csv",
       "role": "youngs_modulus_table",
-      "sha256": "52fb353dfc58943065f856e148b648d548a4b03eedd7db9def541f53a6e2ca93",
-      "provenance": "byte_identical_copy_of_external_approved_input_dependency"
+      "sha256": "0aa64610e37b6ca787752a027050dfb43dc9bc2f98e7310d6a12381bc0a3741f",
+      "provenance": "original_PDF_Figure_4a_vector_calibration_plus_explicit_solver_extension"
     },
     {
       "path": "alpha_table.csv",
       "role": "thermal_expansion_table",
-      "sha256": "a19492a220da9c8fdd2e8a34afbbf401d65ebbcb6e11c28ed6dac8443fb808b3",
-      "provenance": "byte_identical_copy_of_external_approved_input_dependency"
+      "sha256": "0406f5d7a63fef5a0e4b0ed58dccbf0dc5cfe4961a5028f78ae41f8fdb5ead72",
+      "provenance": "original_PDF_Figure_4e_vector_calibration_including_paper_author_assumption_above_500C_plus_explicit_room_temperature_extrapolation"
     },
     {
       "path": "cp_solid_table.csv",
       "role": "solid_powder_and_liquid_specific_heat_table",
-      "sha256": "52e74a7e1c0f41a75902a61ac47bc7c75cf1ef2211190df358955d1280ff526c",
-      "provenance": "byte_identical_copy_of_external_approved_input_dependency"
+      "sha256": "426c191e839bde10b60aba02b7d2d58ea175ee121b7a2a2267cd818764be5c41",
+      "provenance": "original_PDF_Figure_4d_vector_calibration"
     },
     {
       "path": "hardening_table.csv",
@@ -44,8 +51,8 @@
     {
       "path": "k_solid_table.csv",
       "role": "solid_and_liquid_conductivity_table",
-      "sha256": "0ddde1b05465a280b4d4c9b7bc1ac7b3f5dc2319f9d851b3db463ed5b54d7676",
-      "provenance": "byte_identical_copy_of_external_approved_input_dependency"
+      "sha256": "e0254459f48b1071021ce94e621fe5c3581b2a4eff79bc1555d64c07cee5f4eb",
+      "provenance": "original_PDF_Figure_4c_vector_calibration"
     },
     {
       "path": "yield_table.csv",
@@ -62,23 +69,41 @@
     {
       "path": "flow_curve_table.pending.csv",
       "role": "pending_solid_flow_curve_grid",
-      "sha256": "ae9b0fe8c8e30e715618ff0b6c2dcc82d1565545742b63c0578c63a8e91f8c3d",
-      "provenance": "Figure_4b_digitization_plus_explicit_solver_realization_nodes"
+      "sha256": "e97a5f79fbeaf98621ac502038a8ba615ac278df5629bc04167f04b069bb68f6",
+      "provenance": "PDF_vector_calibrated_Figure_4b_plus_explicit_solver_realization_nodes"
     },
     {
       "path": "flow_curve_table.pending.metadata.json",
       "role": "flow_curve_digitization_metadata",
-      "sha256": "0c7c8637cbdd97f0eb51dbfca6b123cb17b1dfe351e0d6b018af6882165dee0c",
-      "provenance": "page_06_pixel_axis_calibration_and_claim_boundary"
+      "sha256": "8444d400235d43143624b9da634ff7fb07fb7055e125a81b37f3d2fd1596b1b6",
+      "provenance": "page_06_raster_metadata_bound_to_independent_PDF_vector_calibration"
+    },
+    {
+      "path": "flow_curve_table.pending.vector-calibration.json",
+      "role": "independent_flow_curve_vector_calibration",
+      "sha256": "224ee3351e9b33a5125b9f579791639d954e75748ce714dbaaeab84448ec6aaf",
+      "provenance": "original_PDF_page_6_vector_grid_and_curve_objects"
+    },
+    {
+      "path": "figure4_material_properties.vector-calibration.json",
+      "role": "independent_material_property_vector_calibration",
+      "sha256": "42a10c4ad615de23e7b4e7835994db64cc476d94c4dd98d25a52f8eef5822f47",
+      "provenance": "recomputed_original_PDF_Figure_4a_4c_4d_4e_vector_geometry"
     }
   ],
   "source_evidence": {
     "paper_doi": "10.3390/ma16062321",
-    "paper_locator": "Section 2.5, Table 2, and Figure 4(b)",
+    "paper_locator": "Section 2.5, Table 2, and Figure 4(a-e)",
     "repository_fulltext": "cases/kaess_2023/references/cases/kaess_2023_fulltext.txt",
     "repository_fulltext_sha256": "afeba3510f9ae7793184dc7a9e704504a089d1510d6df9df403cf137fccb7ade",
+    "repository_paper_pdf": "cases/kaess_2023/references/cases/kaess_2023_paper.pdf",
+    "repository_paper_pdf_sha256": "8bf5e7c2f744a55b9c4e40bbe5f17a5cb6e1649d668132edc961ecb5c3d5e941",
     "repository_figure_4_page_image": "cases/kaess_2023/references/cases/kaess_2023_figures/page_06.png",
     "repository_figure_4_page_image_sha256": "50cec7676dd5d1286b8711a68feac5c516f2dcadb4139f0c3371cbedc5c5a79e",
+    "figure_4_vector_calibration_script": "cases/kaess_2023/calibrate_figure4.py",
+    "figure_4_vector_calibration_script_sha256": "a187f278e4760207a8daa2f3c4dd55bdaee408db138185265c0d72d2e9e669d1",
+    "figure_4_vector_spec": "cases/kaess_2023/references/figure4-vector-spec.json",
+    "figure_4_vector_spec_sha256": "200ef6c1b3d7d0f9142ec4402f391ceb0796bb6ef2298967597b2485c95b08ac",
     "superseded_external_config_path": "/home/user/work/159/materials/316L/ss316l_material_config_kaess.json",
     "superseded_external_config_sha256": "d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f"
   },
@@ -107,10 +132,21 @@
       "emissivity": 0.4,
       "convection_W_per_m2K": 20.0
     },
+    "figure_4_property_reading_error": {
+      "temperature_absolute_K": 2.0,
+      "youngs_modulus_absolute_GPa": 0.5,
+      "conductivity_absolute_W_per_mK": 0.1,
+      "specific_heat_absolute_J_per_kgK": 2.0,
+      "thermal_expansion_absolute_per_K": 1e-7
+    },
     "mechanics": {
       "model": "j2_plastic",
       "plasticity_input": "temperature_by_equivalent_plastic_strain_flow_curve_grid",
-      "flow_curve_status": "pending_figure_digitization_and_solver_realization",
+      "flow_curve_status": "vector_calibrated_pending_solver_realization_review",
+      "flow_curve_reading_error": {
+        "equivalent_plastic_strain_absolute": 0.0032,
+        "flow_stress_absolute_MPa": 1.0
+      },
       "flow_curve_temperature_nodes_K": [
         293.15,
         673.15,
@@ -137,6 +173,7 @@
     "flow_curve_residual_and_tangent": "single_exact_piecewise_linear_return_map",
     "powder_specific_heat": "same_temperature_dependent_table_as_solid",
     "powder_thermal_expansion": "same_temperature_dependent_table_as_solid",
+    "thermal_expansion_table_form": "Abaqus_total_mean_coefficient",
     "liquid_specific_heat": "same_temperature_dependent_table_as_solid",
     "liquid_conductivity": "same_temperature_dependent_table_as_solid",
     "phase_change_energy": "enthalpy_difference_across_each_increment",
@@ -145,12 +182,14 @@
     "remelt_rewrites_reference_temperature": false,
     "remelt_erases_equivalent_plastic_strain": false,
     "duplicate_mushy_or_liquid_mechanics_scaling": false,
-    "validation_status": "code_verified_pending_approval"
+    "validation_status": "vector_calibrated_pending_thermal_expansion_implementation_and_approval"
   },
   "known_registered_assumptions": [
     "poisson_ratio_0_3_not_reported_by_paper",
     "Figure_4_property_curves_are_digitized_or_extrapolated",
-    "Figure_4b_reading_error_is_unquantified_pending_independent_calibration",
+    "Figure_4a_1600C_modulus_is_a_solver_extension",
+    "Figure_4e_20C_thermal_expansion_is_a_linear_extrapolation",
+    "Figure_4b_vector_reading_error_is_quantified_but_author_input_uncertainty_remains",
     "flow_curve_1673_15K_and_1873_15K_nodes_are_solver_realizations_not_figure_nodes",
     "equivalent_plastic_strain_above_0_4_uses_constant_endpoint_clamping",
     "first_solidification_reference_temperature_is_a_solver_realization_not_a_reported_paper_field"

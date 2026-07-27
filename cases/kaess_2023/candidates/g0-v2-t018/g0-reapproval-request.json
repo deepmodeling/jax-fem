@@ -11,7 +11,7 @@
   },
   "candidate_bundle_reference": {
     "path": "cases/kaess_2023/candidates/g0-v2-t018/material-bundle-manifest.json",
-    "sha256": "fa401cee52ee2c82be833d64848ea43de805ee8cf14c7ed7304d0719cc0889b4"
+    "sha256": "c7cc552afca8c3ebad26160e41c6aa701fc099f3b8abfd6182a6360e7258b061"
   },
   "differences": [
     {
@@ -28,8 +28,8 @@
       },
       "new": {
         "path": "cases/kaess_2023/candidates/g0-v2-t018/material-bundle-manifest.json",
-        "sha256": "fa401cee52ee2c82be833d64848ea43de805ee8cf14c7ed7304d0719cc0889b4",
-        "material_config_sha256": "023253394aef32e0245943c73bb2bddbaca4b31410ac2502fa986818525891fb",
+        "sha256": "c7cc552afca8c3ebad26160e41c6aa701fc099f3b8abfd6182a6360e7258b061",
+        "material_config_sha256": "899a912609db10490872bfe8d1a738a40b5c68e03b37dafac8d4c659b8bca178",
         "dependency_csv_hashes_bound": true
       }
     },
@@ -49,11 +49,53 @@
         "model": "temperature_by_equivalent_plastic_strain_flow_curve_grid",
         "flow_curve_table": "flow_curve_table.pending.csv",
         "digitization_metadata": "flow_curve_table.pending.metadata.json",
-        "source_class": "Figure_4b_digitization_plus_explicit_solver_realization_nodes",
+        "vector_calibration": "flow_curve_table.pending.vector-calibration.json",
+        "source_class": "PDF_vector_calibrated_Figure_4b_plus_explicit_solver_realization_nodes",
         "temperature_interpolation": "piecewise_linear",
         "equivalent_plastic_strain_interpolation": "piecewise_linear",
         "endpoint_behavior": "clamp",
-        "reading_error_status": "unquantified_pending_independent_pixel_calibration"
+        "reading_error": {
+          "status": "quantified_from_pdf_vector",
+          "equivalent_plastic_strain_absolute": 0.0032,
+          "flow_stress_absolute_MPa": 1.0
+        }
+      }
+    },
+    {
+      "field": "material_config.flow_curve_1370C",
+      "old": {
+        "equivalent_plastic_strain": [0.0, 0.4],
+        "flow_stress_MPa": [20.0, 20.0],
+        "status": "pre_calibration_candidate"
+      },
+      "new": {
+        "equivalent_plastic_strain": [0.0, 0.4],
+        "flow_stress_MPa": [20.0, 30.0],
+        "status": "paper_author_assumption_PDF_vector_calibrated"
+      }
+    },
+    {
+      "field": "material_config.figure4_property_tables",
+      "old": {
+        "status": "pre_vector_calibration",
+        "specific_heat_at_solidus_J_per_kgK": 729.95,
+        "thermal_expansion_at_20C_per_K": 1.57e-5
+      },
+      "new": {
+        "status": "independently_PDF_vector_calibrated",
+        "calibration": "figure4_material_properties.vector-calibration.json",
+        "extractor": "PyMuPDF 1.28.0",
+        "specific_heat_at_solidus_J_per_kgK": 670.0,
+        "thermal_expansion_at_20C_per_K": 1.56e-5,
+        "thermal_expansion_above_500C_source": "paper_author_assumption",
+        "reading_error": {
+          "temperature_absolute_K": 2.0,
+          "youngs_modulus_absolute_GPa": 0.5,
+          "conductivity_absolute_W_per_mK": 0.1,
+          "specific_heat_absolute_J_per_kgK": 2.0,
+          "thermal_expansion_absolute_per_K": 1e-7
+        },
+        "claim_boundary": "vector_geometry_and_rounding_only"
       }
     },
     {

@@ -1,0 +1,850 @@
+{
+  "claim_boundary": "The calibration reproduces and rounds the plotted Kaess Figure 4 vector geometry. It does not recover the authors' unpublished Abaqus input deck, and explicitly labelled extrapolation or solver extension nodes remain model realizations.",
+  "frozen_reading_error": {
+    "conductivity_absolute_W_per_mK": 0.1,
+    "specific_heat_absolute_J_per_kgK": 2.0,
+    "temperature_absolute_K": 2.0,
+    "thermal_expansion_absolute_per_K": 1e-07,
+    "youngs_modulus_absolute_GPa": 0.5
+  },
+  "frozen_tables": {
+    "E_table.csv": {
+      "derivation": {
+        "additional_nodes": [
+          {
+            "from_temperature_C": 1400.0,
+            "from_vector_index": -1,
+            "rule": "endpoint_extension",
+            "source_class": "solver_extension",
+            "temperature_C": 1600.0,
+            "value_SI": 10000000000.0
+          }
+        ],
+        "plot_unit": "GPa",
+        "plot_value_to_SI_scale": 1000000000.0,
+        "vector_node_count": 8
+      },
+      "source_class": [
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node_author_assumption",
+        "figure_node_author_assumption",
+        "solver_extension"
+      ],
+      "temperature_K": [
+        293.15,
+        373.15,
+        473.15,
+        573.15,
+        673.15,
+        773.15,
+        1643.15,
+        1673.15,
+        1873.15
+      ],
+      "value": [
+        190000000000.0,
+        184000000000.0,
+        176000000000.0,
+        169000000000.0,
+        162000000000.0,
+        155000000000.0,
+        90000000000.0,
+        10000000000.0,
+        10000000000.0
+      ]
+    },
+    "alpha_table.csv": {
+      "derivation": {
+        "additional_nodes": [
+          {
+            "from_temperature_C": [
+              100.0,
+              200.0
+            ],
+            "from_vector_indices": [
+              0,
+              1
+            ],
+            "rule": "linear_extrapolation",
+            "source_class": "linear_extrapolation",
+            "temperature_C": 20.0,
+            "value_SI": 1.56e-05
+          }
+        ],
+        "plot_unit": "microstrain_per_K",
+        "plot_value_to_SI_scale": 1e-06,
+        "vector_node_count": 13
+      },
+      "source_class": [
+        "linear_extrapolation",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node_author_assumption",
+        "figure_node_author_assumption",
+        "figure_node_author_assumption",
+        "figure_node_author_assumption",
+        "figure_node_author_assumption",
+        "figure_node_author_assumption",
+        "figure_node_author_assumption",
+        "figure_node_author_assumption"
+      ],
+      "temperature_K": [
+        293.15,
+        373.15,
+        473.15,
+        573.15,
+        673.15,
+        773.15,
+        873.15,
+        973.15,
+        1073.15,
+        1173.15,
+        1273.15,
+        1373.15,
+        1473.15,
+        1573.15
+      ],
+      "value": [
+        1.56e-05,
+        1.6e-05,
+        1.65e-05,
+        1.7e-05,
+        1.75e-05,
+        1.8e-05,
+        1.85e-05,
+        1.9e-05,
+        1.95e-05,
+        2e-05,
+        2.05e-05,
+        2.1e-05,
+        2.15e-05,
+        2.2e-05
+      ]
+    },
+    "cp_solid_table.csv": {
+      "derivation": {
+        "additional_nodes": [],
+        "plot_unit": "J_per_kgK",
+        "plot_value_to_SI_scale": 1.0,
+        "vector_node_count": 9
+      },
+      "source_class": [
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node"
+      ],
+      "temperature_K": [
+        293.15,
+        473.15,
+        673.15,
+        873.15,
+        1073.15,
+        1273.15,
+        1473.15,
+        1643.15,
+        1723.15
+      ],
+      "value": [
+        500.0,
+        525.0,
+        550.0,
+        580.0,
+        605.0,
+        630.0,
+        650.0,
+        670.0,
+        750.0
+      ]
+    },
+    "k_solid_table.csv": {
+      "derivation": {
+        "additional_nodes": [],
+        "plot_unit": "W_per_mK",
+        "plot_value_to_SI_scale": 1.0,
+        "vector_node_count": 9
+      },
+      "source_class": [
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node",
+        "figure_node"
+      ],
+      "temperature_K": [
+        293.15,
+        373.15,
+        473.15,
+        673.15,
+        873.15,
+        1073.15,
+        1273.15,
+        1473.15,
+        1673.15
+      ],
+      "value": [
+        15.0,
+        16.0,
+        17.2,
+        19.5,
+        22.0,
+        24.5,
+        26.8,
+        29.0,
+        31.0
+      ]
+    }
+  },
+  "measured_conservative_error": {
+    "conductivity_absolute_W_per_mK": 0.031073831059,
+    "specific_heat_absolute_J_per_kgK": 1.157347529067,
+    "temperature_absolute_K": 1.65781125,
+    "thermal_expansion_absolute_per_K": 1.7417e-08,
+    "youngs_modulus_absolute_GPa": 0.23779267276
+  },
+  "method": {
+    "axis_fit": "ordinary_least_squares_on_frozen_grid_lines",
+    "curve_mapping": "connected_line_vertices_through_fitted_axes",
+    "error_combination": "axis_fit_max_plus_rounding_max",
+    "extractor": "PyMuPDF",
+    "extractor_version": "1.28.0",
+    "script_path": "cases/kaess_2023/calibrate_figure4.py",
+    "script_sha256": "a187f278e4760207a8daa2f3c4dd55bdaee408db138185265c0d72d2e9e669d1",
+    "source_geometry": "PDF_vector_objects",
+    "spec_path": "cases/kaess_2023/references/figure4-vector-spec.json",
+    "spec_sha256": "200ef6c1b3d7d0f9142ec4402f391ceb0796bb6ef2298967597b2485c95b08ac"
+  },
+  "panels": {
+    "figure_4a": {
+      "axis_fit": {
+        "GPa": {
+          "coordinates": [
+            173.785507,
+            201.6315,
+            229.414505,
+            257.386505,
+            285.232483
+          ],
+          "drawing_indices": [
+            15,
+            14,
+            13,
+            12,
+            21
+          ],
+          "intercept": 511.790304679917,
+          "max_residual": 0.135645617272,
+          "slope": -1.794370670041,
+          "values": [
+            200.0,
+            150.0,
+            100.0,
+            50.0,
+            0.0
+          ]
+        },
+        "temperature_C": {
+          "coordinates": [
+            210.575897,
+            247.493896,
+            284.348877,
+            321.266876
+          ],
+          "drawing_indices": [
+            16,
+            17,
+            18,
+            19
+          ],
+          "intercept": -2853.974422679663,
+          "max_residual": 0.256253179414,
+          "slope": 13.552781395847,
+          "values": [
+            0.0,
+            500.0,
+            1000.0,
+            1500.0
+          ]
+        }
+      },
+      "conservative_temperature_reading_error_C": 1.366172765,
+      "conservative_value_reading_error": 0.237792673,
+      "curve_drawing_index": 22,
+      "curve_drawing_rect": [
+        212.024887,
+        179.329498,
+        313.895874,
+        279.688507
+      ],
+      "frozen_vector_nodes": {
+        "temperature_C": [
+          20.0,
+          100.0,
+          200.0,
+          300.0,
+          400.0,
+          500.0,
+          1370.0,
+          1400.0
+        ],
+        "value": [
+          190.0,
+          184.0,
+          176.0,
+          169.0,
+          162.0,
+          155.0,
+          90.0,
+          10.0
+        ]
+      },
+      "mapped_vector_nodes": [
+        {
+          "pdf_x": 212.024887,
+          "pdf_y": 179.329498,
+          "temperature_C": 19.552522,
+          "value": 190.006712673
+        },
+        {
+          "pdf_x": 217.946884,
+          "pdf_y": 182.668503,
+          "temperature_C": 99.812054,
+          "value": 184.015300902
+        },
+        {
+          "pdf_x": 225.317886,
+          "pdf_y": 187.078491,
+          "temperature_C": 199.709636,
+          "value": 176.102147055
+        },
+        {
+          "pdf_x": 232.751892,
+          "pdf_y": 190.984497,
+          "temperature_C": 300.46109,
+          "value": 169.093324704
+        },
+        {
+          "pdf_x": 240.122894,
+          "pdf_y": 194.953491,
+          "temperature_C": 400.358672,
+          "value": 161.971478029
+        },
+        {
+          "pdf_x": 247.556885,
+          "pdf_y": 198.859497,
+          "temperature_C": 501.10992,
+          "value": 154.962655678
+        },
+        {
+          "pdf_x": 311.690887,
+          "pdf_y": 235.0215,
+          "temperature_C": 1370.304038,
+          "value": 90.074618908
+        },
+        {
+          "pdf_x": 313.895874,
+          "pdf_y": 279.688507,
+          "temperature_C": 1400.187739,
+          "value": 9.925450828
+        }
+      ],
+      "max_temperature_rounding_residual_C": 1.109919586,
+      "max_value_rounding_residual": 0.102147055,
+      "table": "E_table.csv"
+    },
+    "figure_4c": {
+      "axis_fit": {
+        "W_per_mK": {
+          "coordinates": [
+            346.72049,
+            374.566498,
+            402.475494,
+            430.321503,
+            458.230469
+          ],
+          "drawing_indices": [
+            75,
+            74,
+            73,
+            72,
+            81
+          ],
+          "intercept": 164.368355087287,
+          "max_residual": 0.006776869204,
+          "slope": -0.358712215338,
+          "values": [
+            40.0,
+            30.0,
+            20.0,
+            10.0,
+            0.0
+          ]
+        },
+        "temperature_C": {
+          "coordinates": [
+            209.567886,
+            246.485886,
+            283.466888,
+            320.384888
+          ],
+          "drawing_indices": [
+            76,
+            77,
+            78,
+            79
+          ],
+          "intercept": -2836.266908308693,
+          "max_residual": 0.255783344674,
+          "slope": 13.534288653369,
+          "values": [
+            0.0,
+            500.0,
+            1000.0,
+            1500.0
+          ]
+        }
+      },
+      "conservative_temperature_reading_error_C": 1.65781125,
+      "conservative_value_reading_error": 0.031073831,
+      "curve_drawing_index": 177,
+      "curve_drawing_rect": [
+        211.142899,
+        371.857513,
+        313.013885,
+        416.398499
+      ],
+      "frozen_vector_nodes": {
+        "temperature_C": [
+          20.0,
+          100.0,
+          200.0,
+          400.0,
+          600.0,
+          800.0,
+          1000.0,
+          1200.0,
+          1400.0
+        ],
+        "value": [
+          15.0,
+          16.0,
+          17.2,
+          19.5,
+          22.0,
+          24.5,
+          26.8,
+          29.0,
+          31.0
+        ]
+      },
+      "mapped_vector_nodes": [
+        {
+          "pdf_x": 211.142899,
+          "pdf_y": 416.398499,
+          "temperature_C": 21.402028,
+          "value": 15.001127214
+        },
+        {
+          "pdf_x": 217.001892,
+          "pdf_y": 413.626495,
+          "temperature_C": 100.699338,
+          "value": 15.995478614
+        },
+        {
+          "pdf_x": 224.435898,
+          "pdf_y": 410.287506,
+          "temperature_C": 201.313317,
+          "value": 17.193214847
+        },
+        {
+          "pdf_x": 239.177902,
+          "pdf_y": 403.9245,
+          "temperature_C": 400.83586,
+          "value": 19.475703038
+        },
+        {
+          "pdf_x": 253.856903,
+          "pdf_y": 396.8685,
+          "temperature_C": 599.505695,
+          "value": 22.006776342
+        },
+        {
+          "pdf_x": 268.661896,
+          "pdf_y": 389.875488,
+          "temperature_C": 799.880739,
+          "value": 24.51525498
+        },
+        {
+          "pdf_x": 283.466888,
+          "pdf_y": 383.512512,
+          "temperature_C": 1000.255783,
+          "value": 26.797732224
+        },
+        {
+          "pdf_x": 298.208893,
+          "pdf_y": 377.338501,
+          "temperature_C": 1199.778326,
+          "value": 29.01242547
+        },
+        {
+          "pdf_x": 313.013885,
+          "pdf_y": 371.857513,
+          "temperature_C": 1400.153371,
+          "value": 30.978522656
+        }
+      ],
+      "max_temperature_rounding_residual_C": 1.402027906,
+      "max_value_rounding_residual": 0.024296962,
+      "table": "k_solid_table.csv"
+    },
+    "figure_4d": {
+      "axis_fit": {
+        "J_per_kgK": {
+          "coordinates": [
+            346.27951,
+            374.0625,
+            401.908508,
+            429.880493,
+            457.726501
+          ],
+          "drawing_indices": [
+            205,
+            204,
+            203,
+            202,
+            211
+          ],
+          "intercept": 4105.613013664017,
+          "max_residual": 0.565048447418,
+          "slope": -8.969822461481,
+          "values": [
+            1000.0,
+            750.0,
+            500.0,
+            250.0,
+            0.0
+          ]
+        },
+        "temperature_C": {
+          "coordinates": [
+            399.44989,
+            436.430878,
+            473.348877,
+            510.266876
+          ],
+          "drawing_indices": [
+            206,
+            207,
+            208,
+            209
+          ],
+          "intercept": -5407.448286077964,
+          "max_residual": 0.341102439677,
+          "slope": 13.536598097384,
+          "values": [
+            0.0,
+            500.0,
+            1000.0,
+            1500.0
+          ]
+        }
+      },
+      "conservative_temperature_reading_error_C": 1.040590158,
+      "conservative_value_reading_error": 1.157347529,
+      "curve_drawing_index": 351,
+      "curve_drawing_rect": [
+        400.961853,
+        374.125488,
+        506.549835,
+        401.971497
+      ],
+      "frozen_vector_nodes": {
+        "temperature_C": [
+          20.0,
+          200.0,
+          400.0,
+          600.0,
+          800.0,
+          1000.0,
+          1200.0,
+          1370.0,
+          1450.0
+        ],
+        "value": [
+          500.0,
+          525.0,
+          550.0,
+          580.0,
+          605.0,
+          630.0,
+          650.0,
+          670.0,
+          750.0
+        ]
+      },
+      "mapped_vector_nodes": [
+        {
+          "pdf_x": 400.961853,
+          "pdf_y": 401.971497,
+          "temperature_C": 20.211171,
+          "value": 500.000054747
+        },
+        {
+          "pdf_x": 414.191864,
+          "pdf_y": 399.199493,
+          "temperature_C": 199.300512,
+          "value": 524.864431079
+        },
+        {
+          "pdf_x": 428.996857,
+          "pdf_y": 396.364502,
+          "temperature_C": 399.709748,
+          "value": 550.293801111
+        },
+        {
+          "pdf_x": 443.801849,
+          "pdf_y": 393.025482,
+          "temperature_C": 600.118984,
+          "value": 580.244215692
+        },
+        {
+          "pdf_x": 458.606842,
+          "pdf_y": 390.25351,
+          "temperature_C": 800.528219,
+          "value": 605.108318286
+        },
+        {
+          "pdf_x": 473.348846,
+          "pdf_y": 387.544495,
+          "temperature_C": 1000.084808,
+          "value": 629.407700918
+        },
+        {
+          "pdf_x": 488.090851,
+          "pdf_y": 385.276489,
+          "temperature_C": 1199.641397,
+          "value": 649.751306439
+        },
+        {
+          "pdf_x": 500.690857,
+          "pdf_y": 383.008484,
+          "temperature_C": 1370.202615,
+          "value": 670.094911959
+        },
+        {
+          "pdf_x": 506.549835,
+          "pdf_y": 374.125488,
+          "temperature_C": 1449.513249,
+          "value": 749.773805466
+        }
+      ],
+      "max_temperature_rounding_residual_C": 0.699487719,
+      "max_value_rounding_residual": 0.592299082,
+      "table": "cp_solid_table.csv"
+    },
+    "figure_4e": {
+      "axis_fit": {
+        "microstrain_per_K": {
+          "coordinates": [
+            524.250916,
+            552.096924,
+            579.942932,
+            607.851929,
+            635.697876
+          ],
+          "drawing_indices": [
+            391,
+            390,
+            389,
+            388,
+            397
+          ],
+          "intercept": 124.067874064543,
+          "max_residual": 0.004518786774,
+          "slope": -0.179437233412,
+          "values": [
+            30.0,
+            25.0,
+            20.0,
+            15.0,
+            10.0
+          ]
+        },
+        "temperature_C": {
+          "coordinates": [
+            214.899796,
+            251.817795,
+            288.672791,
+            325.59079
+          ],
+          "drawing_indices": [
+            392,
+            393,
+            394,
+            395
+          ],
+          "intercept": -2912.574768999585,
+          "max_residual": 0.256191083201,
+          "slope": 13.552779154452,
+          "values": [
+            0.0,
+            500.0,
+            1000.0,
+            1500.0
+          ]
+        }
+      },
+      "conservative_temperature_reading_error_C": 1.502462383,
+      "conservative_value_reading_error": 0.017416999,
+      "curve_drawing_index": 398,
+      "curve_drawing_rect": [
+        222.270782,
+        568.85498,
+        310.848785,
+        602.307983
+      ],
+      "frozen_vector_nodes": {
+        "temperature_C": [
+          100.0,
+          200.0,
+          300.0,
+          400.0,
+          500.0,
+          600.0,
+          700.0,
+          800.0,
+          900.0,
+          1000.0,
+          1100.0,
+          1200.0,
+          1300.0
+        ],
+        "value": [
+          16.0,
+          16.5,
+          17.0,
+          17.5,
+          18.0,
+          18.5,
+          19.0,
+          19.5,
+          20.0,
+          20.5,
+          21.0,
+          21.5,
+          22.0
+        ]
+      },
+      "mapped_vector_nodes": [
+        {
+          "pdf_x": 222.270782,
+          "pdf_y": 602.307983,
+          "temperature_C": 99.812058,
+          "value": 15.991395862
+        },
+        {
+          "pdf_x": 229.641785,
+          "pdf_y": 599.536011,
+          "temperature_C": 199.709623,
+          "value": 16.488790966
+        },
+        {
+          "pdf_x": 237.075775,
+          "pdf_y": 596.700989,
+          "temperature_C": 300.460854,
+          "value": 16.997499466
+        },
+        {
+          "pdf_x": 244.383789,
+          "pdf_y": 593.928955,
+          "temperature_C": 399.504753,
+          "value": 17.494905522
+        },
+        {
+          "pdf_x": 251.81778,
+          "pdf_y": 591.093994,
+          "temperature_C": 500.255984,
+          "value": 18.00360307
+        },
+        {
+          "pdf_x": 259.188782,
+          "pdf_y": 588.32196,
+          "temperature_C": 600.153549,
+          "value": 18.501009126
+        },
+        {
+          "pdf_x": 266.622772,
+          "pdf_y": 585.612976,
+          "temperature_C": 700.90478,
+          "value": 18.987101788
+        },
+        {
+          "pdf_x": 273.930786,
+          "pdf_y": 582.777954,
+          "temperature_C": 799.948679,
+          "value": 19.495810287
+        },
+        {
+          "pdf_x": 281.301788,
+          "pdf_y": 580.005981,
+          "temperature_C": 899.846244,
+          "value": 19.993205392
+        },
+        {
+          "pdf_x": 288.735779,
+          "pdf_y": 577.170959,
+          "temperature_C": 1000.597475,
+          "value": 20.501913891
+        },
+        {
+          "pdf_x": 296.043793,
+          "pdf_y": 574.398987,
+          "temperature_C": 1099.641374,
+          "value": 20.999308996
+        },
+        {
+          "pdf_x": 303.540771,
+          "pdf_y": 571.563965,
+          "temperature_C": 1201.246271,
+          "value": 21.508017495
+        },
+        {
+          "pdf_x": 310.848785,
+          "pdf_y": 568.85498,
+          "temperature_C": 1300.29017,
+          "value": 21.994110157
+        }
+      ],
+      "max_temperature_rounding_residual_C": 1.2462713,
+      "max_value_rounding_residual": 0.012898212,
+      "table": "alpha_table.csv"
+    }
+  },
+  "promotion_eligible": false,
+  "schema_version": "kaess.figure4-material-vector-calibration/1",
+  "source": {
+    "page_index": 5,
+    "paper_doi": "10.3390/ma16062321",
+    "pdf_path": "cases/kaess_2023/references/cases/kaess_2023_paper.pdf",
+    "pdf_sha256": "8bf5e7c2f744a55b9c4e40bbe5f17a5cb6e1649d668132edc961ecb5c3d5e941",
+    "printed_page": 6
+  },
+  "status": "independently_calibrated"
+}

@@ -1,7 +1,7 @@
 {
   "_comment": "REVIEW REQUEST ONLY. This file does not approve, supersede, or modify the canonical G0 record.",
   "schema_version": "kaess.g0-reapproval-request/1",
-  "request_id": "kaess-g0-v2-t018-material-bundle",
+  "request_id": "kaess-g0-v2-t018-t019-material-bundle",
   "gate_id": "G0",
   "status": "pending_review",
   "decision": "pending_review",
@@ -11,7 +11,7 @@
   },
   "candidate_bundle_reference": {
     "path": "cases/kaess_2023/candidates/g0-v2-t018/material-bundle-manifest.json",
-    "sha256": "fbbdbdff12033398fba6a24caaa8119e7e095b7792d3f85c3a57f2f11d1cfa70"
+    "sha256": "fa401cee52ee2c82be833d64848ea43de805ee8cf14c7ed7304d0719cc0889b4"
   },
   "differences": [
     {
@@ -28,8 +28,8 @@
       },
       "new": {
         "path": "cases/kaess_2023/candidates/g0-v2-t018/material-bundle-manifest.json",
-        "sha256": "fbbdbdff12033398fba6a24caaa8119e7e095b7792d3f85c3a57f2f11d1cfa70",
-        "material_config_sha256": "6eab8cf9e4ebe680b225155485350d96dbc2fc81c3e713464be5b30e236b7f86",
+        "sha256": "fa401cee52ee2c82be833d64848ea43de805ee8cf14c7ed7304d0719cc0889b4",
+        "material_config_sha256": "023253394aef32e0245943c73bb2bddbaca4b31410ac2502fa986818525891fb",
         "dependency_csv_hashes_bound": true
       }
     },
@@ -37,6 +37,24 @@
       "field": "material_config.table_paths",
       "old": "external project-relative paths under materials/316L",
       "new": "bundle-local paths resolved relative to the candidate material config directory"
+    },
+    {
+      "field": "material_config.plasticity_input",
+      "old": {
+        "model": "temperature_dependent_yield_plus_linear_hardening",
+        "yield_table": "yield_table.csv",
+        "hardening_table": "hardening_table.csv"
+      },
+      "new": {
+        "model": "temperature_by_equivalent_plastic_strain_flow_curve_grid",
+        "flow_curve_table": "flow_curve_table.pending.csv",
+        "digitization_metadata": "flow_curve_table.pending.metadata.json",
+        "source_class": "Figure_4b_digitization_plus_explicit_solver_realization_nodes",
+        "temperature_interpolation": "piecewise_linear",
+        "equivalent_plastic_strain_interpolation": "piecewise_linear",
+        "endpoint_behavior": "clamp",
+        "reading_error_status": "unquantified_pending_independent_pixel_calibration"
+      }
     },
     {
       "field": "conductivity_powder",

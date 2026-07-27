@@ -133,7 +133,7 @@
       "source_class": "inferred",
       "source_locator": "Spec Kit research review and live source inspection",
       "repository_path": "cases/kaess_2023/inputs/deviations.yaml",
-      "sha256": "702f299935af9233c3d345db77fef973d21cf59e4ab655d02f950b26a82c64fc",
+      "sha256": "08ea9ccaa65889012f8205b94c8d3a0b4cfd6d941fa2047b7210b7cd36b04329",
       "impact": "critical",
       "status": "verified"
     },

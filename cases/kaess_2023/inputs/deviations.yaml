@@ -51,29 +51,29 @@
     {
       "deviation_id": "P0-MAT",
       "paper_requirement": "Temperature-dependent powder conductivity, shared specific heat/latent heat, and source-backed high-temperature tables.",
-      "implemented_behavior": "Current run uses old-temperature coefficients within an increment, so a first melt-crossing step can skip latent heat; extra mushy/liquid scaling is configurable.",
+      "implemented_behavior": "The canonical weak form and energy ledger use the same enthalpy difference across each increment, including complete melting-interval crossings. Powder conductivity and shared phase tables are supported through a content-addressed candidate, and duplicate mushy/liquid scaling is disabled for tabulated high-temperature solid properties. The candidate remains pending G0 reapproval.",
       "severity": "P0",
       "affected_qoi_ids": ["peak_temperature", "melt_volume", "thermal_energy_closure", "sigma_x_depth_curve"],
       "resolution": "open",
-      "evidence_paths": ["jax_fem_am/materials/phases.py", "jax_fem_am/simulation/stepper.py", "specs/001-kaess-paper-reproduction/research.md"]
+      "evidence_paths": ["jax_fem_am/materials/phases.py", "jax_fem_am/simulation/stepper.py", "jax_fem_am/verification/thermal_ledger.py", "cases/kaess_2023/candidates/g0-v2-t018/material-bundle-manifest.json", "specs/001-kaess-paper-reproduction/evidence/t018-material-history.md"]
     },
     {
       "deviation_id": "P0-J2",
       "paper_requirement": "Published temperature-dependent flow curves and consistent incremental plastic update.",
-      "implemented_behavior": "Current path uses simplified hardening inputs; residual/tangent consistency has not passed a V-shaped finite-difference gate.",
+      "implemented_behavior": "The solver loads a source-tagged rectangular temperature/plastic-strain flow curve, solves its exact piecewise-linear J2 consistency equation, and uses one canonical material update for residual, AD tangent, stress output and committed tensor history on raw/v06, plain/B-bar, build and release paths. The Figure 4(b) 7x2 material candidate remains an unapproved digitization with unquantified reading error and explicit solver-realization nodes.",
       "severity": "P0",
       "affected_qoi_ids": ["sigma_x_depth_curve", "front_bending_curve", "max_front_bending"],
       "resolution": "open",
-      "evidence_paths": ["jax_fem_am/materials/j2.py", "jax_fem_am/physics/mechanics.py"]
+      "evidence_paths": ["jax_fem_am/materials/j2.py", "jax_fem_am/physics/mechanics.py", "jax_fem_am/simulation/runner.py", "cases/kaess_2023/candidates/g0-v2-t018/flow_curve_table.pending.metadata.json", "specs/001-kaess-paper-reproduction/evidence/t012-t019-j2-flow-curve.md"]
     },
     {
       "deviation_id": "P0-HIST",
       "paper_requirement": "Irreversible powder-to-solid transition without an unreported stress/plastic-history reset.",
-      "implemented_behavior": "Stress-reference and eqp reset options exist and have no identified support in the paper.",
+      "implemented_behavior": "The paper_irreversible path makes solidification absorbing, latches the first reference temperature once, and preserves equivalent-plastic-strain and tensor plastic history through remelting. Legacy reset/relaxation controls remain isolated compatibility inputs and are inert in the paper path. The exact unpublished USDFLD semantics remain an open author-input assumption.",
       "severity": "P0",
       "affected_qoi_ids": ["sigma_x_depth_curve", "front_bending_curve", "max_front_bending"],
       "resolution": "open",
-      "evidence_paths": ["jax_fem_am/domain/events.py", "jax_fem_am/materials/phases.py"]
+      "evidence_paths": ["jax_fem_am/domain/events.py", "jax_fem_am/materials/phases.py", "jax_fem_am/simulation/runner.py", "specs/001-kaess-paper-reproduction/evidence/t018-material-history.md"]
     },
     {
       "deviation_id": "P0-REL",

@@ -1,7 +1,7 @@
 {
-  "_comment": "UNAPPROVED G0-v2 T018 candidate for the Kaess 2023 public code-to-code benchmark. This file is for pre-approval validation only. All table paths are relative to this candidate bundle. The powder conductivity anchors, weak-solid powder properties, and irreversible phase-history requirements follow Kaess et al. (2023), Section 2.5 and Table 2. Poisson ratio 0.3 and digitized Figure 4 curves remain registered assumptions.",
+  "_comment": "UNAPPROVED G0-v2 T018/T019 candidate for the Kaess 2023 public code-to-code benchmark. This file is for pre-approval validation only. All table paths are relative to this candidate bundle. Powder/phase semantics follow Section 2.5 and Table 2. The flow curve is a pending Figure 4(b) digitization plus explicitly identified solver-realization nodes; it is not the authors' Abaqus table.",
   "_candidate_status": "pending_review",
-  "material_name": "316L (1.4404) - Kaess 2023 benchmark - G0-v2 T018 candidate",
+  "material_name": "316L (1.4404) - Kaess 2023 benchmark - G0-v2 T018/T019 candidate",
   "units": "SI",
 
   "rho_solid": 8000.0,
@@ -25,8 +25,7 @@
 
   "E_table": "E_table.csv",
   "alpha_table": "alpha_table.csv",
-  "yield_table": "yield_table.csv",
-  "hardening_table": "hardening_table.csv",
+  "flow_curve_table": "flow_curve_table.pending.csv",
   "poisson": 0.3,
   "mechanics_model": "j2_plastic",
 

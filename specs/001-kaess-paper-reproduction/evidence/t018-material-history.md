@@ -124,19 +124,24 @@ cases/kaess_2023/candidates/g0-v2-t018/
 ```
 
 It contains a bundle-local material JSON, all referenced CSV files, the exact
-powder-conductivity table, a per-file SHA-256 manifest, and a reapproval
-request. After adding the explicit paper-history selector and rebuilding the
-content-addressed chain:
+powder-conductivity table, the pending Figure 4(b) flow-curve digitization and
+metadata, a per-file SHA-256 manifest, and a reapproval request. After adding
+the explicit paper-history selector, the T019 flow-curve candidate, and
+rebuilding the content-addressed chain:
 
 ```text
 candidate material config
-  6eab8cf9e4ebe680b225155485350d96dbc2fc81c3e713464be5b30e236b7f86
+  023253394aef32e0245943c73bb2bddbaca4b31410ac2502fa986818525891fb
 material bundle manifest
-  fbbdbdff12033398fba6a24caaa8119e7e095b7792d3f85c3a57f2f11d1cfa70
+  fa401cee52ee2c82be833d64848ea43de805ee8cf14c7ed7304d0719cc0889b4
 reapproval request
-  12322e7669825a050f75efff2c85f2ddd27a1937c1352db7d04b599ffc285fc7
+  5bcd2dd3fba950fe8c9fa0a9314560d1526e1d76cccfd16fafab8eda967ef6e3
 powder conductivity table
   a4e762578fd7a7dd585a315157e0423b150c4f15e235076925f1b50315a89eab
+pending flow-curve table
+  ae9b0fe8c8e30e715618ff0b6c2dcc82d1565545742b63c0578c63a8e91f8c3d
+flow-curve digitization metadata
+  0c7c8637cbdd97f0eb51dbfca6b123cb17b1dfe351e0d6b018af6882165dee0c
 ```
 
 Every approval field remains absent and both `status` and `decision` remain
@@ -145,14 +150,12 @@ or external material file was changed. T018 and PAR019/PAR024/PAR025 therefore
 remain open until the material bundle is independently reviewed, explicitly
 approved, and bound into the formal provenance chain.
 
-An independent read-only verification recomputed every load-bearing hash and
-loaded the candidate through the formal parser from both the repository root
-and `/tmp`. Both runs resolved all ten logical tables inside the candidate
-directory and produced the same complete numeric/file identity:
-
-```text
-944e85dbe3fcdc3a108b22c40545ec28f0415fb0c11bbe27c3c5938de23f8f51
-```
+An executable contract test recomputes every load-bearing hash, verifies the
+canonical-approval reference, and loads the candidate through the formal
+parser after changing to an unrelated temporary working directory. Both a
+manual repository-root run and the cross-CWD test resolved every referenced
+table inside the candidate directory, selected the `7 x 2` flow-curve grid,
+and left the superseded scalar yield/hardening tables unloaded.
 
 ## Reproducible verification
 

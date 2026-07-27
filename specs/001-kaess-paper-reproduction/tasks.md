@@ -6,8 +6,9 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
 
 **Input**: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`
 
-**Status**: G0 approved; T005, T009 and T016 complete on 2026-07-24 — P0
-implementation continues through its failing-test gates
+**Status**: G0 approved; T014-T017, T019 and T020 are complete — P0
+implementation continues through the pending T018 material approval and T021
+full regression gate
 
 **Organization**: 任务按 user story 和科学 gate 组织。`[P]` 表示不同文件、
 无前置依赖时可并行；测试任务必须先失败，再实现对应能力。
@@ -185,12 +186,15 @@ implementation continues through its failing-test gates
   - **Files**: `jax_fem_am/materials/tables.py`, `jax_fem_am/materials/phases.py`,
     `jax_fem_am/domain/events.py`, `tests/unit/test_kaess_material_history.py`
 
-- [ ] T019 [US2] 对齐温变塑性曲线和 J2 一致切线 — 支持冻结多点温变塑性输入并让残差/切线同源。
+- [x] T019 [US2] 对齐温变塑性曲线和 J2 一致切线 — 支持冻结多点温变塑性输入并让残差/切线同源。
   - **Acceptance**: 加载循环与 V 形谷测试通过，旧 J2 回归不退化。
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_j2_tangent.py tests/unit/test_v06_j2_kernel.py tests/unit/test_v03_bbar_hex8.py`
   - **Files**: `jax_fem_am/materials/j2.py`, `jax_fem_am/physics/mechanics.py`,
     `jax_fem_am/materials/material_validation.py`,
     `tests/unit/test_kaess_j2_tangent.py`
+  - **Evidence**: `specs/001-kaess-paper-reproduction/evidence/t012-t019-j2-flow-curve.md`.
+    The solver capability is closed; the pending Figure 4(b) material candidate
+    remains outside formal G0 and does not close `P0-J2`.
 
 - [x] T020 [US2] 实现显式 release cell set — 从冻结输入读取、可视化和哈希切割/锚定 cell set。
   - **Acceptance**: 空集、越界、零件本体误切和刚体漂移被拒绝。

@@ -1,20 +1,20 @@
 {
   "_comment": "UNAPPROVED, content-addressed material-bundle candidate. This manifest is not a G0 approval record and is not eligible for formal or promotion runs.",
   "schema_version": "kaess.material-bundle-manifest/1",
-  "bundle_id": "kaess-316l-g0-v2-t018-candidate",
+  "bundle_id": "kaess-316l-g0-v2-t018-t019-candidate",
   "status": "pending_review",
   "promotion_eligible": false,
   "hash_algorithm": "sha256",
   "path_base": "manifest_directory",
   "material_config": {
     "path": "ss316l_material_config_kaess.g0-v2-candidate.json",
-    "sha256": "6eab8cf9e4ebe680b225155485350d96dbc2fc81c3e713464be5b30e236b7f86"
+    "sha256": "023253394aef32e0245943c73bb2bddbaca4b31410ac2502fa986818525891fb"
   },
   "files": [
     {
       "path": "ss316l_material_config_kaess.g0-v2-candidate.json",
       "role": "material_config",
-      "sha256": "6eab8cf9e4ebe680b225155485350d96dbc2fc81c3e713464be5b30e236b7f86",
+      "sha256": "023253394aef32e0245943c73bb2bddbaca4b31410ac2502fa986818525891fb",
       "provenance": "derived_candidate_from_external_material_config_d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f"
     },
     {
@@ -37,7 +37,7 @@
     },
     {
       "path": "hardening_table.csv",
-      "role": "solid_isotropic_hardening_table",
+      "role": "superseded_scalar_hardening_reference_not_loaded",
       "sha256": "c994100186389aec018d007cd5a068493b3f0c90662a921052456ce8868afa89",
       "provenance": "byte_identical_copy_of_external_approved_input_dependency"
     },
@@ -49,7 +49,7 @@
     },
     {
       "path": "yield_table.csv",
-      "role": "solid_yield_stress_table",
+      "role": "superseded_scalar_yield_reference_not_loaded",
       "sha256": "54ef70ee7b335ca58acc3496ea6ab0a12c51742c8dbb07a2aa4f37cc5d987586",
       "provenance": "byte_identical_copy_of_external_approved_input_dependency"
     },
@@ -58,13 +58,27 @@
       "role": "powder_conductivity_table",
       "sha256": "a4e762578fd7a7dd585a315157e0423b150c4f15e235076925f1b50315a89eab",
       "provenance": "Kaess_et_al_2023_Table_2_exact_temperature_anchors"
+    },
+    {
+      "path": "flow_curve_table.pending.csv",
+      "role": "pending_solid_flow_curve_grid",
+      "sha256": "ae9b0fe8c8e30e715618ff0b6c2dcc82d1565545742b63c0578c63a8e91f8c3d",
+      "provenance": "Figure_4b_digitization_plus_explicit_solver_realization_nodes"
+    },
+    {
+      "path": "flow_curve_table.pending.metadata.json",
+      "role": "flow_curve_digitization_metadata",
+      "sha256": "0c7c8637cbdd97f0eb51dbfca6b123cb17b1dfe351e0d6b018af6882165dee0c",
+      "provenance": "page_06_pixel_axis_calibration_and_claim_boundary"
     }
   ],
   "source_evidence": {
     "paper_doi": "10.3390/ma16062321",
-    "paper_locator": "Section 2.5 and Table 2",
+    "paper_locator": "Section 2.5, Table 2, and Figure 4(b)",
     "repository_fulltext": "cases/kaess_2023/references/cases/kaess_2023_fulltext.txt",
     "repository_fulltext_sha256": "afeba3510f9ae7793184dc7a9e704504a089d1510d6df9df403cf137fccb7ade",
+    "repository_figure_4_page_image": "cases/kaess_2023/references/cases/kaess_2023_figures/page_06.png",
+    "repository_figure_4_page_image_sha256": "50cec7676dd5d1286b8711a68feac5c516f2dcadb4139f0c3371cbedc5c5a79e",
     "superseded_external_config_path": "/home/user/work/159/materials/316L/ss316l_material_config_kaess.json",
     "superseded_external_config_sha256": "d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f"
   },
@@ -95,6 +109,18 @@
     },
     "mechanics": {
       "model": "j2_plastic",
+      "plasticity_input": "temperature_by_equivalent_plastic_strain_flow_curve_grid",
+      "flow_curve_status": "pending_figure_digitization_and_solver_realization",
+      "flow_curve_temperature_nodes_K": [
+        293.15,
+        673.15,
+        1073.15,
+        1273.15,
+        1643.15,
+        1673.15,
+        1873.15
+      ],
+      "flow_curve_equivalent_plastic_strain_nodes": [0.0, 0.4],
       "poisson_ratio": 0.3,
       "mushy_extra_stiffness_factor": 1.0,
       "liquid_extra_stiffness_factor": 1.0,
@@ -106,6 +132,9 @@
     "table_path_resolution": "relative_to_material_config_directory",
     "table_interpolation": "piecewise_linear",
     "table_endpoint_behavior": "clamp",
+    "flow_curve_interpolation": "bilinear_temperature_and_equivalent_plastic_strain",
+    "flow_curve_endpoint_behavior": "clamp_on_both_axes",
+    "flow_curve_residual_and_tangent": "single_exact_piecewise_linear_return_map",
     "powder_specific_heat": "same_temperature_dependent_table_as_solid",
     "powder_thermal_expansion": "same_temperature_dependent_table_as_solid",
     "liquid_specific_heat": "same_temperature_dependent_table_as_solid",
@@ -121,6 +150,9 @@
   "known_registered_assumptions": [
     "poisson_ratio_0_3_not_reported_by_paper",
     "Figure_4_property_curves_are_digitized_or_extrapolated",
+    "Figure_4b_reading_error_is_unquantified_pending_independent_calibration",
+    "flow_curve_1673_15K_and_1873_15K_nodes_are_solver_realizations_not_figure_nodes",
+    "equivalent_plastic_strain_above_0_4_uses_constant_endpoint_clamping",
     "first_solidification_reference_temperature_is_a_solver_realization_not_a_reported_paper_field"
   ]
 }

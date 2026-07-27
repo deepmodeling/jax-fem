@@ -78,7 +78,12 @@ def test_uniaxial_loading_unloading_reloading_preserves_committed_history():
 
 
 def test_multitemperature_nonlinear_flow_curve_is_bilinearly_interpolated():
-    """RED: scalar yield(T)+H(T) cannot represent the published flow curves."""
+    """RED: the solver needs a generic multi-point flow-curve capability.
+
+    Kaess Figure 4(b) exposes temperature-dependent flow curves, but not the
+    original Abaqus table.  This synthetic nonlinear grid verifies solver
+    capability without claiming that these particular points were published.
+    """
     interpolate = getattr(j2_model, "flow_stress_from_curve", None)
     assert callable(interpolate), (
         "P0-J2 missing multi-point flow-curve kernel: expected "
@@ -128,6 +133,45 @@ def test_multitemperature_nonlinear_flow_curve_is_bilinearly_interpolated():
     np.testing.assert_allclose(
         np.asarray(midpoint),
         np.asarray(450.0e6),
+        rtol=1.0e-13,
+        atol=1.0e-6,
+    )
+
+
+def test_flow_curve_clamps_both_axes_and_remains_jittable():
+    """RED: endpoint behavior must be explicit and usable inside JAX kernels."""
+    interpolate = getattr(j2_model, "flow_stress_from_curve", None)
+    assert callable(interpolate)
+
+    temperatures = jnp.asarray([300.0, 800.0])
+    plastic_strains = jnp.asarray([0.0, 0.10])
+    flow_stresses = 1.0e6 * jnp.asarray(
+        [
+            [500.0, 600.0],
+            [300.0, 340.0],
+        ]
+    )
+    evaluate = jax.jit(
+        lambda temperature, eqp: interpolate(
+            temperature,
+            eqp,
+            temperatures,
+            plastic_strains,
+            flow_stresses,
+        )
+    )
+
+    actual = np.asarray(
+        [
+            evaluate(100.0, -0.05),
+            evaluate(100.0, 0.20),
+            evaluate(1200.0, -0.05),
+            evaluate(1200.0, 0.20),
+        ]
+    )
+    np.testing.assert_allclose(
+        actual,
+        1.0e6 * np.asarray([500.0, 600.0, 300.0, 340.0]),
         rtol=1.0e-13,
         atol=1.0e-6,
     )

@@ -27,6 +27,45 @@ class J2Update(NamedTuple):
     delta_eqp: jnp.ndarray
 
 
+def _interpolate_clamped(x, knots, values):
+    """Linearly interpolate one sorted axis with endpoint clamping."""
+    x = jnp.clip(jnp.asarray(x), knots[0], knots[-1])
+    upper = jnp.clip(jnp.searchsorted(knots, x, side="right"), 1, knots.size - 1)
+    lower = upper - 1
+    x0 = knots[lower]
+    x1 = knots[upper]
+    weight = (x - x0) / (x1 - x0)
+    return values[lower] + weight * (values[upper] - values[lower])
+
+
+def flow_stress_from_curve(
+    temperature,
+    equivalent_plastic_strain,
+    temperatures,
+    plastic_strains,
+    flow_stresses,
+):
+    """Evaluate a rectangular temperature/plastic-strain flow-stress grid.
+
+    Temperature interpolation and endpoint clamping match the Kaess/Abaqus
+    material description. Plastic-strain endpoint clamping is an explicit
+    solver assumption for values outside the frozen input curve.
+    """
+    temperatures = jnp.asarray(temperatures)
+    plastic_strains = jnp.asarray(plastic_strains)
+    flow_stresses = jnp.asarray(flow_stresses)
+    stress_at_temperature = _interpolate_clamped(
+        temperature,
+        temperatures,
+        flow_stresses,
+    )
+    return _interpolate_clamped(
+        equivalent_plastic_strain,
+        plastic_strains,
+        stress_at_temperature,
+    )
+
+
 def equivalent_stress(stress):
     """Return von Mises equivalent stress for a symmetric 3x3 tensor.
 

@@ -7,12 +7,12 @@ This example implements both **implicit finite element method** and **explicit f
 ## Results
 
 <p align="middle">
-  <img src="materials/implicit_fem.png" width="360" />
-  <img src="materials/explicit_fem.png" width="360" />
+  <img src="assets/implicit_fem.png" width="360" />
+  <img src="assets/explicit_fem.png" width="360" />
 </p>
 <p align="middle">
-  <img src="materials/explicit_fd.png" width="360" />
-  <img src="materials/paper.png" width="360" />
+  <img src="assets/explicit_fd.png" width="360" />
+  <img src="assets/paper.png" width="360" />
 </p>
 
 <p align="middle">
@@ -27,4 +27,3 @@ This example implements both **implicit finite element method** and **explicit f
 [1] https://drzgan.github.io/Python_CFD/Konayashi_1993-main/jax_version/kobayashi_aniso_jax_ZGAN-2.html
 
 [2] Kobayashi, Ryo. "Modeling and numerical simulations of dendritic crystal growth." Physica D: Nonlinear Phenomena 63, no. 3-4 (1993): 410-423.
-

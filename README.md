@@ -1,5 +1,5 @@
 <p align="middle">
-  <img src="docs/source/_static/images/logo.png" width="400" />
+  <img src="docs/source/_static/assets/logo.png" width="400" />
 </p>
 
 
@@ -42,37 +42,37 @@ JAX-FEM is Automatic Differentiation (AD) + Finite Element Method (FEM), and we 
 ## Examples
 
 <p align="middle">
-  <img src="docs/source/_static/images/ded.gif" width="600" />
+  <img src="docs/source/_static/assets/ded.gif" width="600" />
 </p>
 <p align="middle">
     <em >Thermal profile in direct energy deposition.</em>
 </p>
 
 <p align="middle">
-  <img src="docs/source/_static/images/von_mises.png" width="400" />
+  <img src="docs/source/_static/assets/von_mises.png" width="400" />
 </p>
 <p align="middle">
     <em >Linear static analysis of a bracket.</em>
 </p>
 
 <p align="middle">
-  <img src="docs/source/_static/images/polycrystal_grain.gif" width="360" />
-  <img src="docs/source/_static/images/polycrystal_stress.gif" width="360" />
+  <img src="docs/source/_static/assets/polycrystal_grain.gif" width="360" />
+  <img src="docs/source/_static/assets/polycrystal_stress.gif" width="360" />
 </p>
 <p align="middle">
     <em >Crystal plasticity: grain structure (left) and stress-xx (right).</em>
 </p>
 
 <p align="middle">
-  <img src="docs/source/_static/images/stokes_u.png" width="360" />
-  <img src="docs/source/_static/images/stokes_p.png" width="360" />
+  <img src="docs/source/_static/assets/stokes_u.png" width="360" />
+  <img src="docs/source/_static/assets/stokes_p.png" width="360" />
 </p>
 <p align="middle">
     <em >Stokes flow: velocity (left) and pressure(right).</em>
 </p>
 
 <p align="middle">
-  <img src="docs/source/_static/images/to.gif" width="600" />
+  <img src="docs/source/_static/assets/to.gif" width="600" />
 </p>
 <p align="middle">
     <em >Topology optimization with differentiable simulation.</em>
@@ -85,7 +85,7 @@ We have built an LLM Agent for JAX-FEM: Try JAX-FEM Express! https://www.bohrium
 
 <p align="middle">
   <a href="https://www.youtube.com/watch?v=LsBPWGrDhiY">
-    <img src="docs/source/_static/images/jax_fem_express.png" width="600" alt="JAX-FEM Express Video" />
+    <img src="docs/source/_static/assets/jax_fem_express.png" width="600" alt="JAX-FEM Express Video" />
   </a>
 </p>
 <p align="middle">
@@ -111,4 +111,3 @@ If you found this library useful in academic or industry work, we appreciate you
   publisher={Elsevier}
 }
 ```
-

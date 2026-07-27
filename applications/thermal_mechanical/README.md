@@ -113,7 +113,7 @@ from the `jax-fem/` directory.
 Results can be visualized with *ParaWiew*.
 
 <p align="middle">
-  <img src="materials/T.gif" width="600" />
+  <img src="assets/T.gif" width="600" />
 </p>
 <p align="middle">
     <em >Temperature</em>
@@ -121,15 +121,15 @@ Results can be visualized with *ParaWiew*.
 
 
 <p align="middle">
-  <img src="materials/phase.gif" width="600" />
+  <img src="assets/phase.gif" width="600" />
 </p>
 <p align="middle">
     <em >Deformation (x10) with legend [Blue: POWDER; White: LIQUID; RED: SOLID]</em>
 </p>
 
 <p align="middle">
-  <img src="materials/line.gif" width="600" />
-  <img src="materials/value.gif" width="600" /> 
+  <img src="assets/line.gif" width="600" />
+  <img src="assets/value.gif" width="600" />
 </p>
 <p align="middle">
     <em >f_plus and stress_xx along the center line on the top surface</em>

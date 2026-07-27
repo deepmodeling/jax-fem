@@ -327,7 +327,10 @@ def response_gate_is_valid(report: dict[str, Any], run_dir: Path) -> bool:
 
 
 def _material_table_records(
-    used_config: dict[str, Any], work_root: Path, repo_root: Path
+    used_config: dict[str, Any],
+    material_config: Path,
+    work_root: Path,
+    repo_root: Path,
 ) -> dict[str, Any]:
     records: dict[str, Any] = {}
     for key, value in sorted(used_config.items()):
@@ -335,7 +338,12 @@ def _material_table_records(
             continue
         path = Path(value).expanduser()
         if not path.is_absolute():
-            path = work_root / path
+            config_relative = material_config.parent / path
+            path = (
+                config_relative
+                if config_relative.is_file()
+                else work_root / path
+            )
         if path.is_file():
             records[key] = _file_record(path, repo_root)
         else:
@@ -383,6 +391,21 @@ def build_manifest(
     command_path = run_dir / "solver_command.txt"
     if command_path.is_file():
         inputs["solver_command"] = _file_record(command_path, repo_root)
+    release_cell_set_value = used_config.get("release_cell_set")
+    if isinstance(release_cell_set_value, str) and release_cell_set_value:
+        release_cell_set_path = Path(release_cell_set_value).expanduser()
+        if not release_cell_set_path.is_absolute():
+            release_cell_set_path = work_root / release_cell_set_path
+        if release_cell_set_path.is_file():
+            inputs["release_cell_set"] = _file_record(
+                release_cell_set_path,
+                repo_root,
+            )
+        else:
+            inputs["release_cell_set"] = {
+                "path": str(release_cell_set_path.resolve()),
+                "missing": True,
+            }
 
     source_paths = {
         "am_driver": repo_root / "jax_fem_am/simulation/runner.py",
@@ -504,6 +527,27 @@ def build_manifest(
         "used_config",
         "xrd_protocol",
     }
+    derived_config = used_config.get("derived", {})
+    if not isinstance(derived_config, dict):
+        derived_config = {}
+    release_selection_mode = derived_config.get(
+        "release_selection_mode",
+        "unclassified",
+    )
+    release_record = inputs.get("release_cell_set")
+    declared_release_sha256 = used_config.get("release_cell_set_sha256")
+    release_hash_matches = bool(
+        isinstance(release_record, dict)
+        and isinstance(release_record.get("sha256"), str)
+        and release_record["sha256"] == declared_release_sha256
+    )
+    paper_release_eligible = bool(
+        release_selection_mode == "exact_cell_set"
+        and derived_config.get("paper_release_gate_eligible") is True
+        and release_hash_matches
+    )
+    if release_selection_mode == "exact_cell_set":
+        required_input_roles.add("release_cell_set")
     required_artifact_roles = {
         "profile",
         "v06_run_audit",
@@ -593,6 +637,21 @@ def build_manifest(
             "constitutive_state_adapter": "v06",
             "v05_runtime_dependency": False,
         },
+        "paper_release_gate": {
+            "eligible": paper_release_eligible,
+            "selection_mode": release_selection_mode,
+            "release_cell_set_hash_matches": release_hash_matches,
+            "reason": (
+                "exact content-addressed cell set verified"
+                if paper_release_eligible
+                else (
+                    "geometric release selection is diagnostic only"
+                    if release_selection_mode
+                    == "geometric_box_diagnostic"
+                    else "exact release cell-set identity is not verified"
+                )
+            ),
+        },
         "repository": git_snapshot(repo_root),
         "runtime": {
             "python": sys.version,
@@ -604,7 +663,10 @@ def build_manifest(
         },
         "inputs": inputs,
         "material_tables": _material_table_records(
-            used_config, work_root, repo_root
+            used_config,
+            Path(material_config).expanduser().resolve(),
+            work_root,
+            repo_root,
         ),
         "solver_sources": solver_sources,
         "runtime_source_tree": runtime_source_tree,

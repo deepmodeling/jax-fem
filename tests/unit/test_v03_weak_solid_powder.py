@@ -133,12 +133,13 @@ class WeakSolidPowderMaterialTest(unittest.TestCase):
         self.assertAlmostEqual(E[0], 190e9, delta=1e-3 * 190e9)
         self.assertGreater(yld[0], 1e8)
         self.assertAlmostEqual(af[0], 1.0)
-        # active powder: weak solid, full active factor, no expansion
+        # active powder: weak solid, full active factor, and the same
+        # temperature-dependent expansion coefficient as solid material.
         self.assertEqual(E[1], 10e9)
         self.assertEqual(yld[1], 1.0e6)
         self.assertEqual(hard[1], 1.0e7)  # regularization hardening
         self.assertAlmostEqual(af[1], 1.0)
-        self.assertEqual(alpha[1], 0.0)
+        self.assertEqual(alpha[1], args.alpha)
         # liquid untouched
         self.assertAlmostEqual(af[2], args.liquid_mechanics_factor)
         # inactive powder gets the ersatz factor, not load-bearing stiffness
@@ -153,6 +154,30 @@ class WeakSolidPowderMaterialTest(unittest.TestCase):
         af = onp.asarray(af)[:, 0, 0]
         # powder keeps the near-zero ersatz factor (carries no load)
         self.assertAlmostEqual(af[1], args.inactive_mechanics_factor, places=12)
+
+    def test_flow_curve_selector_excludes_weak_and_inactive_powder(self):
+        v03 = self.v03
+        T, active, phase, tables = self.make_inputs()
+        tables.update(
+            {
+                "flow_curve": SimpleNamespace(),
+                "yield": None,
+                "hardening": None,
+            }
+        )
+        args = self.make_args(powder_E=10e9)
+
+        selector = v03.flow_curve_active_quads(
+            active,
+            phase,
+            tables,
+        )
+
+        actual = onp.asarray(selector)[:, 0, 0]
+        onp.testing.assert_array_equal(
+            actual,
+            [1.0, 0.0, 1.0, 0.0],
+        )
 
     def test_parser_wiring(self):
         parser = self.v03.build_parser()

@@ -87,9 +87,20 @@ def build_parser(config=None):
                              "surfaces and their near-singular equations produce unphysical temperatures under surface flux. "
                              "Defaults to on for --surface-selection exterior, off for legacy box mode.")
     parser.add_argument("--no-surface-active-mask", dest="surface_active_mask", action="store_false")
+    parser.add_argument(
+        "--phase-history-model",
+        choices=("legacy_reset", "paper_irreversible"),
+        default=cfg(config, "phase_history_model", "legacy_reset"),
+        help=(
+            "History contract. legacy_reset preserves the historical "
+            "stress-relaxation/remelt controls; paper_irreversible freezes "
+            "the Kaess powder-to-solid switch, first reference, eqp and "
+            "tensor plastic history."
+        ),
+    )
     parser.add_argument("--stress-relaxation-temperature", type=float,
                         default=cfg(config, "stress_relaxation_temperature", None),
-                        help="Stress-free reference temperature written when material solidifies (macro calibration knob; "
+                        help="Legacy-reset-only stress-free reference temperature written when material solidifies (macro calibration knob; "
                              "Ti64 typically 1073-1173 K). Without it, T_ref is the local temperature at solidification, "
                              "which in consolidation-on-activation mode equals the powder entry temperature and inverts the "
                              "residual stress sign.")
@@ -112,15 +123,33 @@ def build_parser(config=None):
     parser.add_argument("--poisson-table", default=cfg(config, "poisson_table", None))
     parser.add_argument("--yield-table", default=cfg(config, "yield_table", None))
     parser.add_argument("--hardening-table", default=cfg(config, "hardening_table", None))
+    parser.add_argument(
+        "--flow-curve-table",
+        default=cfg(config, "flow_curve_table", None),
+        help=(
+            "Long-form temperature/plastic-strain/flow-stress CSV. "
+            "When provided it replaces --yield-table and "
+            "--hardening-table for J2 plasticity."
+        ),
+    )
     parser.add_argument("--mechanics-model", choices=("linear_elastic", "j2_plastic"), default=cfg(config, "mechanics_model", "linear_elastic"))
     parser.add_argument("--yield-saturation-stress", type=float, default=cfg(config, "yield_saturation_stress", None),
                         help="Cap on the hardened yield stress (Pa), ~UTS (Ti64: ~1.15e9). Linear isotropic hardening "
                              "extrapolated past its ~10%% strain validity produced ~2 GPa fictitious von Mises at the "
                              "bottom-clamp region; the cap saturates hardening there. None keeps unbounded legacy hardening.")
-    parser.add_argument("--bottom-mechanics-bc", choices=("fixed", "elastic"), default=cfg(config, "bottom_mechanics_bc", "fixed"),
+    parser.add_argument("--bottom-mechanics-bc", choices=("fixed", "elastic", "paper_minimal"),
+                        default=cfg(config, "bottom_mechanics_bc", "fixed"),
                         help="'fixed' rigidly clamps the base nodes (legacy; models an infinitely stiff build plate and "
                              "concentrates fictitious stress at the clamp edge). 'elastic' replaces the clamp with a "
-                             "Winkler elastic foundation on the base faces, giving the plate finite compliance.")
+                             "Winkler elastic foundation on the base faces. 'paper_minimal' restrains every bottom node "
+                             "only in the build direction and adds three deterministic in-plane scalar restraints to "
+                             "remove rigid motion while permitting thermal contraction (Kaess 2023 Section 2.3).")
+    parser.add_argument("--paper-minimal-anchor-corner",
+                        choices=("min_min", "max_min", "max_max", "min_max"),
+                        default=cfg(config, "paper_minimal_anchor_corner", "min_min"),
+                        help="Bottom-plane corner used by --bottom-mechanics-bc paper_minimal. The paper does not "
+                             "publish exact in-plane anchor nodes; the four deterministic variants support the "
+                             "required anchor-sensitivity study.")
     parser.add_argument("--bottom-foundation-stiffness", type=float, default=cfg(config, "bottom_foundation_stiffness", 1.0e12),
                         help="Foundation modulus k_s (Pa/m) for --bottom-mechanics-bc elastic. Calibration knob for the "
                              "build-plate compliance; 1e12 approximates a ~25 mm steel plate, larger values approach the "
@@ -137,11 +166,30 @@ def build_parser(config=None):
                              "gives ~1e8-1e11; default 1e9 is a soft support ~3 orders below the build plate.")
     parser.add_argument("--mushy-mechanics-factor", type=float, default=cfg(config, "mushy_mechanics_factor", 1e-2), help="Stress/stiffness scaling for mushy-zone material.")
     parser.add_argument("--liquid-mechanics-factor", type=float, default=cfg(config, "liquid_mechanics_factor", 1e-4), help="Stress/stiffness scaling for liquid material.")
-    parser.add_argument("--reset-plastic-on-melt", dest="reset_plastic_on_melt", action="store_true", default=cfg(config, "reset_plastic_on_melt", True))
+    parser.add_argument(
+        "--reset-plastic-on-melt",
+        dest="reset_plastic_on_melt",
+        action="store_true",
+        default=cfg(config, "reset_plastic_on_melt", True),
+        help=(
+            "Legacy-reset-only compatibility switch. paper_irreversible "
+            "always preserves plastic state on later melt events."
+        ),
+    )
     parser.add_argument("--no-reset-plastic-on-melt", dest="reset_plastic_on_melt", action="store_false")
 
     parser.add_argument("--laser-power", type=float, default=cfg(config, "laser_power", 1.0))
     parser.add_argument("--absorptivity", type=float, default=cfg(config, "absorptivity", 0.35))
+    parser.add_argument(
+        "--source-model",
+        choices=("legacy", "paper_hemispherical"),
+        default=cfg(config, "source_model", "legacy"),
+        help=(
+            "Volumetric laser source: legacy uses an in-plane Gaussian with "
+            "exponential depth decay; paper_hemispherical uses Kaess (2023) "
+            "Equation (1)."
+        ),
+    )
     parser.add_argument("--beam-radius", type=float, default=cfg(config, "beam_radius", 1.0e-4))
     parser.add_argument("--source-depth", type=float, default=cfg(config, "source_depth", 6.0e-5))
 
@@ -194,11 +242,14 @@ def build_parser(config=None):
                              "thermal load step that stalls the mechanics Newton solve.")
     parser.add_argument("--release-after-cooling", dest="release_after_cooling", action="store_true", default=cfg(config, "release_after_cooling", False))
     parser.add_argument("--no-release-after-cooling", dest="release_after_cooling", action="store_false")
-    parser.add_argument("--release-anchor-mode", choices=("rigid_body", "box"),
+    parser.add_argument("--release-anchor-mode",
+                        choices=("rigid_body", "box", "paper_minimal_root"),
                         default=cfg(config, "release_anchor_mode", "rigid_body"),
                         help="rigid_body (default): free-free release with 3-point rigid-body anchors (full removal "
                              "from the plate). box: clamp all nodes inside --release-anchor-box (u=0), modeling a "
-                             "partial EDM/saw cut that leaves a root attachment (Kaess 2023 cantilever semantics).")
+                             "partial EDM/saw cut that leaves a root attachment. paper_minimal_root: restrain the "
+                             "retained release-root bottom only in the build direction plus three in-plane rigid "
+                             "DOFs (formal Kaess 2023 cantilever semantics; requires --release-cell-set).")
     parser.add_argument("--release-anchor-box", type=float, nargs=6, metavar=("XMIN", "XMAX", "YMIN", "YMAX", "ZMIN", "ZMAX"),
                         default=cfg(config, "release_anchor_box", None),
                         help="Axis-aligned box (mesh coordinates) whose nodes stay clamped during a box-mode release.")
@@ -207,12 +258,18 @@ def build_parser(config=None):
                         help="Cells whose centroid lies inside this box (mesh coordinates) are deactivated in the "
                              "release solve (stiffness AND locked-in stress scaled by the inactive factor) - the "
                              "equivalent of deleting sawed-off support elements (Kaess 2023 Fig 7 semantics).")
+    parser.add_argument("--release-cell-set",
+                        default=cfg(config, "release_cell_set", None),
+                        help="Content-addressed JSON artifact containing the exact zero-based solver cells "
+                             "removed for release. Mutually exclusive with --release-cut-box; formal "
+                             "paper runs must use this option instead of an unverified geometric box.")
     parser.add_argument("--final-cooldown-temperature", type=float,
                         default=cfg(config, "final_cooldown_temperature", None),
-                        help="Ramp the fixed bottom temperature linearly to this value (K) across the final cooling "
-                             "steps, modeling a build-plate cooldown to room temperature before release "
+                        help="Ramp the fixed bottom temperature and convection/radiation ambient linearly to this "
+                             "value (K) across the final cooling steps, modeling a build-plate and chamber cooldown "
+                             "to room temperature before release "
                              "(Kaess 2023 style). Requires --bottom-thermal-bc fixed; default keeps the bottom "
-                             "temperature constant.")
+                             "and ambient temperatures constant.")
 
     parser.add_argument("--mechanics-every", type=int, default=cfg(config, "mechanics_every", 1))
     parser.add_argument("--mechanics-tol", type=float, default=cfg(config, "mechanics_tol", None),
@@ -226,11 +283,21 @@ def build_parser(config=None):
                         default=cfg(config, "mechanics_line_search", False),
                         help="Enable Newton line search for mechanics solves; stabilizes j2 yield-surface states.")
     parser.add_argument("--no-mechanics-line-search", dest="mechanics_line_search", action="store_false")
+    parser.add_argument("--mechanics-residual-only-check",
+                        dest="mechanics_residual_only_check", action="store_true",
+                        default=cfg(config, "mechanics_residual_only_check", False),
+                        help="After each mechanics Newton correction, check the residual before rebuilding "
+                             "the tangent. If the acceptance criteria pass, the final unused jacfwd tangent "
+                             "assembly is skipped. Opt-in to preserve legacy mechanics behavior by default.")
+    parser.add_argument("--no-mechanics-residual-only-check",
+                        dest="mechanics_residual_only_check", action="store_false")
     parser.add_argument("--mechanics-acceptance", choices=("legacy", "abaqus"),
                         default=cfg(config, "mechanics_acceptance", "legacy"),
-                        help="Newton acceptance criteria for mechanics solves. 'legacy' = single "
-                             "relative-residual test (bitwise-preserving default). 'abaqus' = "
-                             "Abaqus/Standard-style dual criteria: max-norm force residual vs the "
+                        help="Newton acceptance criteria for mechanics solves. 'legacy' = "
+                             "relative/absolute residual test (bitwise-preserving default). 'abaqus' = "
+                             "hybrid strict-residual OR Abaqus/Standard-style dual criteria: "
+                             "configured tol/rel_tol remain a conservative acceptance exit; "
+                             "otherwise use max-norm force residual vs the "
                              "increment's out-of-balance force scale, displacement-correction check, "
                              "and a linear-convergence fallback - accepts the j2 stall-floor and "
                              "near-perfectly-plastic powder states that the reference solver treats "
@@ -259,7 +326,7 @@ def build_parser(config=None):
                         help="Weak-solid powder Young's modulus in Pa (Kaess 2023: 10e9). When set "
                              "(requires --powder-elset), permanent-powder cells join the mechanics "
                              "active set with this constant E, --powder-solid-yield, zero hardening "
-                             "and zero thermal expansion; they are deactivated (depowdered) for the "
+                             "and the solid alpha(T) curve; they are deactivated (depowdered) for the "
                              "release solve. None keeps legacy behavior (powder carries no load).")
     parser.add_argument("--powder-solid-yield", type=float,
                         default=cfg(config, "powder_solid_yield", 1.0e6),

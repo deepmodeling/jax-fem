@@ -42,6 +42,50 @@ def _require_positive(name, values):
         raise ValueError(f"{name} values must be finite and positive")
 
 
+def _validate_flow_curve(table):
+    temperatures = np.asarray(
+        table.temperatures,
+        dtype=np.float64,
+    ).reshape(-1)
+    plastic_strains = np.asarray(
+        table.plastic_strains,
+        dtype=np.float64,
+    ).reshape(-1)
+    stresses = np.asarray(table.stresses, dtype=np.float64)
+    if (
+        len(temperatures) < 2
+        or len(plastic_strains) < 2
+        or stresses.shape != (len(temperatures), len(plastic_strains))
+        or not np.all(np.isfinite(temperatures))
+        or not np.all(np.isfinite(plastic_strains))
+        or not np.all(np.isfinite(stresses))
+    ):
+        raise ValueError(
+            "flow curve must be a finite rectangular grid with at least "
+            "two temperatures and two plastic-strain points"
+        )
+    if not np.all(np.diff(temperatures) > 0.0):
+        raise ValueError(
+            "flow curve temperatures must be strictly increasing"
+        )
+    if not np.all(np.diff(plastic_strains) > 0.0):
+        raise ValueError(
+            "flow curve plastic strains must be strictly increasing"
+        )
+    if not np.isclose(
+        plastic_strains[0],
+        0.0,
+        rtol=0.0,
+        atol=1.0e-14,
+    ):
+        raise ValueError("flow curve plastic strain must start at zero")
+    _require_positive("flow curve stress", stresses)
+    if np.any(np.diff(stresses, axis=1) < 0.0):
+        raise ValueError(
+            "flow curve stress must be nondecreasing with plastic strain"
+        )
+
+
 def validate_material_inputs(args, tables):
     """Validate every used table and scalar fallback before tracing/JIT.
 
@@ -55,6 +99,7 @@ def validate_material_inputs(args, tables):
         "poisson",
         "yield",
         "hardening",
+        "flow_curve",
         "k_solid",
         "cp_solid",
         "k_powder",
@@ -81,15 +126,38 @@ def validate_material_inputs(args, tables):
     if np.any(poisson <= -1.0) or np.any(poisson >= 0.5):
         raise ValueError("poisson values must satisfy -1 < poisson < 0.5")
 
-    if getattr(args, "mechanics_model", None) == "j2_plastic" and tables["yield"] is None:
-        raise ValueError("j2_plastic requires a yield material table")
-    yield_values = _property_values(
-        "yield", tables["yield"], getattr(args, "young")
-    )
-    _require_positive("yield", yield_values)
-    hardening = _property_values("hardening", tables["hardening"], 0.0)
-    if np.any(hardening < 0.0):
-        raise ValueError("hardening values must be finite and nonnegative")
+    flow_curve = tables["flow_curve"]
+    if flow_curve is not None:
+        if tables["yield"] is not None or tables["hardening"] is not None:
+            raise ValueError(
+                "flow curve with yield/hardening tables is ambiguous"
+            )
+        if getattr(args, "mechanics_model", None) != "j2_plastic":
+            raise ValueError(
+                "flow curve requires mechanics_model=j2_plastic"
+            )
+        _validate_flow_curve(flow_curve)
+    else:
+        if (
+            getattr(args, "mechanics_model", None) == "j2_plastic"
+            and tables["yield"] is None
+        ):
+            raise ValueError(
+                "j2_plastic requires a yield material table or flow curve"
+            )
+        yield_values = _property_values(
+            "yield", tables["yield"], getattr(args, "young")
+        )
+        _require_positive("yield", yield_values)
+        hardening = _property_values(
+            "hardening",
+            tables["hardening"],
+            0.0,
+        )
+        if np.any(hardening < 0.0):
+            raise ValueError(
+                "hardening values must be finite and nonnegative"
+            )
 
     for table_name, label, primary, fallback in (
         ("k_solid", "conductivity_solid", "conductivity_solid", "conductivity"),

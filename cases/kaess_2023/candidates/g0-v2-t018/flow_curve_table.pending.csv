@@ -1,0 +1,15 @@
+temperature_K,equivalent_plastic_strain,flow_stress_Pa,source
+293.15,0.0,500000000,reference_33_rounded_by_paper_authors
+293.15,0.4,600000000,reference_33_rounded_by_paper_authors
+673.15,0.0,400000000,paper_author_assumption
+673.15,0.4,500000000,paper_author_assumption
+1073.15,0.0,300000000,paper_author_assumption
+1073.15,0.4,400000000,paper_author_assumption
+1273.15,0.0,150000000,paper_author_assumption
+1273.15,0.4,200000000,paper_author_assumption
+1643.15,0.0,20000000,paper_author_assumption
+1643.15,0.4,30000000,paper_author_assumption
+1673.15,0.0,1000000,solver_realization_melting_minimum_not_figure_node
+1673.15,0.4,1000000,solver_realization_melting_minimum_not_figure_node
+1873.15,0.0,1000000,solver_realization_high_temperature_extension
+1873.15,0.4,1000000,solver_realization_high_temperature_extension

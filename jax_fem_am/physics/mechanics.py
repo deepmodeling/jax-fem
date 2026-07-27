@@ -11,11 +11,13 @@ import numpy as onp
 from jax_fem.problem import Problem
 
 from jax_fem_am.io.vtu import von_mises_from_stress
+from jax_fem_am.materials.j2 import PlasticState, radial_return
 
 
 class ThermoMechanical(Problem):
     def custom_init(self, mechanics_model, yield_saturation=None, foundation_stiffness=0.0,
-                    powder_foundation_stiffness=0.0, powder_plane_axes=(), bbar=False):
+                    powder_foundation_stiffness=0.0, powder_plane_axes=(), bbar=False,
+                    flow_curve=None):
         # B-bar (element-average volumetric strain). jax-fem dispatches on
         # hasattr(get_tensor_map)/hasattr(get_universal_kernel) and SUMS all
         # kernels that exist, so exactly one of the two is bound per
@@ -26,6 +28,7 @@ class ThermoMechanical(Problem):
         else:
             self.get_tensor_map = self._tensor_map_getter
         self.mechanics_model = mechanics_model
+        self.flow_curve = flow_curve
         # Cap on the hardened yield stress (~UTS). Linear isotropic hardening
         # extrapolated past its ~10% strain validity produced 2 GPa fictitious
         # von Mises at the bottom-clamp singularity; saturation bounds it.
@@ -64,43 +67,99 @@ class ThermoMechanical(Problem):
             np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
             np.zeros((len(self.fes[0].cells), self.fes[0].num_quads, 1)),
         ]
-
-    def stress_fn(self, u_grad, T, dT, active_factor, young, alpha, poisson, yield_stress, hardening, eqp_old):
-        eps = 0.5 * (u_grad + u_grad.T)
-        nu = np.clip(poisson[0], -0.49, 0.49)
-        E = young[0]
-        mu = E / (2.0 * (1.0 + nu))
-        lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
-        thermal_eps = alpha[0] * dT[0] * np.eye(self.dim)
-        elastic_eps = eps - thermal_eps
-        sigma_trial = lmbda * np.trace(elastic_eps) * np.eye(self.dim) + 2.0 * mu * elastic_eps
-
-        if self.mechanics_model == "j2_plastic":
-            # Radial return with linear isotropic hardening. Identical to the
-            # legacy min(1, yield/seq) clip when hardening == 0, but with
-            # hardening > 0 the yield surface expands consistently WITHIN the
-            # Newton solve, giving a positive-definite consistent tangent
-            # (the pure clip left the plastic direction with zero stiffness,
-            # which made anchor-only release solves of fully yielded material
-            # ill-posed). delta_eqp matches compute_eqp_update().
-            hydro = np.trace(sigma_trial) / 3.0 * np.eye(self.dim)
-            dev = sigma_trial - hydro
-            seq = np.sqrt(1.5 * np.sum(dev * dev) + 1e-30)
-            hardened_yield = yield_stress[0] + hardening[0] * eqp_old[0]
-            if self.yield_saturation is not None and self.yield_saturation > 0.0:
-                sat = self.yield_saturation
-                current_yield = np.maximum(np.minimum(hardened_yield, sat), 1e-12)
-                hardening_eff = np.where(hardened_yield < sat, hardening[0], 0.0)
-            else:
-                current_yield = np.maximum(hardened_yield, 1e-12)
-                hardening_eff = hardening[0]
-            delta_eqp = np.maximum(seq - current_yield, 0.0) / (3.0 * mu + hardening_eff + 1e-12)
-            scale = 1.0 - 3.0 * mu * delta_eqp / seq
-            sigma = hydro + scale * dev
+        if self.flow_curve is not None:
+            self._flow_curve_active_mask = np.zeros_like(
+                self.internal_vars[0]
+            )
+            self._flow_curve_mask_bound = False
+            self.internal_vars.append(
+                self._flow_curve_active_mask
+            )
         else:
-            sigma = sigma_trial
+            self._flow_curve_active_mask = None
+            self._flow_curve_mask_bound = True
 
-        return active_factor[0] * sigma
+    def _material_point_update(
+        self,
+        u_grad,
+        T,
+        dT,
+        active_factor,
+        young,
+        alpha,
+        poisson,
+        yield_stress,
+        hardening,
+        eqp_old,
+        eps_p_old=None,
+        eps_ref_old=None,
+        flow_curve_active=None,
+    ):
+        """Run the single canonical constitutive update used by every consumer."""
+        if eps_p_old is None:
+            eps_p_old = np.zeros((self.dim, self.dim))
+        if eps_ref_old is None:
+            eps_ref_old = np.zeros((self.dim, self.dim))
+        strain = 0.5 * (u_grad + u_grad.T) - eps_ref_old
+        nu = np.clip(poisson[0], -0.49, 0.49)
+        is_plastic = self.mechanics_model == "j2_plastic"
+        flow_curve = (
+            getattr(self, "flow_curve", None)
+            if is_plastic
+            else None
+        )
+        if flow_curve is not None:
+            if flow_curve_active is None:
+                raise ValueError(
+                    "flow-curve material update requires an explicit selector"
+                )
+            curve_selector = np.asarray(flow_curve_active)
+            if curve_selector.ndim:
+                curve_selector = curve_selector[0]
+            curve_selector = curve_selector > 0.5
+        else:
+            curve_selector = False
+
+        saturation = (
+            self.yield_saturation
+            if is_plastic
+            and self.yield_saturation is not None
+            and self.yield_saturation > 0.0
+            else np.inf
+        )
+        return radial_return(
+            strain=strain,
+            thermal_strain=alpha[0] * dT[0] * np.eye(self.dim),
+            state=PlasticState(
+                eqp=eqp_old[0],
+                eps_p=eps_p_old,
+            ),
+            young=young[0],
+            poisson=nu,
+            yield_stress=yield_stress[0] if is_plastic else np.inf,
+            hardening=hardening[0],
+            saturation=saturation,
+            temperature=T[0],
+            flow_curve=flow_curve,
+            flow_curve_active=curve_selector,
+        )
+
+    def stress_fn(self, u_grad, T, dT, active_factor, young, alpha, poisson, yield_stress, hardening, eqp_old, flow_curve_active=None):
+        update = ThermoMechanical._material_point_update(
+            self,
+            u_grad,
+            T,
+            dT,
+            active_factor,
+            young,
+            alpha,
+            poisson,
+            yield_stress,
+            hardening,
+            eqp_old,
+            flow_curve_active=flow_curve_active,
+        )
+        return active_factor[0] * update.stress
 
     def _tensor_map_getter(self):
         # Bound as instance attribute `get_tensor_map` when bbar is off.
@@ -230,12 +289,50 @@ class ThermoMechanical(Problem):
         )
         self.internal_vars_surfaces[self.powder_boundary_index] = [face_powder]
 
+    def set_flow_curve_active_mask(self, selector):
+        """Bind the per-quadrature solid-curve selector without changing params."""
+        if self.flow_curve is None:
+            if selector is not None:
+                raise ValueError(
+                    "flow-curve selector provided without a flow curve"
+                )
+            return
+        selector = np.asarray(selector)
+        if selector.shape != self.internal_vars[0].shape:
+            raise ValueError(
+                "flow-curve selector shape must match scalar quadrature "
+                f"fields: {selector.shape} != {self.internal_vars[0].shape}"
+            )
+        self._flow_curve_active_mask = selector
+        self._flow_curve_mask_bound = True
+
+    def _require_flow_curve_mask_bound(self):
+        if (
+            getattr(self, "flow_curve", None) is not None
+            and not getattr(self, "_flow_curve_mask_bound", False)
+        ):
+            raise ValueError(
+                "flow-curve quadrature selector must be bound before "
+                "using mechanics parameters or postprocessors"
+            )
+
     def set_params(self, params):
-        self.internal_vars = params
+        self._require_flow_curve_mask_bound()
+        self.internal_vars = list(params)
+        if self.flow_curve is not None:
+            self.internal_vars.append(
+                self._flow_curve_active_mask
+            )
 
     def compute_cell_stress(self, sol, params):
+        self._require_flow_curve_mask_bound()
         T_quad, dT_quad, active_factor_quad, young_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad, eqp_old_quad = params
         u_grads = self._u_grads(sol)
+        selector = (
+            self._flow_curve_active_mask
+            if self.flow_curve is not None
+            else np.zeros_like(active_factor_quad[..., :1])
+        )
         sigmas = jax.vmap(jax.vmap(self.stress_fn))(
             u_grads,
             T_quad,
@@ -247,6 +344,7 @@ class ThermoMechanical(Problem):
             yield_quad,
             hardening_quad,
             eqp_old_quad,
+            selector,
         )
         return {
             "stress_quad": sigmas,
@@ -254,36 +352,38 @@ class ThermoMechanical(Problem):
         }
 
     def compute_eqp_update(self, sol, params):
+        self._require_flow_curve_mask_bound()
         if self.mechanics_model != "j2_plastic":
             return params[-1]
 
         T_quad, dT_quad, active_factor_quad, young_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad, eqp_old_quad = params
         u_grads = self._u_grads(sol)
 
-        def one_quad(u_grad, T, dT, active_factor, young, alpha, poisson, yield_stress, hardening, eqp_old):
-            eps = 0.5 * (u_grad + u_grad.T)
-            nu = np.clip(poisson[0], -0.49, 0.49)
-            E = young[0]
-            mu = E / (2.0 * (1.0 + nu))
-            lmbda = E * nu / ((1.0 + nu) * (1.0 - 2.0 * nu))
-            thermal_eps = alpha[0] * dT[0] * np.eye(self.dim)
-            elastic_eps = eps - thermal_eps
-            sigma_trial = lmbda * np.trace(elastic_eps) * np.eye(self.dim) + 2.0 * mu * elastic_eps
-            hydro = np.trace(sigma_trial) / 3.0 * np.eye(self.dim)
-            dev = sigma_trial - hydro
-            seq = np.sqrt(1.5 * np.sum(dev * dev) + 1e-30)
-            hardened_yield = yield_stress[0] + hardening[0] * eqp_old[0]
-            if self.yield_saturation is not None and self.yield_saturation > 0.0:
-                sat = self.yield_saturation
-                current_yield = np.maximum(np.minimum(hardened_yield, sat), 1e-12)
-                hardening_eff = np.where(hardened_yield < sat, hardening[0], 0.0)
-            else:
-                current_yield = np.maximum(hardened_yield, 1e-12)
-                hardening_eff = hardening[0]
-            delta_eqp = np.maximum(seq - current_yield, 0.0) / (3.0 * mu + hardening_eff + 1e-12)
+        def one_quad(u_grad, T, dT, active_factor, young, alpha, poisson, yield_stress, hardening, eqp_old, flow_curve_active):
+            update = ThermoMechanical._material_point_update(
+                self,
+                u_grad,
+                T,
+                dT,
+                active_factor,
+                young,
+                alpha,
+                poisson,
+                yield_stress,
+                hardening,
+                eqp_old,
+                flow_curve_active=flow_curve_active,
+            )
             active = np.where(active_factor[0] > 0.5, 1.0, 0.0)
-            return np.array([eqp_old[0] + active * delta_eqp])
+            return np.array(
+                [eqp_old[0] + active * update.delta_eqp]
+            )
 
+        selector = (
+            self._flow_curve_active_mask
+            if self.flow_curve is not None
+            else np.zeros_like(active_factor_quad[..., :1])
+        )
         return jax.vmap(jax.vmap(one_quad))(
             u_grads,
             T_quad,
@@ -295,4 +395,5 @@ class ThermoMechanical(Problem):
             yield_quad,
             hardening_quad,
             eqp_old_quad,
+            selector,
         )

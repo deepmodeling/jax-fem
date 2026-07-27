@@ -1,0 +1,249 @@
+{
+  "_format": "JSON-compatible YAML 1.2; intentionally readable with the Python standard library",
+  "schema_version": "kaess.source-manifest/1",
+  "protocol_id": "kaess-2023-public-v1",
+  "claim_level": "public_code_to_code",
+  "paper_doi": "10.3390/ma16062321",
+  "hash_algorithm": "sha256",
+  "created_utc": "2026-07-24T00:00:00Z",
+  "evidence": [
+    {
+      "evidence_id": "paper-pdf",
+      "quantity": "authoritative published model and reported results",
+      "source_class": "paper_text",
+      "source_locator": "Kaess et al. (2023), Materials 16(6):2321, pp. 1-16",
+      "repository_path": "cases/kaess_2023/references/cases/kaess_2023_paper.pdf",
+      "sha256": "8bf5e7c2f744a55b9c4e40bbe5f17a5cb6e1649d668132edc961ecb5c3d5e941",
+      "impact": "critical",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "paper-fulltext",
+      "quantity": "searchable extraction of the published paper",
+      "source_class": "paper_text",
+      "source_locator": "Europe PMC PMC10055713 full-text XML retrieved 2026-07-16",
+      "repository_path": "cases/kaess_2023/references/cases/kaess_2023_fulltext.txt",
+      "sha256": "afeba3510f9ae7793184dc7a9e704504a089d1510d6df9df403cf137fccb7ade",
+      "impact": "high",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "benchmark-metadata",
+      "quantity": "current parameter, geometry, and digitization register",
+      "source_class": "inferred",
+      "source_locator": "repository benchmark metadata; values trace to paper text and Figures 3-9",
+      "repository_path": "cases/kaess_2023/references/cases/kaess_2023.json",
+      "sha256": "0413764a4c350b059ae7d2fa6a738b933520164874e6c5551bc0849d17f5f287",
+      "impact": "high",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "figure-8-digitized-curve",
+      "quantity": "complete Figure 8b 150 C sigma_x depth-profile vector curve and reading bounds",
+      "source_class": "figure_digitized",
+      "source_locator": "paper p. 10, Figure 8b; PDF vector drawing index 53 with axis-calibrated piecewise-linear sampling",
+      "repository_path": "cases/kaess_2023/references/digitized/fig8_sigma_x.csv",
+      "sha256": "dff873ec9ac9177f93bf24388a83972f9f206bddb5bf4666a79a724e63ffe2e9",
+      "impact": "critical",
+      "status": "verified",
+      "digitization": {
+        "paper_pdf_evidence_id": "paper-pdf",
+        "method_id": "pdf_vector_axis_calibrated_piecewise_linear_v1",
+        "paper_page": 10,
+        "paper_figure": "Figure 8b",
+        "pdf_drawing_indices": [53],
+        "output_row_count": 41,
+        "axis_calibration": {
+          "x": {
+            "pdf_points": [388.855377, 484.732971],
+            "values": [0.0, -0.4],
+            "quantity": "cantilever_z",
+            "unit": "mm"
+          },
+          "y": {
+            "pdf_points": [114.762787, 211.186386],
+            "values": [1500.0, -500.0],
+            "quantity": "sigma_x",
+            "unit": "MPa"
+          }
+        },
+        "sampling": {
+          "start_mm": 0.0,
+          "stop_mm": -0.4,
+          "step_mm": -0.01,
+          "interpolation": "piecewise_linear",
+          "endpoint_policy": "first_segment_linear_extension",
+          "maximum_extension_mm": 0.000228
+        },
+        "uncertainty_kind": "absolute_symmetric_reading_bound",
+        "reading_bounds": {
+          "cantilever_z_mm": 0.02,
+          "sigma_x_mpa": 50.0
+        }
+      }
+    },
+    {
+      "evidence_id": "figure-9-digitized-bending",
+      "quantity": "complete Figure 9a/9b maximum front-bending parameter curves and reading bounds",
+      "source_class": "figure_digitized",
+      "source_locator": "paper p. 11, Figure 9a/9b; PDF vector drawing indices 19, 44 and 51 with panel-specific axis calibration",
+      "repository_path": "cases/kaess_2023/references/digitized/fig9_bending.csv",
+      "sha256": "11782e2230de0447c1eeed73cb7f095506a8e43724f377e6a87151a91d060362",
+      "impact": "critical",
+      "status": "verified",
+      "digitization": {
+        "paper_pdf_evidence_id": "paper-pdf",
+        "method_id": "pdf_vector_axis_calibrated_v1",
+        "paper_page": 11,
+        "paper_figures": ["Figure 9a", "Figure 9b"],
+        "pdf_drawing_indices": [19, 44, 51],
+        "output_row_count": 20,
+        "axis_calibrations": [
+          {
+            "panel": "Figure 9a",
+            "x_pdf_points": [217.847992, 332.687988],
+            "x_values": [0.0, 1000.0],
+            "x_quantity": "build_plate_temperature",
+            "x_unit": "degC",
+            "y_pdf_points": [118.213028, 233.833038],
+            "y_values_um": [16.0, 0.0]
+          },
+          {
+            "panel": "Figure 9b",
+            "x_pdf_points": [404.388, 518.807983],
+            "x_values": [0.0, 400.0],
+            "x_quantity": "laser_power",
+            "x_unit": "W",
+            "y_pdf_points": [117.67305, 232.933044],
+            "y_values_um": [16.0, 0.0]
+          }
+        ],
+        "uncertainty_kind": "absolute_symmetric_reading_bound",
+        "reading_bounds": {
+          "max_front_bending_um": 0.3
+        },
+        "source_note": "Figure 9a contains a 50 C marker although Table 3 omits 50 C; the plotted marker is retained as figure evidence."
+      }
+    },
+    {
+      "evidence_id": "reference-hex-mesh",
+      "quantity": "29,568-element C3D8 powder-margin mesh reconstruction",
+      "source_class": "inferred",
+      "source_locator": "paper pp. 4-5 and Figure 3; element partition inferred from published dimensions and count",
+      "repository_path": "cases/kaess_2023/kaess_cantilever_c3d8_powder_margin.inp",
+      "sha256": "d2283a3d3f9f133d80bb630ac8f4068f15d266a538aaceb14f8d27f9f9c08cb8",
+      "impact": "critical",
+      "status": "inferred"
+    },
+    {
+      "evidence_id": "figure-7-release-cellset",
+      "quantity": "content-addressed W1/W2 removed, W3 retained and four-variant paper-minimal root-anchor protocol",
+      "source_class": "inferred",
+      "source_locator": "paper pp. 5 and 9, Sections 2.4 and 3, Figure 7; registered to the frozen C3D8 mesh",
+      "repository_path": "cases/kaess_2023/inputs/release-cellset.json",
+      "sha256": "3eed36636b680e8ba865de0920a153c81abd42a21dafcc71ac9d9596d4d23437",
+      "impact": "critical",
+      "status": "inferred"
+    },
+    {
+      "evidence_id": "figure-7-release-generator",
+      "quantity": "deterministic Figure 7 release partition and paper-minimal root-anchor generator",
+      "source_class": "inferred",
+      "source_locator": "repository implementation of the registered W1/W2 cut and W3 retained-root assumption",
+      "repository_path": "cases/kaess_2023/make_release_cellset.py",
+      "sha256": "073bd378be20482bb6183b224bb4fbeef606bb7d6edcf121eb46434cd150b196",
+      "impact": "high",
+      "status": "inferred"
+    },
+    {
+      "evidence_id": "mesh-reconstruction",
+      "quantity": "deterministic Kaess mesh generator",
+      "source_class": "inferred",
+      "source_locator": "repository implementation of the Figure 3 geometry reconstruction",
+      "repository_path": "cases/kaess_2023/make_kaess_mesh.py",
+      "sha256": "85b00c7729e19c9152e659c0acbfa799fafebdb59f10f551b245ea2e2feb8294",
+      "impact": "high",
+      "status": "inferred"
+    },
+    {
+      "evidence_id": "formal-material-config",
+      "quantity": "current 316L thermal-mechanical material configuration candidate",
+      "source_class": "assumption",
+      "source_locator": "external project asset; paper pp. 5-7, Figure 4, Tables 1-2",
+      "external_path": "/home/user/work/159/materials/316L/ss316l_material_config_kaess.json",
+      "sha256": "d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f",
+      "impact": "critical",
+      "status": "assumed"
+    },
+    {
+      "evidence_id": "scan-path-reconstruction",
+      "quantity": "linear hatch path and 67-degree layer rotation reconstruction",
+      "source_class": "inferred",
+      "source_locator": "paper pp. 7-8 and Figure 6; within-layer start/order remains inferred",
+      "repository_path": "cases/kaess_2023/make_kaess_path.py",
+      "sha256": "13cdb0c278820b3bee44cda094b4881e96dcb4729dac6e9f669cf4cd1ddb9b1b",
+      "impact": "critical",
+      "status": "inferred"
+    },
+    {
+      "evidence_id": "assumptions-register",
+      "quantity": "unpublished-input assumptions and sensitivity obligations",
+      "source_class": "assumption",
+      "source_locator": "Spec Kit Phase 0 source freeze",
+      "repository_path": "cases/kaess_2023/inputs/assumptions.yaml",
+      "sha256": "f328429f4a79a95edc377233c6dbc01929a060e584b593d20246f75d98ad68d8",
+      "impact": "critical",
+      "status": "assumed"
+    },
+    {
+      "evidence_id": "deviations-register",
+      "quantity": "current implementation differences from the published model",
+      "source_class": "inferred",
+      "source_locator": "Spec Kit research review and live source inspection",
+      "repository_path": "cases/kaess_2023/inputs/deviations.yaml",
+      "sha256": "08ea9ccaa65889012f8205b94c8d3a0b4cfd6d941fa2047b7210b7cd36b04329",
+      "impact": "critical",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "author-input-request-register",
+      "quantity": "unpublished author assets requested before claim upgrades",
+      "source_class": "assumption",
+      "source_locator": "Spec Kit unresolved-author-input review",
+      "repository_path": "cases/kaess_2023/inputs/author-input-requests.md",
+      "sha256": "35b29a7b6aeaa33e17bbc99b3a3f066ae602f8da66de2e93a9fe38214d10c94e",
+      "impact": "high",
+      "status": "assumed"
+    },
+    {
+      "evidence_id": "paper-parity-config-approved",
+      "quantity": "approved QoI, path, threshold, case-split, and stop-rule protocol",
+      "source_class": "project_decision",
+      "source_locator": "Spec Kit T006 protocol approved at G0 on 2026-07-24",
+      "repository_path": "cases/kaess_2023/inputs/paper-parity-config.yaml",
+      "sha256": "7e777d73f736d72578bcfccb80199e36163d9b2f60fdb08e9e8b3d2fa56320f7",
+      "impact": "critical",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "g0-approval-record",
+      "quantity": "human Review Gate decision and approved scope",
+      "source_class": "project_decision",
+      "source_locator": "Project-owner approval in Codex task on 2026-07-24",
+      "repository_path": "cases/kaess_2023/inputs/g0-approval.json",
+      "sha256": "206d7af567f0ee4d9113e8780b67b503936030538f266114834aa63052390839",
+      "impact": "critical",
+      "status": "verified"
+    },
+    {
+      "evidence_id": "approved-threshold-set",
+      "quantity": "immutable numerical acceptance thresholds",
+      "source_class": "project_decision",
+      "source_locator": "G0-approved Kaess first-pass threshold set v1.0.0",
+      "repository_path": "cases/kaess_2023/inputs/threshold-set.json",
+      "sha256": "8841c86850f1d5f8f74b8d0be000010f1466331017df390f3125c06cc0cfe275",
+      "impact": "critical",
+      "status": "verified"
+    }
+  ]
+}

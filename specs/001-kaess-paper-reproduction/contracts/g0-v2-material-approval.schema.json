@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.jax-fem/specs/001-kaess-paper-reproduction/g0-v2-material-approval.schema.json",
+  "title": "Kaess G0-v2 Conditional Material Approval",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "gate_id",
+    "protocol_id",
+    "decision",
+    "approved_by",
+    "approved_utc",
+    "approval_source",
+    "relationship_to_g0_v1",
+    "paper_parity_reference",
+    "canonical_g0_reference",
+    "request_reference",
+    "bundle_manifest_reference",
+    "material_config_reference",
+    "approval_scope",
+    "accepted_registered_assumptions",
+    "excluded_pending_semantics",
+    "conditions_for_final_approval",
+    "verification_evidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kaess.g0-v2-material-approval/1"
+    },
+    "gate_id": {
+      "const": "G0-v2"
+    },
+    "protocol_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision": {
+      "const": "conditionally_approved"
+    },
+    "approved_by": {
+      "const": "project_owner"
+    },
+    "approved_utc": {
+      "const": "2026-07-27T07:07:13Z"
+    },
+    "approval_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "message"
+      ],
+      "properties": {
+        "kind": {
+          "const": "codex_user_message"
+        },
+        "message": {
+          "const": "按上述范围条件批准 G0-v2"
+        }
+      }
+    },
+    "relationship_to_g0_v1": {
+      "const": "does_not_supersede_formal_g0_v1"
+    },
+    "paper_parity_reference": {
+      "$ref": "#/$defs/fileIdentity"
+    },
+    "canonical_g0_reference": {
+      "$ref": "#/$defs/fileIdentity"
+    },
+    "request_reference": {
+      "$ref": "#/$defs/fileIdentity"
+    },
+    "bundle_manifest_reference": {
+      "$ref": "#/$defs/fileIdentity"
+    },
+    "material_config_reference": {
+      "$ref": "#/$defs/fileIdentity"
+    },
+    "approval_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorization_level",
+        "claim_level",
+        "permitted_use_scopes",
+        "prohibited_use_scopes",
+        "permitted_jax_platforms",
+        "formal_eligible",
+        "promotion_eligible"
+      ],
+      "properties": {
+        "authorization_level": {
+          "const": "validation_only"
+        },
+        "claim_level": {
+          "const": "public_code_to_code"
+        },
+        "permitted_use_scopes": {
+          "const": [
+            "g1_cpu_validation",
+            "g2_cpu_validation",
+            "sensitivity_analysis"
+          ]
+        },
+        "prohibited_use_scopes": {
+          "const": [
+            "formal_run",
+            "promotion"
+          ]
+        },
+        "permitted_jax_platforms": {
+          "const": [
+            "cpu"
+          ]
+        },
+        "formal_eligible": {
+          "const": false
+        },
+        "promotion_eligible": {
+          "const": false
+        }
+      }
+    },
+    "accepted_registered_assumptions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "excluded_pending_semantics": {
+      "const": [
+        "abaqus_total_mean_thermal_expansion_runtime_implementation",
+        "activation_reference_temperature_semantics"
+      ]
+    },
+    "conditions_for_final_approval": {
+      "const": [
+        "verify_abaqus_total_mean_thermal_expansion",
+        "verify_activation_reference_temperature_semantics",
+        "pass_flow_curve_solver_realization_sensitivity",
+        "issue_superseding_final_g0_v2_approval"
+      ]
+    },
+    "verification_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_commit",
+        "full_regression",
+        "independent_review"
+      ],
+      "properties": {
+        "candidate_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "full_regression": {
+          "type": "string",
+          "minLength": 1
+        },
+        "independent_review": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "fileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

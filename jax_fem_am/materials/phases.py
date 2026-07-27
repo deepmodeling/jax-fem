@@ -10,6 +10,7 @@ import jax.numpy as np
 import numpy as onp
 
 from jax_fem_am.materials.tables import eval_property
+from jax_fem_am.process.activation import uses_strict_active_domain
 
 
 MODE_TO_ID = {
@@ -85,7 +86,16 @@ def material_cell_state(active_cell, substrate_cell, support_cell, args, cell_te
     return state
 
 
-def thermal_material_quads(T_old_quad, active_quad, phase_quad, args, tables, printed_quad=None, cooling_only_quad=None):
+def thermal_material_quads(
+    T_old_quad,
+    active_quad,
+    phase_quad,
+    args,
+    tables,
+    printed_quad=None,
+    cooling_only_quad=None,
+    T_new_quad=None,
+):
     rho_solid = args.rho_solid if args.rho_solid is not None else args.rho
     cp_solid = args.cp_solid if args.cp_solid is not None else args.cp
     k_solid = args.conductivity_solid if args.conductivity_solid is not None else args.conductivity
@@ -105,12 +115,21 @@ def thermal_material_quads(T_old_quad, active_quad, phase_quad, args, tables, pr
     if cooling_only_quad is None:
         cooling_only_quad = np.zeros_like(active_quad)
 
-    inactive_mass_factor = getattr(args, "inactive_mass_factor", None)
-    if inactive_mass_factor is None:
-        inactive_mass_factor = args.inactive_thermal_factor
-    rho_void = rho_solid * inactive_mass_factor
-    cp_void = cp_solid * np.ones_like(T_old_quad)
-    k_void = k_solid * args.inactive_thermal_factor * np.ones_like(T_old_quad)
+    if uses_strict_active_domain(args):
+        rho_void = np.zeros_like(T_old_quad)
+        cp_void = np.zeros_like(T_old_quad)
+        k_void = np.zeros_like(T_old_quad)
+    else:
+        inactive_mass_factor = getattr(args, "inactive_mass_factor", None)
+        if inactive_mass_factor is None:
+            inactive_mass_factor = args.inactive_thermal_factor
+        rho_void = rho_solid * inactive_mass_factor
+        cp_void = cp_solid * np.ones_like(T_old_quad)
+        k_void = (
+            k_solid
+            * args.inactive_thermal_factor
+            * np.ones_like(T_old_quad)
+        )
 
     if args.liquidus_temperature > args.solidus_temperature:
         mushy_frac = np.clip(
@@ -185,8 +204,62 @@ def thermal_material_quads(T_old_quad, active_quad, phase_quad, args, tables, pr
     conductivity_quad = np.where(is_printed | is_window, conductivity_quad, k_unprinted)
 
     if args.latent_heat > 0.0 and args.liquidus_temperature > args.solidus_temperature:
-        in_mushy = (T_old_quad >= args.solidus_temperature) & (T_old_quad <= args.liquidus_temperature) & is_window
-        latent_cp = np.where(in_mushy, args.latent_heat / (args.liquidus_temperature - args.solidus_temperature), 0.0)
+        melt_interval = (
+            args.liquidus_temperature - args.solidus_temperature
+        )
+        latent_support = is_printed | is_window
+        old_liquid_fraction = np.clip(
+            (T_old_quad - args.solidus_temperature) / melt_interval,
+            0.0,
+            1.0,
+        )
+        if T_new_quad is None:
+            in_mushy = (
+                (T_old_quad >= args.solidus_temperature)
+                & (T_old_quad <= args.liquidus_temperature)
+            )
+            latent_cp = np.where(
+                in_mushy & latent_support,
+                args.latent_heat / melt_interval,
+                0.0,
+            )
+        else:
+            # Kaess et al. (2023), Section 2.5, assigns 280 kJ/kg over
+            # 1370--1400 degC.  A secant heat capacity preserves that full
+            # enthalpy when one time increment crosses the entire interval:
+            # https://doi.org/10.3390/ma16062321
+            delta_temperature = T_new_quad - T_old_quad
+            nonzero_delta = np.abs(delta_temperature) > 1.0e-12
+            safe_delta = np.where(
+                nonzero_delta,
+                delta_temperature,
+                np.ones_like(delta_temperature),
+            )
+            new_liquid_fraction = np.clip(
+                (T_new_quad - args.solidus_temperature) / melt_interval,
+                0.0,
+                1.0,
+            )
+            secant_capacity = (
+                args.latent_heat
+                * (new_liquid_fraction - old_liquid_fraction)
+                / safe_delta
+            )
+            local_capacity = np.where(
+                (T_old_quad >= args.solidus_temperature)
+                & (T_old_quad <= args.liquidus_temperature),
+                args.latent_heat / melt_interval,
+                0.0,
+            )
+            latent_cp = np.where(
+                latent_support,
+                np.where(
+                    nonzero_delta,
+                    np.maximum(secant_capacity, 0.0),
+                    local_capacity,
+                ),
+                0.0,
+            )
     else:
         latent_cp = np.zeros_like(T_old_quad)
 
@@ -205,15 +278,51 @@ def clamp_mechanics_temperature(T_quad, floor):
     return np.maximum(T_quad, floor)
 
 
+def flow_curve_active_quads(active_quad, phase_quad, tables):
+    """Select physical non-powder points that use the frozen solid curve."""
+    if tables.get("flow_curve") is None:
+        return None
+    curve_material = (
+        (phase_quad == STATE_SOLID)
+        | (phase_quad == STATE_MUSHY)
+        | (phase_quad == STATE_LIQUID)
+        | (phase_quad == STATE_SUBSTRATE)
+        | (phase_quad == STATE_SUPPORT)
+    )
+    return np.where(
+        (active_quad > 0.5) & curve_material,
+        1.0,
+        0.0,
+    )
+
+
 def mechanics_material_quads(T_quad, active_quad, phase_quad, args, tables):
     E_quad = eval_property(T_quad, tables["E"], args.young)
     alpha_base = eval_property(T_quad, tables["alpha"], args.alpha)
     poisson_quad = eval_property(T_quad, tables["poisson"], args.poisson)
     if args.mechanics_model == "j2_plastic":
-        if tables["yield"] is None:
-            raise ValueError("--mechanics-model j2_plastic requires --yield-table")
-        yield_quad = eval_property(T_quad, tables["yield"], args.young)
-        hardening_quad = eval_property(T_quad, tables["hardening"], 0.0)
+        if tables.get("flow_curve") is not None:
+            # The canonical return map consumes the curve directly. These
+            # scalar slots remain as the weak-powder fallback and are
+            # overwritten below wherever powder is present.
+            yield_quad = args.young * np.ones_like(T_quad)
+            hardening_quad = np.zeros_like(T_quad)
+        else:
+            if tables["yield"] is None:
+                raise ValueError(
+                    "--mechanics-model j2_plastic requires "
+                    "--yield-table or --flow-curve-table"
+                )
+            yield_quad = eval_property(
+                T_quad,
+                tables["yield"],
+                args.young,
+            )
+            hardening_quad = eval_property(
+                T_quad,
+                tables["hardening"],
+                0.0,
+            )
     else:
         yield_quad = args.young * np.ones_like(T_quad)
         hardening_quad = np.zeros_like(T_quad)
@@ -221,26 +330,60 @@ def mechanics_material_quads(T_quad, active_quad, phase_quad, args, tables):
     is_solid_like = (phase_quad == STATE_SOLID) | (phase_quad == STATE_SUBSTRATE) | (phase_quad == STATE_SUPPORT)
     is_mushy = phase_quad == STATE_MUSHY
     is_liquid = phase_quad == STATE_LIQUID
+    inactive_factor = (
+        0.0
+        if uses_strict_active_domain(args)
+        else args.inactive_mechanics_factor
+    )
 
+    # The frozen high-temperature E(T) curve already represents the molten
+    # state in Kaess et al. (2023), Section 2.5.  Applying a second mushy or
+    # liquid multiplier would double-soften the same material response.
+    paper_irreversible = (
+        getattr(args, "phase_history_model", "legacy_reset")
+        == "paper_irreversible"
+    )
+    has_temperature_dependent_modulus = (
+        paper_irreversible and tables["E"] is not None
+    )
+    mushy_factor = (
+        1.0
+        if has_temperature_dependent_modulus
+        else args.mushy_mechanics_factor
+    )
+    liquid_factor = (
+        1.0
+        if has_temperature_dependent_modulus
+        else args.liquid_mechanics_factor
+    )
     active_factor_quad = np.where(
         is_solid_like,
         1.0,
-        np.where(is_mushy, args.mushy_mechanics_factor, np.where(is_liquid, args.liquid_mechanics_factor, args.inactive_mechanics_factor)),
+        np.where(
+            is_mushy,
+            mushy_factor,
+            np.where(is_liquid, liquid_factor, inactive_factor),
+        ),
     )
-    active_factor_quad = active_factor_quad * active_quad + args.inactive_mechanics_factor * (1.0 - active_quad)
+    active_factor_quad = (
+        active_factor_quad * active_quad
+        + inactive_factor * (1.0 - active_quad)
+    )
     alpha_quad = np.where(is_solid_like, alpha_base, np.zeros_like(alpha_base))
     if getattr(args, "powder_solid_E", None) is not None:
         # Weak-solid powder (Kaess 2023): constant E/sigma_y, no hardening,
         # full active factor where mechanically active - the weakness lives in
-        # the material values, not the ersatz factor. alpha stays zero above.
+        # the material values, not the ersatz factor. Section 2.5 also assigns
+        # powder the same thermal-expansion curve as solid material.
         is_powder = phase_quad == STATE_POWDER
         E_quad = np.where(is_powder, args.powder_solid_E, E_quad)
+        alpha_quad = np.where(is_powder, alpha_base, alpha_quad)
         yield_quad = np.where(is_powder, args.powder_solid_yield, yield_quad)
         hardening_quad = np.where(
             is_powder, getattr(args, "powder_solid_hardening", 1.0e7), hardening_quad)
         active_factor_quad = np.where(
             is_powder,
-            active_quad + args.inactive_mechanics_factor * (1.0 - active_quad),
+            active_quad + inactive_factor * (1.0 - active_quad),
             active_factor_quad,
         )
     return active_factor_quad, E_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad

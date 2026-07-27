@@ -1,0 +1,88 @@
+{
+  "_format": "JSON-compatible YAML 1.2",
+  "schema_version": "kaess.deviations/1",
+  "protocol_id": "kaess-2023-public-v1",
+  "deviations": [
+    {
+      "deviation_id": "P0-BC",
+      "paper_requirement": "All bottom nodes restrained in z with partial in-plane freedom.",
+      "implemented_behavior": "Kaess phase 1 uses a paper-minimal global-bottom boundary. On the formal phase-2 exact-release path, all build-stage bottom nodes are restrained in z while the three in-plane rigid-body DOFs are selected from the retained W3 root; release retains exactly those same W3 in-plane DOFs and the 189 W3-bottom z restraints (192 physical DOFs total), so no new zero-displacement anchor is introduced at cutting. The paper does not publish the exact in-plane anchors, so the frozen min_min choice remains subject to the required G2 four-corner sensitivity check.",
+      "severity": "P0",
+      "affected_qoi_ids": ["sigma_x_depth_curve", "front_bending_curve", "max_front_bending"],
+      "resolution": "accepted_assumption",
+      "evidence_paths": ["jax_fem_am/physics/release.py", "jax_fem_am/simulation/stepper.py", "tests/unit/test_kaess_paper_bottom_bc.py", "specs/001-kaess-paper-reproduction/research.md"]
+    },
+    {
+      "deviation_id": "P0-HS",
+      "paper_requirement": "Equation (1) hemispherical three-dimensional Gaussian source.",
+      "implemented_behavior": "Plane Gaussian multiplied by one-sided exponential depth decay.",
+      "severity": "P0",
+      "affected_qoi_ids": ["peak_temperature", "melt_volume", "thermal_energy_closure"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/physics/thermal.py", "cases/kaess_2023/references/cases/kaess_2023_paper.pdf"]
+    },
+    {
+      "deviation_id": "P0-ACT",
+      "paper_requirement": "Abaqus MODEL CHANGE removes inactive elements from the physical equations.",
+      "implemented_behavior": "For the frozen paper workflow (layer_on_scan with future_layer_mode=void), future cells have exactly zero thermal storage, conductivity, stiffness and residual contribution. Nodes owned only by noncontributing cells are removed from the unknown set by deterministic Dirichlet identity rows until activation; shared interface nodes remain free. The static mesh shape is retained for JAX compilation, while legacy activation modes retain their historical ersatz behavior.",
+      "severity": "P0",
+      "affected_qoi_ids": ["peak_temperature", "thermal_energy_closure", "sigma_x_depth_curve", "front_bending_curve"],
+      "resolution": "fixed",
+      "evidence_paths": ["jax_fem_am/materials/phases.py", "jax_fem_am/process/activation.py", "jax_fem_am/simulation/stepper.py", "tests/integration/test_active_domain_equivalence.py", "specs/001-kaess-paper-reproduction/evidence/t009-t016-active-domain.md"]
+    },
+    {
+      "deviation_id": "P0-SURF",
+      "paper_requirement": "Film and radiation act on the current active top element layer.",
+      "implemented_behavior": "The paper path builds a fixed upward-face superset from physical outward normals and applies a per-step owner/neighbor physical-domain mask. The current printed top is exposed exactly once, active-active and void-void internal faces are zero, and future layers do not hide the active top. HEX8 and TET4, including either build direction, are covered.",
+      "severity": "P0",
+      "affected_qoi_ids": ["peak_temperature", "thermal_energy_closure", "sigma_x_depth_curve"],
+      "resolution": "fixed",
+      "evidence_paths": ["jax_fem/fe.py", "jax_fem_am/physics/thermal.py", "jax_fem_am/simulation/stepper.py", "tests/integration/test_active_surface_boundary.py", "specs/001-kaess-paper-reproduction/evidence/t010-t017-active-surface.md"]
+    },
+    {
+      "deviation_id": "P0-COOL",
+      "paper_requirement": "Cooling boundary conditions ramp from process conditions to room temperature.",
+      "implemented_behavior": "The fixed bottom and convection/radiation ambient follow the same frozen linear k/N ramp from their process values to the final cooldown temperature. Both values are explicit StepState fields, path CSV columns, JAX cell/surface inputs and thermal-ledger inputs.",
+      "severity": "P0",
+      "affected_qoi_ids": ["thermal_energy_closure", "sigma_x_depth_curve", "front_bending_curve"],
+      "resolution": "fixed",
+      "evidence_paths": ["jax_fem_am/process/schedule.py", "jax_fem_am/simulation/stepper.py", "jax_fem_am/verification/thermal_ledger.py", "tests/integration/test_active_surface_boundary.py", "specs/001-kaess-paper-reproduction/evidence/t010-t017-active-surface.md"]
+    },
+    {
+      "deviation_id": "P0-MAT",
+      "paper_requirement": "Temperature-dependent powder conductivity, shared specific heat/latent heat, and source-backed high-temperature tables.",
+      "implemented_behavior": "The canonical weak form and energy ledger use the same enthalpy difference across each increment, including complete melting-interval crossings. Powder conductivity and shared phase tables are supported through a content-addressed candidate, and duplicate mushy/liquid scaling is disabled for tabulated high-temperature solid properties. The candidate remains pending G0 reapproval.",
+      "severity": "P0",
+      "affected_qoi_ids": ["peak_temperature", "melt_volume", "thermal_energy_closure", "sigma_x_depth_curve"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/materials/phases.py", "jax_fem_am/simulation/stepper.py", "jax_fem_am/verification/thermal_ledger.py", "cases/kaess_2023/candidates/g0-v2-t018/material-bundle-manifest.json", "specs/001-kaess-paper-reproduction/evidence/t018-material-history.md"]
+    },
+    {
+      "deviation_id": "P0-J2",
+      "paper_requirement": "Published temperature-dependent flow curves and consistent incremental plastic update.",
+      "implemented_behavior": "The solver loads a source-tagged rectangular temperature/plastic-strain flow curve, solves its exact piecewise-linear J2 consistency equation, and uses one canonical material update for residual, AD tangent, stress output and committed tensor history on raw/v06, plain/B-bar, build and release paths. The Figure 4(b) 7x2 material candidate remains an unapproved digitization with unquantified reading error and explicit solver-realization nodes.",
+      "severity": "P0",
+      "affected_qoi_ids": ["sigma_x_depth_curve", "front_bending_curve", "max_front_bending"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/materials/j2.py", "jax_fem_am/physics/mechanics.py", "jax_fem_am/simulation/runner.py", "cases/kaess_2023/candidates/g0-v2-t018/flow_curve_table.pending.metadata.json", "specs/001-kaess-paper-reproduction/evidence/t012-t019-j2-flow-curve.md"]
+    },
+    {
+      "deviation_id": "P0-HIST",
+      "paper_requirement": "Irreversible powder-to-solid transition without an unreported stress/plastic-history reset.",
+      "implemented_behavior": "The paper_irreversible path makes solidification absorbing, latches the first reference temperature once, and preserves equivalent-plastic-strain and tensor plastic history through remelting. Legacy reset/relaxation controls remain isolated compatibility inputs and are inert in the paper path. The exact unpublished USDFLD semantics remain an open author-input assumption.",
+      "severity": "P0",
+      "affected_qoi_ids": ["sigma_x_depth_curve", "front_bending_curve", "max_front_bending"],
+      "resolution": "open",
+      "evidence_paths": ["jax_fem_am/domain/events.py", "jax_fem_am/materials/phases.py", "jax_fem_am/simulation/runner.py", "specs/001-kaess-paper-reproduction/evidence/t018-material-history.md"]
+    },
+    {
+      "deviation_id": "P0-REL",
+      "paper_requirement": "Predefined support elements are deleted for the Figure 7 partial separation.",
+      "implemented_behavior": "The frozen 29,568-cell C3D8 paper workflow reads a mesh-bound, content-addressed release artifact, removes exactly 1,920 W1/W2 support cells with zero contribution, retains 1,920 W3 root cells, derives and verifies the hashed 189-node/192-DOF paper-minimal root anchor protocol, writes the release mask to VTU, and rejects protected-cell cuts, disconnected load-bearing components, non-root anchors, anchor discontinuity and deficient actual constrained DOFs. Other meshes retain a geometric-box diagnostic arm that is explicitly ineligible for the paper release gate.",
+      "severity": "P0",
+      "affected_qoi_ids": ["front_bending_curve", "max_front_bending", "release_direction"],
+      "resolution": "accepted_assumption",
+      "evidence_paths": ["cases/kaess_2023/inputs/release-cellset.json", "cases/kaess_2023/make_release_cellset.py", "jax_fem_am/physics/release.py", "jax_fem_am/simulation/stepper.py", "tests/integration/test_kaess_release_cellset.py", "tests/integration/test_v06_run_audit.py"]
+    }
+  ]
+}

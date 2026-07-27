@@ -1,1 +1,17 @@
 * text=auto eol=lf
+
+.gitattributes text eol=lf
+
+# G0/G0-v2 content-addressed protocol and approval inputs.
+/cases/kaess_2023/inputs/*.json text eol=lf
+/cases/kaess_2023/inputs/*.yaml text eol=lf
+
+# Every text payload in the approved candidate bundle is hashed byte-for-byte.
+/cases/kaess_2023/candidates/g0-v2-t018/** text eol=lf
+
+# Repository source evidence referenced by the G0-v2 manifest.
+/cases/kaess_2023/calibrate_figure4.py text eol=lf
+/cases/kaess_2023/references/**/*.txt text eol=lf
+/cases/kaess_2023/references/**/*.json text eol=lf
+/cases/kaess_2023/references/**/*.pdf binary
+/cases/kaess_2023/references/**/*.png binary

@@ -1,0 +1,279 @@
+{
+  "_comment": "Independent calibration of Figure 4(b) from the original PDF vector objects. This quantifies digitization error only; it does not recover the authors' Abaqus table or approve the candidate.",
+  "axis_fit": {
+    "strain_grid": {
+      "drawing_indices": [
+        39,
+        40,
+        41,
+        42
+      ],
+      "intercept": -2.188976917524,
+      "max_residual": 0.000240836059,
+      "pdf_x": [
+        400.7099,
+        437.249908,
+        473.915894,
+        510.51889
+      ],
+      "value_per_pdf_point": 0.005463091096,
+      "values": [
+        0.0,
+        0.2,
+        0.4,
+        0.6
+      ]
+    },
+    "stress_grid": {
+      "MPa_per_pdf_point": -6.21541783804,
+      "drawing_indices": [
+        44,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38
+      ],
+      "intercept_MPa": 1784.913309430636,
+      "pdf_y": [
+        287.185547,
+        271.057526,
+        255.055527,
+        238.927521,
+        222.736526,
+        206.734528,
+        190.606537,
+        174.604538
+      ],
+      "values_MPa": [
+        0.0,
+        100.0,
+        200.0,
+        300.0,
+        400.0,
+        500.0,
+        600.0,
+        700.0
+      ]
+    },
+    "stress_max_residual_MPa": 0.512729506197
+  },
+  "claim_boundary": "The frozen error covers extraction and rounding of the plotted vector geometry only. It excludes model-form uncertainty, the paper authors' assumed high-temperature curves, and the unpublished 1673.15 K and 1873.15 K solver-realization nodes.",
+  "curve_fit": {
+    "max_endpoint_strain_offset": 0.0028909879,
+    "max_rounding_residual_MPa": 0.485953830586,
+    "vector_endpoints": [
+      {
+        "drawing_index": 45,
+        "frozen": {
+          "equivalent_plastic_strain": [
+            0.0,
+            0.4
+          ],
+          "flow_stress_MPa": [
+            500.0,
+            600.0
+          ]
+        },
+        "mapped": {
+          "equivalent_plastic_strain": [
+            0.0028909879,
+            0.400068780807
+          ],
+          "flow_stress_MPa": [
+            500.363527088456,
+            599.822541664561
+          ]
+        },
+        "pdf": {
+          "bottom": 206.671509,
+          "top": 190.669525,
+          "x0": 401.213867,
+          "x1": 473.915894
+        },
+        "source_origin": "reference_33_rounded_by_paper_authors",
+        "temperature_C": 20.0
+      },
+      {
+        "drawing_index": 48,
+        "frozen": {
+          "equivalent_plastic_strain": [
+            0.0,
+            0.4
+          ],
+          "flow_stress_MPa": [
+            400.0,
+            500.0
+          ]
+        },
+        "mapped": {
+          "equivalent_plastic_strain": [
+            0.0028909879,
+            0.400068780807
+          ],
+          "flow_stress_MPa": [
+            400.121325859115,
+            500.363527088456
+          ]
+        },
+        "pdf": {
+          "bottom": 222.7995,
+          "top": 206.671509,
+          "x0": 401.213867,
+          "x1": 473.915894
+        },
+        "source_origin": "paper_author_assumption",
+        "temperature_C": 400.0
+      },
+      {
+        "drawing_index": 51,
+        "frozen": {
+          "equivalent_plastic_strain": [
+            0.0,
+            0.4
+          ],
+          "flow_stress_MPa": [
+            300.0,
+            400.0
+          ]
+        },
+        "mapped": {
+          "equivalent_plastic_strain": [
+            0.002202766463,
+            0.400068780807
+          ],
+          "flow_stress_MPa": [
+            299.878934950274,
+            400.121325859115
+          ]
+        },
+        "pdf": {
+          "bottom": 238.927521,
+          "top": 222.7995,
+          "x0": 401.087891,
+          "x1": 473.915894
+        },
+        "source_origin": "paper_author_assumption",
+        "temperature_C": 800.0
+      },
+      {
+        "drawing_index": 54,
+        "frozen": {
+          "equivalent_plastic_strain": [
+            0.0,
+            0.4
+          ],
+          "flow_stress_MPa": [
+            150.0,
+            200.0
+          ]
+        },
+        "mapped": {
+          "equivalent_plastic_strain": [
+            0.000825990148,
+            0.400068780807
+          ],
+          "flow_stress_MPa": [
+            149.907321272631,
+            200.028421887301
+          ]
+        },
+        "pdf": {
+          "bottom": 263.056488,
+          "top": 254.992493,
+          "x0": 400.835876,
+          "x1": 473.915894
+        },
+        "source_origin": "paper_author_assumption",
+        "temperature_C": 1000.0
+      },
+      {
+        "drawing_index": 59,
+        "frozen": {
+          "equivalent_plastic_strain": [
+            0.0,
+            0.4
+          ],
+          "flow_stress_MPa": [
+            20.0,
+            30.0
+          ]
+        },
+        "mapped": {
+          "equivalent_plastic_strain": [
+            0.00048187943,
+            0.400068780807
+          ],
+          "flow_stress_MPa": [
+            19.514046169414,
+            29.694903622995
+          ]
+        },
+        "pdf": {
+          "bottom": 284.035492,
+          "top": 282.397491,
+          "x0": 400.772888,
+          "x1": 473.915894
+        },
+        "source_origin": "paper_author_assumption",
+        "temperature_C": 1370.0
+      }
+    ]
+  },
+  "frozen_reading_error": {
+    "equivalent_plastic_strain_absolute": 0.0032,
+    "flow_stress_absolute_MPa": 1.0
+  },
+  "method": {
+    "axis_model": "least_squares_affine_fit_to_vector_grid_lines",
+    "curve_model": "five_connected_vector_line_segments",
+    "extractor": "PyMuPDF",
+    "extractor_version": "1.28.0",
+    "rounding_model": "frozen_integer_MPa_and_endpoint_strain",
+    "script_path": "cases/kaess_2023/calibrate_figure4.py",
+    "script_sha256": "a187f278e4760207a8daa2f3c4dd55bdaee408db138185265c0d72d2e9e669d1",
+    "source_geometry": "PDF_vector_objects",
+    "spec_path": "cases/kaess_2023/references/figure4-vector-spec.json",
+    "spec_sha256": "200ef6c1b3d7d0f9142ec4402f391ceb0796bb6ef2298967597b2485c95b08ac"
+  },
+  "promotion_eligible": false,
+  "schema_version": "kaess.flow-curve-vector-calibration/1",
+  "solver_realization_nodes": [
+    {
+      "basis": "Section 2.5 says yield strength reaches a numerically realizable minimum at melting; the exact value is not published.",
+      "equivalent_plastic_strain": [
+        0.0,
+        0.4
+      ],
+      "flow_stress_MPa": [
+        1.0,
+        1.0
+      ],
+      "source_origin": "solver_realization_melting_minimum_not_figure_node",
+      "temperature_K": 1673.15
+    },
+    {
+      "basis": "High-temperature extension of the same unverified numerical floor.",
+      "equivalent_plastic_strain": [
+        0.0,
+        0.4
+      ],
+      "flow_stress_MPa": [
+        1.0,
+        1.0
+      ],
+      "source_origin": "solver_realization_high_temperature_extension",
+      "temperature_K": 1873.15
+    }
+  ],
+  "source": {
+    "figure": "4(b)",
+    "page_number_one_based": 6,
+    "paper_doi": "10.3390/ma16062321",
+    "pdf_path": "cases/kaess_2023/references/cases/kaess_2023_paper.pdf",
+    "pdf_sha256": "8bf5e7c2f744a55b9c4e40bbe5f17a5cb6e1649d668132edc961ecb5c3d5e941"
+  },
+  "status": "independently_calibrated"
+}

@@ -1,0 +1,10 @@
+T,value,source
+293.15,190000000000.0,figure_node
+373.15,184000000000.0,figure_node
+473.15,176000000000.0,figure_node
+573.15,169000000000.0,figure_node
+673.15,162000000000.0,figure_node
+773.15,155000000000.0,figure_node
+1643.15,90000000000.0,figure_node_author_assumption
+1673.15,10000000000.0,figure_node_author_assumption
+1873.15,10000000000.0,solver_extension

@@ -1,0 +1,51 @@
+{
+  "schema_version": "kaess.g0-approval/1",
+  "gate_id": "G0",
+  "protocol_id": "kaess-2023-public-v1",
+  "decision": "approved",
+  "approved_by": "project_owner",
+  "approved_utc": "2026-07-24T03:03:18Z",
+  "approval_source": {
+    "kind": "codex_user_message",
+    "message": "批准 G0，并允许添加 jsonschema"
+  },
+  "approved_checklist_items": [
+    "CHK023",
+    "CHK024",
+    "CHK025",
+    "CHK026",
+    "CHK027",
+    "CHK028",
+    "CHK029",
+    "CHK030"
+  ],
+  "claim_level": "public_code_to_code",
+  "p0_scope": [
+    "paper_minimal_bottom_boundary",
+    "paper_hemispherical_gaussian_heat_source",
+    "strict_active_domain",
+    "dynamic_exposed_surface_and_cooling_ambient",
+    "temperature_dependent_material_and_phase_history",
+    "consistent_j2_return_map_and_tangent",
+    "frozen_release_cell_set"
+  ],
+  "workflow": "cpu_small_reference_then_gpu_qualification_then_accelerated_formal",
+  "threshold_artifact": {
+    "path": "cases/kaess_2023/inputs/threshold-set.json",
+    "sha256": "8841c86850f1d5f8f74b8d0be000010f1466331017df390f3125c06cc0cfe275"
+  },
+  "calibration_case_ids": [],
+  "held_out_case_ids": [
+    "standard-10x30-t150-p250-v850"
+  ],
+  "material_freeze": {
+    "mode": "external_sha256",
+    "environment_variable": "KAESS_MATERIAL_CONFIG",
+    "source_manifest_evidence_id": "formal-material-config",
+    "sha256": "d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f"
+  },
+  "open_questions_disposition": "approved_as_registered_assumptions_with_required_sensitivity_checks",
+  "dependency_authorization": {
+    "jsonschema": true
+  }
+}

@@ -25,6 +25,7 @@ if ! command -v python >/dev/null 2>&1 && [ -f /home/user/miniforge3/etc/profile
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/launcher_guards.sh"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 WORK_ROOT="${WORK_ROOT:-$(cd "${REPO_ROOT}/.." && pwd)}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
@@ -32,7 +33,7 @@ XLA_PLATFORM="${XLA_PLATFORM:-cpu}"
 LINEAR_SOLVER="${LINEAR_SOLVER:-pardiso}"
 
 PLATE_TEMP_C="${PLATE_TEMP_C:-150}"
-PLATE_TEMP_K="$(${PYTHON_BIN} -c "print(273.15 + ${PLATE_TEMP_C})")"
+PLATE_TEMP_K="$(kaess_celsius_to_kelvin "${PYTHON_BIN}" "${PLATE_TEMP_C}")"
 ROOM_TEMP_K="${ROOM_TEMP_K:-293.15}"      # final plate cooldown target (paper 2.3)
 # Reference model has NO stress relaxation/annealing mechanism -> disabled (0)
 # for code-to-code faithfulness. Set >0 to reactivate the v06 knob.
@@ -43,13 +44,34 @@ RUN_ID="${RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_ROOT="${OUT_ROOT:-${WORK_ROOT}/output/kaess_p1_T${PLATE_TEMP_C}C_${RUN_ID}}"
 RUN_LABEL="kaess-2023-phase1-T${PLATE_TEMP_C}C"
 
-MATERIAL_CONFIG="${MATERIAL_CONFIG:-${WORK_ROOT}/materials/316L/ss316l_material_config_kaess.json}"
+DEFAULT_MATERIAL_CONFIG="${WORK_ROOT}/materials/316L/ss316l_material_config_kaess.json"
+if [[ -n "${KAESS_MATERIAL_CONFIG:-}" && -n "${MATERIAL_CONFIG:-}" ]] \
+   && [[ "$(realpath -m "${KAESS_MATERIAL_CONFIG}")" != "$(realpath -m "${MATERIAL_CONFIG}")" ]]; then
+  echo "kaess p1: conflicting KAESS_MATERIAL_CONFIG and MATERIAL_CONFIG" >&2
+  exit 2
+fi
+MATERIAL_CONFIG="${KAESS_MATERIAL_CONFIG:-${MATERIAL_CONFIG:-${DEFAULT_MATERIAL_CONFIG}}}"
+[[ -f "${MATERIAL_CONFIG}" ]] || {
+  echo "kaess p1: missing input: ${MATERIAL_CONFIG}" >&2
+  exit 2
+}
+MATERIAL_CONFIG="$(realpath -e "${MATERIAL_CONFIG}")"
+export KAESS_MATERIAL_CONFIG="${MATERIAL_CONFIG}"
+PARITY_CONFIG="${SCRIPT_DIR}/inputs/paper-parity-config.yaml"
+G0_APPROVAL="${SCRIPT_DIR}/inputs/g0-approval.json"
 MESH_FILE="${MESH_FILE:-${SCRIPT_DIR}/kaess_cantilever_c3d4.inp}"
 EXTRA_ARGS="${EXTRA_ARGS:-}"
+kaess_parse_safe_extra_args "${EXTRA_ARGS}" 1
 
-for f in "${MATERIAL_CONFIG}" "${MESH_FILE}"; do
+for f in "${MATERIAL_CONFIG}" "${MESH_FILE}" "${PARITY_CONFIG}" "${G0_APPROVAL}"; do
   [[ -f "$f" ]] || { echo "kaess p1: missing input: $f" >&2; exit 2; }
 done
+kaess_validate_material_identity \
+  "${REPO_ROOT}" \
+  "${PYTHON_BIN}" \
+  "${MATERIAL_CONFIG}" \
+  "${PARITY_CONFIG}" \
+  "${G0_APPROVAL}"
 
 mkdir -p "$(dirname "${OUT_ROOT}")"
 if ! mkdir "${OUT_ROOT}" 2>/dev/null; then
@@ -133,10 +155,12 @@ SOLVER_CMD=(
   --cooling-steps 30 --cooling-dt 1.0
   --final-cooldown-temperature "${ROOM_TEMP_K}"
   --mechanics-model j2_plastic
-  # bottom clamp: paper fixes z (+rotation) with x/y partially permitted;
-  # elastic (normal-spring) foundation leaves x/y rigid modes exactly
-  # singular on this mesh, so full clamp is used - documented deviation.
-  --bottom-mechanics-bc fixed
+  # Paper Section 2.3 fixes the bottom normal and rotation while partially
+  # permitting in-plane contraction. Exact anchor nodes are unpublished;
+  # min_min is the frozen primary variant and the other corners are reserved
+  # for the preregistered G2 anchor-sensitivity study.
+  --bottom-mechanics-bc paper_minimal
+  --paper-minimal-anchor-corner min_min
   --mechanics-every 5
   --mechanics-rel-tol 1e-5
   --mechanics-max-iter 50
@@ -153,9 +177,10 @@ SOLVER_CMD=(
   --thermal-output-every 11
   --mechanics-output-every 11
   --summary-every 11
-  --reset-plastic-on-melt
+  --no-reset-plastic-on-melt
+  --phase-history-model paper_irreversible
 )
-printf '%q ' "${SOLVER_CMD[@]}" ${EXTRA_ARGS} > "${OUT_ROOT}/solver_command.txt"
+printf '%q ' "${SOLVER_CMD[@]}" "${KAESS_EXTRA_ARGV[@]}" > "${OUT_ROOT}/solver_command.txt"
 printf '\n' >> "${OUT_ROOT}/solver_command.txt"
 
 finalize_manifest() {
@@ -186,7 +211,7 @@ finalize_manifest() {
 }
 trap finalize_manifest EXIT
 
-"${SOLVER_CMD[@]}" ${EXTRA_ARGS}
+"${SOLVER_CMD[@]}" "${KAESS_EXTRA_ARGV[@]}"
 
 LAST_COOLING_VTU="$(ls "${OUT_ROOT}"/step_*_cooling.vtu 2>/dev/null | sort | tail -1)"
 

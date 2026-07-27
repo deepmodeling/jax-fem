@@ -584,6 +584,7 @@ def _single_var_bc_flat(problem):
     signature = (
         vec,
         offset,
+        int(getattr(fe, '_dirichlet_bc_version', 0)),
         tuple(
             (
                 _bc_array_signature(node_inds),
@@ -927,6 +928,17 @@ class _PetscTangentCache:
         self.mat = PETSc.Mat().createAIJ(size=(n, n))
         self.mat.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)
         self.mat.setPreallocationCOO(coo_i, coo_j)
+        self.bc_versions = None
+        self.bc_row_inds_list = []
+        self._refresh_bc_rows(problem)
+
+    def _refresh_bc_rows(self, problem):
+        versions = tuple(
+            getattr(fe, '_dirichlet_bc_version', 0)
+            for fe in problem.fes
+        )
+        if versions == self.bc_versions:
+            return
         self.bc_row_inds_list = []
         for ind, fe in enumerate(problem.fes):
             for i in range(len(fe.node_inds_list)):
@@ -935,8 +947,10 @@ class _PetscTangentCache:
                     dtype=onp.int32,
                 )
                 self.bc_row_inds_list.append(row_inds)
+        self.bc_versions = versions
 
     def update(self, problem):
+        self._refresh_bc_rows(problem)
         values = onp.asarray(problem.V, dtype=onp.float64)
         self.mat.setValuesCOO(values)
         self.mat.assemble()
@@ -1714,8 +1728,10 @@ def solver(problem, solver_options={}):
     tol = cfg.get('tol', 1e-6)
     residual_only_check = bool(cfg.get('residual_only_check', False))
     max_iter = int(cfg.get('max_iter', 100))
-    # Abaqus-style acceptance (opt-in; None keeps the legacy single-residual
-    # criteria bit-for-bit). Modeled on Abaqus/Standard usb 7.2.3: max-norm
+    # Hybrid Abaqus-style acceptance (opt-in; None keeps the legacy
+    # single-residual criteria bit-for-bit). Configured residual tolerances
+    # remain a strict acceptance exit, augmented by Abaqus/Standard usb 7.2.3:
+    # max-norm
     # force residual measured against the increment's out-of-balance force
     # scale (proxy for the time-averaged flux q~), a displacement-correction
     # criterion, and a linear-convergence fallback that relaxes the force
@@ -1803,10 +1819,20 @@ def solver(problem, solver_options={}):
         acc_last_du_max = None
 
     def _accepted(n, res_vec_, res_val_, rel_res_val_, dofs_, last_du_max_):
+        # Keep the configured residual tolerances as a strict, conservative
+        # acceptance exit in every mode.  The Abaqus-style criteria are an
+        # additional route for stalled-but-stable states; they must not reject
+        # a state that the original residual test has already converged.  This
+        # matters for tiny/cut-back increments, where du_total can approach
+        # zero and make the relative displacement-correction ratio ill-scaled.
+        residual_ok = (rel_res_val_ <= rel_tol) or (res_val_ <= tol)
         if acceptance is None:
-            # Legacy criteria, logically identical to the original
-            # `while (rel > rel_tol) and (res > tol)` continuation.
-            return (rel_res_val_ <= rel_tol) or (res_val_ <= tol)
+            return residual_ok
+        if residual_ok:
+            logger.info(
+                f"acceptance: strict residual criterion satisfied at iter {n} "
+                f"(residual={res_val_:.3e}, relative={rel_res_val_:.3e})")
+            return True
         res_max = float(np.max(np.abs(res_vec_)))
         frac = acc_force_frac if n < acc_fb_after else acc_fb_frac
         if res_max > frac * acc_q_scale:
@@ -1827,10 +1853,31 @@ def solver(problem, solver_options={}):
                         acc_last_du_max if acceptance is not None else None):
         n_iters += 1
         if n_iters > max_iter:
+            acceptance_detail = ""
+            if acceptance is not None:
+                res_max = float(np.max(np.abs(res_vec)))
+                force_ratio = res_max / acc_q_scale
+                du_total_max = float(np.max(np.abs(dofs - acc_dofs_start)))
+                disp_ratio = (
+                    float("inf") if acc_last_du_max is None
+                    else acc_last_du_max / max(du_total_max, 1e-30)
+                )
+                force_limit = (
+                    acc_force_frac if n_iters - 1 < acc_fb_after
+                    else acc_fb_frac
+                )
+                acceptance_detail = (
+                    " Abaqus-style criteria: "
+                    f"force_ratio={force_ratio:.3e} "
+                    f"(limit={force_limit:.1e}), "
+                    f"displacement_correction_ratio={disp_ratio:.3e} "
+                    f"(limit={acc_disp_frac:.1e})."
+                )
             raise RuntimeError(
                 f"Newton solver did not converge within max_iter={max_iter} "
                 f"iterations: residual={res_val:.3e} (tol={tol:.1e}), "
-                f"relative={rel_res_val:.3e} (rel_tol={rel_tol:.1e}). "
+                f"relative={rel_res_val:.3e} (rel_tol={rel_tol:.1e})."
+                f"{acceptance_detail} "
                 "Increase solver_options newton 'max_iter', enable "
                 "'line_search_flag', or check the tangent/material model.")
         _log_newton_iter_start(n_iters)

@@ -1,0 +1,111 @@
+{
+  "schema_version": "kaess.p0-regression-evidence/1",
+  "task_id": "T021",
+  "status": "pass",
+  "recorded_utc": "2026-07-27T02:34:15.1673139Z",
+  "code": {
+    "branch": "codex/r3-optimization",
+    "commit": "8f1603f4ee69a15b0049ad04724aba654db7e740",
+    "source_tree_clean_before_run": true
+  },
+  "runtime": {
+    "system": "Linux",
+    "machine": "x86_64",
+    "python": "3.13.13",
+    "jax": "0.10.2",
+    "numpy": "2.4.6",
+    "jax_backend": "cpu",
+    "environment": {
+      "JAX_PLATFORMS": "cpu",
+      "JAX_PLATFORM_NAME": "cpu"
+    }
+  },
+  "command": [
+    "/home/user/miniforge3/envs/jax-fem-env/bin/python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "working_directory": "/mnt/c/Users/user/Documents/New project/jax-fem-r3-opt",
+  "result": {
+    "exit_code": 0,
+    "duration_seconds": 111.22,
+    "passed": 588,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 2,
+    "subtests_passed": 16,
+    "unexpected_failures": 0
+  },
+  "quickstart_physics_solver_result": {
+    "exit_code": 0,
+    "duration_seconds": 22.09,
+    "passed": 99,
+    "skipped": 2,
+    "subtests_passed": 10
+  },
+  "expected_skips": [
+    {
+      "test": "tests/unit/test_newton_acceptance.py",
+      "reason": "stall floor not reached on this problem/machine; legacy raise path not exercised",
+      "classification": "conditional_non_failure"
+    },
+    {
+      "test": "tests/integration/test_v06_release_anchor_box.py",
+      "reason": "legacy v03 parse_args takes no positional arguments; the optional direct parser probe needs a fuller invocation",
+      "classification": "conditional_non_failure"
+    }
+  ],
+  "red_green_closures": [
+    {
+      "red_task": "T007",
+      "implementation_task": "T014",
+      "status": "green"
+    },
+    {
+      "red_task": "T008",
+      "implementation_task": "T015",
+      "status": "green"
+    },
+    {
+      "red_task": "T009",
+      "implementation_task": "T016",
+      "status": "green",
+      "evidence": "specs/001-kaess-paper-reproduction/evidence/t009-t016-active-domain.md"
+    },
+    {
+      "red_task": "T010",
+      "implementation_task": "T017",
+      "status": "green",
+      "evidence": "specs/001-kaess-paper-reproduction/evidence/t010-t017-active-surface.md"
+    },
+    {
+      "red_task": "T011",
+      "implementation_task": "T018",
+      "status": "green_pending_material_approval",
+      "evidence": "specs/001-kaess-paper-reproduction/evidence/t018-material-history.md"
+    },
+    {
+      "red_task": "T012",
+      "implementation_task": "T019",
+      "status": "green",
+      "evidence": "specs/001-kaess-paper-reproduction/evidence/t012-t019-j2-flow-curve.md"
+    },
+    {
+      "red_task": "T013",
+      "implementation_task": "T020",
+      "status": "green",
+      "evidence": "specs/001-kaess-paper-reproduction/evidence/t013-t020-release-cellset.md"
+    }
+  ],
+  "claim_boundary": {
+    "p0_code_regression": "passed",
+    "g1_g2_checkpoint": "not_yet_approved",
+    "pending": [
+      "T018 material candidate review and G0 reapproval",
+      "anchor sensitivity threshold",
+      "material-source and Figure 4(b) reading-error approval",
+      "remaining unchecked PAR items"
+    ]
+  }
+}

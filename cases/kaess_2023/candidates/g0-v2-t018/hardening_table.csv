@@ -1,0 +1,6 @@
+T,value,source
+293,2.5e8,digitized Kaess Fig4b 2026-07-16: (600-500 MPa)/0.4 strain = 250 MPa linear hardening at 20 C
+1073,2.5e8,digitized Kaess Fig4b: same slope at 400/800 C curves ((500-400)/0.4 and (400-300)/0.4)
+1273,1.25e8,digitized Kaess Fig4b: (200-150)/0.4 at 1000 C
+1643,1e6,digitized Kaess Fig4b: 1370 C curve near-flat; positive-definite tangent floor
+1873,1e6,floor to keep H>=0 in liquid range

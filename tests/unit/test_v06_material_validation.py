@@ -18,6 +18,13 @@ class Table:
         self.values = np.asarray(values)
 
 
+class FlowCurve:
+    def __init__(self, temperatures, plastic_strains, stresses):
+        self.temperatures = np.asarray(temperatures)
+        self.plastic_strains = np.asarray(plastic_strains)
+        self.stresses = np.asarray(stresses)
+
+
 def valid_args(**overrides):
     values = {
         "mechanics_model": "j2_plastic",
@@ -49,6 +56,7 @@ def valid_tables(**overrides):
         "poisson": Table([300.0, 1200.0], [0.32, 0.34]),
         "yield": Table([300.0, 1200.0], [900.0e6, 100.0e6]),
         "hardening": Table([300.0, 1200.0], [2.0e9, 0.0]),
+        "flow_curve": None,
         "k_solid": None,
         "cp_solid": None,
         "k_powder": None,
@@ -93,6 +101,62 @@ class MaterialValidationTest(unittest.TestCase):
             validate_material_inputs(
                 valid_args(conductivity=0.0),
                 valid_tables(),
+            )
+
+    def test_flow_curve_replaces_legacy_yield_and_hardening_tables(self):
+        curve = FlowCurve(
+            [300.0, 1200.0],
+            [0.0, 0.1],
+            [[900.0e6, 1.0e9], [100.0e6, 120.0e6]],
+        )
+        self.assertTrue(
+            validate_material_inputs(
+                valid_args(),
+                valid_tables(
+                    **{
+                        "flow_curve": curve,
+                        "yield": None,
+                        "hardening": None,
+                    }
+                ),
+            )
+        )
+        with self.assertRaisesRegex(ValueError, "ambiguous"):
+            validate_material_inputs(
+                valid_args(),
+                valid_tables(flow_curve=curve),
+            )
+
+    def test_flow_curve_axes_and_hardening_must_be_admissible(self):
+        with self.assertRaisesRegex(ValueError, "start at zero"):
+            validate_material_inputs(
+                valid_args(),
+                valid_tables(
+                    **{
+                        "flow_curve": FlowCurve(
+                            [300.0, 1200.0],
+                            [0.01, 0.1],
+                            [[900.0e6, 1.0e9], [100.0e6, 120.0e6]],
+                        ),
+                        "yield": None,
+                        "hardening": None,
+                    }
+                ),
+            )
+        with self.assertRaisesRegex(ValueError, "nondecreasing"):
+            validate_material_inputs(
+                valid_args(),
+                valid_tables(
+                    **{
+                        "flow_curve": FlowCurve(
+                            [300.0, 1200.0],
+                            [0.0, 0.1],
+                            [[900.0e6, 800.0e6], [100.0e6, 120.0e6]],
+                        ),
+                        "yield": None,
+                        "hardening": None,
+                    }
+                ),
             )
 
 

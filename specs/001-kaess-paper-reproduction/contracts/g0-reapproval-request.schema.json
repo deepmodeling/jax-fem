@@ -1,0 +1,824 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.jax-fem/specs/001-kaess-paper-reproduction/g0-reapproval-request.schema.json",
+  "title": "Kaess G0 Material Reapproval Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "gate_id",
+    "status",
+    "decision",
+    "canonical_approval_reference",
+    "candidate_bundle_reference",
+    "differences"
+  ],
+  "properties": {
+    "_comment": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "kaess.g0-reapproval-request/1"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "gate_id": {
+      "const": "G0"
+    },
+    "status": {
+      "const": "pending_review"
+    },
+    "decision": {
+      "const": "pending_review"
+    },
+    "canonical_approval_reference": {
+      "$ref": "#/$defs/fileIdentity"
+    },
+    "candidate_bundle_reference": {
+      "$ref": "#/$defs/fileIdentity"
+    },
+    "differences": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/difference"
+      }
+    }
+  },
+  "$defs": {
+    "fileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "difference": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/stringDifferenceMaterialFreezeMode"
+        },
+        {
+          "$ref": "#/$defs/materialFreezeIdentityDifference"
+        },
+        {
+          "$ref": "#/$defs/stringDifferenceTablePaths"
+        },
+        {
+          "$ref": "#/$defs/plasticityInputDifference"
+        },
+        {
+          "$ref": "#/$defs/flowCurveDifference"
+        },
+        {
+          "$ref": "#/$defs/figurePropertyDifference"
+        },
+        {
+          "$ref": "#/$defs/conductivityDifference"
+        },
+        {
+          "$ref": "#/$defs/liquidTableDifference"
+        },
+        {
+          "$ref": "#/$defs/powderWeakSolidDifference"
+        },
+        {
+          "$ref": "#/$defs/numberDifferenceMushy"
+        },
+        {
+          "$ref": "#/$defs/numberDifferenceLiquid"
+        },
+        {
+          "$ref": "#/$defs/booleanDifferenceResetPlastic"
+        },
+        {
+          "$ref": "#/$defs/stressRelaxationDifference"
+        },
+        {
+          "$ref": "#/$defs/stringDifferencePhaseChange"
+        },
+        {
+          "$ref": "#/$defs/stringDifferencePhaseHistory"
+        },
+        {
+          "$ref": "#/$defs/remeltHistoryDifference"
+        }
+      ]
+    },
+    "stringDifferenceMaterialFreezeMode": {
+      "$ref": "#/$defs/stringDifferenceBase",
+      "properties": {
+        "field": {
+          "const": "material_freeze.mode"
+        },
+        "old": {
+          "type": "string"
+        },
+        "new": {
+          "type": "string"
+        }
+      }
+    },
+    "stringDifferenceTablePaths": {
+      "$ref": "#/$defs/stringDifferenceBase",
+      "properties": {
+        "field": {
+          "const": "material_config.table_paths"
+        },
+        "old": {
+          "type": "string"
+        },
+        "new": {
+          "type": "string"
+        }
+      }
+    },
+    "stringDifferencePhaseChange": {
+      "$ref": "#/$defs/stringDifferenceBase",
+      "properties": {
+        "field": {
+          "const": "required_runtime_semantics.phase_change_energy"
+        },
+        "old": {
+          "type": "string"
+        },
+        "new": {
+          "type": "string"
+        }
+      }
+    },
+    "stringDifferencePhaseHistory": {
+      "$ref": "#/$defs/stringDifferenceBase",
+      "properties": {
+        "field": {
+          "const": "required_runtime_semantics.phase_history"
+        },
+        "old": {
+          "type": "string"
+        },
+        "new": {
+          "type": "string"
+        }
+      }
+    },
+    "stringDifferenceBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "old": {
+          "type": "string"
+        },
+        "new": {
+          "type": "string"
+        }
+      }
+    },
+    "materialFreezeIdentityDifference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "const": "material_freeze.identity"
+        },
+        "old": {
+          "$ref": "#/$defs/materialFreezeIdentityOld"
+        },
+        "new": {
+          "$ref": "#/$defs/materialFreezeIdentityNew"
+        }
+      }
+    },
+    "materialFreezeIdentityOld": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "dependency_csv_hashes_bound"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "dependency_csv_hashes_bound": {
+          "type": "boolean"
+        }
+      }
+    },
+    "materialFreezeIdentityNew": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "material_config_sha256",
+        "dependency_csv_hashes_bound"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "material_config_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "dependency_csv_hashes_bound": {
+          "type": "boolean"
+        }
+      }
+    },
+    "plasticityInputDifference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "const": "material_config.plasticity_input"
+        },
+        "old": {
+          "$ref": "#/$defs/plasticityInputOld"
+        },
+        "new": {
+          "$ref": "#/$defs/plasticityInputNew"
+        }
+      }
+    },
+    "plasticityInputOld": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "yield_table",
+        "hardening_table"
+      ],
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "yield_table": {
+          "type": "string"
+        },
+        "hardening_table": {
+          "type": "string"
+        }
+      }
+    },
+    "plasticityInputNew": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "flow_curve_table",
+        "digitization_metadata",
+        "vector_calibration",
+        "source_class",
+        "temperature_interpolation",
+        "equivalent_plastic_strain_interpolation",
+        "endpoint_behavior",
+        "reading_error"
+      ],
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "flow_curve_table": {
+          "type": "string"
+        },
+        "digitization_metadata": {
+          "type": "string"
+        },
+        "vector_calibration": {
+          "type": "string"
+        },
+        "source_class": {
+          "type": "string"
+        },
+        "temperature_interpolation": {
+          "type": "string"
+        },
+        "equivalent_plastic_strain_interpolation": {
+          "type": "string"
+        },
+        "endpoint_behavior": {
+          "type": "string"
+        },
+        "reading_error": {
+          "$ref": "#/$defs/flowCurveReadingError"
+        }
+      }
+    },
+    "flowCurveReadingError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "equivalent_plastic_strain_absolute",
+        "flow_stress_absolute_MPa"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "equivalent_plastic_strain_absolute": {
+          "type": "number",
+          "minimum": 0
+        },
+        "flow_stress_absolute_MPa": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "flowCurveDifference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "const": "material_config.flow_curve_1370C"
+        },
+        "old": {
+          "$ref": "#/$defs/flowCurveEndpoint"
+        },
+        "new": {
+          "$ref": "#/$defs/flowCurveEndpoint"
+        }
+      }
+    },
+    "flowCurveEndpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "equivalent_plastic_strain",
+        "flow_stress_MPa",
+        "status"
+      ],
+      "properties": {
+        "equivalent_plastic_strain": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          }
+        },
+        "flow_stress_MPa": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          }
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "figurePropertyDifference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "const": "material_config.figure4_property_tables"
+        },
+        "old": {
+          "$ref": "#/$defs/figurePropertyOld"
+        },
+        "new": {
+          "$ref": "#/$defs/figurePropertyNew"
+        }
+      }
+    },
+    "figurePropertyOld": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "specific_heat_at_solidus_J_per_kgK",
+        "thermal_expansion_at_20C_per_K"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "specific_heat_at_solidus_J_per_kgK": {
+          "type": "number"
+        },
+        "thermal_expansion_at_20C_per_K": {
+          "type": "number"
+        }
+      }
+    },
+    "figurePropertyNew": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "calibration",
+        "extractor",
+        "specific_heat_at_solidus_J_per_kgK",
+        "thermal_expansion_at_20C_per_K",
+        "thermal_expansion_above_500C_source",
+        "reading_error",
+        "claim_boundary"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "calibration": {
+          "type": "string"
+        },
+        "extractor": {
+          "type": "string"
+        },
+        "specific_heat_at_solidus_J_per_kgK": {
+          "type": "number"
+        },
+        "thermal_expansion_at_20C_per_K": {
+          "type": "number"
+        },
+        "thermal_expansion_above_500C_source": {
+          "type": "string"
+        },
+        "reading_error": {
+          "$ref": "#/$defs/propertyReadingError"
+        },
+        "claim_boundary": {
+          "type": "string"
+        }
+      }
+    },
+    "propertyReadingError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "temperature_absolute_K",
+        "youngs_modulus_absolute_GPa",
+        "conductivity_absolute_W_per_mK",
+        "specific_heat_absolute_J_per_kgK",
+        "thermal_expansion_absolute_per_K"
+      ],
+      "properties": {
+        "temperature_absolute_K": {
+          "type": "number",
+          "minimum": 0
+        },
+        "youngs_modulus_absolute_GPa": {
+          "type": "number",
+          "minimum": 0
+        },
+        "conductivity_absolute_W_per_mK": {
+          "type": "number",
+          "minimum": 0
+        },
+        "specific_heat_absolute_J_per_kgK": {
+          "type": "number",
+          "minimum": 0
+        },
+        "thermal_expansion_absolute_per_K": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "conductivityDifference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "const": "conductivity_powder"
+        },
+        "old": {
+          "$ref": "#/$defs/conductivityOld"
+        },
+        "new": {
+          "$ref": "#/$defs/conductivityNew"
+        }
+      }
+    },
+    "conductivityOld": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "value_W_per_mK"
+      ],
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "value_W_per_mK": {
+          "type": "number"
+        }
+      }
+    },
+    "conductivityNew": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "anchors"
+      ],
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/conductivityAnchor"
+          }
+        }
+      }
+    },
+    "conductivityAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "temperature_K",
+        "value_W_per_mK"
+      ],
+      "properties": {
+        "temperature_K": {
+          "type": "number"
+        },
+        "value_W_per_mK": {
+          "type": "number"
+        }
+      }
+    },
+    "liquidTableDifference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "const": "liquid_thermal_tables"
+        },
+        "old": {
+          "$ref": "#/$defs/liquidTableOld"
+        },
+        "new": {
+          "$ref": "#/$defs/liquidTableNew"
+        }
+      }
+    },
+    "liquidTableOld": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conductivity_W_per_mK",
+        "specific_heat_J_per_kgK"
+      ],
+      "properties": {
+        "conductivity_W_per_mK": {
+          "type": "number"
+        },
+        "specific_heat_J_per_kgK": {
+          "type": "number"
+        }
+      }
+    },
+    "liquidTableNew": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conductivity_table",
+        "specific_heat_table"
+      ],
+      "properties": {
+        "conductivity_table": {
+          "type": "string"
+        },
+        "specific_heat_table": {
+          "type": "string"
+        }
+      }
+    },
+    "powderWeakSolidDifference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "const": "powder_weak_solid"
+        },
+        "old": {
+          "type": "null"
+        },
+        "new": {
+          "$ref": "#/$defs/powderWeakSolid"
+        }
+      }
+    },
+    "powderWeakSolid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "youngs_modulus_Pa",
+        "yield_stress_Pa",
+        "hardening_modulus_Pa"
+      ],
+      "properties": {
+        "youngs_modulus_Pa": {
+          "type": "number"
+        },
+        "yield_stress_Pa": {
+          "type": "number"
+        },
+        "hardening_modulus_Pa": {
+          "type": "number"
+        }
+      }
+    },
+    "numberDifferenceMushy": {
+      "$ref": "#/$defs/numberDifferenceBase",
+      "properties": {
+        "field": {
+          "const": "mushy_mechanics_factor"
+        },
+        "old": {
+          "type": "number"
+        },
+        "new": {
+          "type": "number"
+        }
+      }
+    },
+    "numberDifferenceLiquid": {
+      "$ref": "#/$defs/numberDifferenceBase",
+      "properties": {
+        "field": {
+          "const": "liquid_mechanics_factor"
+        },
+        "old": {
+          "type": "number"
+        },
+        "new": {
+          "type": "number"
+        }
+      }
+    },
+    "numberDifferenceBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "old": {
+          "type": "number"
+        },
+        "new": {
+          "type": "number"
+        }
+      }
+    },
+    "booleanDifferenceResetPlastic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "const": "reset_plastic_on_melt"
+        },
+        "old": {
+          "type": "boolean"
+        },
+        "new": {
+          "type": "boolean"
+        }
+      }
+    },
+    "stressRelaxationDifference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "const": "stress_relaxation_temperature"
+        },
+        "old": {
+          "type": "string"
+        },
+        "new": {
+          "type": "null"
+        }
+      }
+    },
+    "remeltHistoryDifference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "old",
+        "new"
+      ],
+      "properties": {
+        "field": {
+          "const": "required_runtime_semantics.remelt_history"
+        },
+        "old": {
+          "type": "string"
+        },
+        "new": {
+          "$ref": "#/$defs/remeltHistoryNew"
+        }
+      }
+    },
+    "remeltHistoryNew": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rewrite_first_reference_temperature",
+        "erase_equivalent_plastic_strain"
+      ],
+      "properties": {
+        "rewrite_first_reference_temperature": {
+          "type": "boolean"
+        },
+        "erase_equivalent_plastic_strain": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

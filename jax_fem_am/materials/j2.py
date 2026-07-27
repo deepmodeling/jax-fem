@@ -27,6 +27,62 @@ class J2Update(NamedTuple):
     delta_eqp: jnp.ndarray
 
 
+class FlowCurve(NamedTuple):
+    """Immutable rectangular flow-stress data used by JAX return maps."""
+
+    temperatures: jnp.ndarray
+    plastic_strains: jnp.ndarray
+    stresses: jnp.ndarray
+
+
+def _interpolate_clamped(x, knots, values):
+    """Linearly interpolate one sorted axis with endpoint clamping."""
+    x = jnp.clip(jnp.asarray(x), knots[0], knots[-1])
+    upper = jnp.clip(
+        jnp.searchsorted(
+            knots,
+            x,
+            side="right",
+            method="compare_all",
+        ),
+        1,
+        knots.size - 1,
+    )
+    lower = upper - 1
+    x0 = knots[lower]
+    x1 = knots[upper]
+    weight = (x - x0) / (x1 - x0)
+    return values[lower] + weight * (values[upper] - values[lower])
+
+
+def flow_stress_from_curve(
+    temperature,
+    equivalent_plastic_strain,
+    temperatures,
+    plastic_strains,
+    flow_stresses,
+):
+    """Evaluate a rectangular temperature/plastic-strain flow-stress grid.
+
+    Temperature interpolation and endpoint clamping match the Kaess/Abaqus
+    material description. Plastic-strain endpoint clamping is an explicit
+    solver assumption for values outside the frozen input curve.
+    """
+    temperatures = jnp.asarray(temperatures)
+    plastic_strains = jnp.asarray(plastic_strains)
+    flow_stresses = jnp.asarray(flow_stresses)
+    stress_at_temperature = _interpolate_clamped(
+        temperature,
+        temperatures,
+        flow_stresses,
+    )
+    return _interpolate_clamped(
+        equivalent_plastic_strain,
+        plastic_strains,
+        stress_at_temperature,
+    )
+
+
 def equivalent_stress(stress):
     """Return von Mises equivalent stress for a symmetric 3x3 tensor.
 
@@ -94,6 +150,88 @@ def _plastic_increment(q_trial, eqp_old, shear, yield0, hardening, saturation):
     return jnp.where(q_trial > current_yield, delta, 0.0)
 
 
+def _plastic_increment_from_curve(
+    q_trial,
+    eqp_old,
+    shear,
+    temperature,
+    flow_curve,
+    saturation,
+):
+    """Solve a monotone piecewise-linear consistency equation exactly."""
+    three_mu = 3.0 * shear
+    stresses = _interpolate_clamped(
+        temperature,
+        flow_curve.temperatures,
+        flow_curve.stresses,
+    )
+    strains = flow_curve.plastic_strains
+    consistency_knots = three_mu * strains + stresses
+    target = q_trial + three_mu * eqp_old
+
+    upper = jnp.clip(
+        jnp.searchsorted(
+            consistency_knots,
+            target,
+            side="left",
+            method="compare_all",
+        ),
+        1,
+        strains.size - 1,
+    )
+    lower = upper - 1
+    segment_fraction = (
+        (target - consistency_knots[lower])
+        / (consistency_knots[upper] - consistency_knots[lower])
+    )
+    segment_root = strains[lower] + segment_fraction * (
+        strains[upper] - strains[lower]
+    )
+    below_root = (target - stresses[0]) / three_mu
+    beyond_root = (target - stresses[-1]) / three_mu
+    raw_root = jnp.where(
+        target < consistency_knots[0],
+        below_root,
+        jnp.where(
+            target > consistency_knots[-1],
+            beyond_root,
+            segment_root,
+        ),
+    )
+    raw_root = jnp.maximum(raw_root, eqp_old)
+
+    current_curve_yield = flow_stress_from_curve(
+        temperature,
+        eqp_old,
+        flow_curve.temperatures,
+        flow_curve.plastic_strains,
+        flow_curve.stresses,
+    )
+    finite_cap = jnp.isfinite(saturation)
+    safe_cap = jnp.where(finite_cap, saturation, 0.0)
+    current_yield = jnp.where(
+        finite_cap,
+        jnp.minimum(current_curve_yield, safe_cap),
+        current_curve_yield,
+    )
+    cap_root = (target - safe_cap) / three_mu
+    cap_root_yield = flow_stress_from_curve(
+        temperature,
+        cap_root,
+        flow_curve.temperatures,
+        flow_curve.plastic_strains,
+        flow_curve.stresses,
+    )
+    use_cap = (
+        finite_cap
+        & (cap_root >= eqp_old)
+        & (cap_root_yield >= safe_cap)
+    )
+    effective_root = jnp.where(use_cap, cap_root, raw_root)
+    delta = jnp.maximum(effective_root - eqp_old, 0.0)
+    return jnp.where(q_trial > current_yield, delta, 0.0)
+
+
 def radial_return(
     *,
     strain,
@@ -104,11 +242,16 @@ def radial_return(
     yield_stress,
     hardening,
     saturation=jnp.inf,
+    temperature=None,
+    flow_curve=None,
+    flow_curve_active=True,
 ):
     """Return stress and committed state for one total-strain increment.
 
     Parameters are SI scalars and require young > 0, hardening >= 0 and
-    -1 < poisson < 0.5. An infinite saturation value disables the cap.
+    -1 < poisson < 0.5. An infinite saturation value disables the cap. When
+    ``flow_curve`` is provided, its piecewise-linear consistency equation
+    replaces the scalar yield/hardening pair and ``temperature`` is required.
     """
     strain = 0.5 * (jnp.asarray(strain) + jnp.asarray(strain).T)
     thermal_strain = 0.5 * (
@@ -121,9 +264,34 @@ def radial_return(
     hydro = jnp.trace(trial) * jnp.eye(3) / 3.0
     dev_trial = trial - hydro
     q_trial = equivalent_stress(trial)
-    delta_eqp = _plastic_increment(
-        q_trial, state.eqp, shear, yield_stress, hardening, saturation
+    scalar_delta_eqp = _plastic_increment(
+        q_trial,
+        state.eqp,
+        shear,
+        yield_stress,
+        hardening,
+        saturation,
     )
+    if flow_curve is None:
+        delta_eqp = scalar_delta_eqp
+    else:
+        if temperature is None:
+            raise ValueError(
+                "temperature is required when flow_curve is provided"
+            )
+        curve_delta_eqp = _plastic_increment_from_curve(
+            q_trial,
+            state.eqp,
+            shear,
+            temperature,
+            flow_curve,
+            saturation,
+        )
+        delta_eqp = jnp.where(
+            flow_curve_active,
+            curve_delta_eqp,
+            scalar_delta_eqp,
+        )
     # Guard the plastic correction with where() on BOTH the primal and the
     # denominator: q_trial can be exactly zero (fresh stress-free material),
     # and a subnormal floor like finfo.tiny underflows to zero when the AD

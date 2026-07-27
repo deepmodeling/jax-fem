@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .mesh_quality import audit_tet_mesh
+from .mesh_quality import audit_solid_mesh
 from .weighted import weighted_mean, weighted_quantile
 
 
@@ -35,6 +35,7 @@ def audit_solution_fields(
     quality_threshold=0.05,
     source_free_upper_bound=None,
     temperature_atol_k=1.0e-3,
+    excluded_cells=None,
 ):
     ambient = float(ambient)
     if not np.isfinite(ambient):
@@ -55,6 +56,11 @@ def audit_solution_fields(
     eqp = np.asarray(eqp, dtype=np.float64)
     printed_raw = np.asarray(printed, dtype=np.float64)
     mechanics_valid_raw = np.asarray(mechanics_valid, dtype=np.float64)
+    excluded_raw = (
+        np.zeros(num_cells, dtype=np.float64)
+        if excluded_cells is None
+        else np.asarray(excluded_cells, dtype=np.float64)
+    )
     if temperature.size != num_points:
         raise ValueError("temperature must contain one scalar per mesh point")
     if displacement.shape != (num_points, 3):
@@ -65,27 +71,32 @@ def audit_solution_fields(
         ("eqp", eqp),
         ("printed", printed_raw),
         ("mechanics_valid", mechanics_valid_raw),
+        ("excluded_cells", excluded_raw),
     ):
         if values.size != num_cells:
             raise ValueError(f"{name} must contain one scalar per mesh cell")
     if not (
         np.all(np.isfinite(printed_raw))
         and np.all(np.isfinite(mechanics_valid_raw))
+        and np.all(np.isfinite(excluded_raw))
         and np.all(np.isin(printed_raw, (0.0, 1.0)))
         and np.all(np.isin(mechanics_valid_raw, (0.0, 1.0)))
+        and np.all(np.isin(excluded_raw, (0.0, 1.0)))
     ):
         raise ValueError("state flags must be finite binary values")
     temperature = temperature.reshape(-1)
     eqp = eqp.reshape(-1)
     printed = printed_raw.reshape(-1) > 0.5
     mechanics_valid = mechanics_valid_raw.reshape(-1)
-    quality = audit_tet_mesh(
+    excluded = excluded_raw.reshape(-1) > 0.5
+    audited = ~excluded
+    quality = audit_solid_mesh(
         points,
         cells,
         quality_threshold=quality_threshold,
     )
     vm_cell = np.max(vm_quad, axis=1)
-    cell_mask = printed & np.isfinite(vm_cell)
+    cell_mask = printed & audited & np.isfinite(vm_cell)
     global_ids = np.flatnonzero(cell_mask)
     if len(global_ids):
         global_cell = int(global_ids[np.argmax(vm_cell[global_ids])])
@@ -102,9 +113,10 @@ def audit_solution_fields(
         & (mechanics_valid > 0.5)
     )
     accepted_ids = np.flatnonzero(accepted)
-    quality_rejected = printed & (quality.mean_ratio < quality_threshold)
+    reported = printed & audited
+    quality_rejected = reported & (quality.mean_ratio < quality_threshold)
     quality_rejected_count = int(np.count_nonzero(quality_rejected))
-    printed_volume = float(np.sum(quality.volume[printed]))
+    printed_volume = float(np.sum(quality.volume[reported]))
     quality_rejected_volume_fraction = (
         float(np.sum(quality.volume[quality_rejected]) / printed_volume)
         if printed_volume > 0.0
@@ -147,13 +159,13 @@ def audit_solution_fields(
     temperature_min, temperature_max = _finite_extrema(temperature)
     displacement_norm = np.linalg.norm(displacement, axis=1)
     displacement_min, displacement_max = _finite_extrema(displacement_norm)
-    eqp_min, eqp_max = _finite_extrema(eqp)
+    eqp_min, eqp_max = _finite_extrema(eqp[audited])
     finite_temperature = bool(np.all(np.isfinite(temperature)))
     finite_displacement = bool(np.all(np.isfinite(displacement)))
-    finite_stress = bool(np.all(np.isfinite(vm_quad)))
-    finite_eqp = bool(np.all(np.isfinite(eqp)))
-    nonnegative_stress = bool(np.all(vm_quad >= 0.0))
-    nonnegative_eqp = bool(np.all(eqp >= 0.0))
+    finite_stress = bool(np.all(np.isfinite(vm_quad[audited])))
+    finite_eqp = bool(np.all(np.isfinite(eqp[audited])))
+    nonnegative_stress = bool(np.all(vm_quad[audited] >= 0.0))
+    nonnegative_eqp = bool(np.all(eqp[audited] >= 0.0))
     below_absolute_zero_count = int(
         np.count_nonzero(np.isfinite(temperature) & (temperature < 0.0))
     )
@@ -179,8 +191,8 @@ def audit_solution_fields(
     else:
         above_upper_bound_count = None
     mechanics_fraction = (
-        float(np.mean(mechanics_valid[printed] > 0.5))
-        if np.any(printed)
+        float(np.mean(mechanics_valid[reported] > 0.5))
+        if np.any(reported)
         else 0.0
     )
     valid_mesh = quality.inverted_count == 0 and quality.degenerate_count == 0
@@ -209,7 +221,10 @@ def audit_solution_fields(
             "mesh_volume": "m^3 when mesh coordinates are metres",
         },
         "mesh": {
+            "cell_type": "tetra" if cells.shape[1] == 4 else "hexahedron",
             "num_cells": int(len(cells)),
+            "audited_cell_count": int(np.count_nonzero(audited)),
+            "excluded_cell_count": int(np.count_nonzero(excluded)),
             "minimum_quality": float(quality.mean_ratio.min()),
             "inverted_count": quality.inverted_count,
             "degenerate_count": quality.degenerate_count,
@@ -279,12 +294,16 @@ def audit_vtu(
     import meshio
 
     mesh = meshio.read(path)
-    block_index = next(
-        (index for index, block in enumerate(mesh.cells) if block.type == "tetra"),
-        None,
-    )
-    if block_index is None:
-        raise ValueError(f"{path} has no tetra cell block")
+    solid_blocks = [
+        (index, block.type)
+        for index, block in enumerate(mesh.cells)
+        if block.type in {"tetra", "hexahedron"}
+    ]
+    if len(solid_blocks) != 1:
+        raise ValueError(
+            f"{path} must contain exactly one TET4 or HEX8 cell block"
+        )
+    block_index, _cell_type = solid_blocks[0]
     cell_data = {
         name: arrays[block_index] for name, arrays in mesh.cell_data.items()
     }
@@ -301,6 +320,10 @@ def audit_vtu(
         quality_threshold=quality_threshold,
         source_free_upper_bound=source_free_upper_bound,
         temperature_atol_k=temperature_atol_k,
+        excluded_cells=cell_data.get(
+            "release_removed",
+            np.zeros(len(mesh.cells[block_index].data), dtype=np.float64),
+        ),
     )
     result["source"] = {
         "path": str(Path(path).resolve()),

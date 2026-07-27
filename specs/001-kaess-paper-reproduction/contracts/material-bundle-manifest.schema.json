@@ -1,0 +1,560 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.jax-fem/specs/001-kaess-paper-reproduction/material-bundle-manifest.schema.json",
+  "title": "Kaess Material Bundle Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "bundle_id",
+    "status",
+    "promotion_eligible",
+    "hash_algorithm",
+    "path_bases",
+    "material_config",
+    "files",
+    "source_evidence",
+    "semantic_fields",
+    "required_runtime_semantics",
+    "known_registered_assumptions"
+  ],
+  "properties": {
+    "_comment": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "kaess.material-bundle-manifest/1"
+    },
+    "bundle_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "const": "pending_review"
+    },
+    "promotion_eligible": {
+      "const": false
+    },
+    "hash_algorithm": {
+      "const": "sha256"
+    },
+    "path_bases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "material_config",
+        "files",
+        "source_evidence"
+      ],
+      "properties": {
+        "material_config": {
+          "const": "manifest_directory"
+        },
+        "files": {
+          "const": "manifest_directory"
+        },
+        "source_evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository_paths",
+            "superseded_external_config_path"
+          ],
+          "properties": {
+            "repository_paths": {
+              "const": "repository_root"
+            },
+            "superseded_external_config_path": {
+              "const": "absolute_path"
+            }
+          }
+        }
+      }
+    },
+    "material_config": {
+      "$ref": "#/$defs/bundleFileIdentity"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bundleFileRecord"
+      }
+    },
+    "source_evidence": {
+      "$ref": "#/$defs/sourceEvidence"
+    },
+    "semantic_fields": {
+      "$ref": "#/$defs/semanticFields"
+    },
+    "required_runtime_semantics": {
+      "$ref": "#/$defs/runtimeSemantics"
+    },
+    "known_registered_assumptions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "bundleFileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "bundleFileRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "role",
+        "sha256",
+        "provenance"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "provenance": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "sourceEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "paper_doi",
+        "paper_locator",
+        "superseded_external_config_path",
+        "superseded_external_config_sha256"
+      ],
+      "properties": {
+        "paper_doi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "paper_locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository_fulltext": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository_fulltext_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "repository_paper_pdf": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository_paper_pdf_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "repository_figure_4_page_image": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository_figure_4_page_image_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "figure_4_vector_calibration_script": {
+          "type": "string",
+          "minLength": 1
+        },
+        "figure_4_vector_calibration_script_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "figure_4_vector_spec": {
+          "type": "string",
+          "minLength": 1
+        },
+        "figure_4_vector_spec_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "superseded_external_config_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "superseded_external_config_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "semanticFields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "density_kg_per_m3",
+        "melting_interval_K",
+        "latent_heat_J_per_kg",
+        "powder_conductivity_W_per_mK",
+        "powder_weak_solid",
+        "thermal_boundary",
+        "figure_4_property_reading_error",
+        "mechanics"
+      ],
+      "properties": {
+        "density_kg_per_m3": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "solid",
+            "powder",
+            "liquid"
+          ],
+          "properties": {
+            "solid": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "powder": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "liquid": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "melting_interval_K": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "solidus",
+            "liquidus"
+          ],
+          "properties": {
+            "solidus": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "liquidus": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "latent_heat_J_per_kg": {
+          "type": "number",
+          "minimum": 0
+        },
+        "powder_conductivity_W_per_mK": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "at_293_15_K",
+            "at_1643_15_K"
+          ],
+          "properties": {
+            "at_293_15_K": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "at_1643_15_K": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "powder_weak_solid": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "youngs_modulus_Pa",
+            "yield_stress_Pa",
+            "hardening_modulus_Pa"
+          ],
+          "properties": {
+            "youngs_modulus_Pa": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "yield_stress_Pa": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "hardening_modulus_Pa": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "thermal_boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "absorptivity",
+            "emissivity",
+            "convection_W_per_m2K"
+          ],
+          "properties": {
+            "absorptivity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "emissivity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "convection_W_per_m2K": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "figure_4_property_reading_error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "temperature_absolute_K",
+            "youngs_modulus_absolute_GPa",
+            "conductivity_absolute_W_per_mK",
+            "specific_heat_absolute_J_per_kgK",
+            "thermal_expansion_absolute_per_K"
+          ],
+          "properties": {
+            "temperature_absolute_K": {
+              "type": "number",
+              "minimum": 0
+            },
+            "youngs_modulus_absolute_GPa": {
+              "type": "number",
+              "minimum": 0
+            },
+            "conductivity_absolute_W_per_mK": {
+              "type": "number",
+              "minimum": 0
+            },
+            "specific_heat_absolute_J_per_kgK": {
+              "type": "number",
+              "minimum": 0
+            },
+            "thermal_expansion_absolute_per_K": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "mechanics": {
+          "$ref": "#/$defs/mechanicsSemantics"
+        }
+      }
+    },
+    "mechanicsSemantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "plasticity_input",
+        "flow_curve_status",
+        "flow_curve_reading_error",
+        "flow_curve_temperature_nodes_K",
+        "flow_curve_equivalent_plastic_strain_nodes",
+        "poisson_ratio",
+        "mushy_extra_stiffness_factor",
+        "liquid_extra_stiffness_factor",
+        "reset_plastic_on_melt",
+        "stress_relaxation_temperature_K"
+      ],
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plasticity_input": {
+          "type": "string",
+          "minLength": 1
+        },
+        "flow_curve_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "flow_curve_reading_error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "equivalent_plastic_strain_absolute",
+            "flow_stress_absolute_MPa"
+          ],
+          "properties": {
+            "equivalent_plastic_strain_absolute": {
+              "type": "number",
+              "minimum": 0
+            },
+            "flow_stress_absolute_MPa": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "flow_curve_temperature_nodes_K": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "flow_curve_equivalent_plastic_strain_nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "poisson_ratio": {
+          "type": "number",
+          "exclusiveMinimum": -1,
+          "exclusiveMaximum": 0.5
+        },
+        "mushy_extra_stiffness_factor": {
+          "type": "number",
+          "minimum": 0
+        },
+        "liquid_extra_stiffness_factor": {
+          "type": "number",
+          "minimum": 0
+        },
+        "reset_plastic_on_melt": {
+          "type": "boolean"
+        },
+        "stress_relaxation_temperature_K": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "runtimeSemantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "table_path_resolution",
+        "table_interpolation",
+        "table_endpoint_behavior",
+        "flow_curve_interpolation",
+        "flow_curve_endpoint_behavior",
+        "flow_curve_residual_and_tangent",
+        "powder_specific_heat",
+        "powder_thermal_expansion",
+        "thermal_expansion_table_form",
+        "liquid_specific_heat",
+        "liquid_conductivity",
+        "phase_change_energy",
+        "phase_history",
+        "first_solidification_reference_temperature",
+        "remelt_rewrites_reference_temperature",
+        "remelt_erases_equivalent_plastic_strain",
+        "duplicate_mushy_or_liquid_mechanics_scaling",
+        "validation_status"
+      ],
+      "properties": {
+        "table_path_resolution": {
+          "type": "string",
+          "minLength": 1
+        },
+        "table_interpolation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "table_endpoint_behavior": {
+          "type": "string",
+          "minLength": 1
+        },
+        "flow_curve_interpolation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "flow_curve_endpoint_behavior": {
+          "type": "string",
+          "minLength": 1
+        },
+        "flow_curve_residual_and_tangent": {
+          "type": "string",
+          "minLength": 1
+        },
+        "powder_specific_heat": {
+          "type": "string",
+          "minLength": 1
+        },
+        "powder_thermal_expansion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "thermal_expansion_table_form": {
+          "type": "string",
+          "minLength": 1
+        },
+        "liquid_specific_heat": {
+          "type": "string",
+          "minLength": 1
+        },
+        "liquid_conductivity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase_change_energy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase_history": {
+          "type": "string",
+          "minLength": 1
+        },
+        "first_solidification_reference_temperature": {
+          "type": "string",
+          "minLength": 1
+        },
+        "remelt_rewrites_reference_temperature": {
+          "type": "boolean"
+        },
+        "remelt_erases_equivalent_plastic_strain": {
+          "type": "boolean"
+        },
+        "duplicate_mushy_or_liquid_mechanics_scaling": {
+          "type": "boolean"
+        },
+        "validation_status": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

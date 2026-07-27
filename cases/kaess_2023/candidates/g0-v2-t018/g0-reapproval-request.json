@@ -1,0 +1,180 @@
+{
+  "_comment": "REVIEW REQUEST ONLY. This file does not approve, supersede, or modify the canonical G0 record.",
+  "schema_version": "kaess.g0-reapproval-request/1",
+  "request_id": "kaess-g0-v2-t018-t019-material-bundle",
+  "gate_id": "G0",
+  "status": "pending_review",
+  "decision": "pending_review",
+  "canonical_approval_reference": {
+    "path": "cases/kaess_2023/inputs/g0-approval.json",
+    "sha256": "206d7af567f0ee4d9113e8780b67b503936030538f266114834aa63052390839"
+  },
+  "candidate_bundle_reference": {
+    "path": "cases/kaess_2023/candidates/g0-v2-t018/material-bundle-manifest.json",
+    "sha256": "c7cc552afca8c3ebad26160e41c6aa701fc099f3b8abfd6182a6360e7258b061"
+  },
+  "differences": [
+    {
+      "field": "material_freeze.mode",
+      "old": "external_sha256",
+      "new": "repository_bundle_manifest_sha256"
+    },
+    {
+      "field": "material_freeze.identity",
+      "old": {
+        "path": "/home/user/work/159/materials/316L/ss316l_material_config_kaess.json",
+        "sha256": "d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f",
+        "dependency_csv_hashes_bound": false
+      },
+      "new": {
+        "path": "cases/kaess_2023/candidates/g0-v2-t018/material-bundle-manifest.json",
+        "sha256": "c7cc552afca8c3ebad26160e41c6aa701fc099f3b8abfd6182a6360e7258b061",
+        "material_config_sha256": "899a912609db10490872bfe8d1a738a40b5c68e03b37dafac8d4c659b8bca178",
+        "dependency_csv_hashes_bound": true
+      }
+    },
+    {
+      "field": "material_config.table_paths",
+      "old": "external project-relative paths under materials/316L",
+      "new": "bundle-local paths resolved relative to the candidate material config directory"
+    },
+    {
+      "field": "material_config.plasticity_input",
+      "old": {
+        "model": "temperature_dependent_yield_plus_linear_hardening",
+        "yield_table": "yield_table.csv",
+        "hardening_table": "hardening_table.csv"
+      },
+      "new": {
+        "model": "temperature_by_equivalent_plastic_strain_flow_curve_grid",
+        "flow_curve_table": "flow_curve_table.pending.csv",
+        "digitization_metadata": "flow_curve_table.pending.metadata.json",
+        "vector_calibration": "flow_curve_table.pending.vector-calibration.json",
+        "source_class": "PDF_vector_calibrated_Figure_4b_plus_explicit_solver_realization_nodes",
+        "temperature_interpolation": "piecewise_linear",
+        "equivalent_plastic_strain_interpolation": "piecewise_linear",
+        "endpoint_behavior": "clamp",
+        "reading_error": {
+          "status": "quantified_from_pdf_vector",
+          "equivalent_plastic_strain_absolute": 0.0032,
+          "flow_stress_absolute_MPa": 1.0
+        }
+      }
+    },
+    {
+      "field": "material_config.flow_curve_1370C",
+      "old": {
+        "equivalent_plastic_strain": [0.0, 0.4],
+        "flow_stress_MPa": [20.0, 20.0],
+        "status": "pre_calibration_candidate"
+      },
+      "new": {
+        "equivalent_plastic_strain": [0.0, 0.4],
+        "flow_stress_MPa": [20.0, 30.0],
+        "status": "paper_author_assumption_PDF_vector_calibrated"
+      }
+    },
+    {
+      "field": "material_config.figure4_property_tables",
+      "old": {
+        "status": "pre_vector_calibration",
+        "specific_heat_at_solidus_J_per_kgK": 729.95,
+        "thermal_expansion_at_20C_per_K": 1.57e-5
+      },
+      "new": {
+        "status": "independently_PDF_vector_calibrated",
+        "calibration": "figure4_material_properties.vector-calibration.json",
+        "extractor": "PyMuPDF 1.28.0",
+        "specific_heat_at_solidus_J_per_kgK": 670.0,
+        "thermal_expansion_at_20C_per_K": 1.56e-5,
+        "thermal_expansion_above_500C_source": "paper_author_assumption",
+        "reading_error": {
+          "temperature_absolute_K": 2.0,
+          "youngs_modulus_absolute_GPa": 0.5,
+          "conductivity_absolute_W_per_mK": 0.1,
+          "specific_heat_absolute_J_per_kgK": 2.0,
+          "thermal_expansion_absolute_per_K": 1e-7
+        },
+        "claim_boundary": "vector_geometry_and_rounding_only"
+      }
+    },
+    {
+      "field": "conductivity_powder",
+      "old": {
+        "model": "constant",
+        "value_W_per_mK": 0.3
+      },
+      "new": {
+        "model": "piecewise_linear_table_with_clamped_endpoints",
+        "anchors": [
+          {
+            "temperature_K": 293.15,
+            "value_W_per_mK": 0.15
+          },
+          {
+            "temperature_K": 1643.15,
+            "value_W_per_mK": 0.6
+          }
+        ]
+      }
+    },
+    {
+      "field": "liquid_thermal_tables",
+      "old": {
+        "conductivity_W_per_mK": 30.0,
+        "specific_heat_J_per_kgK": 800.0
+      },
+      "new": {
+        "conductivity_table": "k_solid_table.csv",
+        "specific_heat_table": "cp_solid_table.csv"
+      }
+    },
+    {
+      "field": "powder_weak_solid",
+      "old": null,
+      "new": {
+        "youngs_modulus_Pa": 10000000000.0,
+        "yield_stress_Pa": 1000000.0,
+        "hardening_modulus_Pa": 0.0
+      }
+    },
+    {
+      "field": "mushy_mechanics_factor",
+      "old": 0.01,
+      "new": 1.0
+    },
+    {
+      "field": "liquid_mechanics_factor",
+      "old": 0.0001,
+      "new": 1.0
+    },
+    {
+      "field": "reset_plastic_on_melt",
+      "old": true,
+      "new": false
+    },
+    {
+      "field": "stress_relaxation_temperature",
+      "old": "not_explicitly_frozen",
+      "new": null
+    },
+    {
+      "field": "required_runtime_semantics.phase_change_energy",
+      "old": "not_bound_by_G0_material_identity",
+      "new": "enthalpy_difference_across_each_increment"
+    },
+    {
+      "field": "required_runtime_semantics.phase_history",
+      "old": "not_bound_by_G0_material_identity",
+      "new": "irreversible_powder_to_solid_after_first_melt"
+    },
+    {
+      "field": "required_runtime_semantics.remelt_history",
+      "old": "reference_temperature_and_plastic_history_not_frozen",
+      "new": {
+        "rewrite_first_reference_temperature": false,
+        "erase_equivalent_plastic_strain": false
+      }
+    }
+  ]
+}

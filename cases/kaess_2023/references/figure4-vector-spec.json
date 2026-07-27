@@ -1,0 +1,255 @@
+{
+  "schema_version": "kaess.figure4-vector-spec/1",
+  "source": {
+    "paper_doi": "10.3390/ma16062321",
+    "pdf_path": "cases/kaess_2023/references/cases/kaess_2023_paper.pdf",
+    "pdf_sha256": "8bf5e7c2f744a55b9c4e40bbe5f17a5cb6e1649d668132edc961ecb5c3d5e941",
+    "page_index": 5,
+    "printed_page": 6
+  },
+  "method": {
+    "script_path": "cases/kaess_2023/calibrate_figure4.py",
+    "spec_path": "cases/kaess_2023/references/figure4-vector-spec.json"
+  },
+  "frozen_reading_error": {
+    "temperature_absolute_K": 2.0,
+    "youngs_modulus_absolute_GPa": 0.5,
+    "conductivity_absolute_W_per_mK": 0.1,
+    "specific_heat_absolute_J_per_kgK": 2.0,
+    "thermal_expansion_absolute_per_K": 1e-07
+  },
+  "flow_panel": {
+    "x_axis": {
+      "drawing_indices": [39, 40, 41, 42],
+      "values": [0.0, 0.2, 0.4, 0.6],
+      "expected_coordinates": [400.7099, 437.2499, 473.9159, 510.5189],
+      "signature_tolerance_points": 0.01
+    },
+    "y_axis": {
+      "drawing_indices": [44, 32, 33, 34, 35, 36, 37, 38],
+      "values_MPa": [0.0, 100.0, 200.0, 300.0, 400.0, 500.0, 600.0, 700.0],
+      "expected_coordinates": [287.1855, 271.0575, 255.0555, 238.9275, 222.7365, 206.7345, 190.6065, 174.6045],
+      "signature_tolerance_points": 0.01
+    },
+    "frozen_reading_error": {
+      "equivalent_plastic_strain_absolute": 0.0032,
+      "flow_stress_absolute_MPa": 1.0
+    },
+    "curves": [
+      {
+        "temperature_C": 20.0,
+        "source_origin": "reference_33_rounded_by_paper_authors",
+        "drawing_index": 45,
+        "expected_line_items": 1,
+        "expected_rect": [401.2139, 190.6695, 473.9159, 206.6715],
+        "signature_tolerance_points": 0.01,
+        "frozen_equivalent_plastic_strain": [0.0, 0.4],
+        "frozen_flow_stress_MPa": [500.0, 600.0]
+      },
+      {
+        "temperature_C": 400.0,
+        "source_origin": "paper_author_assumption",
+        "drawing_index": 48,
+        "expected_line_items": 1,
+        "expected_rect": [401.2139, 206.6715, 473.9159, 222.7995],
+        "signature_tolerance_points": 0.01,
+        "frozen_equivalent_plastic_strain": [0.0, 0.4],
+        "frozen_flow_stress_MPa": [400.0, 500.0]
+      },
+      {
+        "temperature_C": 800.0,
+        "source_origin": "paper_author_assumption",
+        "drawing_index": 51,
+        "expected_line_items": 1,
+        "expected_rect": [401.0879, 222.7995, 473.9159, 238.9275],
+        "signature_tolerance_points": 0.01,
+        "frozen_equivalent_plastic_strain": [0.0, 0.4],
+        "frozen_flow_stress_MPa": [300.0, 400.0]
+      },
+      {
+        "temperature_C": 1000.0,
+        "source_origin": "paper_author_assumption",
+        "drawing_index": 54,
+        "expected_line_items": 1,
+        "expected_rect": [400.8359, 254.9925, 473.9159, 263.0565],
+        "signature_tolerance_points": 0.01,
+        "frozen_equivalent_plastic_strain": [0.0, 0.4],
+        "frozen_flow_stress_MPa": [150.0, 200.0]
+      },
+      {
+        "temperature_C": 1370.0,
+        "source_origin": "paper_author_assumption",
+        "drawing_index": 59,
+        "expected_line_items": 1,
+        "expected_rect": [400.7729, 282.3975, 473.9159, 284.0355],
+        "signature_tolerance_points": 0.01,
+        "frozen_equivalent_plastic_strain": [0.0, 0.4],
+        "frozen_flow_stress_MPa": [20.0, 30.0]
+      }
+    ],
+    "solver_realization_nodes": [
+      {
+        "temperature_K": 1673.15,
+        "equivalent_plastic_strain": [0.0, 0.4],
+        "flow_stress_MPa": [1.0, 1.0],
+        "source_origin": "solver_realization_melting_minimum_not_figure_node",
+        "basis": "Section 2.5 says yield strength reaches a numerically realizable minimum at melting; the exact value is not published."
+      },
+      {
+        "temperature_K": 1873.15,
+        "equivalent_plastic_strain": [0.0, 0.4],
+        "flow_stress_MPa": [1.0, 1.0],
+        "source_origin": "solver_realization_high_temperature_extension",
+        "basis": "High-temperature extension of the same unverified numerical floor."
+      }
+    ]
+  },
+  "panels": {
+    "figure_4a": {
+      "table": "E_table.csv",
+      "plot_unit": "GPa",
+      "reading_error_name": "youngs_modulus_absolute_GPa",
+      "plot_to_si_error_scale": 1.0,
+      "x_axis": {
+        "drawing_indices": [16, 17, 18, 19],
+        "values": [0.0, 500.0, 1000.0, 1500.0],
+        "expected_coordinates": [210.5759, 247.4939, 284.3489, 321.2669],
+        "signature_tolerance_points": 0.01
+      },
+      "y_axis": {
+        "drawing_indices": [15, 14, 13, 12, 21],
+        "values": [200.0, 150.0, 100.0, 50.0, 0.0],
+        "expected_coordinates": [173.7855, 201.6315, 229.4145, 257.3865, 285.2325],
+        "signature_tolerance_points": 0.01
+      },
+      "curve": {
+        "drawing_index": 22,
+        "expected_line_items": 7,
+        "expected_rect": [212.0249, 179.3295, 313.8959, 279.6885],
+        "signature_tolerance_points": 0.01
+      },
+      "vector_frozen": {
+        "temperature_C": [20.0, 100.0, 200.0, 300.0, 400.0, 500.0, 1370.0, 1400.0],
+        "value": [190.0, 184.0, 176.0, 169.0, 162.0, 155.0, 90.0, 10.0]
+      },
+      "table_mapping": {
+        "plot_value_to_SI_scale": 1000000000.0,
+        "vector_source_class": ["figure_node", "figure_node", "figure_node", "figure_node", "figure_node", "figure_node", "figure_node_author_assumption", "figure_node_author_assumption"],
+        "additional_nodes": [
+          {
+            "temperature_C": 1600.0,
+            "rule": "endpoint_extension",
+            "from_vector_index": -1,
+            "source_class": "solver_extension"
+          }
+        ]
+      }
+    },
+    "figure_4c": {
+      "table": "k_solid_table.csv",
+      "plot_unit": "W_per_mK",
+      "reading_error_name": "conductivity_absolute_W_per_mK",
+      "plot_to_si_error_scale": 1.0,
+      "x_axis": {
+        "drawing_indices": [76, 77, 78, 79],
+        "values": [0.0, 500.0, 1000.0, 1500.0],
+        "expected_coordinates": [209.5679, 246.4859, 283.4669, 320.3849],
+        "signature_tolerance_points": 0.01
+      },
+      "y_axis": {
+        "drawing_indices": [75, 74, 73, 72, 81],
+        "values": [40.0, 30.0, 20.0, 10.0, 0.0],
+        "expected_coordinates": [346.7205, 374.5665, 402.4755, 430.3215, 458.2305],
+        "signature_tolerance_points": 0.01
+      },
+      "curve": {
+        "drawing_index": 177,
+        "expected_line_items": 8,
+        "expected_rect": [211.1429, 371.8575, 313.0139, 416.3985],
+        "signature_tolerance_points": 0.01
+      },
+      "vector_frozen": {
+        "temperature_C": [20.0, 100.0, 200.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1400.0],
+        "value": [15.0, 16.0, 17.2, 19.5, 22.0, 24.5, 26.8, 29.0, 31.0]
+      },
+      "table_mapping": {
+        "plot_value_to_SI_scale": 1.0,
+        "vector_source_class": ["figure_node", "figure_node", "figure_node", "figure_node", "figure_node", "figure_node", "figure_node", "figure_node", "figure_node"],
+        "additional_nodes": []
+      }
+    },
+    "figure_4d": {
+      "table": "cp_solid_table.csv",
+      "plot_unit": "J_per_kgK",
+      "reading_error_name": "specific_heat_absolute_J_per_kgK",
+      "plot_to_si_error_scale": 1.0,
+      "x_axis": {
+        "drawing_indices": [206, 207, 208, 209],
+        "values": [0.0, 500.0, 1000.0, 1500.0],
+        "expected_coordinates": [399.4499, 436.4309, 473.3489, 510.2669],
+        "signature_tolerance_points": 0.01
+      },
+      "y_axis": {
+        "drawing_indices": [205, 204, 203, 202, 211],
+        "values": [1000.0, 750.0, 500.0, 250.0, 0.0],
+        "expected_coordinates": [346.2795, 374.0625, 401.9085, 429.8805, 457.7265],
+        "signature_tolerance_points": 0.01
+      },
+      "curve": {
+        "drawing_index": 351,
+        "expected_line_items": 8,
+        "expected_rect": [400.9619, 374.1255, 506.5498, 401.9715],
+        "signature_tolerance_points": 0.01
+      },
+      "vector_frozen": {
+        "temperature_C": [20.0, 200.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1370.0, 1450.0],
+        "value": [500.0, 525.0, 550.0, 580.0, 605.0, 630.0, 650.0, 670.0, 750.0]
+      },
+      "table_mapping": {
+        "plot_value_to_SI_scale": 1.0,
+        "vector_source_class": ["figure_node", "figure_node", "figure_node", "figure_node", "figure_node", "figure_node", "figure_node", "figure_node", "figure_node"],
+        "additional_nodes": []
+      }
+    },
+    "figure_4e": {
+      "table": "alpha_table.csv",
+      "plot_unit": "microstrain_per_K",
+      "reading_error_name": "thermal_expansion_absolute_per_K",
+      "plot_to_si_error_scale": 1e-06,
+      "x_axis": {
+        "drawing_indices": [392, 393, 394, 395],
+        "values": [0.0, 500.0, 1000.0, 1500.0],
+        "expected_coordinates": [214.8998, 251.8178, 288.6728, 325.5908],
+        "signature_tolerance_points": 0.01
+      },
+      "y_axis": {
+        "drawing_indices": [391, 390, 389, 388, 397],
+        "values": [30.0, 25.0, 20.0, 15.0, 10.0],
+        "expected_coordinates": [524.2509, 552.0969, 579.9429, 607.8519, 635.6979],
+        "signature_tolerance_points": 0.01
+      },
+      "curve": {
+        "drawing_index": 398,
+        "expected_line_items": 12,
+        "expected_rect": [222.2708, 568.855, 310.8488, 602.308],
+        "signature_tolerance_points": 0.01
+      },
+      "vector_frozen": {
+        "temperature_C": [100.0, 200.0, 300.0, 400.0, 500.0, 600.0, 700.0, 800.0, 900.0, 1000.0, 1100.0, 1200.0, 1300.0],
+        "value": [16.0, 16.5, 17.0, 17.5, 18.0, 18.5, 19.0, 19.5, 20.0, 20.5, 21.0, 21.5, 22.0]
+      },
+      "table_mapping": {
+        "plot_value_to_SI_scale": 1e-06,
+        "vector_source_class": ["figure_node", "figure_node", "figure_node", "figure_node", "figure_node", "figure_node_author_assumption", "figure_node_author_assumption", "figure_node_author_assumption", "figure_node_author_assumption", "figure_node_author_assumption", "figure_node_author_assumption", "figure_node_author_assumption", "figure_node_author_assumption"],
+        "additional_nodes": [
+          {
+            "temperature_C": 20.0,
+            "rule": "linear_extrapolation",
+            "from_vector_indices": [0, 1],
+            "source_class": "linear_extrapolation"
+          }
+        ]
+      }
+    }
+  }
+}

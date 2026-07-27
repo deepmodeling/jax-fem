@@ -18,6 +18,7 @@ Multiple run dirs (e.g. a preheat ladder) are reported side by side.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import re
 from pathlib import Path
@@ -36,31 +37,131 @@ BEAM_YMID = 0.25e-3
 # mesh v2: root wall at x in [0.775, 0.975] mm; FREE end at x=0.
 # Paper coordinates run the other way (x_paper = 0 at the root).
 
-# Kaess Figure 9a, digitized 2026-07-16 (max front bending, mm -> um,
-# reading error ~ +-0.3 um): plate temp C -> deflection um
-FIG9A_REFERENCE_UM = {
-    20: 14.6, 50: 14.5, 150: 14.0, 300: 12.7,
-    450: 11.9, 600: 10.5, 750: 8.7, 900: 6.1,
-}
+FIG9A_REFERENCE_PATH = (
+    Path(__file__).resolve().parent
+    / "references"
+    / "digitized"
+    / "fig9_bending.csv"
+)
+VOLUME_CELL_TYPES = frozenset(("tetra", "hexahedron"))
+
+
+def load_figure9a_reference(path: Path = FIG9A_REFERENCE_PATH) -> dict[int, float]:
+    """Load the one authoritative Figure 9a series from the frozen CSV."""
+    with path.open(newline="", encoding="utf-8") as stream:
+        rows = [
+            row
+            for row in csv.DictReader(stream)
+            if row["series_id"] == "plate_temperature_fixed_p250_v850"
+        ]
+    return {
+        int(float(row["build_plate_temp_c"])): float(
+            row["max_front_bending_um"]
+        )
+        for row in rows
+    }
+
+
+FIG9A_REFERENCE_UM = load_figure9a_reference()
+
+
+def _volume_cell_blocks(mesh):
+    blocks = []
+    for block_index, block in enumerate(mesh.cells):
+        cell_type = block.type
+        if cell_type in VOLUME_CELL_TYPES:
+            blocks.append(
+                (
+                    block_index,
+                    onp.asarray(block.data, dtype=onp.int64),
+                )
+            )
+    if not blocks:
+        supported = ", ".join(sorted(VOLUME_CELL_TYPES))
+        raise ValueError(
+            f"VTU contains no supported volume cells ({supported})"
+        )
+    return blocks
 
 
 def cell_centroids(mesh):
-    cells = mesh.cells_dict["tetra"]
-    return mesh.points[cells].mean(axis=1)
+    """Return supported volume-cell centroids in mesh cell-block order."""
+    return onp.concatenate(
+        [
+            onp.asarray(mesh.points, dtype=float)[cells].mean(axis=1)
+            for _block_index, cells in _volume_cell_blocks(mesh)
+        ],
+        axis=0,
+    )
 
 
-def pooled_quad_field(mesh, prefix):
-    """Average all '<prefix>_quad*' cell fields (per-cell quad pooling)."""
-    chunks = []
-    for name, data in (mesh.cell_data or {}).items():
-        if re.match(rf"{re.escape(prefix)}_quad", name):
-            chunks.append(onp.concatenate(
-                [onp.asarray(b, dtype=float).reshape(len(b), -1)
-                 for b in data], axis=0
-            ))
-    if not chunks:
+def _volume_cell_field(mesh, data_blocks):
+    volume_values = []
+    for block_index, cells in _volume_cell_blocks(mesh):
+        if block_index >= len(data_blocks):
+            raise ValueError(
+                "cell-data blocks do not align with mesh cell blocks"
+            )
+        values = onp.asarray(data_blocks[block_index], dtype=float)
+        if values.shape[0] != len(cells):
+            raise ValueError(
+                "cell-data length does not match its volume cell block"
+            )
+        if values.ndim == 1:
+            scalar_values = values
+        elif values.ndim == 2 and values.shape[1] == 1:
+            scalar_values = values[:, 0]
+        else:
+            raise ValueError(
+                "quadrature cell field must be scalar per cell"
+            )
+        volume_values.append(scalar_values)
+    return onp.concatenate(volume_values, axis=0)
+
+
+def pooled_quad_field(mesh, prefix, component=None):
+    """Average one scalar field across its per-quadrature cell arrays."""
+    component_suffix = (
+        "" if component is None else f"_{re.escape(component)}"
+    )
+    field_pattern = re.compile(
+        rf"^{re.escape(prefix)}_quad(?P<quad>\d*){component_suffix}$"
+    )
+    matches = []
+    for name in (mesh.cell_data or {}):
+        match = field_pattern.fullmatch(name)
+        if match:
+            matches.append((name, match.group("quad")))
+    if not matches:
         return None
-    return onp.mean(onp.stack(chunks, axis=0), axis=0).squeeze()
+
+    unindexed = [name for name, quad in matches if quad == ""]
+    numbered = [
+        (int(quad), name)
+        for name, quad in matches
+        if quad != ""
+    ]
+    if unindexed and numbered:
+        raise ValueError(
+            "quadrature fields mix unindexed and numbered names"
+        )
+    if unindexed:
+        ordered_names = unindexed
+    else:
+        numbered.sort()
+        quad_indices = [quad for quad, _name in numbered]
+        if quad_indices != list(range(len(numbered))):
+            raise ValueError(
+                "numbered quadrature fields must start at zero and be "
+                "contiguous"
+            )
+        ordered_names = [name for _quad, name in numbered]
+
+    chunks = [
+        _volume_cell_field(mesh, mesh.cell_data[name])
+        for name in ordered_names
+    ]
+    return onp.mean(onp.stack(chunks, axis=0), axis=0)
 
 
 def bending_line(release_path):
@@ -94,32 +195,14 @@ def stress_depth_profile(constrained_path, x_pos=0.475e-3):
     # position is between mid-span and the root; Fig 7 perspective gives
     # ~0.3-0.5 mm from the root -> W2 center chosen, documented estimate)
     mesh = meshio.read(constrained_path)
-    sxx = pooled_quad_field(mesh, "stress")  # may be absent
+    sxx = pooled_quad_field(mesh, "stress", component="xx")
     if sxx is None:
-        # v03 writes per-component names, e.g. stress_quad_xx / _quad0_xx
-        for name in (mesh.cell_data or {}):
-            if name.startswith("stress") and name.endswith("xx"):
-                sxx = onp.concatenate([
-                    onp.asarray(b, dtype=float).ravel()
-                    for b in mesh.cell_data[name]
-                ])
-                break
-    if sxx is None:
-        candidates = [n for n in (mesh.cell_data or {})
-                      if n.endswith("xx")]
-        if not candidates:
-            return None
-        vals = [onp.concatenate([onp.asarray(b, dtype=float).ravel()
-                                 for b in mesh.cell_data[n]])
-                for n in sorted(candidates)]
-        sxx = onp.mean(onp.stack(vals, axis=0), axis=0)
+        return None
     cent = cell_centroids(mesh)
-    if len(sxx) != len(cent):
-        n = len(cent)
-        if len(sxx) % n == 0:  # quad-major concatenation
-            sxx = sxx.reshape(-1, n).mean(axis=0)
-        else:
-            return None
+    if sxx.shape != (len(cent),):
+        raise ValueError(
+            "sigma_xx cell count does not match volume-cell centroids"
+        )
     near = (
         (onp.abs(cent[:, 0] - x_pos) < 26.0e-6)
         & (onp.abs(cent[:, 1] - BEAM_YMID) < 26.0e-6)

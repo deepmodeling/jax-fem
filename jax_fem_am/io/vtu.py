@@ -88,6 +88,9 @@ def save_step(
     mechanics_valid,
     mechanics_source_step,
     mode_id,
+    release_removed_cell=None,
+    release_point_fields=None,
+    quad_cell_info_factory=None,
 ):
     if quad_stress is None:
         quad_stress = empty_quad_stress(fe.num_cells, dT_quad.shape[1])
@@ -110,7 +113,31 @@ def save_step(
         ("mechanics_source_step", np.full(fe.num_cells, float(mechanics_source_step), dtype=np.float64)),
         ("mode_id", np.full(fe.num_cells, float(mode_id), dtype=np.float64)),
     ]
-    cell_infos.extend(make_quad_stress_cell_infos(quad_stress))
+    if release_removed_cell is not None:
+        cell_infos.append(
+            (
+                "release_removed",
+                np.asarray(release_removed_cell, dtype=np.float64),
+            )
+        )
+    if release_point_fields is not None:
+        if not isinstance(release_point_fields, dict):
+            raise ValueError("release point fields must be a name-to-array map")
+        for name, values in release_point_fields.items():
+            if not (
+                name.startswith("release_bottom_u")
+                or name.startswith("release_anchor_u")
+            ):
+                raise ValueError(f"invalid release point field name: {name}")
+            values = np.asarray(values, dtype=np.float64)
+            if values.shape != (len(T_new),):
+                raise ValueError(
+                    f"release point field {name} must have one value per node"
+                )
+            point_infos.append((name, values))
+    if quad_cell_info_factory is None:
+        quad_cell_info_factory = make_quad_stress_cell_infos
+    cell_infos.extend(quad_cell_info_factory(quad_stress))
     save_sol(
         fe,
         T_new,
@@ -154,6 +181,8 @@ def write_path_output(args, output_dir, step_states):
             "dt",
             "scan_frac",
             "hatch_frac",
+            "ambient_temperature",
+            "bottom_temperature",
         ])
         for state in step_states:
             current_time += state.dt
@@ -173,6 +202,8 @@ def write_path_output(args, output_dir, step_states):
                 state.dt,
                 state.scan_frac,
                 state.hatch_frac,
+                state.ambient_temperature,
+                state.bottom_temperature,
             ])
     print(f"path_output: {path}")
 
@@ -226,7 +257,14 @@ def print_startup(args, raw_pmin, raw_pmax, pmin, pmax, part_pmin, part_pmax, se
     print("laser_power:", args.laser_power)
     print("absorptivity:", args.absorptivity)
     print("effective_laser_power_nominal:", args.absorptivity * args.laser_power)
-    print("heat_source_normalization:", "2*P/(pi*r_b^2*source_depth)")
+    print("source_model:", args.source_model)
+    if args.source_model == "paper_hemispherical":
+        print(
+            "heat_source_normalization:",
+            "6*sqrt(3)*P_abs/(pi*sqrt(pi)*r_b^3)",
+        )
+    else:
+        print("heat_source_normalization:", "2*P_abs/(pi*r_b^2*source_depth)")
     print("beam_radius:", args.beam_radius)
     print("source_depth:", args.source_depth)
     print("powder_mode:", args.powder_mode)

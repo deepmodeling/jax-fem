@@ -1,0 +1,1587 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.jax-fem/specs/001-kaess-paper-reproduction/backend-qualification.schema.json",
+  "title": "Kaess Accelerated Backend Qualification Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "execution_mode",
+    "verdict",
+    "promotion_eligible"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kaess.backend-qualification/2"
+    },
+    "qualification_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "execution_mode": {
+      "enum": [
+        "hybrid_gpu_assembly_cpu_pardiso",
+        "gpu_dominant_experimental",
+        "full_gpu"
+      ]
+    },
+    "verdict": {
+      "enum": [
+        "pass",
+        "fail",
+        "diagnostic_only",
+        "unsupported"
+      ]
+    },
+    "promotion_eligible": {
+      "type": "boolean"
+    },
+    "levels": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "kernel",
+          "small_domain",
+          "real_dof_scan_prefix",
+          "1layer_build_cooling_release",
+          "reduced_3layer_history_release",
+          "performance_pair",
+          "formal_10layer"
+        ]
+      }
+    },
+    "cpu_reference_run_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "candidate_run_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "level_run_pairs": {
+      "$ref": "#/$defs/levelRunPairs"
+    },
+    "source_identity": {
+      "$ref": "#/$defs/sourceIdentity"
+    },
+    "comparison_scope": {
+      "$ref": "#/$defs/comparisonScope"
+    },
+    "checkpoint_precision": {
+      "const": "float64"
+    },
+    "stage_gates": {
+      "$ref": "#/$defs/stageGates"
+    },
+    "field_metrics": {
+      "$ref": "#/$defs/metricArray"
+    },
+    "event_metrics": {
+      "$ref": "#/$defs/metricArray"
+    },
+    "qoi_metrics": {
+      "$ref": "#/$defs/metricArray"
+    },
+    "convergence_metrics": {
+      "$ref": "#/$defs/metricArray"
+    },
+    "placement_evidence": {
+      "$ref": "#/$defs/placementEvidence"
+    },
+    "performance": {
+      "$ref": "#/$defs/performanceEvidence"
+    },
+    "numerically_qualified": {
+      "type": "boolean"
+    },
+    "performance_qualified": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "reason_code": {
+      "enum": [
+        "no_gpu_device",
+        "missing_gpu_sparse_backend",
+        "unsupported_float64",
+        "dependency_missing",
+        "capability_probe_failed",
+        "other"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1
+    },
+    "probe_artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/fileIdentity"
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/evaluatedQualification"
+    },
+    {
+      "$ref": "#/$defs/unsupportedQualification"
+    }
+  ],
+  "$defs": {
+    "evaluatedQualification": {
+      "properties": {
+        "verdict": {
+          "enum": [
+            "pass",
+            "fail",
+            "diagnostic_only"
+          ]
+        }
+      },
+      "required": [
+        "levels",
+        "cpu_reference_run_ids",
+        "candidate_run_ids",
+        "level_run_pairs",
+        "source_identity",
+        "comparison_scope",
+        "checkpoint_precision",
+        "stage_gates",
+        "field_metrics",
+        "event_metrics",
+        "qoi_metrics",
+        "convergence_metrics",
+        "placement_evidence",
+        "performance",
+        "numerically_qualified",
+        "performance_qualified"
+      ],
+      "allOf": [
+        {
+          "properties": {
+            "levels": {
+              "minItems": 1
+            },
+            "cpu_reference_run_ids": {
+              "minItems": 1
+            },
+            "candidate_run_ids": {
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "verdict": {
+                "const": "pass"
+              }
+            },
+            "required": [
+              "verdict"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_identity": {
+                "properties": {
+                  "same_identity": {
+                    "const": true
+                  }
+                }
+              },
+              "numerically_qualified": {
+                "const": true
+              },
+              "placement_evidence": {
+                "properties": {
+                  "placement_verified": {
+                    "const": true
+                  },
+                  "unexpected_fallback_count": {
+                    "const": 0
+                  }
+                }
+              },
+              "stage_gates": {
+                "properties": {
+                  "backend_parity": {
+                    "$ref": "#/$defs/passedGate"
+                  },
+                  "energy_audit": {
+                    "$ref": "#/$defs/passedGate"
+                  },
+                  "convergence_audit": {
+                    "$ref": "#/$defs/passedGate"
+                  }
+                }
+              },
+              "field_metrics": {
+                "$ref": "#/$defs/passedFieldMetricArray"
+              },
+              "event_metrics": {
+                "$ref": "#/$defs/passedEventMetricArray"
+              },
+              "qoi_metrics": {
+                "$ref": "#/$defs/passedQoiMetricArray"
+              },
+              "convergence_metrics": {
+                "$ref": "#/$defs/passedConvergenceMetricArray"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "promotion_eligible": {
+                "const": true
+              }
+            },
+            "required": [
+              "promotion_eligible"
+            ]
+          },
+          "then": {
+            "properties": {
+              "verdict": {
+                "const": "pass"
+              },
+              "execution_mode": {
+                "enum": [
+                  "hybrid_gpu_assembly_cpu_pardiso",
+                  "full_gpu"
+                ]
+              },
+              "numerically_qualified": {
+                "const": true
+              },
+              "performance_qualified": {
+                "const": true
+              },
+              "levels": {
+                "minItems": 6,
+                "allOf": [
+                  {
+                    "contains": {
+                      "const": "kernel"
+                    }
+                  },
+                  {
+                    "contains": {
+                      "const": "small_domain"
+                    }
+                  },
+                  {
+                    "contains": {
+                      "const": "real_dof_scan_prefix"
+                    }
+                  },
+                  {
+                    "contains": {
+                      "const": "1layer_build_cooling_release"
+                    }
+                  },
+                  {
+                    "contains": {
+                      "const": "reduced_3layer_history_release"
+                    }
+                  },
+                  {
+                    "contains": {
+                      "const": "performance_pair"
+                    }
+                  }
+                ]
+              },
+              "cpu_reference_run_ids": {
+                "minItems": 2
+              },
+              "candidate_run_ids": {
+                "minItems": 2
+              },
+              "level_run_pairs": {
+                "required": [
+                  "kernel",
+                  "small_domain",
+                  "real_dof_scan_prefix",
+                  "1layer_build_cooling_release",
+                  "reduced_3layer_history_release",
+                  "performance_pair"
+                ],
+                "properties": {
+                  "kernel": {
+                    "$ref": "#/$defs/passedLevelPair"
+                  },
+                  "small_domain": {
+                    "$ref": "#/$defs/passedLevelPair"
+                  },
+                  "real_dof_scan_prefix": {
+                    "$ref": "#/$defs/passedLevelPair"
+                  },
+                  "1layer_build_cooling_release": {
+                    "$ref": "#/$defs/passedLevelPair"
+                  },
+                  "reduced_3layer_history_release": {
+                    "$ref": "#/$defs/passedLevelPair"
+                  },
+                  "performance_pair": {
+                    "$ref": "#/$defs/passedLevelPair"
+                  }
+                }
+              },
+              "stage_gates": {
+                "properties": {
+                  "build_complete": {
+                    "$ref": "#/$defs/passedGate"
+                  },
+                  "cooling_complete": {
+                    "$ref": "#/$defs/passedGate"
+                  },
+                  "release_complete": {
+                    "$ref": "#/$defs/passedGate"
+                  },
+                  "performance_gate": {
+                    "$ref": "#/$defs/passedGate"
+                  }
+                },
+                "required": [
+                  "build_complete",
+                  "cooling_complete",
+                  "release_complete",
+                  "performance_gate"
+                ]
+              },
+              "performance": {
+                "properties": {
+                  "measured": {
+                    "const": true
+                  },
+                  "speedup": {
+                    "type": "number",
+                    "minimum": 1.2
+                  },
+                  "linear_solve_count_delta_fraction": {
+                    "type": "number",
+                    "minimum": -1,
+                    "maximum": 0.1
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "performance_qualified": {
+                "const": true
+              }
+            },
+            "required": [
+              "performance_qualified"
+            ]
+          },
+          "then": {
+            "properties": {
+              "performance": {
+                "properties": {
+                  "measured": {
+                    "const": true
+                  },
+                  "speedup": {
+                    "type": "number",
+                    "minimum": 1.2
+                  },
+                  "linear_solve_count_delta_fraction": {
+                    "type": "number",
+                    "minimum": -1,
+                    "maximum": 0.1
+                  }
+                }
+              },
+              "stage_gates": {
+                "properties": {
+                  "performance_gate": {
+                    "$ref": "#/$defs/passedGate"
+                  }
+                },
+                "required": [
+                  "performance_gate"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "execution_mode": {
+                "const": "gpu_dominant_experimental"
+              }
+            },
+            "required": [
+              "execution_mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "promotion_eligible": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "execution_mode": {
+                "const": "hybrid_gpu_assembly_cpu_pardiso"
+              },
+              "verdict": {
+                "const": "pass"
+              }
+            },
+            "required": [
+              "execution_mode",
+              "verdict"
+            ]
+          },
+          "then": {
+            "properties": {
+              "placement_evidence": {
+                "properties": {
+                  "orchestration_backend": {
+                    "const": "host_python"
+                  },
+                  "full_loop_xla": {
+                    "const": false
+                  },
+                  "cpu_pardiso_calls": {
+                    "minimum": 1
+                  },
+                  "unexpected_fallback_count": {
+                    "const": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "execution_mode": {
+                "const": "full_gpu"
+              },
+              "verdict": {
+                "const": "pass"
+              }
+            },
+            "required": [
+              "execution_mode",
+              "verdict"
+            ]
+          },
+          "then": {
+            "properties": {
+              "placement_evidence": {
+                "properties": {
+                  "cpu_pardiso_calls": {
+                    "const": 0
+                  },
+                  "unexpected_fallback_count": {
+                    "const": 0
+                  }
+                },
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "orchestration_backend": {
+                          "const": "xla_loop"
+                        }
+                      },
+                      "required": [
+                        "orchestration_backend"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "full_loop_xla": {
+                          "const": true
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "orchestration_backend": {
+                          "const": "host_python"
+                        }
+                      },
+                      "required": [
+                        "orchestration_backend"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "full_loop_xla": {
+                          "const": false
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "unsupportedQualification": {
+      "properties": {
+        "verdict": {
+          "const": "unsupported"
+        },
+        "promotion_eligible": {
+          "const": false
+        }
+      },
+      "required": [
+        "reason_code",
+        "message",
+        "probe_artifacts"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "numerically_qualified"
+            ]
+          },
+          {
+            "required": [
+              "performance_qualified"
+            ]
+          }
+        ]
+      }
+    },
+    "sourceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "same_identity",
+        "commit",
+        "dirty_diff_sha256",
+        "input_bundle_sha256",
+        "acceptance_model_sha256"
+      ],
+      "properties": {
+        "same_identity": {
+          "type": "boolean"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "dirty_diff_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "input_bundle_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "acceptance_model_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "levelRunPairs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kernel": {
+          "$ref": "#/$defs/levelPair"
+        },
+        "small_domain": {
+          "$ref": "#/$defs/levelPair"
+        },
+        "real_dof_scan_prefix": {
+          "$ref": "#/$defs/levelPair"
+        },
+        "1layer_build_cooling_release": {
+          "$ref": "#/$defs/levelPair"
+        },
+        "reduced_3layer_history_release": {
+          "$ref": "#/$defs/levelPair"
+        },
+        "performance_pair": {
+          "$ref": "#/$defs/levelPair"
+        },
+        "formal_10layer": {
+          "$ref": "#/$defs/levelPair"
+        }
+      }
+    },
+    "levelPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpu_run_ids",
+        "candidate_run_ids",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "cpu_run_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "candidate_run_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_run"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/fileIdentity"
+          }
+        }
+      }
+    },
+    "passedLevelPair": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/levelPair"
+        },
+        {
+          "properties": {
+            "cpu_run_ids": {
+              "minItems": 2
+            },
+            "candidate_run_ids": {
+              "minItems": 2
+            },
+            "status": {
+              "const": "pass"
+            }
+          }
+        }
+      ]
+    },
+    "comparisonScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mask_id",
+        "mask_artifact",
+        "active_or_printed_only",
+        "paper_path_ids",
+        "excluded_domains"
+      ],
+      "properties": {
+        "mask_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mask_artifact": {
+          "$ref": "#/$defs/fileIdentity"
+        },
+        "active_or_printed_only": {
+          "const": true
+        },
+        "paper_path_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded_domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "stageGates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "backend_parity",
+        "energy_audit",
+        "convergence_audit"
+      ],
+      "properties": {
+        "backend_parity": {
+          "$ref": "#/$defs/gate"
+        },
+        "energy_audit": {
+          "$ref": "#/$defs/energyAuditGate"
+        },
+        "convergence_audit": {
+          "$ref": "#/$defs/gate"
+        },
+        "build_complete": {
+          "$ref": "#/$defs/gate"
+        },
+        "cooling_complete": {
+          "$ref": "#/$defs/gate"
+        },
+        "release_complete": {
+          "$ref": "#/$defs/gate"
+        },
+        "performance_gate": {
+          "$ref": "#/$defs/gate"
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_applicable"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/fileIdentity"
+          }
+        }
+      }
+    },
+    "passedGate": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/gate"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "pass"
+            }
+          }
+        }
+      ]
+    },
+    "energyAuditGate": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/gate"
+        },
+        {
+          "properties": {
+            "evidence": {
+              "minItems": 1,
+              "maxItems": 1
+            }
+          }
+        }
+      ]
+    },
+    "metricArray": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/metric"
+      }
+    },
+    "passedMetricArray": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/metricArray"
+        },
+        {
+          "items": {
+            "properties": {
+              "status": {
+                "const": "pass"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "passedFieldMetricArray": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/passedMetricArray"
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "temperature_field_relative_l2"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "sigma_x_field_relative_l2"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "eqp_field_relative_l2"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "displacement_field_relative_l2"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "passedEventMetricArray": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/passedMetricArray"
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "activation_event_digest_match"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "active_element_digest_match"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "phase_state_digest_match"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "passedQoiMetricArray": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/passedMetricArray"
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "peak_temperature_relative_error"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "front_bending_curve_relative_l2"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "max_front_bending_error"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "release_direction_match"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "passedConvergenceMetricArray": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/passedMetricArray"
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "linear_solve_count_delta_fraction"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "accepted_increment_digest_match"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "metric_id": {
+                "const": "fallback_event_digest_match"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "metric": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/numericMetric"
+        },
+        {
+          "$ref": "#/$defs/categoricalMatchMetric"
+        },
+        {
+          "$ref": "#/$defs/digestMatchMetric"
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "metric_id": {
+                "enum": [
+                  "activation_event_digest_match",
+                  "active_element_digest_match",
+                  "phase_state_digest_match",
+                  "accepted_increment_digest_match",
+                  "fallback_event_digest_match"
+                ]
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "metric_kind": {
+                "const": "digest_match"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "metric_id": {
+                "const": "release_direction_match"
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "metric_kind": {
+                "const": "categorical_match"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "metric_id": {
+                "enum": [
+                  "temperature_field_relative_l2",
+                  "sigma_x_field_relative_l2",
+                  "eqp_field_relative_l2",
+                  "displacement_field_relative_l2",
+                  "peak_temperature_relative_error",
+                  "front_bending_curve_relative_l2",
+                  "max_front_bending_error",
+                  "linear_solve_count_delta_fraction"
+                ]
+              }
+            },
+            "required": [
+              "metric_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "metric_kind": {
+                "const": "numeric"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "metricStatus": {
+      "enum": [
+        "pass",
+        "fail",
+        "not_applicable"
+      ]
+    },
+    "scalarValue": {
+      "type": [
+        "number",
+        "string",
+        "boolean"
+      ]
+    },
+    "numericMetric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric_id",
+        "metric_kind",
+        "cpu_value",
+        "candidate_value",
+        "value_unit",
+        "error",
+        "error_unit",
+        "threshold",
+        "comparison_operator",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "metric_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metric_kind": {
+          "const": "numeric"
+        },
+        "cpu_value": {
+          "type": "number"
+        },
+        "candidate_value": {
+          "type": "number"
+        },
+        "value_unit": {
+          "enum": [
+            "K",
+            "MPa",
+            "fraction",
+            "um",
+            "count"
+          ]
+        },
+        "error": {
+          "type": "number",
+          "minimum": 0
+        },
+        "error_unit": {
+          "enum": [
+            "fraction",
+            "um"
+          ]
+        },
+        "threshold": {
+          "type": "number",
+          "minimum": 0
+        },
+        "comparison_operator": {
+          "enum": [
+            "<=",
+            ">=",
+            "=="
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/metricStatus"
+        },
+        "evidence": {
+          "$ref": "#/$defs/fileIdentity"
+        }
+      }
+    },
+    "categoricalMatchMetric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric_id",
+        "metric_kind",
+        "cpu_value",
+        "candidate_value",
+        "match",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "metric_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metric_kind": {
+          "const": "categorical_match"
+        },
+        "cpu_value": {
+          "$ref": "#/$defs/scalarValue"
+        },
+        "candidate_value": {
+          "$ref": "#/$defs/scalarValue"
+        },
+        "match": {
+          "type": "boolean"
+        },
+        "status": {
+          "$ref": "#/$defs/metricStatus"
+        },
+        "evidence": {
+          "$ref": "#/$defs/fileIdentity"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "pass"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "match": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    "digestMatchMetric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric_id",
+        "metric_kind",
+        "cpu_sha256",
+        "candidate_sha256",
+        "match",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "metric_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metric_kind": {
+          "const": "digest_match"
+        },
+        "cpu_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "candidate_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "match": {
+          "type": "boolean"
+        },
+        "status": {
+          "$ref": "#/$defs/metricStatus"
+        },
+        "evidence": {
+          "$ref": "#/$defs/fileIdentity"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "pass"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "match": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    "placementEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "placement_verified",
+        "run_manifest_artifacts",
+        "profiler_artifacts",
+        "orchestration_backend",
+        "full_loop_xla",
+        "cpu_pardiso_calls",
+        "unexpected_fallback_count"
+      ],
+      "properties": {
+        "placement_verified": {
+          "type": "boolean"
+        },
+        "run_manifest_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/fileIdentity"
+          }
+        },
+        "profiler_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/fileIdentity"
+          }
+        },
+        "orchestration_backend": {
+          "enum": [
+            "host_python",
+            "xla_loop"
+          ]
+        },
+        "full_loop_xla": {
+          "type": "boolean"
+        },
+        "cpu_pardiso_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unexpected_fallback_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "performanceEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "measured",
+        "cold_wall_seconds",
+        "steady_wall_seconds",
+        "speedup",
+        "cpu_threads",
+        "linear_solve_count_delta_fraction",
+        "evidence"
+      ],
+      "properties": {
+        "measured": {
+          "type": "boolean"
+        },
+        "cold_wall_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "steady_wall_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "speedup": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "cpu_threads": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "linear_solve_count_delta_fraction": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -1
+        },
+        "cpu_wall_seconds_samples": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "candidate_wall_seconds_samples": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "cpu_linear_solve_count_samples": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "candidate_linear_solve_count_samples": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "peak_ram_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "peak_vram_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/fileIdentity"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "measured": {
+                "const": true
+              }
+            },
+            "required": [
+              "measured"
+            ]
+          },
+          "then": {
+            "required": [
+              "cpu_wall_seconds_samples",
+              "candidate_wall_seconds_samples",
+              "cpu_linear_solve_count_samples",
+              "candidate_linear_solve_count_samples"
+            ],
+            "properties": {
+              "cold_wall_seconds": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "steady_wall_seconds": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "speedup": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "cpu_threads": {
+                "type": "integer"
+              },
+              "linear_solve_count_delta_fraction": {
+                "type": "number",
+                "minimum": -1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "fileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

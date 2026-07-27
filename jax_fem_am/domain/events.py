@@ -1,4 +1,4 @@
-"""Phase lifecycle events: solidification reference and plastic-state reset.
+"""Phase lifecycle events for legacy-reset and paper-irreversible histories.
 
 Extracted verbatim from legacy/v03/am_thermal_stress_macro_intersection_mech100.py.
 """
@@ -19,11 +19,27 @@ from jax_fem_am.materials.phases import (
 def update_phase_reference_and_eqp(T_quad, active_quad, phase_quad, T_ref_quad, eqp_quad, args):
     """Update quadrature-point material phase and stress-free reference temperature.
 
-    The important modeling change is that T_ref is written when material
-    solidifies from liquid/mushy state, not when a layer is merely activated.
-    Re-melting moves the point back to a stress-free liquid/mushy state; when it
-    solidifies again the reference temperature is overwritten.
+    ``legacy_reset`` preserves the historical reversible melt/reset behavior.
+    ``paper_irreversible`` implements the Kaess et al. (2023), Section 2.5,
+    field variable: powder starts at zero and switches permanently to solid
+    after first melting.  In that mode a solid point may report a later melt
+    event for diagnostics, but it cannot return to a liquid/mushy history
+    state, rewrite its first solidification reference, or erase plastic
+    history.
+
+    Source: https://doi.org/10.3390/ma16062321
     """
+    history_model = getattr(
+        args,
+        "phase_history_model",
+        "legacy_reset",
+    )
+    if history_model not in ("legacy_reset", "paper_irreversible"):
+        raise ValueError(
+            "phase_history_model must be 'legacy_reset' or "
+            "'paper_irreversible'"
+        )
+    paper_irreversible = history_model == "paper_irreversible"
     active = active_quad > 0.5
     fixture = (phase_quad == STATE_SUBSTRATE) | (phase_quad == STATE_SUPPORT)
     non_fixture = active & (~fixture)
@@ -39,16 +55,51 @@ def update_phase_reference_and_eqp(T_quad, active_quad, phase_quad, T_ref_quad, 
         mushy = non_fixture & (T_quad >= Ts) & (T_quad < Tl)
         cold = non_fixture & (T_quad < Ts)
 
-        old_was_melted = (phase_quad == STATE_LIQUID) | (phase_quad == STATE_MUSHY)
+        old_was_melted = (
+            (phase_quad == STATE_LIQUID)
+            | (phase_quad == STATE_MUSHY)
+        )
+        old_was_solid = phase_quad == STATE_SOLID
         became_solid = cold & old_was_melted
-        stayed_solid = cold & (phase_quad == STATE_SOLID)
-
-        phase_new = np.where(hot_liquid, STATE_LIQUID, phase_new)
-        phase_new = np.where(mushy, STATE_MUSHY, phase_new)
-        phase_new = np.where(became_solid | stayed_solid, STATE_SOLID, phase_new)
-
+        if paper_irreversible:
+            powder_or_transient = (
+                (phase_quad == STATE_POWDER)
+                | (phase_quad == STATE_VOID)
+                | old_was_melted
+            )
+            phase_new = np.where(
+                hot_liquid & powder_or_transient,
+                STATE_LIQUID,
+                phase_new,
+            )
+            phase_new = np.where(
+                mushy & powder_or_transient,
+                STATE_MUSHY,
+                phase_new,
+            )
+            phase_new = np.where(
+                became_solid | old_was_solid,
+                STATE_SOLID,
+                phase_new,
+            )
+            entered_melted_state = (
+                (hot_liquid | mushy)
+                & (old_was_solid | old_was_melted)
+            )
+        else:
+            stayed_solid = cold & old_was_solid
+            phase_new = np.where(hot_liquid, STATE_LIQUID, phase_new)
+            phase_new = np.where(mushy, STATE_MUSHY, phase_new)
+            phase_new = np.where(
+                became_solid | stayed_solid,
+                STATE_SOLID,
+                phase_new,
+            )
+            entered_melted_state = (
+                (hot_liquid | mushy)
+                & (old_was_solid | old_was_melted)
+            )
         newly_solidified = became_solid
-        entered_melted_state = (hot_liquid | mushy) & ((phase_quad == STATE_SOLID) | (phase_quad == STATE_MUSHY) | (phase_quad == STATE_LIQUID))
     else:
         # Compatibility / macro consolidation-on-activation mode when no
         # phase-change interval is provided: activated material solidifies
@@ -60,18 +111,26 @@ def update_phase_reference_and_eqp(T_quad, active_quad, phase_quad, T_ref_quad, 
         newly_solidified = became_solid
         entered_melted_state = np.zeros_like(active, dtype=bool)
 
-    relax_T = getattr(args, "stress_relaxation_temperature", None)
-    if relax_T is not None and relax_T > 0.0:
-        # Stress-free reference is the relaxation temperature: above it the
-        # material is assumed to carry no stress (macro calibration knob,
-        # Ti64 typically ~1073-1173 K). Residual stress then builds from the
-        # constrained shrinkage between relax_T and the local temperature.
-        T_ref_value = relax_T * np.ones_like(T_quad)
-    else:
+    if paper_irreversible:
         T_ref_value = T_quad
-    T_ref_new = np.where(newly_solidified, T_ref_value, T_ref_quad)
-    if args.reset_plastic_on_melt:
-        eqp_new = np.where(entered_melted_state, np.zeros_like(eqp_quad), eqp_quad)
-    else:
         eqp_new = eqp_quad
+    else:
+        relax_temperature = getattr(
+            args,
+            "stress_relaxation_temperature",
+            None,
+        )
+        if relax_temperature is not None and relax_temperature > 0.0:
+            T_ref_value = relax_temperature * np.ones_like(T_quad)
+        else:
+            T_ref_value = T_quad
+        if getattr(args, "reset_plastic_on_melt", False):
+            eqp_new = np.where(
+                entered_melted_state,
+                np.zeros_like(eqp_quad),
+                eqp_quad,
+            )
+        else:
+            eqp_new = eqp_quad
+    T_ref_new = np.where(newly_solidified, T_ref_value, T_ref_quad)
     return phase_new, T_ref_new, eqp_new, newly_solidified, entered_melted_state

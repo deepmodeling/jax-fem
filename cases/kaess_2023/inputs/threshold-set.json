@@ -1,0 +1,124 @@
+{
+  "schema_version": "kaess.threshold-set/1",
+  "protocol_id": "kaess-2023-public-v1",
+  "threshold_set_id": "kaess-first-pass-v1",
+  "version": "1.0.0",
+  "status": "approved",
+  "approved_by": "project_owner",
+  "approved_utc": "2026-07-24T03:03:18Z",
+  "metrics": [
+    {
+      "metric_id": "heat_source_relative_integral_error",
+      "operator": "less_than_or_equal",
+      "value": 0.005,
+      "unit": "fraction"
+    },
+    {
+      "metric_id": "latent_heat_relative_integral_error",
+      "operator": "less_than_or_equal",
+      "value": 0.005,
+      "unit": "fraction"
+    },
+    {
+      "metric_id": "thermal_energy_closure",
+      "operator": "less_than_or_equal",
+      "value": 0.01,
+      "unit": "fraction"
+    },
+    {
+      "metric_id": "active_domain_deleted_reference_relative_error",
+      "operator": "less_than_or_equal",
+      "value": 1e-8,
+      "unit": "fraction"
+    },
+    {
+      "metric_id": "time_path_mesh_refinement_qoi_difference",
+      "operator": "less_than_or_equal",
+      "value": 0.02,
+      "unit": "fraction"
+    },
+    {
+      "metric_id": "solver_tolerance_qoi_difference",
+      "operator": "less_than_or_equal",
+      "value": 0.01,
+      "unit": "fraction"
+    },
+    {
+      "metric_id": "cpu_repeat_active_displacement_absolute",
+      "operator": "less_than_or_equal",
+      "value": 0.1,
+      "unit": "um",
+      "combined_with": "cpu_repeat_active_displacement_relative",
+      "combination": "maximum"
+    },
+    {
+      "metric_id": "cpu_repeat_active_displacement_relative",
+      "operator": "less_than_or_equal",
+      "value": 0.01,
+      "unit": "fraction",
+      "combined_with": "cpu_repeat_active_displacement_absolute",
+      "combination": "maximum"
+    },
+    {
+      "metric_id": "figure9_bending_curve_nrmse",
+      "operator": "less_than_or_equal",
+      "value": 0.10,
+      "unit": "fraction",
+      "combined_with": "two_times_digitization_uncertainty",
+      "combination": "maximum"
+    },
+    {
+      "metric_id": "figure8_stress_peak_trough_amplitude_error",
+      "operator": "less_than_or_equal",
+      "value": 0.15,
+      "unit": "fraction"
+    },
+    {
+      "metric_id": "figure8_zero_crossing_depth_error",
+      "operator": "less_than_or_equal",
+      "value": 1.0,
+      "unit": "local_element_height"
+    },
+    {
+      "metric_id": "hybrid_temperature_qoi_difference",
+      "operator": "less_than_or_equal",
+      "value": 0.001,
+      "unit": "fraction"
+    },
+    {
+      "metric_id": "hybrid_stress_qoi_difference",
+      "operator": "less_than_or_equal",
+      "value": 0.01,
+      "unit": "fraction"
+    },
+    {
+      "metric_id": "hybrid_release_displacement_absolute",
+      "operator": "less_than_or_equal",
+      "value": 0.5,
+      "unit": "um",
+      "combined_with": "hybrid_release_displacement_relative",
+      "combination": "maximum"
+    },
+    {
+      "metric_id": "hybrid_release_displacement_relative",
+      "operator": "less_than_or_equal",
+      "value": 0.02,
+      "unit": "fraction",
+      "combined_with": "hybrid_release_displacement_absolute",
+      "combination": "maximum"
+    },
+    {
+      "metric_id": "accelerated_wall_speedup",
+      "operator": "greater_than_or_equal",
+      "value": 1.20,
+      "unit": "ratio",
+      "sample_count": 2
+    },
+    {
+      "metric_id": "accelerated_linear_solve_increase",
+      "operator": "less_than_or_equal",
+      "value": 0.10,
+      "unit": "fraction"
+    }
+  ]
+}

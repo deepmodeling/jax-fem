@@ -125,6 +125,85 @@ class Ti64RunnerTest(unittest.TestCase):
             self.assertIn("--custom-solver-arg", command)
             self.assertNotIn("-- --custom-solver-arg", " ".join(command))
 
+    def test_cli_requires_separator_and_blocks_validated_option_overrides(self):
+        with self.assertRaises(SystemExit):
+            self.runner.parse_cli(["--custom-solver-arg", "value"])
+        with self.assertRaises(SystemExit):
+            self.runner.parse_cli(["--dry"])
+
+        _args, passthrough = self.runner.parse_cli(
+            ["--", "--custom-solver-arg", "value"]
+        )
+        self.assertEqual(
+            passthrough,
+            ["--custom-solver-arg", "value"],
+        )
+
+        for protected_option in (
+            "--output-dir",
+            "--out=/tmp/abbreviated-override",
+            "--summ=999",
+            "--config",
+            "--steps",
+            "--no-auto-scan-steps-from-speed",
+        ):
+            with self.subTest(protected_option=protected_option):
+                with self.assertRaisesRegex(ValueError, "override"):
+                    self.runner.parse_cli(["--", protected_option])
+
+    def test_declared_optional_material_table_must_exist(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp)
+            repo_root = project_root / "jax-fem"
+            material_dir = project_root / "materials" / "Ti-6Al-4V"
+            material_dir.mkdir(parents=True)
+            for name in (
+                "k_solid_table.csv",
+                "cp_solid_table.csv",
+                "E_table.csv",
+                "alpha_table.csv",
+                "yield_table.csv",
+            ):
+                self.write_table(material_dir / name)
+            config_path = material_dir / "material.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "k_table_solid": "k_solid_table.csv",
+                        "cp_table_solid": "cp_solid_table.csv",
+                        "E_table": "E_table.csv",
+                        "alpha_table": "alpha_table.csv",
+                        "yield_table": "yield_table.csv",
+                        "hardening_table": "missing-hardening.csv",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                FileNotFoundError,
+                "missing-hardening",
+            ):
+                self.runner.load_material_pack(
+                    material_dir,
+                    config_path,
+                    repo_root,
+                )
+
+    def test_relative_explicit_config_is_resolved_inside_material_pack(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            material_dir = Path(tmp)
+            config_path = material_dir / "custom.json"
+            config_path.write_text("{}", encoding="utf-8")
+
+            self.assertEqual(
+                self.runner.material_config_path(
+                    material_dir,
+                    Path("custom.json"),
+                ),
+                config_path.resolve(),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

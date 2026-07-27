@@ -1,0 +1,608 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.jax-fem/specs/001-kaess-paper-reproduction/backend-qualification-validation.schema.json",
+  "title": "Kaess Backend Qualification Semantic Validation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "validation_id",
+    "validator_version",
+    "created_utc",
+    "qualification_id",
+    "qualification_artifact",
+    "qualification_candidate_run_id",
+    "qualification_cpu_reference_run_id",
+    "qualification_candidate_manifest_artifact",
+    "execution_mode",
+    "identity",
+    "checks",
+    "recomputed_performance",
+    "promotion_eligible",
+    "verdict"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kaess.backend-qualification-validation/1"
+    },
+    "validation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "validator_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "qualification_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "qualification_artifact": {
+      "$ref": "#/$defs/fileIdentity"
+    },
+    "qualification_candidate_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "qualification_cpu_reference_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "qualification_candidate_manifest_artifact": {
+      "$ref": "#/$defs/fileIdentity"
+    },
+    "execution_mode": {
+      "enum": [
+        "hybrid_gpu_assembly_cpu_pardiso",
+        "gpu_dominant_experimental",
+        "full_gpu"
+      ]
+    },
+    "identity": {
+      "$ref": "#/$defs/reconciledIdentity"
+    },
+    "checks": {
+      "$ref": "#/$defs/validationChecks"
+    },
+    "recomputed_performance": {
+      "$ref": "#/$defs/recomputedPerformance"
+    },
+    "promotion_eligible": {
+      "type": "boolean"
+    },
+    "verdict": {
+      "enum": [
+        "pass_promotion_eligible",
+        "pass_not_promotion_eligible",
+        "fail"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "verdict": {
+            "enum": [
+              "pass_promotion_eligible",
+              "pass_not_promotion_eligible"
+            ]
+          }
+        },
+        "required": [
+          "verdict"
+        ]
+      },
+      "then": {
+        "properties": {
+          "identity": {
+            "$ref": "#/$defs/passedReconciledIdentity"
+          },
+          "checks": {
+            "$ref": "#/$defs/passedValidationChecks"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "promotion_eligible": {
+            "const": true
+          }
+        },
+        "required": [
+          "promotion_eligible"
+        ]
+      },
+      "then": {
+        "properties": {
+          "verdict": {
+            "const": "pass_promotion_eligible"
+          },
+          "execution_mode": {
+            "enum": [
+              "hybrid_gpu_assembly_cpu_pardiso",
+              "full_gpu"
+            ]
+          },
+          "recomputed_performance": {
+            "properties": {
+              "measured": {
+                "const": true
+              },
+              "speedup": {
+                "type": "number",
+                "minimum": 1.2
+              },
+              "linear_solve_count_delta_fraction": {
+                "type": "number",
+                "minimum": -1,
+                "maximum": 0.1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "verdict": {
+            "const": "pass_promotion_eligible"
+          }
+        },
+        "required": [
+          "verdict"
+        ]
+      },
+      "then": {
+        "properties": {
+          "promotion_eligible": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "verdict": {
+            "const": "pass_not_promotion_eligible"
+          }
+        },
+        "required": [
+          "verdict"
+        ]
+      },
+      "then": {
+        "properties": {
+          "promotion_eligible": {
+            "const": false
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "fileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "validationCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/fileIdentity"
+          }
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "passedValidationCheck": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/validationCheck"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "pass"
+            }
+          }
+        }
+      ]
+    },
+    "validationChecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_rehash",
+        "candidate_membership",
+        "source_identity",
+        "acceptance_model_identity",
+        "level_coverage",
+        "checkpoint_dtype",
+        "checkpoint_shape",
+        "comparison_mask_identity",
+        "placement_reconciliation",
+        "gate_consistency",
+        "metric_recalculation",
+        "performance_recalculation",
+        "performance_protocol_identity"
+      ],
+      "properties": {
+        "artifact_rehash": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "candidate_membership": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "source_identity": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "acceptance_model_identity": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "level_coverage": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "checkpoint_dtype": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "checkpoint_shape": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "comparison_mask_identity": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "placement_reconciliation": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "gate_consistency": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "metric_recalculation": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "performance_recalculation": {
+          "$ref": "#/$defs/validationCheck"
+        },
+        "performance_protocol_identity": {
+          "$ref": "#/$defs/validationCheck"
+        }
+      }
+    },
+    "passedValidationChecks": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/validationChecks"
+        },
+        {
+          "properties": {
+            "artifact_rehash": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "candidate_membership": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "source_identity": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "acceptance_model_identity": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "level_coverage": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "checkpoint_dtype": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "checkpoint_shape": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "comparison_mask_identity": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "placement_reconciliation": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "gate_consistency": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "metric_recalculation": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "performance_recalculation": {
+              "$ref": "#/$defs/passedValidationCheck"
+            },
+            "performance_protocol_identity": {
+              "$ref": "#/$defs/passedValidationCheck"
+            }
+          }
+        }
+      ]
+    },
+    "reconciledIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commit",
+        "dirty_diff_sha256",
+        "input_bundle_sha256",
+        "acceptance_model_sha256",
+        "precision",
+        "cpu_environment_sha256",
+        "candidate_environment_sha256",
+        "cpu_hardware_sha256",
+        "candidate_hardware_sha256",
+        "same_cpu_hardware",
+        "cpu_thread_budget",
+        "performance_protocol_sha256",
+        "sequential_execution",
+        "execution_order_artifact",
+        "checkpoint_sha256",
+        "checkpoint_dtype",
+        "checkpoint_shape",
+        "mask_sha256",
+        "candidate_in_qualification",
+        "mode_matches_manifest"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "dirty_diff_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "input_bundle_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "acceptance_model_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "precision": {
+          "type": "string"
+        },
+        "cpu_environment_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "candidate_environment_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "cpu_hardware_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "candidate_hardware_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "same_cpu_hardware": {
+          "type": "boolean"
+        },
+        "cpu_thread_budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu_control_threads",
+            "candidate_threads",
+            "same_budget"
+          ],
+          "properties": {
+            "cpu_control_threads": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "candidate_threads": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "same_budget": {
+              "type": "boolean"
+            }
+          }
+        },
+        "performance_protocol_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sequential_execution": {
+          "type": "boolean"
+        },
+        "execution_order_artifact": {
+          "$ref": "#/$defs/fileIdentity"
+        },
+        "checkpoint_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "checkpoint_dtype": {
+          "type": "string"
+        },
+        "checkpoint_shape": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "mask_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "candidate_in_qualification": {
+          "type": "boolean"
+        },
+        "mode_matches_manifest": {
+          "type": "boolean"
+        }
+      }
+    },
+    "passedReconciledIdentity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/reconciledIdentity"
+        },
+        {
+          "properties": {
+            "precision": {
+              "const": "float64"
+            },
+            "same_cpu_hardware": {
+              "const": true
+            },
+            "cpu_thread_budget": {
+              "properties": {
+                "same_budget": {
+                  "const": true
+                }
+              }
+            },
+            "sequential_execution": {
+              "const": true
+            },
+            "checkpoint_dtype": {
+              "const": "float64"
+            },
+            "candidate_in_qualification": {
+              "const": true
+            },
+            "mode_matches_manifest": {
+              "const": true
+            }
+          }
+        }
+      ]
+    },
+    "recomputedPerformance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "measured",
+        "cpu_median_wall_seconds",
+        "candidate_median_wall_seconds",
+        "speedup",
+        "linear_solve_count_delta_fraction",
+        "evidence"
+      ],
+      "properties": {
+        "measured": {
+          "type": "boolean"
+        },
+        "cpu_median_wall_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "candidate_median_wall_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "speedup": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "linear_solve_count_delta_fraction": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -1
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/fileIdentity"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "measured": {
+                "const": true
+              }
+            },
+            "required": [
+              "measured"
+            ]
+          },
+          "then": {
+            "properties": {
+              "cpu_median_wall_seconds": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "candidate_median_wall_seconds": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "speedup": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "linear_solve_count_delta_fraction": {
+                "type": "number",
+                "minimum": -1
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

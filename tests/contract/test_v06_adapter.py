@@ -20,7 +20,10 @@ V03_PATH = (
     ROOT / "jax_fem_am" / "simulation" / "stepper.py"
 )
 from jax_fem_am.simulation import runner as driver  # noqa: E402
-from jax_fem_am.materials.j2 import equivalent_stress  # noqa: E402
+from jax_fem_am.materials.j2 import (  # noqa: E402
+    FlowCurve,
+    equivalent_stress,
+)
 
 
 def load_fresh_v03(name):
@@ -80,6 +83,97 @@ class V06AdapterTest(unittest.TestCase):
             1.0,
             places=10,
         )
+
+    def test_state_safe_residual_and_commit_share_the_flow_curve_return(self):
+        base = load_fresh_v03("v03_v06_flow_curve_test")
+        driver.install_v06_adapter(base)
+        cls = base.ThermoMechanical
+        problem = object.__new__(cls)
+        problem.mechanics_model = "j2_plastic"
+        problem.dim = 3
+        problem.yield_saturation = None
+        problem.flow_curve = FlowCurve(
+            temperatures=jnp.asarray([300.0, 800.0]),
+            plastic_strains=jnp.asarray([0.0, 0.02, 0.10]),
+            stresses=1.0e6
+            * jnp.asarray(
+                [
+                    [500.0, 560.0, 610.0],
+                    [350.0, 390.0, 420.0],
+                ]
+            ),
+        )
+        direction = jnp.diag(jnp.asarray([1.0, -0.5, -0.5]))
+        common = (
+            0.02 * direction,
+            jnp.asarray([550.0]),
+            jnp.asarray([0.0]),
+            jnp.asarray([1.0]),
+            jnp.asarray([120.0e9]),
+            jnp.asarray([0.0]),
+            jnp.asarray([0.3]),
+            jnp.asarray([1.0e6]),
+            jnp.asarray([0.0]),
+            jnp.asarray([0.0]),
+            jnp.zeros((3, 3)),
+            jnp.zeros((3, 3)),
+            jnp.asarray([1.0]),
+        )
+
+        residual_stress = problem.stress_fn(*common)
+        committed_stress, delta_eqp, _ = problem._return_map(
+            common[0],
+            common[2],
+            common[4],
+            common[5],
+            common[6],
+            common[7],
+            common[8],
+            common[9],
+            common[10],
+            common[11],
+            T=common[1],
+            active_factor=common[3],
+            flow_curve_active=common[12],
+        )
+
+        np.testing.assert_allclose(
+            np.asarray(residual_stress),
+            np.asarray(committed_stress),
+            rtol=1.0e-12,
+            atol=1.0e-3,
+        )
+        self.assertGreater(float(delta_eqp), 0.0)
+
+    def test_flow_curve_return_map_requires_temperature(self):
+        base = load_fresh_v03("v03_v06_flow_curve_temperature_test")
+        driver.install_v06_adapter(base)
+        cls = base.ThermoMechanical
+        problem = object.__new__(cls)
+        problem.mechanics_model = "j2_plastic"
+        problem.dim = 3
+        problem.yield_saturation = None
+        problem.flow_curve = FlowCurve(
+            temperatures=jnp.asarray([300.0, 800.0]),
+            plastic_strains=jnp.asarray([0.0, 0.1]),
+            stresses=jnp.asarray(
+                [[500.0e6, 600.0e6], [300.0e6, 340.0e6]]
+            ),
+        )
+
+        with self.assertRaisesRegex(ValueError, "temperature"):
+            problem._return_map(
+                jnp.zeros((3, 3)),
+                jnp.asarray([0.0]),
+                jnp.asarray([120.0e9]),
+                jnp.asarray([0.0]),
+                jnp.asarray([0.3]),
+                jnp.asarray([1.0e6]),
+                jnp.asarray([0.0]),
+                jnp.asarray([0.0]),
+                jnp.zeros((3, 3)),
+                jnp.zeros((3, 3)),
+            )
 
     def test_linear_elastic_mode_ignores_plastic_saturation(self):
         base = load_fresh_v03("v03_v06_linear_elastic_test")
@@ -145,7 +239,7 @@ class V06AdapterTest(unittest.TestCase):
         np.testing.assert_allclose(np.asarray(stress), 0.0, atol=1.0e-7)
         self.assertEqual(float(delta_eqp), 0.0)
 
-    def test_phase_update_resets_tensor_history_when_material_remelts(self):
+    def test_phase_update_preserves_tensor_history_when_material_remelts(self):
         base = load_fresh_v03("v03_v06_remelt_test")
         driver.install_v06_adapter(base)
 
@@ -167,6 +261,7 @@ class V06AdapterTest(unittest.TestCase):
         args = SimpleNamespace(
             liquidus_temperature=1900.0,
             solidus_temperature=1800.0,
+            phase_history_model="paper_irreversible",
             stress_relaxation_temperature=1100.0,
             reset_plastic_on_melt=True,
         )
@@ -180,17 +275,24 @@ class V06AdapterTest(unittest.TestCase):
             args,
         )
 
-        np.testing.assert_array_equal(np.asarray(result[2]), np.zeros((1, 1, 1)))
+        np.testing.assert_array_equal(
+            np.asarray(result[0]),
+            np.full((1, 1, 1), base.STATE_SOLID),
+        )
+        np.testing.assert_array_equal(
+            np.asarray(result[2]),
+            np.full((1, 1, 1), 0.25),
+        )
         np.testing.assert_array_equal(
             np.asarray(driver.REGISTRY.eqp),
-            np.zeros((1, 1, 1)),
+            np.full((1, 1, 1), 0.25),
         )
         np.testing.assert_array_equal(
             np.asarray(build._eps_p_state),
-            np.zeros((1, 1, 3, 3)),
+            np.ones((1, 1, 3, 3)),
         )
-        self.assertTrue(bool(np.asarray(driver.REGISTRY.pending_reference).all()))
-        self.assertTrue(bool(np.asarray(driver.REGISTRY.relaxation_mask).all()))
+        self.assertFalse(bool(np.asarray(driver.REGISTRY.pending_reference).any()))
+        self.assertFalse(bool(np.asarray(driver.REGISTRY.relaxation_mask).any()))
 
     def test_lifecycle_wrapper_is_restored_after_v04_replaces_phase_kernel(self):
         base = load_fresh_v03("v03_v06_phase_refresh_test")
@@ -207,6 +309,7 @@ class V06AdapterTest(unittest.TestCase):
         args = SimpleNamespace(
             liquidus_temperature=1900.0,
             solidus_temperature=1800.0,
+            phase_history_model="paper_irreversible",
             stress_relaxation_temperature=1100.0,
             reset_plastic_on_melt=True,
         )
@@ -221,7 +324,7 @@ class V06AdapterTest(unittest.TestCase):
         )
 
         self.assertEqual(called["jit"], 1)
-        self.assertTrue(bool(np.asarray(driver.REGISTRY.pending_reference).all()))
+        self.assertFalse(bool(np.asarray(driver.REGISTRY.pending_reference).any()))
 
     def test_reference_event_forces_mechanics_but_respects_disabled_mode(self):
         base = load_fresh_v03("v03_v06_event_cadence_test")
@@ -235,12 +338,13 @@ class V06AdapterTest(unittest.TestCase):
             base.should_run_mechanics(1, SimpleNamespace(mechanics_every=0))
         )
 
-    def test_continuously_hot_material_forces_only_the_threshold_crossing(self):
+    def test_continuously_hot_material_does_not_create_reference_events(self):
         base = load_fresh_v03("v03_v06_hot_crossing_test")
         driver.install_v06_adapter(base)
         args = SimpleNamespace(
             liquidus_temperature=1900.0,
             solidus_temperature=1800.0,
+            phase_history_model="paper_irreversible",
             stress_relaxation_temperature=1100.0,
             reset_plastic_on_melt=False,
         )
@@ -254,12 +358,12 @@ class V06AdapterTest(unittest.TestCase):
         )
 
         base.update_phase_reference_and_eqp(*state)
-        self.assertTrue(bool(np.asarray(driver.REGISTRY.pending_reference).all()))
+        self.assertFalse(bool(np.asarray(driver.REGISTRY.pending_reference).any()))
         driver.REGISTRY.pending_reference = jnp.zeros((1, 1, 1), dtype=bool)
         base.update_phase_reference_and_eqp(*state)
 
         self.assertFalse(bool(np.asarray(driver.REGISTRY.pending_reference).any()))
-        self.assertTrue(bool(np.asarray(driver.REGISTRY.relaxation_hot).all()))
+        self.assertFalse(bool(np.asarray(driver.REGISTRY.relaxation_hot).any()))
 
     def test_mechanics_event_wrapper_is_restored_after_v04_cache_patch(self):
         base = load_fresh_v03("v03_v06_mechanics_refresh_test")
@@ -372,6 +476,69 @@ class V06AdapterTest(unittest.TestCase):
         self.assertEqual(float(infos["elastic_strain_quad_xx"][0]), 4.0)
         self.assertEqual(float(infos["eps_p_quad_xy"][0]), 2.0)
         self.assertEqual(float(infos["eps_ref_quad_zz"][0]), 3.0)
+
+    def test_vtu_save_step_uses_v06_tensor_state_cell_info_wrapper(self):
+        from jax_fem_am.io import vtu as vtu_module
+
+        base = load_fresh_v03("v03_v06_save_step_state_test")
+        driver.install_v06_adapter(base)
+        driver.REGISTRY.eqp = 0.25 * jnp.ones((1, 1, 1))
+        driver.REGISTRY.eps_p = 2.0 * jnp.ones((1, 1, 3, 3))
+        driver.REGISTRY.eps_ref = 3.0 * jnp.ones((1, 1, 3, 3))
+        elastic = 4.0 * jnp.ones((1, 1, 3, 3))
+        captured = {}
+
+        class FakeFe:
+            num_cells = 1
+
+        def fake_save_sol(
+            _fe,
+            _temperature,
+            _vtk_path,
+            *,
+            point_infos,
+            cell_infos,
+        ):
+            captured["point_infos"] = dict(point_infos)
+            captured["cell_infos"] = dict(cell_infos)
+
+        original_save_sol = vtu_module.save_sol
+        vtu_module.save_sol = fake_save_sol
+        try:
+            base.save_step(
+                FakeFe(),
+                jnp.zeros((4, 1)),
+                jnp.zeros((4, 3)),
+                "unused.vtu",
+                jnp.zeros((1, 1, 1)),
+                {
+                    "stress_quad": jnp.zeros((1, 1, 3, 3)),
+                    "vm_quad": jnp.zeros((1, 1)),
+                    "elastic_strain_quad": elastic,
+                },
+                jnp.ones((1,)),
+                jnp.ones((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1, 1, 1)),
+                True,
+                1,
+                base.MODE_TO_ID["release"],
+            )
+        finally:
+            vtu_module.save_sol = original_save_sol
+
+        infos = captured["cell_infos"]
+        self.assertEqual(float(infos["elastic_strain_quad_xx"][0]), 4.0)
+        self.assertEqual(float(infos["eps_p_quad_xy"][0]), 2.0)
+        self.assertEqual(float(infos["eps_ref_quad_zz"][0]), 3.0)
+        self.assertEqual(float(infos["eq_plastic_strain"][0]), 0.25)
 
     def test_vtu_output_rejects_mismatched_tensor_state(self):
         base = load_fresh_v03("v03_v06_output_shape_test")

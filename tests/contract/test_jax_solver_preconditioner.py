@@ -212,6 +212,49 @@ class JaxSolvePreconditionerTest(unittest.TestCase):
             [1.0, 2.0, 3.0, 70.0, 5.0, 6.0],
         )
 
+    def test_single_var_bc_flat_cache_tracks_explicit_bc_version(self):
+        problem = self.make_single_var_bc_problem()
+        fe = problem.fes[0]
+        fe.node_inds_list = [onp.asarray([0, 2], dtype=onp.int32)]
+        fe.vec_inds_list = [onp.asarray([1, 0], dtype=onp.int32)]
+        fe.vals_list = [onp.asarray([10.0, 20.0])]
+        fe._dirichlet_bc_version = 0
+        dofs = jnp.asarray([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+        residual = jnp.zeros_like(dofs)
+
+        first_flat = jax_fem_solver._single_var_bc_flat(problem)
+        onp.testing.assert_array_equal(onp.asarray(first_flat[0]), [1, 4])
+        onp.testing.assert_array_equal(onp.asarray(first_flat[1]), [10.0, 20.0])
+
+        # Dynamic FE updates may reuse the same host/JAX array objects. The
+        # explicit version is the authoritative cache invalidation signal.
+        fe.node_inds_list[0][...] = [1, 2]
+        fe.vec_inds_list[0][...] = [0, 1]
+        fe.vals_list[0][...] = [30.0, 40.0]
+        fe._dirichlet_bc_version += 1
+
+        second_flat = jax_fem_solver._single_var_bc_flat(problem)
+        assigned = jax_fem_solver.assign_bc(dofs, problem)
+        applied = jax_fem_solver.apply_bc_vec(
+            residual,
+            dofs,
+            problem,
+        )
+
+        onp.testing.assert_array_equal(onp.asarray(second_flat[0]), [2, 5])
+        onp.testing.assert_array_equal(
+            onp.asarray(second_flat[1]),
+            [30.0, 40.0],
+        )
+        onp.testing.assert_array_equal(
+            onp.asarray(assigned),
+            [1.0, 2.0, 30.0, 4.0, 5.0, 40.0],
+        )
+        onp.testing.assert_array_equal(
+            onp.asarray(applied),
+            [0.0, 0.0, -27.0, 0.0, 0.0, -34.0],
+        )
+
     def test_single_var_bc_zero_seed_cache_rebuilds_when_bc_lists_change(self):
         problem = self.make_single_var_bc_problem()
         dofs = jnp.asarray([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])

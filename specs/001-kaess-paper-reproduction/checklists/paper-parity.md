@@ -10,7 +10,7 @@
 
 - [x] PAR001 论文 PDF、全文和引用信息具有 SHA-256。
 - [x] PAR002 来源矩阵覆盖所有 critical/high-impact 输入。
-- [ ] PAR003 Figure 8/9 数字化 CSV 记录坐标、单位和读图误差。
+- [x] PAR003 Figure 8/9 数字化 CSV 记录坐标、单位和读图误差。
 - [x] PAR004 `kaess_2023.json` 的数字化状态字段无自相矛盾。
 - [x] PAR005 作者输入请求和响应形成审计记录。
 - [x] PAR006 所有未公开输入进入 assumptions register。

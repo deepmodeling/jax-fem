@@ -30,11 +30,13 @@ block G1/G2.
   - **Files**: `cases/kaess_2023/inputs/source-manifest.yaml`,
     `tests/contract/test_kaess_source_manifest.py`
 
-- [ ] T002 [P] [US1] 冻结 Figure 8/9 数字化数据 — 将现有 JSON 数值导出为带单位和读图误差的 CSV。
-  - **Progress**: Figure 8b 的四个锚点和 Figure 9a/9b 的现有数值已冻结；
-    完整 Figure 8 曲线的像素级数字化仍未完成。
+- [x] T002 [P] [US1] 冻结 Figure 8/9 数字化数据 — 将现有 JSON 数值导出为带单位和读图误差的 CSV。
+  - **Result**: Figure 8b 的 41 点完整矢量曲线与 Figure 9a/9b 的
+    `8+6+6` 个矢量标记已冻结；PDF 坐标、轴标定、工况、来源身份和
+    `absolute_symmetric_reading_bound` 均可独立读取。
   - **Acceptance**: Figure 8 曲线、Figure 9a/9b 标量和不确定度可独立读取。
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_reference_data.py`
+  - **Evidence**: `specs/001-kaess-paper-reproduction/evidence/t002-figure8-9-digitization.md`
   - **Files**: `cases/kaess_2023/references/digitized/fig8_sigma_x.csv`,
     `cases/kaess_2023/references/digitized/fig9_bending.csv`,
     `tests/unit/test_kaess_reference_data.py`

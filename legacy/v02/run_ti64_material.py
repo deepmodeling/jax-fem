@@ -90,9 +90,11 @@ PROTECTED_PASSTHROUGH_OPTIONS = {
     "--powder-mode",
     "--layer-thickness",
     "--layers",
+    "--steps",
     "--hatch-spacing",
     "--hatch-lines-per-layer",
     "--auto-scan-steps-from-speed",
+    "--no-auto-scan-steps-from-speed",
     "--scan-steps-per-layer",
 }
 
@@ -341,7 +343,8 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Run legacy/v02/am_thermal_stress_upgraded.py with a local "
             "Ti-6Al-4V material pack."
-        )
+        ),
+        allow_abbrev=False,
     )
     parser.add_argument(
         "--material-dir",
@@ -453,7 +456,10 @@ def build_parser() -> argparse.ArgumentParser:
 def validate_passthrough(passthrough: list[str]) -> None:
     for token in passthrough:
         option = token.split("=", 1)[0]
-        if option in PROTECTED_PASSTHROUGH_OPTIONS:
+        if any(
+            protected.startswith(option)
+            for protected in PROTECTED_PASSTHROUGH_OPTIONS
+        ):
             raise ValueError(
                 "passthrough arguments cannot override validated option "
                 f"{option}"

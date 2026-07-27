@@ -128,6 +128,8 @@ class Ti64RunnerTest(unittest.TestCase):
     def test_cli_requires_separator_and_blocks_validated_option_overrides(self):
         with self.assertRaises(SystemExit):
             self.runner.parse_cli(["--custom-solver-arg", "value"])
+        with self.assertRaises(SystemExit):
+            self.runner.parse_cli(["--dry"])
 
         _args, passthrough = self.runner.parse_cli(
             ["--", "--custom-solver-arg", "value"]
@@ -137,12 +139,17 @@ class Ti64RunnerTest(unittest.TestCase):
             ["--custom-solver-arg", "value"],
         )
 
-        for protected_option in ("--output-dir", "--config"):
+        for protected_option in (
+            "--output-dir",
+            "--out=/tmp/abbreviated-override",
+            "--summ=999",
+            "--config",
+            "--steps",
+            "--no-auto-scan-steps-from-speed",
+        ):
             with self.subTest(protected_option=protected_option):
                 with self.assertRaisesRegex(ValueError, "override"):
-                    self.runner.parse_cli(
-                        ["--", protected_option, "different-value"]
-                    )
+                    self.runner.parse_cli(["--", protected_option])
 
     def test_declared_optional_material_table_must_exist(self):
         with tempfile.TemporaryDirectory() as tmp:

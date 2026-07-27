@@ -33,29 +33,97 @@
       "source_class": "inferred",
       "source_locator": "repository benchmark metadata; values trace to paper text and Figures 3-9",
       "repository_path": "cases/kaess_2023/references/cases/kaess_2023.json",
-      "sha256": "a96715583e4616a9cd85cd3e3a843cbd439a0267bede8617b419bac44804ee51",
+      "sha256": "0413764a4c350b059ae7d2fa6a738b933520164874e6c5551bc0849d17f5f287",
       "impact": "high",
       "status": "verified"
     },
     {
-      "evidence_id": "figure-8-digitized-anchors",
-      "quantity": "Figure 8b 150 C sigma_x depth-profile anchors and reading uncertainty",
+      "evidence_id": "figure-8-digitized-curve",
+      "quantity": "complete Figure 8b 150 C sigma_x depth-profile vector curve and reading bounds",
       "source_class": "figure_digitized",
-      "source_locator": "paper p. 10, Figure 8b; anchor-only digitization",
+      "source_locator": "paper p. 10, Figure 8b; PDF vector drawing index 53 with axis-calibrated piecewise-linear sampling",
       "repository_path": "cases/kaess_2023/references/digitized/fig8_sigma_x.csv",
-      "sha256": "ef97e0dad7ae3fbc48c86c00eab336ced24d4b2d40e581aaece1e7c9df0ae314",
+      "sha256": "dff873ec9ac9177f93bf24388a83972f9f206bddb5bf4666a79a724e63ffe2e9",
       "impact": "critical",
-      "status": "verified"
+      "status": "verified",
+      "digitization": {
+        "paper_pdf_evidence_id": "paper-pdf",
+        "method_id": "pdf_vector_axis_calibrated_piecewise_linear_v1",
+        "paper_page": 10,
+        "paper_figure": "Figure 8b",
+        "pdf_drawing_indices": [53],
+        "output_row_count": 41,
+        "axis_calibration": {
+          "x": {
+            "pdf_points": [388.855377, 484.732971],
+            "values": [0.0, -0.4],
+            "quantity": "cantilever_z",
+            "unit": "mm"
+          },
+          "y": {
+            "pdf_points": [114.762787, 211.186386],
+            "values": [1500.0, -500.0],
+            "quantity": "sigma_x",
+            "unit": "MPa"
+          }
+        },
+        "sampling": {
+          "start_mm": 0.0,
+          "stop_mm": -0.4,
+          "step_mm": -0.01,
+          "interpolation": "piecewise_linear",
+          "endpoint_policy": "first_segment_linear_extension",
+          "maximum_extension_mm": 0.000228
+        },
+        "uncertainty_kind": "absolute_symmetric_reading_bound",
+        "reading_bounds": {
+          "cantilever_z_mm": 0.02,
+          "sigma_x_mpa": 50.0
+        }
+      }
     },
     {
       "evidence_id": "figure-9-digitized-bending",
-      "quantity": "Figure 9a/9b maximum front-bending values and reading uncertainty",
+      "quantity": "complete Figure 9a/9b maximum front-bending parameter curves and reading bounds",
       "source_class": "figure_digitized",
-      "source_locator": "paper p. 11, Figure 9a/9b",
+      "source_locator": "paper p. 11, Figure 9a/9b; PDF vector drawing indices 19, 44 and 51 with panel-specific axis calibration",
       "repository_path": "cases/kaess_2023/references/digitized/fig9_bending.csv",
-      "sha256": "a886dd4bdfac3ce78c548a79b82478391695289afa8dd8cdd5575f40be57c128",
+      "sha256": "11782e2230de0447c1eeed73cb7f095506a8e43724f377e6a87151a91d060362",
       "impact": "critical",
-      "status": "verified"
+      "status": "verified",
+      "digitization": {
+        "paper_pdf_evidence_id": "paper-pdf",
+        "method_id": "pdf_vector_axis_calibrated_v1",
+        "paper_page": 11,
+        "paper_figures": ["Figure 9a", "Figure 9b"],
+        "pdf_drawing_indices": [19, 44, 51],
+        "output_row_count": 20,
+        "axis_calibrations": [
+          {
+            "panel": "Figure 9a",
+            "x_pdf_points": [217.847992, 332.687988],
+            "x_values": [0.0, 1000.0],
+            "x_quantity": "build_plate_temperature",
+            "x_unit": "degC",
+            "y_pdf_points": [118.213028, 233.833038],
+            "y_values_um": [16.0, 0.0]
+          },
+          {
+            "panel": "Figure 9b",
+            "x_pdf_points": [404.388, 518.807983],
+            "x_values": [0.0, 400.0],
+            "x_quantity": "laser_power",
+            "x_unit": "W",
+            "y_pdf_points": [117.67305, 232.933044],
+            "y_values_um": [16.0, 0.0]
+          }
+        ],
+        "uncertainty_kind": "absolute_symmetric_reading_bound",
+        "reading_bounds": {
+          "max_front_bending_um": 0.3
+        },
+        "source_note": "Figure 9a contains a 50 C marker although Table 3 omits 50 C; the plotted marker is retained as figure evidence."
+      }
     },
     {
       "evidence_id": "reference-hex-mesh",

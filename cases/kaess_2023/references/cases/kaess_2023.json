@@ -12,7 +12,7 @@
       "pmc": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10055713/",
       "publisher": "https://www.mdpi.com/1996-1944/16/6/2321"
     },
-    "verification_status": "setup parameters verified against EuropePMC fulltext 2026-07-16; Figure 8/9 digitized anchors frozen as CSV with explicit reading uncertainty 2026-07-24"
+    "verification_status": "setup parameters verified against EuropePMC fulltext 2026-07-16; complete Figure 8b and Figure 9a/9b PDF-vector digitization frozen as content-addressed CSV with explicit reading bounds 2026-07-27"
   },
   "reference_model": {
     "code": "Abaqus, weakly-coupled (sequential) thermomechanical, implicit both passes, line search for convergence",
@@ -54,7 +54,11 @@
       "build_plate_temp_c": [20.0, 150.0, 300.0, 450.0, 600.0, 750.0, 900.0],
       "laser_power_w": [100.0, 150.0, 200.0, 250.0, 300.0, 350.0],
       "laser_speed_mm_s": [340.0, 510.0, 680.0, 850.0, 1020.0, 1190.0],
-      "constant_led_variant_j_mm": 0.29
+      "constant_led_variant_j_mm": 0.29411764705882354
+    },
+    "figure_marker_ladders": {
+      "figure9a_build_plate_temp_c": [20.0, 50.0, 150.0, 300.0, 450.0, 600.0, 750.0, 900.0],
+      "provenance": "Figure 9a vector markers; includes the plotted 50 C point that is absent from Table 3"
     },
     "layers_modeled": {"60um": 5, "30um": 10},
     "scan_strategy": "linear pattern, 67 degree inter-layer rotation"
@@ -85,20 +89,56 @@
       "source_location": "Introduction (Buchbinder) and Results depth profiles"
     }
   ],
-  "quantitative_anchors_status": "FROZEN 2026-07-24: current Figure 8b anchor points and Figure 9a/9b values exported to references/digitized CSV with reading uncertainty; full pixel-level Figure 8 curve remains a separate digitization task",
+  "quantitative_anchors_status": "COMPLETE 2026-07-27: Figure 8b 150 C profile and all Figure 9a/9b markers are frozen from the content-addressed paper PDF as independently readable CSV",
+  "digitization": {
+    "status": "complete",
+    "completed_utc": "2026-07-27T00:00:00Z",
+    "source_pdf_sha256": "8bf5e7c2f744a55b9c4e40bbe5f17a5cb6e1649d668132edc961ecb5c3d5e941",
+    "figure8": {
+      "file": "digitized/fig8_sigma_x.csv",
+      "sample_count": 41,
+      "method_id": "pdf_vector_axis_calibrated_piecewise_linear_v1",
+      "series_id": "plate150_layer30_p250_v850"
+    },
+    "figure9": {
+      "file": "digitized/fig9_bending.csv",
+      "sample_count": 20,
+      "method_id": "pdf_vector_axis_calibrated_v1",
+      "series_counts": {
+        "plate_temperature_fixed_p250_v850": 8,
+        "power_fixed_v850": 6,
+        "power_constant_led_0p29_j_per_mm": 6
+      }
+    },
+    "uncertainty_kind": "absolute_symmetric_reading_bound",
+    "uncertainty_claim_boundary": "Conservative plot-reading bounds only; these values are not standard uncertainty, standard deviation, or paper-reported error bars.",
+    "source_discrepancies": [
+      "Figure 9a contains a 50 C marker although Table 3 omits 50 C; the plotted marker is retained as figure evidence and is not attributed to Table 3."
+    ]
+  },
   "digitized_reference_results": {
     "fig9a_max_front_bending_um_vs_plate_c": {
-      "20": 14.6, "50": 14.5, "150": 14.0, "300": 12.7,
-      "450": 11.9, "600": 10.5, "750": 8.7, "900": 6.1,
-      "reading_error_um": 0.3
+      "20": 14.571875, "50": 14.463935, "150": 13.982358, "300": 13.127142,
+      "450": 12.047743, "600": 10.528284, "750": 8.668398, "900": 6.127661,
+      "reading_bound_bending_um": 0.3
     },
     "fig9b_max_front_bending_um_vs_power_w_fixed_speed": {
-      "100": 15.5, "350": 13.0, "note": "deflection DEcreases with power at fixed speed; increases 12.0->14.3 at constant LED (varying speed)"
+      "100": 15.491937, "150": 15.017185, "200": 14.534103,
+      "250": 13.976060, "300": 13.526294, "350": 12.984910,
+      "reading_bound_bending_um": 0.3
+    },
+    "fig9b_max_front_bending_um_vs_power_w_constant_led": {
+      "100": 12.027072, "150": 12.751690, "200": 13.576261,
+      "250": 13.976054, "300": 14.209265, "350": 14.359189,
+      "reading_bound_bending_um": 0.3
     },
     "fig8b_sigma_x_profile_150c": {
-      "surface_mpa": 250, "peak_mpa": 650, "peak_depth_mm": -0.15,
-      "zero_crossing_mm": -0.21, "min_mpa": -450, "min_depth_mm": -0.30,
-      "note": "path per Fig 7 black arrow, extends to -0.4 mm into the support stub; exact x position estimated (perspective)"
+      "surface_mpa": 223.988751, "peak_mpa": 676.141100, "peak_depth_mm": -0.15,
+      "first_zero_crossing_mm": -0.2275573767,
+      "min_mpa": -452.435753, "min_depth_mm": -0.30,
+      "second_zero_crossing_mm": -0.3964694106,
+      "reading_bound_z_mm": 0.02, "reading_bound_sigma_x_mpa": 50.0,
+      "note": "Figure 8b 150 C vector polyline sampled on z=0:-0.01:-0.40 mm; path follows the Figure 7 black-arrow depth direction"
     },
     "results_text_anchors": "bending significantly reduces from 300 C; stress effects clearly visible from 450 C onward; 30 vs 60 um layer thickness nearly identical at 150 C"
   },
@@ -115,7 +155,7 @@
   "use_limitations": [
     "This is a code-to-code comparison against a published FE study, marked as 对比实验; it provides no experimental accuracy evidence.",
     "Reference powder E=10 GPa and absorption are author assumptions; quantitative mismatch does not falsify either model. Trend agreement is the acceptance criterion.",
-    "The frozen CSV contains Figure 8 profile anchors and Figure 9 values with reading uncertainty; a full pixel-level Figure 8 curve is still required before curve-NRMSE claims.",
+    "The frozen CSV contains the complete plotted Figure 8b 150 C vector profile and all Figure 9a/9b vector markers with conservative absolute symmetric reading bounds; these bounds are not standard uncertainty.",
     "Geometry partition (cantilever vs support region) must be taken from Figure 3 before meshing; total-domain dimensions alone are insufficient."
   ]
 }

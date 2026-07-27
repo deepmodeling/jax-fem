@@ -145,7 +145,7 @@ class V06AdapterTest(unittest.TestCase):
         np.testing.assert_allclose(np.asarray(stress), 0.0, atol=1.0e-7)
         self.assertEqual(float(delta_eqp), 0.0)
 
-    def test_phase_update_resets_tensor_history_when_material_remelts(self):
+    def test_phase_update_preserves_tensor_history_when_material_remelts(self):
         base = load_fresh_v03("v03_v06_remelt_test")
         driver.install_v06_adapter(base)
 
@@ -167,6 +167,7 @@ class V06AdapterTest(unittest.TestCase):
         args = SimpleNamespace(
             liquidus_temperature=1900.0,
             solidus_temperature=1800.0,
+            phase_history_model="paper_irreversible",
             stress_relaxation_temperature=1100.0,
             reset_plastic_on_melt=True,
         )
@@ -180,17 +181,24 @@ class V06AdapterTest(unittest.TestCase):
             args,
         )
 
-        np.testing.assert_array_equal(np.asarray(result[2]), np.zeros((1, 1, 1)))
+        np.testing.assert_array_equal(
+            np.asarray(result[0]),
+            np.full((1, 1, 1), base.STATE_SOLID),
+        )
+        np.testing.assert_array_equal(
+            np.asarray(result[2]),
+            np.full((1, 1, 1), 0.25),
+        )
         np.testing.assert_array_equal(
             np.asarray(driver.REGISTRY.eqp),
-            np.zeros((1, 1, 1)),
+            np.full((1, 1, 1), 0.25),
         )
         np.testing.assert_array_equal(
             np.asarray(build._eps_p_state),
-            np.zeros((1, 1, 3, 3)),
+            np.ones((1, 1, 3, 3)),
         )
-        self.assertTrue(bool(np.asarray(driver.REGISTRY.pending_reference).all()))
-        self.assertTrue(bool(np.asarray(driver.REGISTRY.relaxation_mask).all()))
+        self.assertFalse(bool(np.asarray(driver.REGISTRY.pending_reference).any()))
+        self.assertFalse(bool(np.asarray(driver.REGISTRY.relaxation_mask).any()))
 
     def test_lifecycle_wrapper_is_restored_after_v04_replaces_phase_kernel(self):
         base = load_fresh_v03("v03_v06_phase_refresh_test")
@@ -207,6 +215,7 @@ class V06AdapterTest(unittest.TestCase):
         args = SimpleNamespace(
             liquidus_temperature=1900.0,
             solidus_temperature=1800.0,
+            phase_history_model="paper_irreversible",
             stress_relaxation_temperature=1100.0,
             reset_plastic_on_melt=True,
         )
@@ -221,7 +230,7 @@ class V06AdapterTest(unittest.TestCase):
         )
 
         self.assertEqual(called["jit"], 1)
-        self.assertTrue(bool(np.asarray(driver.REGISTRY.pending_reference).all()))
+        self.assertFalse(bool(np.asarray(driver.REGISTRY.pending_reference).any()))
 
     def test_reference_event_forces_mechanics_but_respects_disabled_mode(self):
         base = load_fresh_v03("v03_v06_event_cadence_test")
@@ -235,12 +244,13 @@ class V06AdapterTest(unittest.TestCase):
             base.should_run_mechanics(1, SimpleNamespace(mechanics_every=0))
         )
 
-    def test_continuously_hot_material_forces_only_the_threshold_crossing(self):
+    def test_continuously_hot_material_does_not_create_reference_events(self):
         base = load_fresh_v03("v03_v06_hot_crossing_test")
         driver.install_v06_adapter(base)
         args = SimpleNamespace(
             liquidus_temperature=1900.0,
             solidus_temperature=1800.0,
+            phase_history_model="paper_irreversible",
             stress_relaxation_temperature=1100.0,
             reset_plastic_on_melt=False,
         )
@@ -254,12 +264,12 @@ class V06AdapterTest(unittest.TestCase):
         )
 
         base.update_phase_reference_and_eqp(*state)
-        self.assertTrue(bool(np.asarray(driver.REGISTRY.pending_reference).all()))
+        self.assertFalse(bool(np.asarray(driver.REGISTRY.pending_reference).any()))
         driver.REGISTRY.pending_reference = jnp.zeros((1, 1, 1), dtype=bool)
         base.update_phase_reference_and_eqp(*state)
 
         self.assertFalse(bool(np.asarray(driver.REGISTRY.pending_reference).any()))
-        self.assertTrue(bool(np.asarray(driver.REGISTRY.relaxation_hot).all()))
+        self.assertFalse(bool(np.asarray(driver.REGISTRY.relaxation_hot).any()))
 
     def test_mechanics_event_wrapper_is_restored_after_v04_cache_patch(self):
         base = load_fresh_v03("v03_v06_mechanics_refresh_test")

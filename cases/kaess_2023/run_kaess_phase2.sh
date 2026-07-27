@@ -239,7 +239,8 @@ SOLVER_CMD=(
   --thermal-output-every 200
   --mechanics-output-every 200
   --summary-every 100
-  --reset-plastic-on-melt
+  --no-reset-plastic-on-melt
+  --phase-history-model paper_irreversible
 )
 printf '%q ' "${SOLVER_CMD[@]}" ${EXTRA_ARGS} > "${OUT_ROOT}/solver_command.txt"
 printf '\n' >> "${OUT_ROOT}/solver_command.txt"

@@ -5,6 +5,7 @@ Origin: legacy/v03/am_thermal_stress_macro_intersection_mech100.py
 2026-07-22 restructure.
 """
 import csv
+from pathlib import Path
 
 import jax.numpy as np
 
@@ -30,6 +31,23 @@ class PropertyTable:
 
 
 def load_property_tables(args):
+    config_path = getattr(args, "config", None)
+
+    def resolve(path):
+        if not path:
+            return None
+        path = Path(path)
+        if path.is_absolute() or config_path is None:
+            return path
+        config_relative = (
+            Path(config_path).expanduser().resolve().parent / path
+        )
+        if config_relative.is_file():
+            return config_relative
+        # Backward compatibility for older configs whose paths were written
+        # relative to the project launch directory rather than the config.
+        return path
+
     tables = {}
     for key, path in [
         ("k_solid", args.k_table_solid),
@@ -44,7 +62,8 @@ def load_property_tables(args):
         ("yield", args.yield_table),
         ("hardening", args.hardening_table),
     ]:
-        tables[key] = PropertyTable(path) if path else None
+        resolved = resolve(path)
+        tables[key] = PropertyTable(resolved) if resolved else None
     return tables
 
 

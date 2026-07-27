@@ -133,12 +133,13 @@ class WeakSolidPowderMaterialTest(unittest.TestCase):
         self.assertAlmostEqual(E[0], 190e9, delta=1e-3 * 190e9)
         self.assertGreater(yld[0], 1e8)
         self.assertAlmostEqual(af[0], 1.0)
-        # active powder: weak solid, full active factor, no expansion
+        # active powder: weak solid, full active factor, and the same
+        # temperature-dependent expansion coefficient as solid material.
         self.assertEqual(E[1], 10e9)
         self.assertEqual(yld[1], 1.0e6)
         self.assertEqual(hard[1], 1.0e7)  # regularization hardening
         self.assertAlmostEqual(af[1], 1.0)
-        self.assertEqual(alpha[1], 0.0)
+        self.assertEqual(alpha[1], args.alpha)
         # liquid untouched
         self.assertAlmostEqual(af[2], args.liquid_mechanics_factor)
         # inactive powder gets the ersatz factor, not load-bearing stiffness

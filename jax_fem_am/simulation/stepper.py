@@ -247,6 +247,34 @@ def validate_release_configuration(args, strict_active_domain):
         )
 
 
+def make_thermal_solver_options(
+    temperature_old,
+    *,
+    latent_heat,
+    solidus_temperature,
+    liquidus_temperature,
+):
+    """Return a robust implicit solve contract for one thermal increment.
+
+    The enthalpy residual is continuous but changes slope at the solidus and
+    liquidus. A full Newton step can jump across both corners indefinitely.
+    The committed temperature is therefore the initial guess, and latent-heat
+    increments use backtracking without altering the conservative residual.
+    """
+
+    phase_change_active = (
+        float(latent_heat) > 0.0
+        and float(liquidus_temperature) > float(solidus_temperature)
+    )
+    return {
+        "newton": {
+            "initial_guess": [temperature_old],
+            "line_search_flag": phase_change_active,
+            "linear": {"spsolve_solver": {}},
+        }
+    }
+
+
 def main():
     args = parse_args()
     strict_active_domain = uses_strict_active_domain(args)
@@ -402,6 +430,9 @@ def main():
             args.front_surface_loss_thickness,
             args.front_surface_loss_radiation,
             args.source_model,
+            args.solidus_temperature,
+            args.liquidus_temperature,
+            args.latent_heat,
         ),
     )
     if args.thermal_mass_lumping:
@@ -865,7 +896,15 @@ def main():
                 state.ambient_temperature,
             ]
         )
-        T_new = solver(thermal, solver_options={"newton": {"linear": {"spsolve_solver": {}}}})[0]
+        T_new = solver(
+            thermal,
+            solver_options=make_thermal_solver_options(
+                T_old,
+                latent_heat=args.latent_heat,
+                solidus_temperature=args.solidus_temperature,
+                liquidus_temperature=args.liquidus_temperature,
+            ),
+        )[0]
 
         cell_T = compute_cell_temperature(T_new, cells)
         newly_printed = printed_cell & (~previous_active)

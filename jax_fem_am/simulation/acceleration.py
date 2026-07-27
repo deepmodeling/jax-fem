@@ -2531,8 +2531,20 @@ def _mechanics_material_key(
     )
 
 
-def _history_kernel_key(args: argparse.Namespace, base_module) -> tuple[Any, ...]:
+def _history_kernel_key(
+    args: argparse.Namespace,
+    base_module,
+    history_function=None,
+) -> tuple[Any, ...]:
+    if history_function is None:
+        history_function = getattr(
+            base_module,
+            "_v06_original_phase_update",
+            getattr(base_module, "update_phase_reference_and_eqp", None),
+        )
     return (
+        id(history_function),
+        getattr(args, "phase_history_model", "legacy_reset"),
         _float_arg(args, "solidus_temperature", 0.0),
         _float_arg(args, "liquidus_temperature", 0.0),
         _float_arg(args, "stress_relaxation_temperature", 0.0),
@@ -2714,7 +2726,7 @@ def _make_jit_thermal_material_kernel(base_module, key: tuple[Any, ...]):
             in_mushy = (
                 (T_old_quad >= solidus_temperature)
                 & (T_old_quad <= liquidus_temperature)
-                & is_window
+                & (is_printed | is_window)
             )
             latent_cp = jnp.where(
                 in_mushy,
@@ -2796,6 +2808,7 @@ def _make_jit_mechanics_material_kernel(base_module, key: tuple[Any, ...]):
         )
         if has_powder_solid:
             E_quad = jnp.where(is_powder, powder_solid_E, E_quad)
+            alpha_quad = jnp.where(is_powder, alpha_base, alpha_quad)
             yield_quad = jnp.where(
                 is_powder,
                 powder_solid_yield,
@@ -2823,93 +2836,27 @@ def _make_jit_mechanics_material_kernel(base_module, key: tuple[Any, ...]):
     return kernel
 
 
-def _make_jit_history_kernel(base_module, key: tuple[Any, ...]):
+def _make_jit_history_kernel(base_module, history_function, args):
+    """JIT the canonical CPU history rule instead of maintaining a copy.
+
+    Phase history is a scientific contract, so the accelerated path must
+    trace the same function used by the CPU reference. Keeping a second
+    hand-written state machine here previously allowed reset/relaxation and
+    remelt semantics to drift between backends.
+    """
+
     jax_module = base_module.jax
-    jnp = base_module.np
-    (
-        solidus_temperature,
-        liquidus_temperature,
-        stress_relaxation_temperature,
-        reset_plastic_on_melt,
-        state_void,
-        state_powder,
-        state_solid,
-        state_mushy,
-        state_liquid,
-        state_substrate,
-        state_support,
-    ) = key
-    has_phase_interval = liquidus_temperature > solidus_temperature
-    has_relaxation_reference = stress_relaxation_temperature > 0.0
+    static_args = copy.copy(args)
 
     @jax_module.jit
     def kernel(T_quad, active_quad, phase_quad, T_ref_quad, eqp_quad):
-        active = active_quad > 0.5
-        fixture = (phase_quad == state_substrate) | (phase_quad == state_support)
-        non_fixture = active & (~fixture)
-        phase_new = phase_quad
-
-        newly_active_void = non_fixture & (phase_new == state_void)
-        phase_new = jnp.where(newly_active_void, state_powder, phase_new)
-
-        if has_phase_interval:
-            hot_liquid = non_fixture & (T_quad >= liquidus_temperature)
-            mushy = (
-                non_fixture
-                & (T_quad >= solidus_temperature)
-                & (T_quad < liquidus_temperature)
-            )
-            cold = non_fixture & (T_quad < solidus_temperature)
-
-            old_was_melted = (
-                (phase_quad == state_liquid)
-                | (phase_quad == state_mushy)
-            )
-            became_solid = cold & old_was_melted
-            stayed_solid = cold & (phase_quad == state_solid)
-
-            phase_new = jnp.where(hot_liquid, state_liquid, phase_new)
-            phase_new = jnp.where(mushy, state_mushy, phase_new)
-            phase_new = jnp.where(
-                became_solid | stayed_solid,
-                state_solid,
-                phase_new,
-            )
-
-            newly_solidified = became_solid
-            entered_melted_state = (
-                (hot_liquid | mushy)
-                & (
-                    (phase_quad == state_solid)
-                    | (phase_quad == state_mushy)
-                    | (phase_quad == state_liquid)
-                )
-            )
-        else:
-            became_solid = non_fixture & (phase_quad != state_solid)
-            phase_new = jnp.where(non_fixture, state_solid, phase_new)
-            newly_solidified = became_solid
-            entered_melted_state = jnp.zeros_like(active)
-
-        if has_relaxation_reference:
-            T_ref_value = stress_relaxation_temperature * jnp.ones_like(T_quad)
-        else:
-            T_ref_value = T_quad
-        T_ref_new = jnp.where(newly_solidified, T_ref_value, T_ref_quad)
-        if reset_plastic_on_melt:
-            eqp_new = jnp.where(
-                entered_melted_state,
-                jnp.zeros_like(eqp_quad),
-                eqp_quad,
-            )
-        else:
-            eqp_new = eqp_quad
-        return (
-            phase_new,
-            T_ref_new,
-            eqp_new,
-            newly_solidified,
-            entered_melted_state,
+        return history_function(
+            T_quad,
+            active_quad,
+            phase_quad,
+            T_ref_quad,
+            eqp_quad,
+            static_args,
         )
 
     return kernel
@@ -2949,8 +2896,12 @@ def install_loop_kernel_jit_patch(
     )
     history_original = getattr(
         base_module,
-        "_v04_original_update_phase_reference_and_eqp",
-        getattr(base_module, "update_phase_reference_and_eqp", None),
+        "_v06_original_phase_update",
+        getattr(
+            base_module,
+            "_v04_original_update_phase_reference_and_eqp",
+            getattr(base_module, "update_phase_reference_and_eqp", None),
+        ),
     )
     if thermal_original is None or mechanics_original is None or history_original is None:
         if profiler is not None:
@@ -2998,11 +2949,16 @@ def install_loop_kernel_jit_patch(
         return _LOOP_KERNEL_JIT_MECHANICS_CACHE[key]
 
     def get_history_kernel(args):
-        key = _history_kernel_key(args, base_module)
+        key = _history_kernel_key(
+            args,
+            base_module,
+            history_original,
+        )
         if key not in _LOOP_KERNEL_JIT_HISTORY_CACHE:
             _LOOP_KERNEL_JIT_HISTORY_CACHE[key] = _make_jit_history_kernel(
                 base_module,
-                key,
+                history_original,
+                args,
             )
             _profiler_meta_increment(
                 profiler,
@@ -3022,8 +2978,12 @@ def install_loop_kernel_jit_patch(
         tables,
         printed_quad=None,
         cooling_only_quad=None,
+        T_new_quad=None,
     ):
-        if _tables_are_empty(tables, THERMAL_TABLE_KEYS):
+        if (
+            T_new_quad is None
+            and _tables_are_empty(tables, THERMAL_TABLE_KEYS)
+        ):
             if printed_quad is None:
                 printed_quad = active_quad
             if cooling_only_quad is None:
@@ -3051,6 +3011,7 @@ def install_loop_kernel_jit_patch(
             tables,
             printed_quad=printed_quad,
             cooling_only_quad=cooling_only_quad,
+            T_new_quad=T_new_quad,
         )
 
     def mechanics_material_quads_jit(

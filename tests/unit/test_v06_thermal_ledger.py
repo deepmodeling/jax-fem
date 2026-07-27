@@ -57,6 +57,40 @@ class ThermalLedgerQuadratureTest(unittest.TestCase):
         self.assertEqual(terms["old_layer_loss_j"], -100.0)
         self.assertEqual(terms["front_loss_j"], 0.0)
 
+    def test_storage_uses_enthalpy_difference_across_melt_interval(self):
+        terms = integrate_volume_terms(
+            jxw=np.asarray([[1.0]]),
+            points=np.zeros((1, 1, 3)),
+            temperature_old=np.asarray([[1623.15]]),
+            temperature_new=np.asarray([[1693.15]]),
+            rho=np.asarray([[1.0]]),
+            cp=np.asarray([[1.0]]),
+            latent_cp=np.asarray([[0.0]]),
+            laser_center=np.zeros(3),
+            effective_laser_power_w=0.0,
+            beam_radius_m=1.0,
+            source_depth_m=1.0,
+            laser_switch=0.0,
+            active=np.ones((1, 1)),
+            cooling_only=np.zeros((1, 1)),
+            old_layer_cooling_h=0.0,
+            ambient_k=300.0,
+            dt_s=1.0,
+            build_axis=2,
+            plane_axes=(0, 1),
+            build_sign=1.0,
+            front_loss_h=0.0,
+            front_loss_thickness_m=1.0,
+            front_loss_radiation=False,
+            emissivity=0.0,
+            stefan_boltzmann=5.67e-8,
+            solidus_temperature=1643.15,
+            liquidus_temperature=1673.15,
+            latent_heat=280_000.0,
+        )
+
+        self.assertEqual(terms["storage_j"], 280_070.0)
+
     def test_surface_exchange_is_signed_outward(self):
         heating = integrate_surface_exchange(
             temperature_face=np.asarray([[290.0]]),

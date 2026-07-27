@@ -87,9 +87,20 @@ def build_parser(config=None):
                              "surfaces and their near-singular equations produce unphysical temperatures under surface flux. "
                              "Defaults to on for --surface-selection exterior, off for legacy box mode.")
     parser.add_argument("--no-surface-active-mask", dest="surface_active_mask", action="store_false")
+    parser.add_argument(
+        "--phase-history-model",
+        choices=("legacy_reset", "paper_irreversible"),
+        default=cfg(config, "phase_history_model", "legacy_reset"),
+        help=(
+            "History contract. legacy_reset preserves the historical "
+            "stress-relaxation/remelt controls; paper_irreversible freezes "
+            "the Kaess powder-to-solid switch, first reference, eqp and "
+            "tensor plastic history."
+        ),
+    )
     parser.add_argument("--stress-relaxation-temperature", type=float,
                         default=cfg(config, "stress_relaxation_temperature", None),
-                        help="Stress-free reference temperature written when material solidifies (macro calibration knob; "
+                        help="Legacy-reset-only stress-free reference temperature written when material solidifies (macro calibration knob; "
                              "Ti64 typically 1073-1173 K). Without it, T_ref is the local temperature at solidification, "
                              "which in consolidation-on-activation mode equals the powder entry temperature and inverts the "
                              "residual stress sign.")
@@ -146,7 +157,16 @@ def build_parser(config=None):
                              "gives ~1e8-1e11; default 1e9 is a soft support ~3 orders below the build plate.")
     parser.add_argument("--mushy-mechanics-factor", type=float, default=cfg(config, "mushy_mechanics_factor", 1e-2), help="Stress/stiffness scaling for mushy-zone material.")
     parser.add_argument("--liquid-mechanics-factor", type=float, default=cfg(config, "liquid_mechanics_factor", 1e-4), help="Stress/stiffness scaling for liquid material.")
-    parser.add_argument("--reset-plastic-on-melt", dest="reset_plastic_on_melt", action="store_true", default=cfg(config, "reset_plastic_on_melt", True))
+    parser.add_argument(
+        "--reset-plastic-on-melt",
+        dest="reset_plastic_on_melt",
+        action="store_true",
+        default=cfg(config, "reset_plastic_on_melt", True),
+        help=(
+            "Legacy-reset-only compatibility switch. paper_irreversible "
+            "always preserves plastic state on later melt events."
+        ),
+    )
     parser.add_argument("--no-reset-plastic-on-melt", dest="reset_plastic_on_melt", action="store_false")
 
     parser.add_argument("--laser-power", type=float, default=cfg(config, "laser_power", 1.0))
@@ -297,7 +317,7 @@ def build_parser(config=None):
                         help="Weak-solid powder Young's modulus in Pa (Kaess 2023: 10e9). When set "
                              "(requires --powder-elset), permanent-powder cells join the mechanics "
                              "active set with this constant E, --powder-solid-yield, zero hardening "
-                             "and zero thermal expansion; they are deactivated (depowdered) for the "
+                             "and the solid alpha(T) curve; they are deactivated (depowdered) for the "
                              "release solve. None keeps legacy behavior (powder carries no load).")
     parser.add_argument("--powder-solid-yield", type=float,
                         default=cfg(config, "powder_solid_yield", 1.0e6),

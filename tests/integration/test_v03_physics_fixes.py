@@ -302,7 +302,7 @@ class StressRelaxationReferenceTest(unittest.TestCase):
         )
         return base, phase_new, T_ref_new, newly_solidified
 
-    def test_consolidation_mode_writes_relaxation_reference(self):
+    def test_legacy_consolidation_mode_writes_relaxation_reference(self):
         base, phase_new, T_ref_new, newly_solidified = self.run_update(1100.0)
         self.assertTrue(bool(onp.all(onp.asarray(newly_solidified))))
         self.assertTrue(

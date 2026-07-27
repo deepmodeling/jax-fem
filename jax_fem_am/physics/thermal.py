@@ -104,6 +104,9 @@ class TransientThermal(Problem):
         front_surface_loss_thickness,
         front_surface_loss_radiation,
         source_model="legacy",
+        solidus_temperature=0.0,
+        liquidus_temperature=0.0,
+        latent_heat=0.0,
     ):
         self.convection_h = convection_h
         self.process_ambient = ambient
@@ -128,6 +131,28 @@ class TransientThermal(Problem):
                 f"got {source_model!r}"
             )
         self.source_model = source_model
+        self.solidus_temperature = float(solidus_temperature)
+        self.liquidus_temperature = float(liquidus_temperature)
+        self.latent_heat = float(latent_heat)
+        if not all(
+            math.isfinite(value)
+            for value in (
+                self.solidus_temperature,
+                self.liquidus_temperature,
+                self.latent_heat,
+            )
+        ):
+            raise ValueError("phase-change temperatures and latent heat must be finite")
+        if self.latent_heat < 0.0:
+            raise ValueError("latent_heat must be nonnegative")
+        if (
+            self.latent_heat > 0.0
+            and self.liquidus_temperature <= self.solidus_temperature
+        ):
+            raise ValueError(
+                "positive latent_heat requires liquidus_temperature "
+                "greater than solidus_temperature"
+            )
         location_fns = self.location_fns or ()
         self._dynamic_surface_maps = tuple(
             bool(getattr(location_fn, "active_domain_exterior", False))
@@ -184,6 +209,17 @@ class TransientThermal(Problem):
                 f"source_model must be one of {sorted(SOURCE_MODELS)}, "
                 f"got {source_model!r}"
             )
+        solidus_temperature = float(
+            getattr(self, "solidus_temperature", 0.0)
+        )
+        liquidus_temperature = float(
+            getattr(self, "liquidus_temperature", 0.0)
+        )
+        latent_heat = float(getattr(self, "latent_heat", 0.0))
+        use_enthalpy_difference = (
+            latent_heat > 0.0
+            and liquidus_temperature > solidus_temperature
+        )
 
         def heat_capacity(
             T,
@@ -286,8 +322,49 @@ class TransientThermal(Problem):
                 * (T_old[0] - ambient)
             )
 
-            cp_eff = cp[0] + latent_cp[0]
-            return np.array([rho[0] * cp_eff * (T[0] - T_old[0]) / dt[0] - q_vol + q_front_loss + q_old_layer_loss])
+            delta_temperature = T[0] - T_old[0]
+            if use_enthalpy_difference:
+                melt_interval = (
+                    liquidus_temperature - solidus_temperature
+                )
+                old_liquid_fraction = np.clip(
+                    (T_old[0] - solidus_temperature) / melt_interval,
+                    0.0,
+                    1.0,
+                )
+                new_liquid_fraction = np.clip(
+                    (T[0] - solidus_temperature) / melt_interval,
+                    0.0,
+                    1.0,
+                )
+                phase_change_support = np.where(
+                    (active[0] > 0.5) | (cooling_only[0] > 0.5),
+                    1.0,
+                    0.0,
+                )
+                storage_rate = (
+                    rho[0]
+                    * (
+                        cp[0] * delta_temperature
+                        + latent_heat
+                        * (new_liquid_fraction - old_liquid_fraction)
+                        * phase_change_support
+                    )
+                    / dt[0]
+                )
+            else:
+                cp_eff = cp[0] + latent_cp[0]
+                storage_rate = (
+                    rho[0] * cp_eff * delta_temperature / dt[0]
+                )
+            return np.array(
+                [
+                    storage_rate
+                    - q_vol
+                    + q_front_loss
+                    + q_old_layer_loss
+                ]
+            )
 
         return heat_capacity
 
@@ -395,7 +472,11 @@ class TransientThermal(Problem):
         # maps inherit their owner flag; active-domain exterior maps additionally
         # require an exterior face or an inactive neighbor.
         num_face_quads = self.fes[0].num_face_quads
-        cell_mask = surface_mask_quad[:, 0, 0]
+        cell_mask = np.where(
+            surface_mask_quad[:, 0, 0] > 0.5,
+            1.0,
+            0.0,
+        )
         self.internal_vars_surfaces = []
         for index, boundary_inds in enumerate(self.boundary_inds_list):
             if boundary_inds.shape[0] == 0:

@@ -29,6 +29,45 @@ def _field(name, values, shape):
     return values
 
 
+def _storage_increment_density(
+    *,
+    temperature_old,
+    temperature_new,
+    rho,
+    cp,
+    latent_cp,
+    active,
+    cooling_only,
+    solidus_temperature,
+    liquidus_temperature,
+    latent_heat,
+):
+    delta_temperature = temperature_new - temperature_old
+    if (
+        latent_heat > 0.0
+        and liquidus_temperature > solidus_temperature
+    ):
+        melt_interval = liquidus_temperature - solidus_temperature
+        old_liquid_fraction = np.clip(
+            (temperature_old - solidus_temperature) / melt_interval,
+            0.0,
+            1.0,
+        )
+        new_liquid_fraction = np.clip(
+            (temperature_new - solidus_temperature) / melt_interval,
+            0.0,
+            1.0,
+        )
+        phase_change_support = np.maximum(active, cooling_only)
+        return rho * (
+            cp * delta_temperature
+            + latent_heat
+            * (new_liquid_fraction - old_liquid_fraction)
+            * phase_change_support
+        )
+    return rho * (cp + latent_cp) * delta_temperature
+
+
 def integrate_volume_terms(
     *,
     jxw,
@@ -57,6 +96,9 @@ def integrate_volume_terms(
     emissivity,
     stefan_boltzmann,
     source_model="legacy",
+    solidus_temperature=None,
+    liquidus_temperature=None,
+    latent_heat=0.0,
 ):
     """Integrate the explicit volume terms used by the v03 weak form."""
     jxw = np.asarray(jxw, dtype=np.float64)
@@ -109,6 +151,7 @@ def integrate_volume_terms(
         "front_loss_thickness_m": front_loss_thickness_m,
         "emissivity": emissivity,
         "stefan_boltzmann": stefan_boltzmann,
+        "latent_heat": latent_heat,
     }
     scalars = {name: float(value) for name, value in scalars.items()}
     if laser_center.shape != (3,) or not np.all(np.isfinite(laser_center)):
@@ -127,6 +170,8 @@ def integrate_volume_terms(
         raise ValueError("source_depth_m must be positive for legacy source")
     if scalars["effective_laser_power_w"] < 0.0:
         raise ValueError("effective_laser_power_w must be nonnegative")
+    if scalars["latent_heat"] < 0.0:
+        raise ValueError("latent_heat must be nonnegative")
     if not 0.0 <= scalars["laser_switch"] <= 1.0:
         raise ValueError("laser_switch must lie in [0, 1]")
     if scalars["old_layer_cooling_h"] < 0.0 or scalars["front_loss_h"] < 0.0:
@@ -139,8 +184,40 @@ def integrate_volume_terms(
     plane_axes = tuple(int(axis) for axis in plane_axes)
     if sorted((*plane_axes, build_axis)) != [0, 1, 2] or len(plane_axes) != 2:
         raise ValueError("build_axis and plane_axes must partition xyz")
+    if solidus_temperature is None:
+        solidus_temperature = 0.0
+    if liquidus_temperature is None:
+        liquidus_temperature = 0.0
+    solidus_temperature = float(solidus_temperature)
+    liquidus_temperature = float(liquidus_temperature)
+    if not np.isfinite(solidus_temperature) or not np.isfinite(
+        liquidus_temperature
+    ):
+        raise ValueError("phase-change temperatures must be finite")
+    if (
+        scalars["latent_heat"] > 0.0
+        and liquidus_temperature <= solidus_temperature
+    ):
+        raise ValueError(
+            "positive latent_heat requires liquidus_temperature "
+            "greater than solidus_temperature"
+        )
     dt = scalars["dt_s"]
-    storage = np.sum(jxw * rho * (cp + latent_cp) * (new - old))
+    storage = np.sum(
+        jxw
+        * _storage_increment_density(
+            temperature_old=old,
+            temperature_new=new,
+            rho=rho,
+            cp=cp,
+            latent_cp=latent_cp,
+            active=active,
+            cooling_only=cooling_only,
+            solidus_temperature=solidus_temperature,
+            liquidus_temperature=liquidus_temperature,
+            latent_heat=scalars["latent_heat"],
+        )
+    )
 
     r0 = points[..., plane_axes[0]] - laser_center[plane_axes[0]]
     r1 = points[..., plane_axes[1]] - laser_center[plane_axes[1]]
@@ -433,6 +510,17 @@ def extract_solver_step(
         emissivity=problem.emissivity,
         stefan_boltzmann=problem.stefan_boltzmann,
         source_model=getattr(problem, "source_model", "legacy"),
+        solidus_temperature=getattr(
+            problem,
+            "solidus_temperature",
+            0.0,
+        ),
+        liquidus_temperature=getattr(
+            problem,
+            "liquidus_temperature",
+            0.0,
+        ),
+        latent_heat=getattr(problem, "latent_heat", 0.0),
     )
     surface_loss = _surface_exchange_from_problem(
         problem, temperature_new, dt_s
@@ -537,14 +625,43 @@ def extract_solver_step(
         state_override = float(
             np.sum(
                 np.asarray(fe.JxW, dtype=np.float64)
-                * np.asarray(rho_quad, dtype=np.float64)[..., 0]
-                * (
-                    np.asarray(cp_quad, dtype=np.float64)[..., 0]
-                    + np.asarray(latent_cp_quad, dtype=np.float64)[..., 0]
-                )
-                * (
-                    np.asarray(temperature_old_quad, dtype=np.float64)[..., 0]
-                    - previous_quad
+                * _storage_increment_density(
+                    temperature_old=previous_quad,
+                    temperature_new=np.asarray(
+                        temperature_old_quad,
+                        dtype=np.float64,
+                    )[..., 0],
+                    rho=np.asarray(rho_quad, dtype=np.float64)[..., 0],
+                    cp=np.asarray(cp_quad, dtype=np.float64)[..., 0],
+                    latent_cp=np.asarray(
+                        latent_cp_quad,
+                        dtype=np.float64,
+                    )[..., 0],
+                    active=np.asarray(
+                        active_quad,
+                        dtype=np.float64,
+                    )[..., 0],
+                    cooling_only=np.asarray(
+                        cooling_only_quad,
+                        dtype=np.float64,
+                    )[..., 0],
+                    solidus_temperature=float(
+                        getattr(
+                            problem,
+                            "solidus_temperature",
+                            0.0,
+                        )
+                    ),
+                    liquidus_temperature=float(
+                        getattr(
+                            problem,
+                            "liquidus_temperature",
+                            0.0,
+                        )
+                    ),
+                    latent_heat=float(
+                        getattr(problem, "latent_heat", 0.0)
+                    ),
                 )
             )
         )

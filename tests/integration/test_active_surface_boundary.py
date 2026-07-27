@@ -269,6 +269,28 @@ def test_upward_shared_face_is_exposed_only_until_neighbor_activates():
     assert areas == pytest.approx([1.0, 0.0, 0.0], rel=5.0e-3)
 
 
+def test_shared_face_owner_neighbor_mask_is_binary_without_double_counting():
+    problem = _make_static_exterior_problem()
+    boundary_owners = np.asarray(problem.boundary_inds_list[0])[:, 0]
+
+    cases = (
+        ([0.500001, 0.499999], [1.0, 0.0]),
+        ([0.499999, 0.500001], [0.0, 1.0]),
+        ([0.500001, 0.500001], [0.0, 1.0]),
+        ([0.499999, 0.499999], [0.0, 0.0]),
+    )
+    for physical_cells, expected_by_owner in cases:
+        _set_uniform_surface_state(problem, physical_cells)
+        face_flags = np.asarray(
+            problem.internal_vars_surfaces[0][0]
+        )[:, 0, 0]
+        actual_by_owner = np.zeros(2, dtype=np.float64)
+        actual_by_owner[boundary_owners] = face_flags
+
+        np.testing.assert_array_equal(actual_by_owner, expected_by_owner)
+        assert np.all(np.isin(face_flags, (0.0, 1.0)))
+
+
 def test_dynamic_candidate_set_contains_only_upward_faces():
     problem = _make_static_exterior_problem()
     assert len(problem.boundary_inds_list[0]) == 2

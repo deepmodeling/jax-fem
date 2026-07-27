@@ -59,7 +59,9 @@ def install_phase_lifecycle_wrapper(base_module):
 
     v04 may replace the phase function with a JIT kernel after the base module
     is loaded, so this hook is intentionally safe to call again immediately
-    before entering the v03 time loop.
+    before entering the v03 time loop. ``paper_irreversible`` has one
+    lifecycle event (first solidification); ``legacy_reset`` retains the
+    historical relaxation/remelt side effects for non-paper workflows.
     """
     current = base_module.update_phase_reference_and_eqp
     if getattr(current, "_v06_phase_lifecycle_wrapper", False):
@@ -83,56 +85,86 @@ def install_phase_lifecycle_wrapper(base_module):
             args,
         )
         REGISTRY.eqp = result[2]
-        active = active_quad > 0.5
-        fixture = (phase_quad == base_module.STATE_SUBSTRATE) | (
-            phase_quad == base_module.STATE_SUPPORT
-        )
-        managed = active & (~fixture)
-        relax_temperature = getattr(args, "stress_relaxation_temperature", None)
-        relaxation_enabled = bool(
-            relax_temperature is not None and relax_temperature > 0.0
-        )
-        relaxation_mask = (
-            managed
-            if relaxation_enabled
-            else np.zeros_like(managed, dtype=bool)
-        )
-        REGISTRY.relaxation_mask = relaxation_mask
-        relaxation_hot = (
-            managed & (T_quad >= float(relax_temperature))
-            if relaxation_enabled
-            else np.zeros_like(managed, dtype=bool)
-        )
-        previous_hot = REGISTRY.relaxation_hot
-        if previous_hot is None or previous_hot.shape != relaxation_hot.shape:
-            previous_hot = np.zeros_like(relaxation_hot, dtype=bool)
-        became_relaxation_hot = relaxation_hot & (~previous_hot)
-        REGISTRY.relaxation_hot = relaxation_hot
-
         newly_solidified = result[3]
-        entered_melted = result[4]
-        old_melted = (phase_quad == base_module.STATE_LIQUID) | (
-            phase_quad == base_module.STATE_MUSHY
+        paper_irreversible = (
+            getattr(args, "phase_history_model", "legacy_reset")
+            == "paper_irreversible"
         )
-        new_melted = (result[0] == base_module.STATE_LIQUID) | (
-            result[0] == base_module.STATE_MUSHY
-        )
-        became_melted = new_melted & (~old_melted)
-        reference_event = (
-            newly_solidified | became_melted | became_relaxation_hot
-        )
+        if paper_irreversible:
+            no_relaxation = np.zeros_like(
+                newly_solidified,
+                dtype=bool,
+            )
+            REGISTRY.relaxation_mask = no_relaxation
+            REGISTRY.relaxation_hot = no_relaxation
+            reference_event = newly_solidified
+        else:
+            active = active_quad > 0.5
+            fixture = (
+                (phase_quad == base_module.STATE_SUBSTRATE)
+                | (phase_quad == base_module.STATE_SUPPORT)
+            )
+            managed = active & (~fixture)
+            relax_temperature = getattr(
+                args,
+                "stress_relaxation_temperature",
+                None,
+            )
+            relaxation_enabled = bool(
+                relax_temperature is not None
+                and relax_temperature > 0.0
+            )
+            relaxation_mask = (
+                managed
+                if relaxation_enabled
+                else np.zeros_like(managed, dtype=bool)
+            )
+            REGISTRY.relaxation_mask = relaxation_mask
+            relaxation_hot = (
+                managed & (T_quad >= float(relax_temperature))
+                if relaxation_enabled
+                else np.zeros_like(managed, dtype=bool)
+            )
+            previous_hot = REGISTRY.relaxation_hot
+            if (
+                previous_hot is None
+                or previous_hot.shape != relaxation_hot.shape
+            ):
+                previous_hot = np.zeros_like(
+                    relaxation_hot,
+                    dtype=bool,
+                )
+            became_relaxation_hot = relaxation_hot & (~previous_hot)
+            REGISTRY.relaxation_hot = relaxation_hot
+
+            entered_melted = result[4]
+            old_melted = (
+                (phase_quad == base_module.STATE_LIQUID)
+                | (phase_quad == base_module.STATE_MUSHY)
+            )
+            new_melted = (
+                (result[0] == base_module.STATE_LIQUID)
+                | (result[0] == base_module.STATE_MUSHY)
+            )
+            became_melted = new_melted & (~old_melted)
+            reference_event = (
+                newly_solidified
+                | became_melted
+                | became_relaxation_hot
+            )
+            if (
+                getattr(args, "reset_plastic_on_melt", False)
+                and REGISTRY.build_problem is not None
+            ):
+                REGISTRY.build_problem.reset_remelted_state(
+                    entered_melted
+                )
         if REGISTRY.pending_reference is None:
             REGISTRY.pending_reference = reference_event
         else:
             REGISTRY.pending_reference = (
                 REGISTRY.pending_reference | reference_event
             )
-
-        if (
-            getattr(args, "reset_plastic_on_melt", False)
-            and REGISTRY.build_problem is not None
-        ):
-            REGISTRY.build_problem.reset_remelted_state(entered_melted)
         return result
 
     update_phase_with_lifecycle._v06_phase_lifecycle_wrapper = True

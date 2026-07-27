@@ -63,6 +63,39 @@ REQUIRED_TABLE_KEYS = (
     "yield_table",
 )
 
+PROTECTED_PASSTHROUGH_OPTIONS = {
+    *TABLE_ARGS.values(),
+    *VALUE_ARGS.values(),
+    "--reset-plastic-on-melt",
+    "--no-reset-plastic-on-melt",
+    "--config",
+    "--inp",
+    "--output-dir",
+    "--build-axis",
+    "--base-side",
+    "--scan-axis",
+    "--scan-rotation-per-layer",
+    "--jump-speed",
+    "--scan-speed",
+    "--laser-power",
+    "--dt",
+    "--beam-radius",
+    "--source-depth",
+    "--mechanics-every",
+    "--thermal-output-every",
+    "--mechanics-output-every",
+    "--summary-every",
+    "--cooling-steps",
+    "--max-cells",
+    "--powder-mode",
+    "--layer-thickness",
+    "--layers",
+    "--hatch-spacing",
+    "--hatch-lines-per-layer",
+    "--auto-scan-steps-from-speed",
+    "--scan-steps-per-layer",
+}
+
 
 def read_json_object(path: Path) -> dict:
     with path.open(encoding="utf-8") as stream:
@@ -100,7 +133,12 @@ def material_config_path(
     explicit_config: Path | None,
 ) -> Path:
     if explicit_config is not None:
-        return explicit_config.expanduser().resolve()
+        expanded = explicit_config.expanduser()
+        if not expanded.is_absolute():
+            pack_relative = material_dir / expanded
+            if pack_relative.is_file():
+                return pack_relative.resolve()
+        return expanded.resolve()
     return (
         material_dir / "ti64_material_config_initial.json"
     ).resolve()
@@ -143,19 +181,21 @@ def load_material_pack(
             "Material config is missing required table keys: "
             + ", ".join(missing_keys)
         )
-    if missing_files:
-        raise FileNotFoundError(
-            "Material table file(s) not found: "
-            + ", ".join(missing_files)
-        )
-
     for key, value in config.items():
         if key in TABLE_ARGS and value:
-            resolved_tables[key] = resolve_material_path(
+            table_path = resolve_material_path(
                 str(value),
                 material_dir,
                 repo_root,
             )
+            resolved_tables[key] = table_path
+            if not table_path.is_file():
+                missing_files.append(str(table_path))
+    if missing_files:
+        raise FileNotFoundError(
+            "Material table file(s) not found: "
+            + ", ".join(sorted(set(missing_files)))
+        )
     return config, resolved_tables
 
 
@@ -269,6 +309,7 @@ def build_command(
     args: argparse.Namespace,
     passthrough: list[str],
 ) -> tuple[list[str], dict[str, str]]:
+    validate_passthrough(passthrough)
     material_dir = args.material_dir.expanduser().resolve()
     config_path = material_config_path(
         material_dir,
@@ -409,11 +450,34 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def validate_passthrough(passthrough: list[str]) -> None:
+    for token in passthrough:
+        option = token.split("=", 1)[0]
+        if option in PROTECTED_PASSTHROUGH_OPTIONS:
+            raise ValueError(
+                "passthrough arguments cannot override validated option "
+                f"{option}"
+            )
+
+
+def parse_cli(
+    argv: list[str] | None = None,
+) -> tuple[argparse.Namespace, list[str]]:
+    raw_args = list(sys.argv[1:] if argv is None else argv)
+    if "--" in raw_args:
+        separator = raw_args.index("--")
+        launcher_args = raw_args[:separator]
+        passthrough = raw_args[separator + 1 :]
+    else:
+        launcher_args = raw_args
+        passthrough = []
+    args = build_parser().parse_args(launcher_args)
+    validate_passthrough(passthrough)
+    return args, passthrough
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    args, passthrough = parser.parse_known_args(argv)
-    if passthrough and passthrough[0] == "--":
-        passthrough = passthrough[1:]
+    args, passthrough = parse_cli(argv)
     command, env = build_command(args, passthrough)
 
     print("PYTHONPATH=" + env["PYTHONPATH"])

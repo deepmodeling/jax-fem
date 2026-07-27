@@ -477,6 +477,69 @@ class V06AdapterTest(unittest.TestCase):
         self.assertEqual(float(infos["eps_p_quad_xy"][0]), 2.0)
         self.assertEqual(float(infos["eps_ref_quad_zz"][0]), 3.0)
 
+    def test_vtu_save_step_uses_v06_tensor_state_cell_info_wrapper(self):
+        from jax_fem_am.io import vtu as vtu_module
+
+        base = load_fresh_v03("v03_v06_save_step_state_test")
+        driver.install_v06_adapter(base)
+        driver.REGISTRY.eqp = 0.25 * jnp.ones((1, 1, 1))
+        driver.REGISTRY.eps_p = 2.0 * jnp.ones((1, 1, 3, 3))
+        driver.REGISTRY.eps_ref = 3.0 * jnp.ones((1, 1, 3, 3))
+        elastic = 4.0 * jnp.ones((1, 1, 3, 3))
+        captured = {}
+
+        class FakeFe:
+            num_cells = 1
+
+        def fake_save_sol(
+            _fe,
+            _temperature,
+            _vtk_path,
+            *,
+            point_infos,
+            cell_infos,
+        ):
+            captured["point_infos"] = dict(point_infos)
+            captured["cell_infos"] = dict(cell_infos)
+
+        original_save_sol = vtu_module.save_sol
+        vtu_module.save_sol = fake_save_sol
+        try:
+            base.save_step(
+                FakeFe(),
+                jnp.zeros((4, 1)),
+                jnp.zeros((4, 3)),
+                "unused.vtu",
+                jnp.zeros((1, 1, 1)),
+                {
+                    "stress_quad": jnp.zeros((1, 1, 3, 3)),
+                    "vm_quad": jnp.zeros((1, 1)),
+                    "elastic_strain_quad": elastic,
+                },
+                jnp.ones((1,)),
+                jnp.ones((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1,)),
+                jnp.zeros((1, 1, 1)),
+                True,
+                1,
+                base.MODE_TO_ID["release"],
+            )
+        finally:
+            vtu_module.save_sol = original_save_sol
+
+        infos = captured["cell_infos"]
+        self.assertEqual(float(infos["elastic_strain_quad_xx"][0]), 4.0)
+        self.assertEqual(float(infos["eps_p_quad_xy"][0]), 2.0)
+        self.assertEqual(float(infos["eps_ref_quad_zz"][0]), 3.0)
+        self.assertEqual(float(infos["eq_plastic_strain"][0]), 0.25)
+
     def test_vtu_output_rejects_mismatched_tensor_state(self):
         base = load_fresh_v03("v03_v06_output_shape_test")
         driver.install_v06_adapter(base)

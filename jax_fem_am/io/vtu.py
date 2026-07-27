@@ -90,6 +90,7 @@ def save_step(
     mode_id,
     release_removed_cell=None,
     release_point_fields=None,
+    quad_cell_info_factory=None,
 ):
     if quad_stress is None:
         quad_stress = empty_quad_stress(fe.num_cells, dT_quad.shape[1])
@@ -134,7 +135,9 @@ def save_step(
                     f"release point field {name} must have one value per node"
                 )
             point_infos.append((name, values))
-    cell_infos.extend(make_quad_stress_cell_infos(quad_stress))
+    if quad_cell_info_factory is None:
+        quad_cell_info_factory = make_quad_stress_cell_infos
+    cell_infos.extend(quad_cell_info_factory(quad_stress))
     save_sol(
         fe,
         T_new,

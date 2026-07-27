@@ -742,6 +742,9 @@ def install_v06_adapter(base_module, profiler=None):
                 positional[16] = REGISTRY.eqp
             else:
                 kwargs["eqp_quad"] = REGISTRY.eqp
+        kwargs["quad_cell_info_factory"] = (
+            base_module.make_quad_stress_cell_infos
+        )
         return original_save_step(*positional, **kwargs)
 
     base_module.ThermoMechanical = StateSafeThermoMechanical

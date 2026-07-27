@@ -124,13 +124,13 @@ thermal/source/ledger/active-domain set passed:
 50 passed, 10 subtests passed
 ```
 
-The full repository run reached:
+At the time this T017 slice was first closed, the full repository run reached:
 
 ```text
 534 passed, 2 skipped, 10 subtests passed
 ```
 
-Its ten remaining failures are pre-existing or intentionally frozen RED gates:
+Its ten remaining failures were pre-existing or intentionally frozen RED gates:
 
 - seven T018/T019 material-history and J2-curve/tangent failures;
 - three legacy-v02 runner tests whose referenced
@@ -138,3 +138,8 @@ Its ten remaining failures are pre-existing or intentionally frozen RED gates:
 
 No T017, thermal-ledger, active-domain, source, or accelerator-contract test
 failed.
+
+The listed T018 implementation failures, T019, and the missing legacy-v02
+runner were subsequently closed. T018 material approval remains pending. The
+clean T021 regression at commit `8f1603f` passed `588` tests with no failure;
+see `specs/001-kaess-paper-reproduction/evidence/t021-p0-regression.json`.

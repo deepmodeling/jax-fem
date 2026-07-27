@@ -6,9 +6,9 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
 
 **Input**: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`
 
-**Status**: G0 approved; T014-T017, T019 and T020 are complete — P0
-implementation continues through the pending T018 material approval and T021
-full regression gate
+**Status**: G0 approved; T014-T017 and T019-T021 are complete. T018 material
+approval, anchor sensitivity, zero-energy-mode verification, and the remaining
+unchecked parity items still block G1/G2.
 
 **Organization**: 任务按 user story 和科学 gate 组织。`[P]` 表示不同文件、
 无前置依赖时可并行；测试任务必须先失败，再实现对应能力。
@@ -203,11 +203,14 @@ full regression gate
     `cases/kaess_2023/inputs/release-cellset.json`,
     `tests/integration/test_kaess_release_cellset.py`
 
-- [ ] T021 [US2] 运行 P0 完整回归并更新 parity checklist — 运行所有现有 physics/solver tests 与 T007–T013 新测试。
+- [x] T021 [US2] 运行 P0 完整回归并更新 parity checklist — 运行所有现有 physics/solver tests 与 T007–T013 新测试。
   - **Acceptance**: 无预期外失败；P0 gates 有机器可读证据。
   - **Verify**: 使用 `quickstart.md` 的 physics/solver command。
   - **Files**: `specs/001-kaess-paper-reproduction/checklists/paper-parity.md`,
     `cases/kaess_2023/inputs/deviations.yaml`
+  - **Evidence**: clean commit `8f1603f` passed `588` tests with `2`
+    conditional skips and `16` passing subtests; see
+    `specs/001-kaess-paper-reproduction/evidence/t021-p0-regression.json`.
 
 ### Checkpoint G1/G2 — Physics and Code Verification
 

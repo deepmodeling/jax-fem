@@ -184,14 +184,19 @@ The broader T018 compatibility set passed:
 Independent final review additionally passed `160` focused CPU tests and `35`
 RTX 5080 GPU tests. It found no remaining Critical or Important issue.
 
-The final full-repository run reached:
+At the time this T018 implementation slice was first reviewed, the
+full-repository run reached:
 
 ```text
 553 passed, 2 skipped, 10 subtests passed
 ```
 
-Its five remaining failures are outside the T018 implementation:
+Its five remaining failures were outside the T018 implementation:
 
 - two intentional T019 J2 flow-curve/tangent RED gates;
 - three legacy-v02 runner tests whose referenced
   `legacy/v02/run_ti64_material.py` file is absent.
+
+T019 and the legacy runner were subsequently closed. The clean T021
+regression at commit `8f1603f` passed `588` tests with no failure; see
+`specs/001-kaess-paper-reproduction/evidence/t021-p0-regression.json`.

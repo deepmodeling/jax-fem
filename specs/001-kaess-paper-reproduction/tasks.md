@@ -7,8 +7,8 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
 **Input**: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`
 
 **Status**: G0 approved; T014-T017 and T019-T021 are complete. T018 material
-approval, anchor sensitivity, zero-energy-mode verification, and the remaining
-unchecked parity items still block G1/G2.
+approval, anchor sensitivity, and the remaining unchecked parity items still
+block G1/G2.
 
 **Organization**: 任务按 user story 和科学 gate 组织。`[P]` 表示不同文件、
 无前置依赖时可并行；测试任务必须先失败，再实现对应能力。

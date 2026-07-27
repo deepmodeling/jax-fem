@@ -7,8 +7,8 @@
 **Created**: 2026-07-23
 
 **Status**: Approved — G0 passed; T014-T017 and T019-T021 are complete with a
-clean full regression. T018 material review, anchor sensitivity,
-zero-energy-mode verification, and remaining parity items still block G1/G2.
+clean full regression. T018 material review, anchor sensitivity, and the
+remaining parity items still block G1/G2.
 
 **Input**: 按照 Spec Kit 标准，为 Kaess et al. (2023) 论文级复现建立可执行、可审计的开发规格。
 

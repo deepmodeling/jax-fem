@@ -26,6 +26,7 @@ V03_PATH = (
 )
 
 try:
+    import jax
     import numpy as onp
     import jax.numpy as jnp
     from jax_fem.generate_mesh import Mesh
@@ -200,6 +201,81 @@ class BBarConsistencyTest(BBarTestBase):
             res[bbar] = self.residual_flat(problem, sol)
         diff = onp.abs(res[True] - res[False]).max()
         self.assertGreater(diff, 1e-8 * onp.abs(res[False]).max())
+
+    def test_hex8_bbar_has_only_the_six_rigid_body_zero_modes(self):
+        """Full-integration B-bar must not introduce hourglass mechanisms."""
+        points, hexes = box_grid(1)
+        points = points.copy()
+        # Break the regular cube symmetry so the test exercises the
+        # isoparametric mapping rather than a special Cartesian case.
+        points[hexes[0, 6]] += 1e-3 * onp.array([0.13, -0.08, 0.11])
+        points[hexes[0, 5]] += 1e-3 * onp.array([0.04, 0.02, -0.03])
+
+        problem = self.v03.ThermoMechanical(
+            mesh=Mesh(points, hexes, ele_type="HEX8"),
+            vec=3,
+            dim=3,
+            ele_type="HEX8",
+            quadrature_order=2,
+            dirichlet_bc_info=None,
+            additional_info=("elastic", None, 0.0, 0.0, (), True),
+        )
+        problem.set_params(
+            self.uniform_params(problem, dT=0.0, yield_stress=1e30)
+        )
+        self.assertEqual(problem.fes[0].num_quads, 8)
+        self.assertTrue(onp.all(onp.asarray(problem.fes[0].JxW) > 0.0))
+
+        tangent = onp.asarray(
+            jax.jacfwd(
+                lambda sol: problem.compute_residual([sol])[0]
+            )(jnp.zeros((len(points), 3)))
+        ).reshape((24, 24))
+        self.assertEqual(tangent.dtype, onp.dtype(onp.float64))
+        tangent_symmetric = 0.5 * (tangent + tangent.T)
+        spectral_scale = onp.linalg.norm(tangent_symmetric, ord=2)
+        rank_tolerance = (
+            10.0
+            * max(tangent.shape)
+            * onp.finfo(tangent.dtype).eps
+            * spectral_scale
+        )
+
+        self.assertLessEqual(
+            onp.linalg.norm(tangent - tangent.T, ord=2),
+            rank_tolerance,
+        )
+        eigenvalues = onp.linalg.eigvalsh(tangent_symmetric)
+        self.assertFalse(onp.any(eigenvalues < -rank_tolerance))
+        self.assertEqual(
+            int(onp.count_nonzero(
+                onp.abs(eigenvalues) <= rank_tolerance
+            )),
+            6,
+        )
+        self.assertEqual(
+            int(onp.count_nonzero(eigenvalues > rank_tolerance)),
+            18,
+        )
+        self.assertGreater(eigenvalues[6], 100.0 * rank_tolerance)
+
+        # Verify that the six expected null vectors really are translations
+        # and infinitesimal rotations, rather than six unrelated mechanisms.
+        centered = points - points.mean(axis=0)
+        rigid_modes = onp.zeros((24, 6), dtype=tangent.dtype)
+        for axis in range(3):
+            rigid_modes[axis::3, axis] = 1.0
+        for node, (x, y, z) in enumerate(centered):
+            rigid_modes[3 * node:3 * node + 3, 3:] = onp.array([
+                [0.0, z, -y],
+                [-z, 0.0, x],
+                [y, -x, 0.0],
+            ])
+        rigid_orthogonal, _ = onp.linalg.qr(rigid_modes)
+        self.assertLessEqual(
+            onp.linalg.norm(tangent @ rigid_orthogonal, ord=2),
+            rank_tolerance,
+        )
 
 
 # production-grade Newton settings (run_kaess_phase2.sh): the default

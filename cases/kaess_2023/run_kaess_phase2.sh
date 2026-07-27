@@ -24,6 +24,7 @@ if ! command -v python >/dev/null 2>&1 && [ -f /home/user/miniforge3/etc/profile
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/launcher_guards.sh"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 WORK_ROOT="${WORK_ROOT:-$(cd "${REPO_ROOT}/.." && pwd)}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
@@ -31,12 +32,13 @@ XLA_PLATFORM="${XLA_PLATFORM:-cpu}"
 LINEAR_SOLVER="${LINEAR_SOLVER:-pardiso}"
 
 PLATE_TEMP_C="${PLATE_TEMP_C:-150}"
-PLATE_TEMP_K="$(${PYTHON_BIN} -c "print(273.15 + ${PLATE_TEMP_C})")"
+PLATE_TEMP_K="$(kaess_celsius_to_kelvin "${PYTHON_BIN}" "${PLATE_TEMP_C}")"
 ROOM_TEMP_K="${ROOM_TEMP_K:-293.15}"      # final plate cooldown target (paper 2.3)
 # Reference model has NO stress relaxation/annealing mechanism -> disabled (0).
 RELAX_TEMP_K="${RELAX_TEMP_K:-0}"
 POWER_TAG="${POWER_TAG:-P250}"
 PATH_ARGS="${PATH_ARGS:-}"
+kaess_parse_safe_path_args "${PATH_ARGS}"
 # The reference case is 10 x 30 um.  Keep those defaults, but expose both
 # values so reduced-order launchers can cover the same 0.3 mm build height
 # with a smaller number of explicitly documented macro layers.
@@ -83,7 +85,23 @@ RUN_ID="${RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_ROOT="${OUT_ROOT:-${WORK_ROOT}/output/kaess_p2_T${PLATE_TEMP_C}C_${POWER_TAG}_${ELEMENT_TYPE}_${RUN_ID}}"
 RUN_LABEL="${RUN_LABEL:-kaess-2023-phase2-T${PLATE_TEMP_C}C-${POWER_TAG}-${ELEMENT_TYPE}}"
 
-MATERIAL_CONFIG="${MATERIAL_CONFIG:-${WORK_ROOT}/materials/316L/ss316l_material_config_kaess.json}"
+DEFAULT_MATERIAL_CONFIG="${WORK_ROOT}/materials/316L/ss316l_material_config_kaess.json"
+if [[ -n "${KAESS_MATERIAL_CONFIG:-}" && -n "${MATERIAL_CONFIG:-}" ]] \
+   && [[ "$(realpath -m "${KAESS_MATERIAL_CONFIG}")" != "$(realpath -m "${MATERIAL_CONFIG}")" ]]; then
+  echo "kaess p2: conflicting KAESS_MATERIAL_CONFIG and MATERIAL_CONFIG" >&2
+  exit 2
+fi
+MATERIAL_CONFIG="${KAESS_MATERIAL_CONFIG:-${MATERIAL_CONFIG:-${DEFAULT_MATERIAL_CONFIG}}}"
+[[ -f "${MATERIAL_CONFIG}" ]] || {
+  echo "kaess p2: missing input: ${MATERIAL_CONFIG}" >&2
+  exit 2
+}
+MATERIAL_CONFIG="$(realpath -e "${MATERIAL_CONFIG}")"
+export KAESS_MATERIAL_CONFIG="${MATERIAL_CONFIG}"
+PARITY_CONFIG="${SCRIPT_DIR}/inputs/paper-parity-config.yaml"
+G0_APPROVAL="${SCRIPT_DIR}/inputs/g0-approval.json"
+EXTRA_ARGS="${EXTRA_ARGS:-}"
+kaess_parse_safe_extra_args "${EXTRA_ARGS}" 0
 # POWDER_SOLID=1: paper-parity weak-solid powder (E=10 GPa / sigma_y=1 MPa,
 # Kaess 2023 sec 2.2) - switches to the powder-filled mesh (inter-wall gaps
 # meshed as a POWDER elset; lateral margins still unmeshed, documented
@@ -104,7 +122,7 @@ if [[ -n "${POWDER_SOLID}" ]]; then
   POWDER_ARGS=(--powder-elset POWDER
                --powder-solid-E "${POWDER_SOLID_E:-10e9}"
                --powder-solid-yield "${POWDER_SOLID_YIELD:-1e6}"
-               --powder-solid-hardening "${POWDER_SOLID_HARDENING:-1e7}")
+               --powder-solid-hardening "${POWDER_SOLID_HARDENING:-0}")
 else
   MESH_FILE="${MESH_FILE:-${SCRIPT_DIR}/kaess_cantilever_${ELEMENT_TYPE}.inp}"
   POWDER_ARGS=()
@@ -126,11 +144,15 @@ else
                 --release-cut-box 0 7.0e-4 0 5.0e-4 0 2.999e-4)
   echo "kaess p2: DIAGNOSTIC_ONLY geometric release box; paper release gate is ineligible" >&2
 fi
-EXTRA_ARGS="${EXTRA_ARGS:-}"
-
-for f in "${MATERIAL_CONFIG}" "${MESH_FILE}" "${RELEASE_CELL_SET}"; do
+for f in "${MATERIAL_CONFIG}" "${MESH_FILE}" "${RELEASE_CELL_SET}" "${PARITY_CONFIG}" "${G0_APPROVAL}"; do
   [[ -f "$f" ]] || { echo "kaess p2: missing input: $f" >&2; exit 2; }
 done
+kaess_validate_material_identity \
+  "${REPO_ROOT}" \
+  "${PYTHON_BIN}" \
+  "${MATERIAL_CONFIG}" \
+  "${PARITY_CONFIG}" \
+  "${G0_APPROVAL}"
 
 mkdir -p "$(dirname "${OUT_ROOT}")"
 if ! mkdir "${OUT_ROOT}" 2>/dev/null; then
@@ -138,14 +160,15 @@ if ! mkdir "${OUT_ROOT}" 2>/dev/null; then
   exit 2
 fi
 
-# Scan path generated per-run so PATH_ARGS (power/speed/layers) are recorded.
-# Base layer arguments mirror the solver.  Trailing PATH_ARGS may explicitly
-# override path-only layers for legacy truncated smoke wrappers.
+# Scan path generated per-run so reviewed PATH_ARGS (power/speed/layers) are
+# recorded. Base layer arguments mirror the solver. The allowlisted trailing
+# argv may explicitly override path-only layers for legacy smoke wrappers, but
+# cannot replace the output path.
 PATH_FILE="${OUT_ROOT}/kaess_path.csv"
 "${PYTHON_BIN}" "${SCRIPT_DIR}/make_kaess_path.py" \
   --layers "${BUILD_LAYERS}" \
   --layer-thickness "${LAYER_THICKNESS}" \
-  --output "${PATH_FILE}" ${PATH_ARGS}
+  --output "${PATH_FILE}" "${KAESS_PATH_ARGV[@]}"
 
 XRD_PROTOCOL="${OUT_ROOT}/kaess_xrd_protocol.json"
 "${PYTHON_BIN}" - "$XRD_PROTOCOL" "$ROOM_TEMP_K" <<'PYEOF'
@@ -242,7 +265,7 @@ SOLVER_CMD=(
   --no-reset-plastic-on-melt
   --phase-history-model paper_irreversible
 )
-printf '%q ' "${SOLVER_CMD[@]}" ${EXTRA_ARGS} > "${OUT_ROOT}/solver_command.txt"
+printf '%q ' "${SOLVER_CMD[@]}" "${KAESS_EXTRA_ARGV[@]}" > "${OUT_ROOT}/solver_command.txt"
 printf '\n' >> "${OUT_ROOT}/solver_command.txt"
 
 finalize_manifest() {
@@ -273,7 +296,7 @@ finalize_manifest() {
 }
 trap finalize_manifest EXIT
 
-"${SOLVER_CMD[@]}" ${EXTRA_ARGS}
+"${SOLVER_CMD[@]}" "${KAESS_EXTRA_ARGV[@]}"
 
 LAST_COOLING_VTU="$(ls "${OUT_ROOT}"/step_*_cooling.vtu 2>/dev/null | sort | tail -1)"
 

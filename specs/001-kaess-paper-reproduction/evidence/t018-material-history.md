@@ -150,6 +150,55 @@ or external material file was changed. T018 and PAR019/PAR024/PAR025 therefore
 remain open until the material bundle is independently reviewed, explicitly
 approved, and bound into the formal provenance chain.
 
+## Formal launcher identity safety
+
+The phase-1 and phase-2 launchers now resolve the material through the G0
+environment name `KAESS_MATERIAL_CONFIG`. The older `MATERIAL_CONFIG` name is
+accepted only as a compatibility alias; conflicting values fail before an
+output directory is created.
+
+Before either launcher creates a run directory, it invokes
+`jax_fem_am.verification.material_identity`. The gate binds:
+
+- the exact material-config SHA-256;
+- the approved paper-parity record;
+- the SHA-256 of the G0 approval record;
+- the protocol ID and approved material-freeze object.
+
+The currently approved external material bytes pass this gate. The unapproved
+G0-v2 candidate fails with a material SHA-256 mismatch and cannot accidentally
+enter a formal run. The gate deliberately supports only the currently approved
+`external_sha256` mode; approval of a repository-bundle mode requires an
+explicit gate/schema revision rather than an implicit fallback.
+
+This G0-v1 gate freezes only the top-level external JSON, because that is the
+scope of the existing approval. It does not bind the JSON's dependency CSVs
+and therefore does not close T018 or PAR019. The pending G0-v2 bundle must add
+manifest status/promotion checks plus config and per-CSV hashes before it can
+replace the external mode.
+
+`EXTRA_ARGS` is parsed into an argv array before the identity check and is
+restricted to an explicit allowlist of reviewed operational options; phase 1
+additionally permits a smoke-only `--layers` override, which is not a formal
+case. Duplicate `--config`, material-table/scalar, powder, phase-history and
+reset overrides are rejected before run-directory creation. The selected
+material path is canonicalized to one absolute path before the gate, solver
+and manifest consume it.
+
+The identity module executes from the launcher's own repository root, so a
+different checkout in the caller's working directory cannot shadow the
+reviewed gate. Plate temperature conversion passes the environment value as a
+`float()` argument instead of interpolating it into Python source. Operational
+cadence values are range checked (`summary_every >= 1`), and phase-2
+`PATH_ARGS` uses a separate generator-option allowlist that cannot override
+the launcher's content-addressed output path.
+
+The phase-2 paper-parity powder arm also defaults
+`powder_solid_hardening` to `0 Pa`, matching the candidate/reference
+ideal-plastic specification instead of silently injecting the prior
+`1e7 Pa` numerical regularization. A nonzero diagnostic override must now be
+explicit; such an effective-parameter deviation is not promotion evidence.
+
 An executable contract test recomputes every load-bearing hash, verifies the
 canonical-approval reference, and loads the candidate through the formal
 parser after changing to an unrelated temporary working directory. Both a
@@ -200,3 +249,31 @@ Its five remaining failures were outside the T018 implementation:
 T019 and the legacy runner were subsequently closed. The clean T021
 regression at commit `8f1603f` passed `588` tests with no failure; see
 `specs/001-kaess-paper-reproduction/evidence/t021-p0-regression.json`.
+
+The later formal-material identity slice passed:
+
+```bash
+JAX_PLATFORMS=cpu JAX_PLATFORM_NAME=cpu JAX_ENABLE_X64=1 \
+/home/user/miniforge3/envs/jax-fem-env/bin/python -m pytest -q \
+  tests/contract/test_kaess_material_identity_gate.py \
+  tests/contract/test_kaess_parity_config.py \
+  tests/contract/test_kaess_material_candidate.py \
+  tests/unit/test_kaess_material_history.py \
+  tests/unit/test_kaess_accelerated_history.py \
+  tests/unit/test_v06_material_validation.py
+```
+
+```text
+54 passed
+```
+
+Both launchers passed `bash -n`. A direct phase-2 launcher probe using the
+unapproved candidate failed at the identity gate and confirmed that no output
+directory was created.
+
+The repository-wide CPU regression after the final fail-closed status check
+also passed:
+
+```text
+630 passed, 2 skipped, 16 subtests passed
+```

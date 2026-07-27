@@ -76,4 +76,8 @@
 - CHK023–CHK030 是人工门禁，不能由自动测试代替。
 - G0 审批记录为 `cases/kaess_2023/inputs/g0-approval.json`；批准时间
   `2026-07-24T03:03:18Z`。
+- G0-v2 条件审批记录为
+  `cases/kaess_2023/inputs/g0-v2-material-conditional-approval.json`；
+  它不替代 G0-v1，只允许显式 CPU validation/sensitivity scope，且
+  `formal_eligible=false`、`promotion_eligible=false`。
 - 任何 requirement 变更先修改 `spec.md`，再更新 plan/tasks。

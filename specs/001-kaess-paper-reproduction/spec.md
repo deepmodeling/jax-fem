@@ -6,9 +6,11 @@
 
 **Created**: 2026-07-23
 
-**Status**: Approved — G0 passed; T014-T017 and T019-T021 are complete with a
-clean full regression. T018 material review, anchor sensitivity, and the
-remaining parity items still block G1/G2.
+**Status**: Formal G0-v1 remains approved and immutable. G0-v2 has a
+validation-only, CPU-only conditional approval and does not supersede G0-v1.
+T014-T017 and T019-T021 are complete. T018 final material semantics,
+flow-curve sensitivity, anchor sensitivity, and the remaining parity items
+still block final G1/G2 closure and every formal/promotion run.
 
 **Input**: 按照 Spec Kit 标准，为 Kaess et al. (2023) 论文级复现建立可执行、可审计的开发规格。
 

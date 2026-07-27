@@ -1,0 +1,80 @@
+{
+  "schema_version": "kaess.g0-v2-material-approval/1",
+  "gate_id": "G0-v2",
+  "protocol_id": "kaess-2023-public-v1",
+  "decision": "conditionally_approved",
+  "approved_by": "project_owner",
+  "approved_utc": "2026-07-27T07:07:13Z",
+  "approval_source": {
+    "kind": "codex_user_message",
+    "message": "按上述范围条件批准 G0-v2"
+  },
+  "relationship_to_g0_v1": "does_not_supersede_formal_g0_v1",
+  "paper_parity_reference": {
+    "path": "cases/kaess_2023/inputs/paper-parity-config.yaml",
+    "sha256": "7e777d73f736d72578bcfccb80199e36163d9b2f60fdb08e9e8b3d2fa56320f7",
+    "size_bytes": 7149
+  },
+  "canonical_g0_reference": {
+    "path": "cases/kaess_2023/inputs/g0-approval.json",
+    "sha256": "206d7af567f0ee4d9113e8780b67b503936030538f266114834aa63052390839",
+    "size_bytes": 1596
+  },
+  "request_reference": {
+    "path": "cases/kaess_2023/candidates/g0-v2-t018/g0-reapproval-request.json",
+    "sha256": "b94be55ed173186bea9dcacfd5fbd4044afef3187dc72fd1aa72e00ba1a211c2",
+    "size_bytes": 6049
+  },
+  "bundle_manifest_reference": {
+    "path": "cases/kaess_2023/candidates/g0-v2-t018/material-bundle-manifest.json",
+    "sha256": "c7cc552afca8c3ebad26160e41c6aa701fc099f3b8abfd6182a6360e7258b061",
+    "size_bytes": 9093
+  },
+  "material_config_reference": {
+    "path": "cases/kaess_2023/candidates/g0-v2-t018/ss316l_material_config_kaess.g0-v2-candidate.json",
+    "sha256": "899a912609db10490872bfe8d1a738a40b5c68e03b37dafac8d4c659b8bca178",
+    "size_bytes": 1619
+  },
+  "approval_scope": {
+    "authorization_level": "validation_only",
+    "claim_level": "public_code_to_code",
+    "permitted_use_scopes": [
+      "g1_cpu_validation",
+      "g2_cpu_validation",
+      "sensitivity_analysis"
+    ],
+    "prohibited_use_scopes": [
+      "formal_run",
+      "promotion"
+    ],
+    "permitted_jax_platforms": [
+      "cpu"
+    ],
+    "formal_eligible": false,
+    "promotion_eligible": false
+  },
+  "accepted_registered_assumptions": [
+    "poisson_ratio_0_3_not_reported_by_paper",
+    "Figure_4_property_curves_are_digitized_or_extrapolated",
+    "Figure_4a_1600C_modulus_is_a_solver_extension",
+    "Figure_4e_20C_thermal_expansion_is_a_linear_extrapolation",
+    "Figure_4b_vector_reading_error_is_quantified_but_author_input_uncertainty_remains",
+    "flow_curve_1673_15K_and_1873_15K_nodes_are_solver_realizations_not_figure_nodes",
+    "equivalent_plastic_strain_above_0_4_uses_constant_endpoint_clamping"
+  ],
+  "excluded_pending_semantics": [
+    "abaqus_total_mean_thermal_expansion_runtime_implementation",
+    "activation_reference_temperature_semantics"
+  ],
+  "conditions_for_final_approval": [
+    "verify_abaqus_total_mean_thermal_expansion",
+    "verify_activation_reference_temperature_semantics",
+    "pass_flow_curve_solver_realization_sensitivity",
+    "issue_superseding_final_g0_v2_approval"
+  ],
+  "verification_evidence": {
+    "candidate_commit": "8eed832289b9b5945d1f493840c0912fe0747d86",
+    "full_regression": "646 passed, 2 skipped, 16 subtests passed",
+    "independent_review": "approved_no_blocking_findings"
+  }
+}

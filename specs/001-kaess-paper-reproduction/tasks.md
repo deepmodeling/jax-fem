@@ -6,9 +6,11 @@ description: "Dependency-ordered task list for Kaess 2023 paper-level reproducti
 
 **Input**: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`
 
-**Status**: G0 approved; T014-T017 and T019-T021 are complete. T018 material
-approval, anchor sensitivity, and the remaining unchecked parity items still
-block G1/G2.
+**Status**: Formal G0-v1 remains approved and immutable. G0-v2 is
+conditionally approved for CPU-only G1/G2 validation and sensitivity work;
+it is not formal- or promotion-eligible. T014-T017 and T019-T021 are complete.
+T018 final material approval, anchor sensitivity, and the remaining unchecked
+parity items still block final G1/G2 closure.
 
 **Organization**: 任务按 user story 和科学 gate 组织。`[P]` 表示不同文件、
 无前置依赖时可并行；测试任务必须先失败，再实现对应能力。
@@ -95,6 +97,13 @@ block G1/G2.
   SHA-256。
 - [x] 审批证据冻结在 `cases/kaess_2023/inputs/g0-approval.json`，阈值
   artifact 冻结在 `cases/kaess_2023/inputs/threshold-set.json`。
+- [x] 独立 G0-v2 条件审批 overlay 冻结在
+  `cases/kaess_2023/inputs/g0-v2-material-conditional-approval.json`；
+  只允许 `g1_cpu_validation`、`g2_cpu_validation` 和
+  `sensitivity_analysis`，且实际 JAX backend 必须为 `cpu`。
+- [ ] G0-v2 尚未获得 superseding final approval；正式 phase-1/phase-2
+  launcher 继续使用 G0-v1，禁止将条件审批用于 `formal_run` 或
+  `promotion`。
 - 未达到本 checkpoint 时，Phase 2 只允许编写失败测试，不允许正式实现。
 
 ## Phase 2 — Foundational Failing Tests for P0 Physics
@@ -187,6 +196,12 @@ block G1/G2.
   - **Verify**: `python -m pytest -q tests/unit/test_kaess_material_history.py tests/unit/test_v06_material_validation.py`
   - **Files**: `jax_fem_am/materials/tables.py`, `jax_fem_am/materials/phases.py`,
     `jax_fem_am/domain/events.py`, `tests/unit/test_kaess_material_history.py`
+  - **Conditional status**: G0-v2 bundle 已获 validation-only 条件批准，
+    可进入 CPU G1/G2 验证和敏感性计算；Abaqus total/mean CTE runtime
+    语义、activation reference temperature 语义、flow-curve solver
+    realization sensitivity 和新的 superseding final approval 仍是关闭条件。
+  - **Evidence**:
+    `specs/001-kaess-paper-reproduction/evidence/t018-material-history.md`
 
 - [x] T019 [US2] 对齐温变塑性曲线和 J2 一致切线 — 支持冻结多点温变塑性输入并让残差/切线同源。
   - **Acceptance**: 加载循环与 V 形谷测试通过，旧 J2 回归不退化。

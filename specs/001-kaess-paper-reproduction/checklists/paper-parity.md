@@ -39,6 +39,11 @@
 - [x] PAR026 release 使用显式、可视化、可哈希 cell set。
 - [ ] PAR027 release 前后无新增刚体漂移。
 
+G0-v2 的条件审批只授权上述未完成项的 CPU 验证与敏感性工作，不自动
+勾选 PAR019/PAR024/PAR025，也不构成 G1/G2 最终通过。Abaqus total/mean
+CTE runtime 语义和 activation reference temperature 语义仍明确排除在
+本次批准之外。
+
 ## G3 — CPU Small-Scale Verification Baseline
 
 - [ ] PAR028 single-track 能量账闭合误差不超过 1%。

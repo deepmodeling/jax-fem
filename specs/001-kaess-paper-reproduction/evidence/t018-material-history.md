@@ -170,11 +170,13 @@ Thermal-expansion nodes above `500 °C` and the high-temperature Figure 4(b)
 curves are separately labelled as paper-author assumptions rather than
 experimental source data.
 
-Every approval field remains absent and both `status` and `decision` remain
-`pending_review`. No canonical G0 record, paper-parity config, source manifest,
-or external material file was changed. T018 and PAR019/PAR024/PAR025 therefore
-remain open until the material bundle is independently reviewed, explicitly
-approved, and bound into the formal provenance chain.
+The immutable manifest and request intentionally keep `status` and `decision`
+at `pending_review`; neither file was rewritten after review. Conditional
+authority is recorded in a separate hash-bound approval envelope. The
+canonical G0-v1 record, paper-parity config, source manifest, and external
+material file remain unchanged. T018 and PAR019/PAR024/PAR025 remain open
+because validation-only authority is not a superseding final material
+approval.
 
 ## Formal launcher identity safety
 
@@ -191,17 +193,18 @@ Before either launcher creates a run directory, it invokes
 - the SHA-256 of the G0 approval record;
 - the protocol ID and approved material-freeze object.
 
-The currently approved external material bytes pass this gate. The unapproved
-G0-v2 candidate fails with a material SHA-256 mismatch and cannot accidentally
-enter a formal run. The gate deliberately supports only the currently approved
-`external_sha256` mode; approval of a repository-bundle mode requires an
-explicit gate/schema revision rather than an implicit fallback.
+The currently approved external material bytes pass the legacy G0-v1 gate.
+The G0-v2 candidate still fails that gate with a material SHA-256 mismatch and
+cannot accidentally enter a formal run. A separate public G0-v2 entry point
+validates the repository bundle only against the fixed conditional-approval
+path and SHA-256, and only for explicit CPU validation scopes.
 
-This G0-v1 gate freezes only the top-level external JSON, because that is the
-scope of the existing approval. It does not bind the JSON's dependency CSVs
-and therefore does not close T018 or PAR019. The pending G0-v2 bundle must add
-manifest status/promotion checks plus config and per-CSV hashes before it can
-replace the external mode.
+The G0-v1 gate still freezes only the top-level external JSON, because that is
+the scope of the formal approval. The conditional G0-v2 gate additionally
+binds manifest status, config identity, every dependency file, repository
+source evidence, request/canonical/parity references, scope, and the actual
+JAX backend. It is an overlay for validation work, not a replacement for the
+formal external mode.
 
 `EXTRA_ARGS` is parsed into an argv array before the identity check and is
 restricted to an explicit allowlist of reviewed operational options; phase 1
@@ -303,3 +306,71 @@ also passed:
 ```text
 630 passed, 2 skipped, 16 subtests passed
 ```
+
+## G0-v2 conditional approval
+
+The project owner issued the exact decision
+`按上述范围条件批准 G0-v2` at `2026-07-27T07:07:13Z`. The independent
+approval envelope is:
+
+```text
+path:
+  cases/kaess_2023/inputs/g0-v2-material-conditional-approval.json
+sha256:
+  4c917871ea433b6589ad13ec681c09d4067d8710d0771b99fadcd1681cbc123b
+size_bytes:
+  3078
+decision:
+  conditionally_approved
+authorization:
+  validation_only
+jax_platform:
+  cpu
+formal_eligible:
+  false
+promotion_eligible:
+  false
+```
+
+The envelope freezes the unchanged identities approved by the owner:
+
+| Artifact | SHA-256 |
+|---|---|
+| paper-parity config | `7e777d73f736d72578bcfccb80199e36163d9b2f60fdb08e9e8b3d2fa56320f7` |
+| canonical G0-v1 approval | `206d7af567f0ee4d9113e8780b67b503936030538f266114834aa63052390839` |
+| G0-v2 reapproval request | `b94be55ed173186bea9dcacfd5fbd4044afef3187dc72fd1aa72e00ba1a211c2` |
+| material-bundle manifest | `c7cc552afca8c3ebad26160e41c6aa701fc099f3b8abfd6182a6360e7258b061` |
+| material config | `899a912609db10490872bfe8d1a738a40b5c68e03b37dafac8d4c659b8bca178` |
+
+Only `g1_cpu_validation`, `g2_cpu_validation`, and
+`sensitivity_analysis` are authorized. The public gate derives its repository,
+manifest, and request from the reviewed source checkout, requires the fixed
+approval SHA-256, rejects self-signed chains, validates strict JSON and Draft
+2020-12 schemas, verifies every content-addressed file and source artifact,
+and checks the declared `cpu` platform against `jax.default_backend()`.
+Content-addressed text uses repository-enforced LF checkout semantics.
+
+The following items were expressly excluded from this approval:
+
+- Abaqus total/mean thermal-expansion runtime implementation;
+- activation-reference-temperature semantics.
+
+Final G0-v2 approval additionally requires both excluded semantics to be
+verified, the flow-curve solver-realization sensitivity to pass, and a new
+superseding owner decision. The immutable manifest/request remain
+`pending_review`, and formal phase-1/phase-2 launchers remain on G0-v1.
+
+The approval-gate slice passed `352` contract tests. A single monolithic pytest
+process was interrupted by a WSL instance restart without a test assertion;
+complete directory-isolated CPU reruns covered the same repository suite:
+
+```text
+352 contract passed
+136 integration passed, 1 skipped
+164 unit passed, 1 skipped, 10 subtests passed
+27 benchmark/regression passed, 6 subtests passed
+total: 679 passed, 2 skipped, 16 subtests passed
+```
+
+These are software and provenance regressions, not a substitute for the
+remaining G1/G2 material-point, element, and sensitivity simulations.

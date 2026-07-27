@@ -1,0 +1,8 @@
+T,value,source
+293,500e6,digitized Kaess Fig4b 2026-07-16: 20 C flow curve starts at 500 MPa (ref33 rounded)
+673,400e6,digitized Kaess Fig4b: 400 C curve starts at 400 MPa
+1073,300e6,digitized Kaess Fig4b: 800 C curve starts at 300 MPa
+1273,150e6,digitized Kaess Fig4b: 1000 C curve starts at 150 MPa
+1643,20e6,digitized Kaess Fig4b: 1370 C curve ~20 MPa (near-flat)
+1673,1e6,Kaess section 2.5: yield reduces to numerically realizable minimum at melting (powder Table 2 value)
+1873,1e6,floor to keep sigma_y>0 in liquid range

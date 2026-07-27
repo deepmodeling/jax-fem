@@ -1,0 +1,120 @@
+{
+  "_comment": "REVIEW REQUEST ONLY. This file does not approve, supersede, or modify the canonical G0 record.",
+  "schema_version": "kaess.g0-reapproval-request/1",
+  "request_id": "kaess-g0-v2-t018-material-bundle",
+  "gate_id": "G0",
+  "status": "pending_review",
+  "decision": "pending_review",
+  "canonical_approval_reference": {
+    "path": "cases/kaess_2023/inputs/g0-approval.json",
+    "sha256": "206d7af567f0ee4d9113e8780b67b503936030538f266114834aa63052390839"
+  },
+  "candidate_bundle_reference": {
+    "path": "cases/kaess_2023/candidates/g0-v2-t018/material-bundle-manifest.json",
+    "sha256": "fbbdbdff12033398fba6a24caaa8119e7e095b7792d3f85c3a57f2f11d1cfa70"
+  },
+  "differences": [
+    {
+      "field": "material_freeze.mode",
+      "old": "external_sha256",
+      "new": "repository_bundle_manifest_sha256"
+    },
+    {
+      "field": "material_freeze.identity",
+      "old": {
+        "path": "/home/user/work/159/materials/316L/ss316l_material_config_kaess.json",
+        "sha256": "d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f",
+        "dependency_csv_hashes_bound": false
+      },
+      "new": {
+        "path": "cases/kaess_2023/candidates/g0-v2-t018/material-bundle-manifest.json",
+        "sha256": "fbbdbdff12033398fba6a24caaa8119e7e095b7792d3f85c3a57f2f11d1cfa70",
+        "material_config_sha256": "6eab8cf9e4ebe680b225155485350d96dbc2fc81c3e713464be5b30e236b7f86",
+        "dependency_csv_hashes_bound": true
+      }
+    },
+    {
+      "field": "material_config.table_paths",
+      "old": "external project-relative paths under materials/316L",
+      "new": "bundle-local paths resolved relative to the candidate material config directory"
+    },
+    {
+      "field": "conductivity_powder",
+      "old": {
+        "model": "constant",
+        "value_W_per_mK": 0.3
+      },
+      "new": {
+        "model": "piecewise_linear_table_with_clamped_endpoints",
+        "anchors": [
+          {
+            "temperature_K": 293.15,
+            "value_W_per_mK": 0.15
+          },
+          {
+            "temperature_K": 1643.15,
+            "value_W_per_mK": 0.6
+          }
+        ]
+      }
+    },
+    {
+      "field": "liquid_thermal_tables",
+      "old": {
+        "conductivity_W_per_mK": 30.0,
+        "specific_heat_J_per_kgK": 800.0
+      },
+      "new": {
+        "conductivity_table": "k_solid_table.csv",
+        "specific_heat_table": "cp_solid_table.csv"
+      }
+    },
+    {
+      "field": "powder_weak_solid",
+      "old": null,
+      "new": {
+        "youngs_modulus_Pa": 10000000000.0,
+        "yield_stress_Pa": 1000000.0,
+        "hardening_modulus_Pa": 0.0
+      }
+    },
+    {
+      "field": "mushy_mechanics_factor",
+      "old": 0.01,
+      "new": 1.0
+    },
+    {
+      "field": "liquid_mechanics_factor",
+      "old": 0.0001,
+      "new": 1.0
+    },
+    {
+      "field": "reset_plastic_on_melt",
+      "old": true,
+      "new": false
+    },
+    {
+      "field": "stress_relaxation_temperature",
+      "old": "not_explicitly_frozen",
+      "new": null
+    },
+    {
+      "field": "required_runtime_semantics.phase_change_energy",
+      "old": "not_bound_by_G0_material_identity",
+      "new": "enthalpy_difference_across_each_increment"
+    },
+    {
+      "field": "required_runtime_semantics.phase_history",
+      "old": "not_bound_by_G0_material_identity",
+      "new": "irreversible_powder_to_solid_after_first_melt"
+    },
+    {
+      "field": "required_runtime_semantics.remelt_history",
+      "old": "reference_temperature_and_plastic_history_not_frozen",
+      "new": {
+        "rewrite_first_reference_temperature": false,
+        "erase_equivalent_plastic_strain": false
+      }
+    }
+  ]
+}

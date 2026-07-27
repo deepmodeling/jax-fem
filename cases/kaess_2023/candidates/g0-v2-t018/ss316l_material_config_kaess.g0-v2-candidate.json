@@ -1,0 +1,46 @@
+{
+  "_comment": "UNAPPROVED G0-v2 T018 candidate for the Kaess 2023 public code-to-code benchmark. This file is for pre-approval validation only. All table paths are relative to this candidate bundle. The powder conductivity anchors, weak-solid powder properties, and irreversible phase-history requirements follow Kaess et al. (2023), Section 2.5 and Table 2. Poisson ratio 0.3 and digitized Figure 4 curves remain registered assumptions.",
+  "_candidate_status": "pending_review",
+  "material_name": "316L (1.4404) - Kaess 2023 benchmark - G0-v2 T018 candidate",
+  "units": "SI",
+
+  "rho_solid": 8000.0,
+  "rho_powder": 4000.0,
+  "rho_liquid": 8000.0,
+
+  "k_table_solid": "k_solid_table.csv",
+  "cp_table_solid": "cp_solid_table.csv",
+  "k_table_powder": "k_powder_table.csv",
+  "cp_table_powder": "cp_solid_table.csv",
+  "k_table_liquid": "k_solid_table.csv",
+  "cp_table_liquid": "cp_solid_table.csv",
+
+  "conductivity_powder": 0.15,
+  "conductivity_liquid": 31.0,
+  "cp_liquid": 755.0,
+
+  "solidus_temperature": 1643.15,
+  "liquidus_temperature": 1673.15,
+  "latent_heat": 280000.0,
+
+  "E_table": "E_table.csv",
+  "alpha_table": "alpha_table.csv",
+  "yield_table": "yield_table.csv",
+  "hardening_table": "hardening_table.csv",
+  "poisson": 0.3,
+  "mechanics_model": "j2_plastic",
+
+  "absorptivity": 0.5,
+  "emissivity": 0.4,
+  "convection_h": 20.0,
+
+  "powder_mode": "powder",
+  "powder_solid_E": 10000000000.0,
+  "powder_solid_yield": 1000000.0,
+  "powder_solid_hardening": 0.0,
+  "mushy_mechanics_factor": 1.0,
+  "liquid_mechanics_factor": 1.0,
+  "phase_history_model": "paper_irreversible",
+  "reset_plastic_on_melt": false,
+  "stress_relaxation_temperature": null
+}

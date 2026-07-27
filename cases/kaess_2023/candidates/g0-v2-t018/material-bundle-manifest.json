@@ -1,0 +1,126 @@
+{
+  "_comment": "UNAPPROVED, content-addressed material-bundle candidate. This manifest is not a G0 approval record and is not eligible for formal or promotion runs.",
+  "schema_version": "kaess.material-bundle-manifest/1",
+  "bundle_id": "kaess-316l-g0-v2-t018-candidate",
+  "status": "pending_review",
+  "promotion_eligible": false,
+  "hash_algorithm": "sha256",
+  "path_base": "manifest_directory",
+  "material_config": {
+    "path": "ss316l_material_config_kaess.g0-v2-candidate.json",
+    "sha256": "6eab8cf9e4ebe680b225155485350d96dbc2fc81c3e713464be5b30e236b7f86"
+  },
+  "files": [
+    {
+      "path": "ss316l_material_config_kaess.g0-v2-candidate.json",
+      "role": "material_config",
+      "sha256": "6eab8cf9e4ebe680b225155485350d96dbc2fc81c3e713464be5b30e236b7f86",
+      "provenance": "derived_candidate_from_external_material_config_d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f"
+    },
+    {
+      "path": "E_table.csv",
+      "role": "youngs_modulus_table",
+      "sha256": "52fb353dfc58943065f856e148b648d548a4b03eedd7db9def541f53a6e2ca93",
+      "provenance": "byte_identical_copy_of_external_approved_input_dependency"
+    },
+    {
+      "path": "alpha_table.csv",
+      "role": "thermal_expansion_table",
+      "sha256": "a19492a220da9c8fdd2e8a34afbbf401d65ebbcb6e11c28ed6dac8443fb808b3",
+      "provenance": "byte_identical_copy_of_external_approved_input_dependency"
+    },
+    {
+      "path": "cp_solid_table.csv",
+      "role": "solid_powder_and_liquid_specific_heat_table",
+      "sha256": "52e74a7e1c0f41a75902a61ac47bc7c75cf1ef2211190df358955d1280ff526c",
+      "provenance": "byte_identical_copy_of_external_approved_input_dependency"
+    },
+    {
+      "path": "hardening_table.csv",
+      "role": "solid_isotropic_hardening_table",
+      "sha256": "c994100186389aec018d007cd5a068493b3f0c90662a921052456ce8868afa89",
+      "provenance": "byte_identical_copy_of_external_approved_input_dependency"
+    },
+    {
+      "path": "k_solid_table.csv",
+      "role": "solid_and_liquid_conductivity_table",
+      "sha256": "0ddde1b05465a280b4d4c9b7bc1ac7b3f5dc2319f9d851b3db463ed5b54d7676",
+      "provenance": "byte_identical_copy_of_external_approved_input_dependency"
+    },
+    {
+      "path": "yield_table.csv",
+      "role": "solid_yield_stress_table",
+      "sha256": "54ef70ee7b335ca58acc3496ea6ab0a12c51742c8dbb07a2aa4f37cc5d987586",
+      "provenance": "byte_identical_copy_of_external_approved_input_dependency"
+    },
+    {
+      "path": "k_powder_table.csv",
+      "role": "powder_conductivity_table",
+      "sha256": "a4e762578fd7a7dd585a315157e0423b150c4f15e235076925f1b50315a89eab",
+      "provenance": "Kaess_et_al_2023_Table_2_exact_temperature_anchors"
+    }
+  ],
+  "source_evidence": {
+    "paper_doi": "10.3390/ma16062321",
+    "paper_locator": "Section 2.5 and Table 2",
+    "repository_fulltext": "cases/kaess_2023/references/cases/kaess_2023_fulltext.txt",
+    "repository_fulltext_sha256": "afeba3510f9ae7793184dc7a9e704504a089d1510d6df9df403cf137fccb7ade",
+    "superseded_external_config_path": "/home/user/work/159/materials/316L/ss316l_material_config_kaess.json",
+    "superseded_external_config_sha256": "d22865b0faeb694f97c74c8eea5213a068ed34eba7c4053ee057c1976b1db38f"
+  },
+  "semantic_fields": {
+    "density_kg_per_m3": {
+      "solid": 8000.0,
+      "powder": 4000.0,
+      "liquid": 8000.0
+    },
+    "melting_interval_K": {
+      "solidus": 1643.15,
+      "liquidus": 1673.15
+    },
+    "latent_heat_J_per_kg": 280000.0,
+    "powder_conductivity_W_per_mK": {
+      "at_293_15_K": 0.15,
+      "at_1643_15_K": 0.6
+    },
+    "powder_weak_solid": {
+      "youngs_modulus_Pa": 10000000000.0,
+      "yield_stress_Pa": 1000000.0,
+      "hardening_modulus_Pa": 0.0
+    },
+    "thermal_boundary": {
+      "absorptivity": 0.5,
+      "emissivity": 0.4,
+      "convection_W_per_m2K": 20.0
+    },
+    "mechanics": {
+      "model": "j2_plastic",
+      "poisson_ratio": 0.3,
+      "mushy_extra_stiffness_factor": 1.0,
+      "liquid_extra_stiffness_factor": 1.0,
+      "reset_plastic_on_melt": false,
+      "stress_relaxation_temperature_K": null
+    }
+  },
+  "required_runtime_semantics": {
+    "table_path_resolution": "relative_to_material_config_directory",
+    "table_interpolation": "piecewise_linear",
+    "table_endpoint_behavior": "clamp",
+    "powder_specific_heat": "same_temperature_dependent_table_as_solid",
+    "powder_thermal_expansion": "same_temperature_dependent_table_as_solid",
+    "liquid_specific_heat": "same_temperature_dependent_table_as_solid",
+    "liquid_conductivity": "same_temperature_dependent_table_as_solid",
+    "phase_change_energy": "enthalpy_difference_across_each_increment",
+    "phase_history": "irreversible_powder_to_solid_after_first_melt",
+    "first_solidification_reference_temperature": "latch_once",
+    "remelt_rewrites_reference_temperature": false,
+    "remelt_erases_equivalent_plastic_strain": false,
+    "duplicate_mushy_or_liquid_mechanics_scaling": false,
+    "validation_status": "code_verified_pending_approval"
+  },
+  "known_registered_assumptions": [
+    "poisson_ratio_0_3_not_reported_by_paper",
+    "Figure_4_property_curves_are_digitized_or_extrapolated",
+    "first_solidification_reference_temperature_is_a_solver_realization_not_a_reported_paper_field"
+  ]
+}

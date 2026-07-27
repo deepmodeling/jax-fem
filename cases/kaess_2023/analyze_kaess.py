@@ -18,6 +18,7 @@ Multiple run dirs (e.g. a preheat ladder) are reported side by side.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import re
 from pathlib import Path
@@ -36,12 +37,31 @@ BEAM_YMID = 0.25e-3
 # mesh v2: root wall at x in [0.775, 0.975] mm; FREE end at x=0.
 # Paper coordinates run the other way (x_paper = 0 at the root).
 
-# Kaess Figure 9a, digitized 2026-07-16 (max front bending, mm -> um,
-# reading error ~ +-0.3 um): plate temp C -> deflection um
-FIG9A_REFERENCE_UM = {
-    20: 14.6, 50: 14.5, 150: 14.0, 300: 12.7,
-    450: 11.9, 600: 10.5, 750: 8.7, 900: 6.1,
-}
+FIG9A_REFERENCE_PATH = (
+    Path(__file__).resolve().parent
+    / "references"
+    / "digitized"
+    / "fig9_bending.csv"
+)
+
+
+def load_figure9a_reference(path: Path = FIG9A_REFERENCE_PATH) -> dict[int, float]:
+    """Load the one authoritative Figure 9a series from the frozen CSV."""
+    with path.open(newline="", encoding="utf-8") as stream:
+        rows = [
+            row
+            for row in csv.DictReader(stream)
+            if row["series_id"] == "plate_temperature_fixed_p250_v850"
+        ]
+    return {
+        int(float(row["build_plate_temp_c"])): float(
+            row["max_front_bending_um"]
+        )
+        for row in rows
+    }
+
+
+FIG9A_REFERENCE_UM = load_figure9a_reference()
 
 
 def cell_centroids(mesh):

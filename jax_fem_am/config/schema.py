@@ -123,6 +123,15 @@ def build_parser(config=None):
     parser.add_argument("--poisson-table", default=cfg(config, "poisson_table", None))
     parser.add_argument("--yield-table", default=cfg(config, "yield_table", None))
     parser.add_argument("--hardening-table", default=cfg(config, "hardening_table", None))
+    parser.add_argument(
+        "--flow-curve-table",
+        default=cfg(config, "flow_curve_table", None),
+        help=(
+            "Long-form temperature/plastic-strain/flow-stress CSV. "
+            "When provided it replaces --yield-table and "
+            "--hardening-table for J2 plasticity."
+        ),
+    )
     parser.add_argument("--mechanics-model", choices=("linear_elastic", "j2_plastic"), default=cfg(config, "mechanics_model", "linear_elastic"))
     parser.add_argument("--yield-saturation-stress", type=float, default=cfg(config, "yield_saturation_stress", None),
                         help="Cap on the hardened yield stress (Pa), ~UTS (Ti64: ~1.15e9). Linear isotropic hardening "

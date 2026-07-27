@@ -278,15 +278,51 @@ def clamp_mechanics_temperature(T_quad, floor):
     return np.maximum(T_quad, floor)
 
 
+def flow_curve_active_quads(active_quad, phase_quad, tables):
+    """Select physical non-powder points that use the frozen solid curve."""
+    if tables.get("flow_curve") is None:
+        return None
+    curve_material = (
+        (phase_quad == STATE_SOLID)
+        | (phase_quad == STATE_MUSHY)
+        | (phase_quad == STATE_LIQUID)
+        | (phase_quad == STATE_SUBSTRATE)
+        | (phase_quad == STATE_SUPPORT)
+    )
+    return np.where(
+        (active_quad > 0.5) & curve_material,
+        1.0,
+        0.0,
+    )
+
+
 def mechanics_material_quads(T_quad, active_quad, phase_quad, args, tables):
     E_quad = eval_property(T_quad, tables["E"], args.young)
     alpha_base = eval_property(T_quad, tables["alpha"], args.alpha)
     poisson_quad = eval_property(T_quad, tables["poisson"], args.poisson)
     if args.mechanics_model == "j2_plastic":
-        if tables["yield"] is None:
-            raise ValueError("--mechanics-model j2_plastic requires --yield-table")
-        yield_quad = eval_property(T_quad, tables["yield"], args.young)
-        hardening_quad = eval_property(T_quad, tables["hardening"], 0.0)
+        if tables.get("flow_curve") is not None:
+            # The canonical return map consumes the curve directly. These
+            # scalar slots remain as the weak-powder fallback and are
+            # overwritten below wherever powder is present.
+            yield_quad = args.young * np.ones_like(T_quad)
+            hardening_quad = np.zeros_like(T_quad)
+        else:
+            if tables["yield"] is None:
+                raise ValueError(
+                    "--mechanics-model j2_plastic requires "
+                    "--yield-table or --flow-curve-table"
+                )
+            yield_quad = eval_property(
+                T_quad,
+                tables["yield"],
+                args.young,
+            )
+            hardening_quad = eval_property(
+                T_quad,
+                tables["hardening"],
+                0.0,
+            )
     else:
         yield_quad = args.young * np.ones_like(T_quad)
         hardening_quad = np.zeros_like(T_quad)

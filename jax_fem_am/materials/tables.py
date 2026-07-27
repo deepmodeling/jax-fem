@@ -57,6 +57,11 @@ class FlowCurveTable:
                     f"flow_stress_Pa,source columns: {self.path}"
                 )
             for row in reader:
+                if not (row.get("source") or "").strip():
+                    raise ValueError(
+                        "Flow curve nodes require a non-empty source "
+                        f"(row {reader.line_num}): {self.path}"
+                    )
                 temperature = float(row["temperature_K"])
                 plastic_strain = float(
                     row["equivalent_plastic_strain"]

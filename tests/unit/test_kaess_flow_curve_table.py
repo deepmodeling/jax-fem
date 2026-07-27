@@ -93,6 +93,22 @@ def test_flow_curve_table_rejects_duplicate_or_missing_nodes(
         material_tables.FlowCurveTable(curve_path)
 
 
+def test_flow_curve_table_rejects_blank_source_provenance(tmp_path):
+    curve_path = tmp_path / "invalid-source.csv"
+    _write_curve(
+        curve_path,
+        [
+            "300,0.00,5.0e8,source-a",
+            "300,0.10,6.0e8,",
+            "800,0.00,3.0e8,source-b",
+            "800,0.10,3.4e8,source-b",
+        ],
+    )
+
+    with pytest.raises(ValueError, match="non-empty source"):
+        material_tables.FlowCurveTable(curve_path)
+
+
 def test_loader_resolves_flow_curve_relative_to_material_config(tmp_path):
     config_path = tmp_path / "material.json"
     config_path.write_text("{}", encoding="utf-8")

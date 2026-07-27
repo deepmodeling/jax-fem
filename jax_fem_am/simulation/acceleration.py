@@ -71,6 +71,7 @@ MECHANICAL_TABLE_KEYS = (
     "poisson",
     "yield",
     "hardening",
+    "flow_curve",
 )
 _LOOP_KERNEL_JIT_THERMAL_CACHE: Dict[tuple[Any, ...], Any] = {}
 _LOOP_KERNEL_JIT_MECHANICS_CACHE: Dict[tuple[Any, ...], Any] = {}

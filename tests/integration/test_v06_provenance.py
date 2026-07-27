@@ -329,6 +329,48 @@ class V06ProvenanceTest(unittest.TestCase):
             "geometric_box_diagnostic",
         )
 
+    def test_material_tables_resolve_relative_to_material_config_first(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            repo_root = Path(temporary) / "jax-fem"
+            run_dir = Path(temporary) / "run"
+            bundle = repo_root / "cases" / "candidate"
+            run_dir.mkdir(parents=True)
+            bundle.mkdir(parents=True)
+            mesh = repo_root / "mesh.inp"
+            mesh.write_text("*HEADING\n", encoding="utf-8")
+            flow_curve = bundle / "flow.csv"
+            flow_curve.write_text(
+                "temperature_K,equivalent_plastic_strain,"
+                "flow_stress_Pa,source\n"
+                "300,0,5e8,test\n"
+                "300,0.1,6e8,test\n"
+                "800,0,3e8,test\n"
+                "800,0.1,3.4e8,test\n",
+                encoding="utf-8",
+            )
+            expected_flow_hash = sha256_file(flow_curve)
+            config = bundle / "material.json"
+            config.write_text(
+                '{"flow_curve_table":"flow.csv"}\n',
+                encoding="utf-8",
+            )
+            (run_dir / "used_config.json").write_text(
+                '{"flow_curve_table":"flow.csv"}\n',
+                encoding="utf-8",
+            )
+
+            manifest = build_manifest(
+                repo_root=repo_root,
+                run_dir=run_dir,
+                mesh=mesh,
+                material_config=config,
+                label="config-relative-table",
+            )
+
+        record = manifest["material_tables"]["flow_curve_table"]
+        self.assertNotIn("missing", record)
+        self.assertEqual(record["sha256"], expected_flow_hash)
+
     def test_malformed_used_config_degrades_to_forensic_manifest(self):
         with tempfile.TemporaryDirectory() as temporary:
             repo_root = Path(temporary) / "jax-fem"

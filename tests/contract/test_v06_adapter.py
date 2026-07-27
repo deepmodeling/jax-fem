@@ -20,7 +20,10 @@ V03_PATH = (
     ROOT / "jax_fem_am" / "simulation" / "stepper.py"
 )
 from jax_fem_am.simulation import runner as driver  # noqa: E402
-from jax_fem_am.materials.j2 import equivalent_stress  # noqa: E402
+from jax_fem_am.materials.j2 import (  # noqa: E402
+    FlowCurve,
+    equivalent_stress,
+)
 
 
 def load_fresh_v03(name):
@@ -80,6 +83,97 @@ class V06AdapterTest(unittest.TestCase):
             1.0,
             places=10,
         )
+
+    def test_state_safe_residual_and_commit_share_the_flow_curve_return(self):
+        base = load_fresh_v03("v03_v06_flow_curve_test")
+        driver.install_v06_adapter(base)
+        cls = base.ThermoMechanical
+        problem = object.__new__(cls)
+        problem.mechanics_model = "j2_plastic"
+        problem.dim = 3
+        problem.yield_saturation = None
+        problem.flow_curve = FlowCurve(
+            temperatures=jnp.asarray([300.0, 800.0]),
+            plastic_strains=jnp.asarray([0.0, 0.02, 0.10]),
+            stresses=1.0e6
+            * jnp.asarray(
+                [
+                    [500.0, 560.0, 610.0],
+                    [350.0, 390.0, 420.0],
+                ]
+            ),
+        )
+        direction = jnp.diag(jnp.asarray([1.0, -0.5, -0.5]))
+        common = (
+            0.02 * direction,
+            jnp.asarray([550.0]),
+            jnp.asarray([0.0]),
+            jnp.asarray([1.0]),
+            jnp.asarray([120.0e9]),
+            jnp.asarray([0.0]),
+            jnp.asarray([0.3]),
+            jnp.asarray([1.0e6]),
+            jnp.asarray([0.0]),
+            jnp.asarray([0.0]),
+            jnp.zeros((3, 3)),
+            jnp.zeros((3, 3)),
+            jnp.asarray([1.0]),
+        )
+
+        residual_stress = problem.stress_fn(*common)
+        committed_stress, delta_eqp, _ = problem._return_map(
+            common[0],
+            common[2],
+            common[4],
+            common[5],
+            common[6],
+            common[7],
+            common[8],
+            common[9],
+            common[10],
+            common[11],
+            T=common[1],
+            active_factor=common[3],
+            flow_curve_active=common[12],
+        )
+
+        np.testing.assert_allclose(
+            np.asarray(residual_stress),
+            np.asarray(committed_stress),
+            rtol=1.0e-12,
+            atol=1.0e-3,
+        )
+        self.assertGreater(float(delta_eqp), 0.0)
+
+    def test_flow_curve_return_map_requires_temperature(self):
+        base = load_fresh_v03("v03_v06_flow_curve_temperature_test")
+        driver.install_v06_adapter(base)
+        cls = base.ThermoMechanical
+        problem = object.__new__(cls)
+        problem.mechanics_model = "j2_plastic"
+        problem.dim = 3
+        problem.yield_saturation = None
+        problem.flow_curve = FlowCurve(
+            temperatures=jnp.asarray([300.0, 800.0]),
+            plastic_strains=jnp.asarray([0.0, 0.1]),
+            stresses=jnp.asarray(
+                [[500.0e6, 600.0e6], [300.0e6, 340.0e6]]
+            ),
+        )
+
+        with self.assertRaisesRegex(ValueError, "temperature"):
+            problem._return_map(
+                jnp.zeros((3, 3)),
+                jnp.asarray([0.0]),
+                jnp.asarray([120.0e9]),
+                jnp.asarray([0.0]),
+                jnp.asarray([0.3]),
+                jnp.asarray([1.0e6]),
+                jnp.asarray([0.0]),
+                jnp.asarray([0.0]),
+                jnp.zeros((3, 3)),
+                jnp.zeros((3, 3)),
+            )
 
     def test_linear_elastic_mode_ignores_plastic_saturation(self):
         base = load_fresh_v03("v03_v06_linear_elastic_test")

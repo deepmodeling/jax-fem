@@ -21,6 +21,7 @@ from jax_fem_am.materials.tables import (
     eval_property,
     load_property_tables,
 )
+from jax_fem_am.materials.j2 import FlowCurve
 from jax_fem_am.materials.phases import (
     MODE_TO_ID,
     STATE_LIQUID,
@@ -31,6 +32,7 @@ from jax_fem_am.materials.phases import (
     STATE_SUPPORT,
     STATE_VOID,
     clamp_mechanics_temperature,
+    flow_curve_active_quads,
     initial_phase_cell,
     make_quad_scalar,
     material_cell_state,
@@ -575,6 +577,21 @@ def main():
         mechanics_location_fns = list(mechanics_location_fns) + [powder_side]
     if not mechanics_location_fns:
         mechanics_location_fns = None
+    tables = load_property_tables(args)
+    flow_curve_table = tables["flow_curve"]
+    flow_curve = (
+        None
+        if flow_curve_table is None
+        else FlowCurve(
+            temperatures=np.asarray(
+                flow_curve_table.temperatures
+            ),
+            plastic_strains=np.asarray(
+                flow_curve_table.plastic_strains
+            ),
+            stresses=np.asarray(flow_curve_table.stresses),
+        )
+    )
     mechanics = ThermoMechanical(
         mesh=mesh,
         vec=3,
@@ -590,10 +607,10 @@ def main():
             powder_foundation,
             tuple(plane_axis_ids),
             bbar_enabled,
+            flow_curve,
         ),
     )
 
-    tables = load_property_tables(args)
     cell_centroids, cell_build_coord, substrate_cell, support_cell = classify_cells(points, cells, build_axis_id, build_sign, base_coord, args)
     if args.powder_solid_E is not None and args.powder_elset is None:
         raise ValueError("--powder-solid-E requires --powder-elset")
@@ -740,6 +757,7 @@ def main():
     last_dT_quad = np.zeros((len(cells), thermal.fes[0].num_quads, 1))
     last_T_mech_quad = None
     last_mechanical_active_quad = None
+    last_flow_curve_active_quad = None
     permanent_powder_quad = make_quad_scalar(
         permanent_powder_cell.astype(onp.float64), thermal.fes[0].num_quads)
 
@@ -940,6 +958,15 @@ def main():
         T_mech_quad = clamp_mechanics_temperature(T_quad, args.mechanics_temperature_floor)
         dT_quad = (T_mech_quad - T_ref_quad) * mechanical_active_quad
         active_factor_quad, E_quad, alpha_quad, poisson_quad, yield_quad, hardening_quad = mechanics_material_quads(T_mech_quad, mechanical_active_quad, phase_quad, args, tables)
+        flow_curve_active_quad = flow_curve_active_quads(
+            mechanical_active_quad,
+            phase_quad,
+            tables,
+        )
+        mechanics.set_flow_curve_active_mask(
+            flow_curve_active_quad
+        )
+        last_flow_curve_active_quad = flow_curve_active_quad
         mechanical_contributing_cell = contributing_cell_mask(
             active_factor_quad
         )
@@ -1170,6 +1197,12 @@ def main():
                     ),
                     mechanics_params[2],
                 )
+            if last_flow_curve_active_quad is not None:
+                last_flow_curve_active_quad = np.where(
+                    cut_quad > 0.5,
+                    0.0,
+                    last_flow_curve_active_quad,
+                )
         if args.powder_solid_E is not None and permanent_powder_cell.any():
             # depowdering precedes the saw cut: weak-solid powder is removed
             # for the release solve exactly like sawed-off cells
@@ -1185,6 +1218,12 @@ def main():
                 ),
                 mechanics_params[2],
             )
+            if last_flow_curve_active_quad is not None:
+                last_flow_curve_active_quad = np.where(
+                    permanent_powder_quad > 0.5,
+                    0.0,
+                    last_flow_curve_active_quad,
+                )
         if strict_active_domain:
             release_contributing_cell = contributing_cell_mask(
                 mechanics_params[2]
@@ -1210,7 +1249,10 @@ def main():
             quadrature_order=args.quadrature_order,
             dirichlet_bc_info=release_bc,
             additional_info=(args.mechanics_model, args.yield_saturation_stress,
-                             0.0, 0.0, (), bbar_enabled),
+                             0.0, 0.0, (), bbar_enabled, flow_curve),
+        )
+        release_mechanics.set_flow_curve_active_mask(
+            last_flow_curve_active_quad
         )
         u_release = run_mechanics(release_mechanics, u_guess, mechanics_params, mechanics_newton_overrides)
         quad_stress = release_mechanics.compute_cell_stress(u_release[0], mechanics_params)

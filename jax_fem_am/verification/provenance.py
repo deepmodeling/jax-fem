@@ -327,7 +327,10 @@ def response_gate_is_valid(report: dict[str, Any], run_dir: Path) -> bool:
 
 
 def _material_table_records(
-    used_config: dict[str, Any], work_root: Path, repo_root: Path
+    used_config: dict[str, Any],
+    material_config: Path,
+    work_root: Path,
+    repo_root: Path,
 ) -> dict[str, Any]:
     records: dict[str, Any] = {}
     for key, value in sorted(used_config.items()):
@@ -335,7 +338,12 @@ def _material_table_records(
             continue
         path = Path(value).expanduser()
         if not path.is_absolute():
-            path = work_root / path
+            config_relative = material_config.parent / path
+            path = (
+                config_relative
+                if config_relative.is_file()
+                else work_root / path
+            )
         if path.is_file():
             records[key] = _file_record(path, repo_root)
         else:
@@ -655,7 +663,10 @@ def build_manifest(
         },
         "inputs": inputs,
         "material_tables": _material_table_records(
-            used_config, work_root, repo_root
+            used_config,
+            Path(material_config).expanduser().resolve(),
+            work_root,
+            repo_root,
         ),
         "solver_sources": solver_sources,
         "runtime_source_tree": runtime_source_tree,

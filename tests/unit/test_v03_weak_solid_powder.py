@@ -155,6 +155,30 @@ class WeakSolidPowderMaterialTest(unittest.TestCase):
         # powder keeps the near-zero ersatz factor (carries no load)
         self.assertAlmostEqual(af[1], args.inactive_mechanics_factor, places=12)
 
+    def test_flow_curve_selector_excludes_weak_and_inactive_powder(self):
+        v03 = self.v03
+        T, active, phase, tables = self.make_inputs()
+        tables.update(
+            {
+                "flow_curve": SimpleNamespace(),
+                "yield": None,
+                "hardening": None,
+            }
+        )
+        args = self.make_args(powder_E=10e9)
+
+        selector = v03.flow_curve_active_quads(
+            active,
+            phase,
+            tables,
+        )
+
+        actual = onp.asarray(selector)[:, 0, 0]
+        onp.testing.assert_array_equal(
+            actual,
+            [1.0, 0.0, 1.0, 0.0],
+        )
+
     def test_parser_wiring(self):
         parser = self.v03.build_parser()
         args = parser.parse_args(["--inp", "x.inp"])

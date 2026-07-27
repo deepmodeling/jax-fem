@@ -21,6 +21,7 @@ os.environ.setdefault("JAX_PLATFORM_NAME", "cpu")
 import jax
 import jax.numpy as jnp
 import numpy as np
+import pytest
 
 import jax_fem_am.materials.j2 as j2_model
 from jax_fem_am.materials.j2 import PlasticState, radial_return
@@ -50,6 +51,24 @@ def _material_update(strain, state=ZERO_STATE, *, saturation=jnp.inf):
         yield_stress=YIELD0,
         hardening=HARDENING,
         saturation=saturation,
+    )
+
+
+def _nonlinear_flow_curve():
+    flow_curve_type = getattr(j2_model, "FlowCurve", None)
+    assert flow_curve_type is not None, (
+        "P0-J2 missing immutable FlowCurve data passed to radial_return"
+    )
+    return flow_curve_type(
+        temperatures=jnp.asarray([300.0, 800.0]),
+        plastic_strains=jnp.asarray([0.0, 0.02, 0.10]),
+        stresses=1.0e6
+        * jnp.asarray(
+            [
+                [500.0, 560.0, 610.0],
+                [350.0, 390.0, 420.0],
+            ]
+        ),
     )
 
 
@@ -175,6 +194,344 @@ def test_flow_curve_clamps_both_axes_and_remains_jittable():
         rtol=1.0e-13,
         atol=1.0e-6,
     )
+
+
+def test_radial_return_crosses_multiple_flow_curve_segments_exactly():
+    """One increment may cross a knot and finish inside a later segment."""
+    curve = _nonlinear_flow_curve()
+    direction = jnp.diag(jnp.asarray([1.0, -0.5, -0.5]))
+    expected_eqp = 0.075
+    expected_yield = j2_model.flow_stress_from_curve(
+        550.0,
+        expected_eqp,
+        curve.temperatures,
+        curve.plastic_strains,
+        curve.stresses,
+    )
+    three_mu = 3.0 * YOUNG / (2.0 * (1.0 + POISSON))
+    amplitude = expected_eqp + expected_yield / three_mu
+
+    update = radial_return(
+        strain=amplitude * direction,
+        thermal_strain=jnp.zeros((3, 3)),
+        state=ZERO_STATE,
+        young=YOUNG,
+        poisson=POISSON,
+        yield_stress=YIELD0,
+        hardening=HARDENING,
+        temperature=550.0,
+        flow_curve=curve,
+    )
+
+    returned_q = j2_model.equivalent_stress(update.stress)
+    returned_yield = j2_model.flow_stress_from_curve(
+        550.0,
+        update.state.eqp,
+        curve.temperatures,
+        curve.plastic_strains,
+        curve.stresses,
+    )
+    np.testing.assert_allclose(
+        np.asarray(update.state.eqp),
+        np.asarray(expected_eqp),
+        rtol=1.0e-12,
+        atol=1.0e-13,
+    )
+    np.testing.assert_allclose(
+        np.asarray(returned_q),
+        np.asarray(returned_yield),
+        rtol=1.0e-12,
+        atol=1.0e-3,
+    )
+
+
+def test_flow_curve_return_respects_a_within_segment_saturation_crossing():
+    """The root uses the raw curve before and the cap after its kink."""
+    curve = _nonlinear_flow_curve()
+    direction = jnp.diag(jnp.asarray([1.0, -0.5, -0.5]))
+    saturation = 495.0e6
+    three_mu = 3.0 * YOUNG / (2.0 * (1.0 + POISSON))
+
+    def update_for_exact_root(expected_eqp, expected_flow_stress):
+        amplitude = expected_eqp + expected_flow_stress / three_mu
+        return radial_return(
+            strain=amplitude * direction,
+            thermal_strain=jnp.zeros((3, 3)),
+            state=ZERO_STATE,
+            young=YOUNG,
+            poisson=POISSON,
+            yield_stress=YIELD0,
+            hardening=HARDENING,
+            saturation=saturation,
+            temperature=550.0,
+            flow_curve=curve,
+        )
+
+    before_eqp = 0.04
+    before_yield = j2_model.flow_stress_from_curve(
+        550.0,
+        before_eqp,
+        curve.temperatures,
+        curve.plastic_strains,
+        curve.stresses,
+    )
+    before = update_for_exact_root(before_eqp, before_yield)
+    after_eqp = 0.08
+    after = update_for_exact_root(after_eqp, saturation)
+
+    np.testing.assert_allclose(
+        np.asarray(before.state.eqp),
+        np.asarray(before_eqp),
+        rtol=1.0e-12,
+        atol=1.0e-13,
+    )
+    np.testing.assert_allclose(
+        np.asarray(j2_model.equivalent_stress(before.stress)),
+        np.asarray(before_yield),
+        rtol=1.0e-12,
+        atol=1.0e-3,
+    )
+    np.testing.assert_allclose(
+        np.asarray(after.state.eqp),
+        np.asarray(after_eqp),
+        rtol=1.0e-12,
+        atol=1.0e-13,
+    )
+    np.testing.assert_allclose(
+        np.asarray(j2_model.equivalent_stress(after.stress)),
+        np.asarray(saturation),
+        rtol=1.0e-12,
+        atol=1.0e-3,
+    )
+
+
+def test_flow_curve_right_endpoint_is_a_constant_yield_plateau():
+    curve = _nonlinear_flow_curve()
+    direction = jnp.diag(jnp.asarray([1.0, -0.5, -0.5]))
+    eqp_old = 0.15
+    state = PlasticState(
+        eqp=jnp.asarray(eqp_old),
+        eps_p=eqp_old * direction,
+    )
+
+    update = radial_return(
+        strain=state.eps_p + 0.02 * direction,
+        thermal_strain=jnp.zeros((3, 3)),
+        state=state,
+        young=YOUNG,
+        poisson=POISSON,
+        yield_stress=YIELD0,
+        hardening=HARDENING,
+        temperature=550.0,
+        flow_curve=curve,
+    )
+
+    expected_plateau = j2_model.flow_stress_from_curve(
+        550.0,
+        1.0,
+        curve.temperatures,
+        curve.plastic_strains,
+        curve.stresses,
+    )
+    assert float(update.state.eqp) > eqp_old
+    np.testing.assert_allclose(
+        np.asarray(j2_model.equivalent_stress(update.stress)),
+        np.asarray(expected_plateau),
+        rtol=1.0e-12,
+        atol=1.0e-3,
+    )
+
+
+def test_saturation_above_the_flow_curve_is_a_noop():
+    curve = _nonlinear_flow_curve()
+    direction = jnp.diag(jnp.asarray([1.0, -0.5, -0.5]))
+
+    def update(saturation):
+        return radial_return(
+            strain=0.04 * direction,
+            thermal_strain=jnp.zeros((3, 3)),
+            state=ZERO_STATE,
+            young=YOUNG,
+            poisson=POISSON,
+            yield_stress=YIELD0,
+            hardening=HARDENING,
+            saturation=saturation,
+            temperature=550.0,
+            flow_curve=curve,
+        )
+
+    uncapped = update(jnp.inf)
+    high_cap = update(1.0e9)
+    np.testing.assert_allclose(
+        np.asarray(high_cap.stress),
+        np.asarray(uncapped.stress),
+        rtol=1.0e-12,
+        atol=1.0e-3,
+    )
+    np.testing.assert_allclose(
+        np.asarray(high_cap.state.eqp),
+        np.asarray(uncapped.state.eqp),
+        rtol=1.0e-12,
+        atol=1.0e-13,
+    )
+
+
+def test_flow_curve_return_jit_vmap_matches_eager():
+    curve = _nonlinear_flow_curve()
+    direction = jnp.diag(jnp.asarray([1.0, -0.5, -0.5]))
+
+    def equivalent_plastic_strain(amplitude):
+        return radial_return(
+            strain=amplitude * direction,
+            thermal_strain=jnp.zeros((3, 3)),
+            state=ZERO_STATE,
+            young=YOUNG,
+            poisson=POISSON,
+            yield_stress=YIELD0,
+            hardening=HARDENING,
+            temperature=550.0,
+            flow_curve=curve,
+        ).state.eqp
+
+    amplitudes = jnp.asarray([0.005, 0.01, 0.04, 0.12])
+    eager = jax.vmap(equivalent_plastic_strain)(amplitudes)
+    compiled = jax.jit(jax.vmap(equivalent_plastic_strain))(amplitudes)
+    np.testing.assert_allclose(
+        np.asarray(compiled),
+        np.asarray(eager),
+        rtol=1.0e-12,
+        atol=1.0e-13,
+    )
+
+
+def test_flow_curve_return_has_a_segment_interior_ad_valley():
+    curve = _nonlinear_flow_curve()
+    direction = jnp.diag(jnp.asarray([1.0, -0.5, -0.5]))
+
+    def residual(amplitude):
+        return radial_return(
+            strain=amplitude * direction,
+            thermal_strain=jnp.zeros((3, 3)),
+            state=ZERO_STATE,
+            young=YOUNG,
+            poisson=POISSON,
+            yield_stress=YIELD0,
+            hardening=HARDENING,
+            temperature=550.0,
+            flow_curve=curve,
+        ).stress[0, 0]
+
+    amplitude = 0.01
+    tangent = jax.grad(residual)(amplitude)
+    step_sizes = np.logspace(-3, -11, 9)
+    errors = []
+    for step_size in step_sizes:
+        finite_difference = (
+            residual(amplitude + step_size)
+            - residual(amplitude - step_size)
+        ) / (2.0 * step_size)
+        errors.append(
+            float(
+                jnp.abs(finite_difference - tangent)
+                / jnp.abs(tangent)
+            )
+        )
+
+    errors = np.asarray(errors)
+    valley_index = int(np.argmin(errors))
+    assert 0 < valley_index < len(errors) - 1
+    assert errors[valley_index] < 1.0e-8
+    assert errors[-1] > 100.0 * errors[valley_index]
+
+
+def test_flow_curve_selector_preserves_the_weak_powder_scalar_model():
+    """RED: the solid curve must not overwrite the 1 MPa powder model."""
+    mechanics = object.__new__(ThermoMechanical)
+    mechanics.dim = 3
+    mechanics.mechanics_model = "j2_plastic"
+    mechanics.yield_saturation = None
+    mechanics.flow_curve = _nonlinear_flow_curve()
+    direction = jnp.diag(jnp.asarray([1.0, -0.5, -0.5]))
+
+    def stress(curve_active):
+        return mechanics.stress_fn(
+            0.02 * direction,
+            jnp.asarray([550.0]),
+            jnp.asarray([0.0]),
+            jnp.asarray([1.0]),
+            jnp.asarray([YOUNG]),
+            jnp.asarray([0.0]),
+            jnp.asarray([POISSON]),
+            jnp.asarray([1.0e6]),
+            jnp.asarray([0.0]),
+            jnp.asarray([0.0]),
+            jnp.asarray([curve_active]),
+        )
+
+    solid_q = j2_model.equivalent_stress(stress(1.0))
+    powder_q = j2_model.equivalent_stress(stress(0.0))
+    assert float(solid_q) > 300.0e6
+    np.testing.assert_allclose(
+        np.asarray(powder_q),
+        np.asarray(1.0e6),
+        rtol=1.0e-10,
+        atol=1.0e-3,
+    )
+
+
+def test_flow_curve_problem_rejects_an_unbound_quad_selector():
+    mechanics = object.__new__(ThermoMechanical)
+    mechanics.flow_curve = _nonlinear_flow_curve()
+    mechanics._flow_curve_active_mask = jnp.zeros((1, 1, 1))
+    mechanics._flow_curve_mask_bound = False
+    mechanics.internal_vars = [jnp.zeros((1, 1, 1))]
+    params = [jnp.zeros((1, 1, 1)) for _ in range(9)]
+
+    with pytest.raises(ValueError, match="selector"):
+        mechanics.set_params(params)
+
+    mechanics.set_flow_curve_active_mask(jnp.ones((1, 1, 1)))
+    mechanics.set_params(params)
+    assert len(mechanics.internal_vars) == 10
+
+
+def test_flow_curve_material_update_rejects_a_missing_selector():
+    mechanics = object.__new__(ThermoMechanical)
+    mechanics.dim = 3
+    mechanics.mechanics_model = "j2_plastic"
+    mechanics.yield_saturation = None
+    mechanics.flow_curve = _nonlinear_flow_curve()
+
+    with pytest.raises(ValueError, match="selector"):
+        mechanics.stress_fn(
+            jnp.zeros((3, 3)),
+            jnp.asarray([550.0]),
+            jnp.asarray([0.0]),
+            jnp.asarray([1.0]),
+            jnp.asarray([YOUNG]),
+            jnp.asarray([0.0]),
+            jnp.asarray([POISSON]),
+            jnp.asarray([1.0e6]),
+            jnp.asarray([0.0]),
+            jnp.asarray([0.0]),
+        )
+
+
+@pytest.mark.parametrize(
+    "consumer",
+    [
+        ThermoMechanical.compute_cell_stress,
+        ThermoMechanical.compute_eqp_update,
+    ],
+)
+def test_flow_curve_postprocessors_reject_an_unbound_selector(consumer):
+    mechanics = object.__new__(ThermoMechanical)
+    mechanics.flow_curve = _nonlinear_flow_curve()
+    mechanics._flow_curve_mask_bound = False
+    mechanics.mechanics_model = "j2_plastic"
+
+    with pytest.raises(ValueError, match="selector"):
+        consumer(mechanics, None, [])
 
 
 def test_mechanics_residual_and_canonical_return_map_share_one_j2_source():

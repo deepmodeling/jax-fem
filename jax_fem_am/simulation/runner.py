@@ -12,9 +12,7 @@ from typing import Any, Optional, Sequence
 
 
 from jax_fem_am.materials.j2 import (  # noqa: E402
-    PlasticState,
     elastic_strain_from_stress,
-    radial_return,
 )
 from jax_fem_am.domain.lifecycle import (  # noqa: E402
     effective_thermal_increment,
@@ -375,6 +373,9 @@ def install_v06_adapter(base_module, profiler=None):
                 self, mechanics_model, yield_saturation, foundation_stiffness,
                 *extra,
             )
+            curve_selector = None
+            if self.flow_curve is not None:
+                curve_selector = self.internal_vars.pop()
             shape = (len(self.fes[0].cells), self.fes[0].num_quads, 3, 3)
             self._eps_p_state = np.zeros(shape)
             self._eps_ref_state = np.zeros(shape)
@@ -383,6 +384,8 @@ def install_v06_adapter(base_module, profiler=None):
                 self._eps_p_state,
                 self._eps_ref_state,
             ]
+            if curve_selector is not None:
+                self.internal_vars.append(curve_selector)
 
         def _return_map(
             self,
@@ -395,24 +398,36 @@ def install_v06_adapter(base_module, profiler=None):
             hardening,
             eqp_old,
             eps_p_old,
-            eps_ref_old,
+            eps_ref_old=None,
+            T=None,
+            active_factor=None,
+            flow_curve_active=None,
         ):
-            strain = 0.5 * (u_grad + u_grad.T)
-            thermal_strain = alpha[0] * dT[0] * np.eye(self.dim)
-            is_plastic = self.mechanics_model == "j2_plastic"
-            update = radial_return(
-                strain=strain - eps_ref_old,
-                thermal_strain=thermal_strain,
-                state=PlasticState(eqp=eqp_old[0], eps_p=eps_p_old),
-                young=young[0],
-                poisson=poisson[0],
-                yield_stress=yield_stress[0] if is_plastic else np.inf,
-                hardening=hardening[0],
-                saturation=self.yield_saturation
-                if is_plastic
-                and self.yield_saturation is not None
-                and self.yield_saturation > 0.0
-                else np.inf,
+            if eps_ref_old is None:
+                eps_ref_old = np.zeros((self.dim, self.dim))
+            if T is None and getattr(self, "flow_curve", None) is not None:
+                raise ValueError(
+                    "temperature is required for a flow-curve return map"
+                )
+            if T is None:
+                T = np.asarray([0.0])
+            if active_factor is None:
+                active_factor = np.asarray([1.0])
+            update = BaseMech._material_point_update(
+                self,
+                u_grad,
+                T,
+                dT,
+                active_factor,
+                young,
+                alpha,
+                poisson,
+                yield_stress,
+                hardening,
+                eqp_old,
+                eps_p_old=eps_p_old,
+                eps_ref_old=eps_ref_old,
+                flow_curve_active=flow_curve_active,
             )
             return (
                 update.stress,
@@ -434,6 +449,7 @@ def install_v06_adapter(base_module, profiler=None):
             eqp_old,
             eps_p_old,
             eps_ref_old,
+            flow_curve_active=None,
         ):
             stress, _, _ = self._return_map(
                 u_grad,
@@ -446,6 +462,9 @@ def install_v06_adapter(base_module, profiler=None):
                 eqp_old,
                 eps_p_old,
                 eps_ref_old,
+                T=T,
+                active_factor=active_factor,
+                flow_curve_active=flow_curve_active,
             )
             return active_factor[0] * stress
 
@@ -456,12 +475,17 @@ def install_v06_adapter(base_module, profiler=None):
             )
 
         def set_params(self, params):
+            BaseMech._require_flow_curve_mask_bound(self)
             effective_params = list(params)
             effective_params[1] = self._effective_dT(effective_params[1])
             self.internal_vars = effective_params + [
                 self._eps_p_state,
                 self._eps_ref_state,
             ]
+            if self.flow_curve is not None:
+                self.internal_vars.append(
+                    self._flow_curve_active_mask
+                )
 
         # _u_grads is inherited from the v03 base class: it applies B-bar
         # (element-average volumetric strain) when the problem was built
@@ -492,6 +516,7 @@ def install_v06_adapter(base_module, profiler=None):
             REGISTRY.eps_ref = self._eps_ref_state
 
         def compute_cell_stress(self, sol, params):
+            BaseMech._require_flow_curve_mask_bound(self)
             (
                 T_quad,
                 dT_quad,
@@ -504,6 +529,11 @@ def install_v06_adapter(base_module, profiler=None):
                 eqp_old_quad,
             ) = params
             dT_quad = self._effective_dT(dT_quad)
+            selector = (
+                self._flow_curve_active_mask
+                if self.flow_curve is not None
+                else np.zeros_like(active_quad[..., :1])
+            )
             stress = jax.vmap(jax.vmap(self.stress_fn))(
                 self._u_grads(sol),
                 T_quad,
@@ -517,6 +547,7 @@ def install_v06_adapter(base_module, profiler=None):
                 eqp_old_quad,
                 self._eps_p_state,
                 self._eps_ref_state,
+                selector,
             )
             elastic_strain = elastic_strain_from_stress(
                 stress,
@@ -530,6 +561,7 @@ def install_v06_adapter(base_module, profiler=None):
             }
 
         def compute_eqp_update(self, sol, params):
+            BaseMech._require_flow_curve_mask_bound(self)
             if self.mechanics_model != "j2_plastic":
                 return params[-1]
             (
@@ -558,6 +590,7 @@ def install_v06_adapter(base_module, profiler=None):
                 eqp_old,
                 eps_p_old,
                 eps_ref_old,
+                flow_curve_active,
             ):
                 _, delta_eqp, delta_eps_p = self._return_map(
                     u_grad,
@@ -570,6 +603,9 @@ def install_v06_adapter(base_module, profiler=None):
                     eqp_old,
                     eps_p_old,
                     eps_ref_old,
+                    T=T,
+                    active_factor=active,
+                    flow_curve_active=flow_curve_active,
                 )
                 mask = np.where(active[0] > 0.5, 1.0, 0.0)
                 return (
@@ -577,6 +613,11 @@ def install_v06_adapter(base_module, profiler=None):
                     eps_p_old + mask * delta_eps_p,
                 )
 
+            selector = (
+                self._flow_curve_active_mask
+                if self.flow_curve is not None
+                else np.zeros_like(active_quad[..., :1])
+            )
             eqp_new, eps_p_new = jax.vmap(jax.vmap(one_quad))(
                 self._u_grads(sol),
                 T_quad,
@@ -590,6 +631,7 @@ def install_v06_adapter(base_module, profiler=None):
                 eqp_old_quad,
                 self._eps_p_state,
                 self._eps_ref_state,
+                selector,
             )
             self._eps_p_state = eps_p_new
             REGISTRY.eps_p = eps_p_new

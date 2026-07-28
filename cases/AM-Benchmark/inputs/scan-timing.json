@@ -1,0 +1,147 @@
+{
+  "_comment": "Laser and scan-path timing for AMB2018-01, transcribed from Heigel et al. 2020, J. Res. NIST 125:125005 (doi 10.6028/jres.125.005), Tables 2-5, Figs 7-8 and Secs 3.4.1-3.4.5. Values are as printed; nothing is inferred except where marked source_class=inferred.",
+  "schema_version": "ambench.scan-timing/1",
+  "protocol_id": "ambench-2018-01-v1",
+  "source": {
+    "paper": "Heigel, Lane, Levine, Phan, Whiting (2020) JRES 125:125005",
+    "doi": "10.6028/jres.125.005",
+    "repository_path": "references/docs/Heigel2020_AMB2018-01_in-situ-thermography_JRES-125-005.pdf",
+    "sha256_prefix": "dd955ca24aa29e33",
+    "measurement_method": "laser on/off command signal recorded at 200 MHz with a Nicolet Odyssey XE oscilloscope for select layers; infill timings measured on layer 3 of a trial build and assumed constant for layers 1-250",
+    "applies_to": "both IN625 and 15-5 builds (paper states timing was the same for both materials)"
+  },
+
+  "global": {
+    "infill_power_W": 195,
+    "infill_speed_mm_s": 800,
+    "contour_power_W": 100,
+    "contour_speed_mm_s": 900,
+    "hatch_spacing_mm": 0.10,
+    "layer_height_mm": 0.020,
+    "total_layers": 624,
+    "laser_spot": {
+      "value_mm": 0.10,
+      "note": "vendor-supplied nominal Gaussian diameter (JRES Table 2). Phan/IMMI give 85 um D4-sigma contour / 100 um defocused infill; AMB2022-04 gives 80 um D4-sigma. Conflict B2 in PREREQUISITES.md - state the metric used.",
+      "source_class": "paper_table"
+    },
+    "infill_edge_offset_mm": 0.03,
+    "contour_scanned_first": true,
+    "recoater_speed_mm_s": 80,
+    "recoater_blade": { "IN625": "high-strength steel", "15-5": "ceramic" }
+  },
+
+  "layer_bands": {
+    "_comment": "Z values verbatim from the paper text; layer indices from Table 3/4 band labels.",
+    "legs":     { "layers": [1, 250],   "z_mm": [0.02, 5.00],  "cross_section": "constant" },
+    "overhang": { "layers": [251, 350], "z_mm": [5.02, 7.00],  "cross_section": "growing 45-degree overhangs; 13 features",
+                  "interpolation_rule": "for layers 252-349, feature lengths interpolate linearly between layer 250 and layer 350 (verbatim table note)" },
+    "bridge":   { "layers": [351, 600], "z_mm": [7.02, 12.00], "cross_section": "single merged feature spanning the part" },
+    "ridges":   { "layers": [601, 624], "z_mm": [12.02, 12.48],
+                  "note": "NOT covered by any timing table in the paper. 11 ridges, 1 mm wide, 7 mm pitch (geometry from STL). Timing unpublished.",
+                  "source_class": "inferred" }
+  },
+
+  "contour_timing_table3": {
+    "_comment": "Laser-on duration per feature contour, ms. Same strategy odd and even layers. Contour order and start position varied per layer; time between leg contours varied 15.5-25.5 ms depending on travel.",
+    "layers_1_250": {
+      "L1_L4_L7_L10_ms": 22.4,
+      "L2_L5_L8_L11_ms": 12.4,
+      "L3_L6_L9_L12_ms": 16.8,
+      "base_ms": 50.3,
+      "bridge_ms": null
+    },
+    "layers_251_350": {
+      "L1_L4_L7_L10_ms": [22.4, 26.67],
+      "L2_L5_L8_L11_ms": [12.4, 16.67],
+      "L3_L6_L9_L12_ms": [16.8, 21.11],
+      "base_ms": [50.3, 54.7],
+      "bridge_ms": null
+    },
+    "layers_351_600": {
+      "L1_L4_L7_L10_ms": null,
+      "L2_L5_L8_L11_ms": null,
+      "L3_L6_L9_L12_ms": null,
+      "base_ms": null,
+      "bridge_ms": 112.5
+    },
+    "inter_leg_travel_ms": [15.5, 25.5]
+  },
+
+  "infill_odd_layers_table4": {
+    "_comment": "Odd layers: scan lines parallel to x, back and forth. First line starts at the upper-left corner of the part, in L1, travelling +x, hopping feature to feature (laser off) along constant y until the far end (base), then the direction reverses.",
+    "start": "upper-left corner, L1, first travel +x",
+    "scan_axis": "x",
+    "within_feature_laser_off_at_part_ends_ms": [0.48, 0.01],
+    "between_features_laser_off_ms": [1.66, 0.01],
+    "between_features_note": "1.66 ms measured for layers 1-250; overhang layers not measured, line-end 0.48 ms assumed unchanged (verbatim assumption in paper)",
+    "legs_constant_section_layers_1_250": {
+      "L1_L4_L7_L10": { "feature_length_mm": 5.00, "scan_line_mm": 4.94, "laser_on_ms": [6.25, 0.01], "lines_per_feature": 49 },
+      "L2_L5_L8_L11": { "feature_length_mm": 0.50, "scan_line_mm": 0.44, "laser_on_ms": [0.59, 0.01], "lines_per_feature": 49 },
+      "L3_L6_L9_L12": { "feature_length_mm": 2.50, "scan_line_mm": 2.44, "laser_on_ms": [3.12, 0.01], "lines_per_feature": 49 },
+      "base": { "feature_length_mm": [16.50, 19.00], "scan_line_mm": [16.49, 18.94], "laser_on_ms": [[20.75, 0.01], [23.75, 0.01]], "lines_per_feature": 49 }
+    },
+    "overhang_layer_350": {
+      "L1_L4_L7_L10": { "feature_length_mm": 6.98, "scan_line_mm": 6.92, "laser_on_ms": null, "lines_per_feature": 49 },
+      "L2_L5_L8_L11": { "feature_length_mm": 2.48, "scan_line_mm": 2.42, "laser_on_ms": null, "lines_per_feature": 49 },
+      "L3_L6_L9_L12": { "feature_length_mm": 4.48, "scan_line_mm": 4.42, "laser_on_ms": null, "lines_per_feature": 49 },
+      "base": { "feature_length_mm": [18.48, 20.98], "scan_line_mm": [16.62, 18.94], "laser_on_ms": null, "lines_per_feature": 49 }
+    },
+    "bridge_layers_351_600": {
+      "bridge": { "feature_length_mm": [72.50, 75.00], "scan_line_mm": [72.49, 74.94], "laser_on_ms": null, "lines_per_feature": 49 }
+    }
+  },
+
+  "infill_even_layers_table5": {
+    "_comment": "Even layers: scan lines parallel to y. First line starts at the lower-left corner of the part, travelling +y. Each feature is COMPLETED before the laser moves to the next feature (unlike odd layers, which hop per line). Scan direction alternates continuously. Lines start/end 0.03 mm from the bottom/top edges.",
+    "start": "lower-left corner, first travel +y",
+    "scan_axis": "y",
+    "within_feature_line_to_line_laser_off_ms": [0.48, 0.01],
+    "between_features_laser_off_ms": [1.78, 0.01],
+    "legs_constant_section_layers_1_250": {
+      "L1_L4_L7_L10": { "feature_width_mm": 5.00, "scan_line_mm": 4.94, "laser_on_ms": [6.25, 0.01], "lines_per_feature": { "L1": 49, "L10": 49, "L4": 50, "L7": 50 } },
+      "L2_L5_L8_L11": { "feature_width_mm": 5.00, "scan_line_mm": 4.94, "laser_on_ms": [6.25, 0.01], "lines_per_feature": { "L2": 4, "L8": 4, "L11": 4, "L5": 5 } },
+      "L3_L6_L9_L12": { "feature_width_mm": 5.00, "scan_line_mm": 4.94, "laser_on_ms": [6.25, 0.01], "lines_per_feature": { "L3": 24, "L9": 24, "L12": 24, "L6": 25 } },
+      "base": { "feature_width_mm": [0.00, 5.00], "scan_line_mm": [0.00, 4.94], "laser_on_ms": [[0.01, 0.01], [6.25, 0.01]], "lines_per_feature_as_printed": 49,
+                "verdict": "PAPER MISPRINT, verified 2026-07-28. Positional PDF reconstruction confirms the printed table does say 49, but geometry contradicts it: the base spans 16.5-19.0 mm in x, so y-parallel lines at 0.10 mm hatch give ~165-190 lines. The leg rows of this same table (49/50, 4/5, 24/25 lines for 5.0/0.5/2.5 mm widths) match width/hatch exactly, validating the column semantics; base, overhang and bridge rows carry a filled-down 49. Path generator must derive line counts as ceil(feature_x_width/hatch), never from these cells. The 0.00-5.00 width range and 0.01-6.25 ms per-line range are REAL: the part's right end is a 45-degree point in plan (max-x 72.55 at the y-edges to 75.00 at mid-y, confirmed at all heights in the STL), matching Fig 8's 'laser on time decreases in tip'." }
+    },
+    "overhang_layer_350": {
+      "L1_L4_L7_L10": { "feature_width_mm": 6.98, "scan_line_mm": 6.92, "laser_on_ms": null, "lines_per_feature": 49 },
+      "L2_L5_L8_L11": { "feature_width_mm": 2.48, "scan_line_mm": 2.42, "laser_on_ms": null, "lines_per_feature": 49 },
+      "L3_L6_L9_L12": { "feature_width_mm": 4.48, "scan_line_mm": 4.42, "laser_on_ms": null, "lines_per_feature": 49 },
+      "base": { "feature_width_mm": [18.48, 20.98], "scan_line_mm": [16.62, 18.94], "laser_on_ms": null, "lines_per_feature": 49 }
+    },
+    "bridge_layers_351_600": {
+      "bridge": { "feature_width_mm": [72.50, 75.00], "scan_line_mm": [72.49, 74.94], "laser_on_ms": null, "lines_per_feature_as_printed": 49,
+                  "verdict": "same misprint as the base row: ~725-750 lines by geometry (72.5-75.0 mm / 0.10 mm hatch). Derive, do not copy." }
+    },
+    "overhang_note": "the layer-350 rows' printed 49 is likewise unreliable for even layers (e.g. thick legs 6.98 mm wide imply ~69 lines); derive from interpolated widths."
+  },
+
+  "part_plan_geometry": {
+    "_comment": "Verified from AMB2018_01_Part.STL by ray casting, 2026-07-28.",
+    "right_end": "45-degree point in plan view: max-x = 72.55 mm at y = 0/5 edges rising linearly to 75.00 mm at y = 2.5 mid-plane; present at every height from the legs through the bridge (z 0.5 to 10 checked); the ridges stop at x = 71.0",
+    "left_end": "flat at x = 0 for all y",
+    "consequence": "the part is NOT an extrusion of its mid-plane cross-section; meshes and scan paths must model the tip. Odd-layer base scan-line lengths 16.49-18.94 mm and even-layer 0.00-4.94 mm both follow from this shape."
+  },
+
+  "inter_part_and_layer": {
+    "time_between_parts_s": [0.307, 0.363],
+    "time_between_parts_note": "from last infill line of one part to first contour of the next; varies with contour start position, which changed every layer",
+    "layer_time_legs_s": 52,
+    "scan_time_all_four_parts_s": 26,
+    "dwell": "imposed at the end of each layer so the NIST AMMT (slower recoater) could replicate the build later (verbatim); duration not published separately - only the 52 s total and ~26 s scanning are given, and only for layers 1-250",
+    "layer_time_layers_251_plus": null,
+    "layer_time_layers_251_plus_note": "NOT PUBLISHED - gap E in PREREQUISITES.md"
+  },
+
+  "feature_id_map": {
+    "_comment": "Feature labels vs geometry measured from AMB2018_01_Part.STL (left edge x, mm, at z=2.5). Widths: thick 5.0, thin 0.5, medium 2.5. The paper's L-numbering runs from the part's left end; the base is the 19 mm end block.",
+    "L1": 0.0, "L2": 7.0, "L3": 9.5,
+    "L4": 14.0, "L5": 21.0, "L6": 23.5,
+    "L7": 28.0, "L8": 35.0, "L9": 37.5,
+    "L10": 42.0, "L11": 49.0, "L12": 51.5,
+    "base_x_mm": [56.0, 75.0],
+    "source_class": "inferred",
+    "note": "mapping of L-labels to x positions is inferred from feature widths (L1/L4/L7/L10 thick, L2/L5/L8/L11 thin, L3/L6/L9/L12 medium) matching Table 4 lengths 5.0/0.5/2.5 mm; consistent with Fig 7 ordering L1 leftmost."
+  }
+}

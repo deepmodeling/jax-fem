@@ -159,9 +159,18 @@ Gaps are uniformly 2.000 mm; the repeat period is 14.000 mm; 4 repeats.
 | Thick | 4 | 5.0 mm | 0.0, 14.0, 28.0, 42.0 |
 | Thin | 4 | **0.5 mm** | 7.0, 21.0, 35.0, 49.0 |
 | Medium | 4 | 2.5 mm | 9.5, 23.5, 37.5, 51.5 |
-| End block | 1 | 19.0 mm | 56.0 (to 75.0) |
+| End block | 1 | 19.0 mm at mid-plane | 56.0 (see tip note) |
 
 The 0.5 mm thin leg is the minimum feature and sets the mesh floor.
+
+**Tip correction (2026-07-28):** the "56.0 to 75.0" end-block extent above is a
+mid-plane (y = 2.5) statement only. Ray casting across y shows the part's right end
+is a **45-degree point in plan view**: max-x runs from 72.55 mm at the y edges to
+75.00 mm at mid-plane, at every height from the legs through the bridge (the ridges
+stop at x = 71.0). The part is **not** an extrusion of its mid-plane cross-section;
+meshes and scan paths must model the tip. This matches the JRES scan tables (odd
+base line lengths 16.49-18.94 mm; even 0.00-4.94 mm; "laser on time decreases in
+tip", Fig 8) and is recorded in `inputs/scan-timing.json`.
 
 Ridges (CMM measurement targets) — 11, each 1.000 mm wide, 7.000 mm pitch,
 centres at x = 0.5, 7.5, 14.5, 21.5, 28.5, 35.5, 42.5, 49.5, 56.5, 63.5, 70.5 mm.
@@ -454,6 +463,47 @@ thin leg needs three elements across), powder ~220 k at ~1 mm, substrate ~42 k a
 | cp(T) | available | Special Metals 12 points (footnoted "Calculated", not measured); Gen3 CSP; Kaschnitz DSC | Low |
 | rho(T) | RT only in datasheets | Heugenhauser & Kaschnitz doi 10.32908/hthp.v48.726, 150-1400 C solid + mushy + liquid (paywalled, tabulation unverified) | Low |
 | 15-5 PH deflection uncertainties | never published | Phan is IN625-only; the promised 15-5 paper does not appear to exist | Low (only if 15-5 is modelled) |
+
+### In-situ thermography (DOI 10.18434/M31935) — EVALUATED AND REJECTED
+
+Data descriptor: Heigel, Lane, Levine, Phan, Whiting (2020), *J. Res. NIST* 125:125005,
+doi 10.6028/jres.125.005, archived at
+`references/docs/Heigel2020_AMB2018-01_in-situ-thermography_JRES-125-005.pdf`.
+
+Dataset: 122 zip archives plus two MATLAB functions, covering all 624 layers of two
+builds. A sample layer file was inspected directly:
+
+| Property | Value |
+|---|---|
+| Format | MATLAB v5 `Layer` struct, readable with `scipy.io.loadmat` |
+| Pixel size | 51.95 x 33.98 um |
+| ROI | 126 x 360 px = **6.55 x 12.23 mm** — covers legs 7/8/9 only (x = 28-40 mm) |
+| Frame rate | **1799 fps** (0.556 ms per frame); 2497 frames for 3.979 s of layer 1 |
+| Field | `RadiantTemp`, uint16, 126 x 360 x 2497 = 113 M values, 227 MB uncompressed per layer |
+| Calibration | Sakuma-Hattori coefficients `SHvariable_A/B/C` = 2.655 / -800.7 / 1.94e6 |
+| Occupancy | **0.838 % non-zero.** >550 C: 0.81 %; >1050 C: 0.05 % (camera saturates 1050-1100 C) |
+| Hot area | median 0.46 mm2 per active frame, max 3.55 mm2 |
+
+**Not used.** Three candidate uses were considered and all fail:
+
+1. *Heat-source / absorptivity calibration* — blocked. Converting radiant to true
+   temperature requires an emissivity that has no measured value (gap E). Fitting
+   absorptivity against this data means fitting A and epsilon to one dataset:
+   unidentifiable, and precisely the coupling that discredited Keller's A = 0.50.
+   Would need AMB2018-02 sectioned melt-pool geometry as an independent constraint.
+2. *Scan-path verification* — **redundant.** Tables 3, 4 and 5 of the same paper
+   specify contour timing per feature and per-line laser on/off timing for odd and
+   even layers to the millisecond. The path is defined, not inferred.
+3. *Cooling-rate extraction* — blocked by the same emissivity coupling.
+
+Scale mismatch against the approved N = 10 model is also decisive: 34-52 um pixels
+against 200 um computational layers, and 0.556 ms frames against ~26 s steps — five
+orders of magnitude in time.
+
+Recorded as a negative result so it is not re-evaluated. Physical relevance is not
+the issue: the camera's 550-1050 C window sits squarely in the range where the
+thermal-gradient mechanism generates residual stress. The instrument is simply the
+wrong scale for a part-level lumped model.
 
 ### Note on the MaCTO mechanical data
 

@@ -452,6 +452,26 @@ thin leg needs three elements across), powder ~220 k at ~1 mm, substrate ~42 k a
 
 ## E. Data gaps — each needs a decision, not a search
 
+### E.0 Option A acquisition status (2026-07-28)
+
+All Option A resources that exist are now archived and hashed in
+`source-manifest.json` (schema v2). Cross-check: the four files also fetched
+independently by the earlier research agents match byte-for-byte.
+
+| Resource | Where | Status |
+|---|---|---|
+| MaCTO mechanical data (3 files: raw curves, answers table, README) | `references/material/amb2022-04-macto/` | **acquired** (DOI 10.18434/mds2-2681) |
+| Special Metals INCONEL 625 bulletin | `references/material/` | **acquired** |
+| Gen3 CSP k/cp/alpha spreadsheet | `references/material/` | **acquired** |
+| Zhang 2019 powder-conductivity paper | `references/docs/` | **acquired** (via Europe PMC render; author manuscript) |
+| Keller 2017 CALPHAD-recipe preprint | `references/docs/` | **acquired** (arXiv PDF, 25 pp) |
+| Kaschnitz / Heugenhauser measured rho(T) through melting | — | paywalled, NOT acquired; tabulation unverified |
+| CALPHAD run (cp, latent heat, solidus/liquidus) | `derived/` (future) | **to do** — needs Thermo-Calc/JMatPro access, database version must be recorded |
+
+Still open from the gap table below: sigma_y above 773 K (extrapolation +
+relaxation cutoff), emissivity (solid and powder), rho(T) above RT, layer time
+for layers 251+, and the Zhang measurement-gas check.
+
 | Gap | Status | Candidate | Threat to residual stress |
 |---|---|---|---|
 | sigma_y(T), hardening, 773 K -> solidus | **nothing exists anywhere** | extrapolate MaCTO shape + stress-relaxation cutoff (Denlinger & Michaleris, doi 10.1016/j.addma.2016.06.011) | **Highest.** The cutoff temperature is a calibration parameter, not data. Sensitivity study mandatory. |

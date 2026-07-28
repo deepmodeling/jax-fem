@@ -1,0 +1,5 @@
+# The two NIST process videos (9.9 MB combined) are excluded from git history.
+# They are re-downloadable from the URLs in DOWNLOAD.md, and their SHA-256 are
+# recorded in source-manifest.json, so provenance is preserved without carrying
+# ~10 MB of binary in the repository. Remove these lines to track them.
+references/docs/*.mp4

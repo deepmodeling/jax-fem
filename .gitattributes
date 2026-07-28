@@ -15,3 +15,16 @@
 /cases/kaess_2023/references/**/*.json text eol=lf
 /cases/kaess_2023/references/**/*.pdf binary
 /cases/kaess_2023/references/**/*.png binary
+
+# AM-Bench AMB2018-01 reference payloads are SHA-256 verified byte-for-byte.
+# Any line-ending rewrite would break source-manifest.json.
+/cases/AM-Benchmark/references/**/*.STL binary
+/cases/AM-Benchmark/references/**/*.stl binary
+/cases/AM-Benchmark/references/**/*.pdf binary
+/cases/AM-Benchmark/references/**/*.png binary
+/cases/AM-Benchmark/references/**/*.fig binary
+/cases/AM-Benchmark/references/**/*.mp4 binary
+/cases/AM-Benchmark/references/**/*.txt text eol=lf
+/cases/AM-Benchmark/references/**/*.sha256 text eol=lf
+/cases/AM-Benchmark/*.json text eol=lf
+/cases/AM-Benchmark/*.md text eol=lf

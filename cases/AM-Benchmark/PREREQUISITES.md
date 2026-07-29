@@ -30,6 +30,7 @@ doi 10.1007/s40192-019-00149-0. Archived at
 | ~~D-06~~ | ~~Lateral powder margin coincides with the substrate patch (15-20 mm)~~ | **SUPERSEDED by D-07** — ceases to be an independent parameter | 2026-07-28 |
 | D-07 | **Computational domain = one 20 mm periodic cell in y (the actual part pitch), substrate to its real x extent, Dirichlet 73.9 C on the substrate underside** | **APPROVED** | 2026-07-28 |
 | D-08 | **CALPHAD source = pycalphad 0.11.2 + MatCalc open Ni database mc_ni_v2.036 (ODbL 1.0)**, replacing the Thermo-Calc-TCNI candidate (educational Thermo-Calc has no TCNI, 3-element cap, no TC-Python). Trial at mill-cert composition passed the gates: melting range 1279-1357 C vs Special Metals 1288-1349 C; latent heat 259 kJ/kg; gamma-frozen cp inside Gen3 CSP 95 % CI at 6/9 points; Ghosh delta 35 K registered in B3. Files, adaptation script and caveats in `references/calphad/` | **APPROVED** | 2026-07-29 |
+| D-09 | **Verification track added (section V): Balbaa & Elbestawi 2022 (JMMP 6:2, CC BY) as code-to-code comparison source.** V1 = single-track melt-pool triangle (our solver vs NIST bare-plate measurement vs Balbaa ABAQUS), runs ahead of the L-ladder in a separate session; V2 = cube-RS code-to-code, deferred to the mechanics stage. Balbaa inputs are quarantined from main-case inputs. Side registrations: stress-free-T 1000 C precedent into the T_cut sweep design; DRS-measured A = 0.62 into the C.2 absorptivity genealogy; Sih-Barlow model as the powder-emissivity bracket generator | **APPROVED (V1 first)** | 2026-07-29 |
 
 All design decisions are settled. Remaining open items are data gaps (section E)
 and the registered conflicts (section B), not design choices.
@@ -557,6 +558,33 @@ window repeatedly.
 Convenient: no precipitation-kinetics model is needed. But it introduces a weak
 circularity — material data carrying thermal history A is used to predict the
 process that produces thermal history A. Register it; do not assume it away.
+
+---
+
+## V. Verification track (code-to-code; decision D-09)
+
+Comparison source: Balbaa & Elbestawi 2022, "Multi-Scale Modeling of Residual
+Stresses Evolution in Laser Powder Bed Fusion of Inconel 625", JMMP 6(1):2,
+DOI 10.3390/jmmp6010002 (CC BY 4.0), archived at
+`references/docs/Balbaa2022_multiscale-RS-LPBF-IN625_JMMP-6-2.pdf`.
+
+- **V1 — single-track melt-pool triangle** (our solver vs NIST bare-plate
+  measurement vs Balbaa ABAQUS): spec and workspace at
+  `verification/v1-single-track/SPEC.md`. Runs ahead of the L-ladder in a
+  **separate session**; that session owns only its own subdirectory.
+- **V2 — cube RS code-to-code** (Balbaa part-scale, J-C plasticity, XRD
+  profiles): deferred until the main-case mechanics stage (L3).
+- **Quarantine**: Balbaa's inputs (Table 1 properties, machining-derived J-C
+  parameters, A = 0.62, phi = 0.4, epsilon = 0.4) are used verbatim inside V
+  runs only and never enter the main case; main-case inputs (D-01/D-08
+  genealogy) never enter V runs. V results verify the solver, not the case.
+- Reliability notes registered when auditing the paper: Table 1 cites k and cp
+  to the Kaschnitz *density* paper (citation hygiene concern); J-C parameters
+  come from a turning/tool-wear study (ref. strain rate 1670 /s); solidus
+  1563 K and latent heat 290 kJ/kg are second-hand from Gan 2019. First-hand
+  content: DRS absorptivity 0.62 @ 1070 nm, as-built RT tensile
+  (Ramberg-Osgood K = 1618 MPa, n = 0.243), XRD in-depth RS profiles,
+  two-color pyrometer temperatures.
 
 ---
 

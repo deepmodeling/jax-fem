@@ -12,8 +12,8 @@
   "material_source_scope": "Option A per decision D-01 (PREREQUISITES.md): AM-Bench-series extension - AMB2022-04 mechanical + Zhang 2019 powder conductivity + Keller 2017 CALPHAD recipe; Special Metals and Gen3 CSP as solid k/cp/E sources",
   "hash_algorithm": "sha256",
   "summary": {
-    "files_total": 79,
-    "payload_files": 44,
+    "files_total": 81,
+    "payload_files": 45,
     "nist_checksum_verified": 30,
     "nist_checksum_mismatch": 0
   },
@@ -883,6 +883,29 @@
       "source_class": "derived_artifact",
       "role": "documentation",
       "note": "Provenance, license, adaptation record, gate results, caveats"
+    },
+    {
+      "path": "references/docs/Balbaa2022_multiscale-RS-LPBF-IN625_JMMP-6-2.pdf",
+      "folder": "docs",
+      "dataset": "Balbaa & Elbestawi 2022, J. Manuf. Mater. Process. 6(1):2 (CC BY 4.0)",
+      "doi": "10.3390/jmmp6010002",
+      "source_class": "paper_text",
+      "role": "payload",
+      "decision": "D-09 (2026-07-29): verification-track comparison source; inputs quarantined from main case",
+      "note": "aminer cache copy, byte-identical to the user-downloaded copy; MDPI direct download returns 403 from this network",
+      "bytes": 21728647,
+      "sha256": "94c51f9c5a6d7ee7396062c091be598dd8239c465086b80ba676da5aa2597b75"
+    },
+    {
+      "path": "verification/v1-single-track/SPEC.md",
+      "folder": "verification",
+      "dataset": "V1 single-track triangle verification spec (this repository)",
+      "source_class": "derived_artifact",
+      "role": "documentation",
+      "decision": "D-09 (2026-07-29)",
+      "note": "handoff spec for the separate V1 session",
+      "bytes": 4501,
+      "sha256": "b4706f5d0c249f1271ce9a2162e2a78acd43aeb2870be27fe5964755a2167689"
     }
   ]
 }

@@ -90,6 +90,55 @@
   adopted: "2016"
   justification: "transcribed from the Balbaa reference list as printed (p.41); SPEC not edited since it is a shared-history document -- noted here and to be flagged in RESULTS.md"
 
+- id: D-V1-14
+  what: substrate mesh grading
+  paper_says: "Sec 2.6.1: 'minimum size of 10 um employed in the powder layer'; substrate grading not specified"
+  status: resolved
+  adopted: "uniform 10 um hexes everywhere (100 x 48 x 30 = 144k cells)"
+  justification: "finer than or equal to Balbaa's mesh everywhere; removes an unknown instead of guessing his grading"
+
+- id: D-V1-15
+  what: powder heat capacity porosity scaling as printed double-counts
+  paper_says: "Eq 14 Cp_pb = (1-phi)*Cp_s AND Eq 15 rho_pb = (1-phi)*rho_s; entered together in an FE code the volumetric heat capacity becomes (1-phi)^2*rho_s*Cp_s"
+  status: accepted-gap
+  adopted: "reproduce as printed (cp_powder table = 0.6*cp_s, rho_powder = 0.6*rho_s)"
+  justification: "code-to-code parity requires his inputs as printed; physically the correct scaling would keep cp_s unchanged. Affects only the 20 um powder layer pre-melt; sensitivity variant possible later"
+
+- id: D-V1-16
+  what: whether the printed 1 mm x 240 um x 300 um is the half (symmetric) domain or the full domain
+  paper_says: "Sec 2.6.1 states the dimensions and separately that an XZ symmetry plane was used 'to reduce the model's size'"
+  status: resolved
+  adopted: "240 um read as modeled half-width; we mesh the full 480 um width with the track centered and no symmetry BC (numerically equivalent)"
+  justification: "a 240 um FULL width would put insulated side walls < 2 pool half-widths from the melt boundary (131 um pool in 480 um vs 240 um); reading it as half-width is the only physically sensible option and matches ABAQUS practice"
+
+- id: D-V1-17
+  what: track start/end positions within the 1 mm domain
+  paper_says: "not stated"
+  status: resolved
+  adopted: "x from 0.05 to 0.95 mm (50 um margins); measurements extracted at steady state near mid-track"
+  justification: "steady-state extraction makes the margins immaterial; registered for completeness"
+
+- id: D-V1-18
+  what: density is temperature-dependent in Balbaa (8453 -> 7925) but constant-per-phase in our solver
+  paper_says: "Table 1 range [49]"
+  status: open
+  adopted: "baseline rho_solid = 8453 (RT endpoint); bounding rerun with 7925 planned; rho_liquid = 7925"
+  resolution_path: "if the two bounding runs move melt-pool dimensions by more than the digitization uncertainty, revisit (e.g. fold rho(T)/rho0 into the cp table)"
+
+- id: D-V1-19
+  what: radiation emissivity and convection coefficient actually applied
+  paper_says: "radiation: Eq 8 with powder-bed emissivity from Eq 9-11 (es = 0.4 -> e_pb = 0.5312 at phi = 0.4); convection: Eq 4-7 flat-plate correlation with N2 at 3 m/s, film-temperature gas properties not tabulated"
+  status: resolved
+  adopted: "emissivity 0.5312 (computed from his Eq 9-11), constant h = 20 W/m2K"
+  justification: "both losses are O(1e-4) of absorbed laser power at melt-pool scale and time; the exact h cannot change the triangle. Derivation of e_pb printed in make_v1_tables.py output"
+
+- id: D-V1-20
+  what: printed Sih-Barlow equations do not reproduce the paper's own Fig 1 powder curve
+  paper_says: "Eq 12-13 (with the ln(ks/kg) term restored - the PDF text layer drops it) give k_pb 0.21..0.74 W/mK; Fig 1 shows ~0.55..1.55 W/mK (~2x higher); Fig 1 also confirms solid k is exactly the linear 10.1..31.6 ramp (validates D-V1-01)"
+  status: resolved
+  adopted: "k_powder table = Fig 1 curve digitized (the model as run); Sih-Barlow-as-printed kept as k_powder_sihbarlow.csv sensitivity variant"
+  justification: "the figure reflects what his ABAQUS model consumed; equations-as-printed demonstrably do not. Transcription finding to be reported in RESULTS.md"
+
 - id: D-V1-13
   what: raw AMB2018-02 datasets from data.nist.gov
   paper_says: "SPEC asks for 'the Lane et al. paper and/or the AMB2018-02 measurement tables from the NIST portal'; all *.nist.gov hosts unreachable on 2026-07-29 (connect timeout local + remote)"

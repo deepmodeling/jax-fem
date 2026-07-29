@@ -91,3 +91,11 @@ finding about the solver, exactly what V1 exists to expose.
   Transcription finding: printed Sih-Barlow (Eq 12-13) is ~2x below the
   paper's own Fig 1 powder curve; Fig 1 digitization used (D-V1-20).
   CBM-B thermal run in progress.
+- 2026-07-29 (V1 session, later): ALL RUNS DONE, RESULTS.md written.
+  Triangle at CBM-B: width 141.0 um (NIST 133, Balbaa 131), depth below
+  substrate top 90.6 um (NIST 91, Balbaa 44), length 575 um (NIST 780,
+  Balbaa 378), CR 1290->1190C 2.22e6 (NIST 9.35e5), CR 1290->1000C 1.05e6
+  (NIST ~9.5e5). Two-way A/C runs also done (depth exact at C, -24% at A =
+  keyhole-regime signature). Sensitivity: rho bounding and powder-k
+  variants both immaterial (<=4%). Remaining open: D-V1-13 (data.nist.gov
+  diff when reachable), cp_powder double-count sensitivity (D-V1-15).

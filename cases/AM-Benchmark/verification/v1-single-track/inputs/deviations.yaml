@@ -29,9 +29,9 @@
 - id: D-V1-04
   what: which temperature 'Tmelt' triggers the USDFLD powder->liquid state switch
   paper_says: "Sec 2.6.1 uses the symbol Tmelt without defining it; Table 1 has solidus 1563 K and liquidus 1623 K; melt-pool DIMENSIONS are extracted at the 1290 C solidus contour (Sec 3.2)"
-  status: open
-  adopted: null
-  resolution_path: "run both interpretations (switch at solidus vs liquidus) if cheap, report sensitivity; melt-pool extraction is unaffected (always 1290 C contour)"
+  status: resolved
+  adopted: "our solver's native mushy-band treatment (enthalpy interpolation between solidus 1563 and liquidus 1623 K) instead of a binary state switch; melt-pool extraction always at the 1290 C solidus contour, unaffected"
+  justification: "the binary-switch temperature only matters for Balbaa's USDFLD material-state bookkeeping; our phases module interpolates powder/mushy/liquid properties continuously, which subsumes both readings. Registered as a model difference in RESULTS.md"
 
 - id: D-V1-05
   what: ambient temperature and initial temperature are internally inconsistent in the paper
@@ -121,9 +121,9 @@
 - id: D-V1-18
   what: density is temperature-dependent in Balbaa (8453 -> 7925) but constant-per-phase in our solver
   paper_says: "Table 1 range [49]"
-  status: open
-  adopted: "baseline rho_solid = 8453 (RT endpoint); bounding rerun with 7925 planned; rho_liquid = 7925"
-  resolution_path: "if the two bounding runs move melt-pool dimensions by more than the digitization uncertainty, revisit (e.g. fold rho(T)/rho0 into the cp table)"
+  status: resolved
+  adopted: "baseline rho_solid = 8453 (RT endpoint), rho_liquid = 7925; bounding run at rho_solid = 7925 executed 2026-07-29"
+  justification: "bounding run moved width +0.6%, depth +4.1%, length 0%, CR +0.5% -- below every discrepancy of interest (RESULTS.md sensitivity table). Constant-per-phase density is immaterial for this case"
 
 - id: D-V1-19
   what: radiation emissivity and convection coefficient actually applied
@@ -137,7 +137,7 @@
   paper_says: "Eq 12-13 (with the ln(ks/kg) term restored - the PDF text layer drops it) give k_pb 0.21..0.74 W/mK; Fig 1 shows ~0.55..1.55 W/mK (~2x higher); Fig 1 also confirms solid k is exactly the linear 10.1..31.6 ramp (validates D-V1-01)"
   status: resolved
   adopted: "k_powder table = Fig 1 curve digitized (the model as run); Sih-Barlow-as-printed kept as k_powder_sihbarlow.csv sensitivity variant"
-  justification: "the figure reflects what his ABAQUS model consumed; equations-as-printed demonstrably do not. Transcription finding to be reported in RESULTS.md"
+  justification: "the figure reflects what his ABAQUS model consumed; equations-as-printed demonstrably do not. Transcription finding reported in RESULTS.md. Sensitivity run 2026-07-29 (v1_cbmB-sbpowder): the factor-2 powder-k ambiguity moves width +0.2%, depth 0.0%, length 0%, CR -5% -- immaterial to the triangle"
 
 - id: D-V1-13
   what: raw AMB2018-02 datasets from data.nist.gov

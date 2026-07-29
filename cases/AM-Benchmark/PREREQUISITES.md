@@ -572,6 +572,19 @@ DOI 10.3390/jmmp6010002 (CC BY 4.0), archived at
   measurement vs Balbaa ABAQUS): spec and workspace at
   `verification/v1-single-track/SPEC.md`. Runs ahead of the L-ladder in a
   **separate session**; that session owns only its own subdirectory.
+  **COMPLETE 2026-07-29** (`verification/v1-single-track/RESULTS.md`, commit
+  e5b27b2). CBM-B (195 W / 800 mm/s — the AMB2018-01 infill condition):
+  width 141/133/131 um, depth 90.6/91/44 um, length 575/780/378 um
+  (ours / NIST / Balbaa). Verdict per the SPEC framing: width error comparable
+  to Balbaa, depth and length significantly better; our depth is
+  measurement-accurate where Balbaa is -52 %. Registered limitation: melt-pool
+  LENGTH is systematically low (-20 to -26 %) and near-solidus cooling rate
+  ~2.3x fast — one phenomenon (no Marangoni flow in the tail). Consequence
+  for the main case: energy deposition and conduction are verified at the
+  AMB2018-01 infill point; any conclusion sensitive to melt-pool length or
+  solidification rate must NOT be drawn from this solver. Keyhole physics
+  absent (case A depth -24 %); irrelevant to AMB2018-01 (conduction mode).
+  Sensitivity variants (rho endpoints, powder-k 2x ambiguity): no effect.
 - **V2 — cube RS code-to-code** (Balbaa part-scale, J-C plasticity, XRD
   profiles): deferred until the main-case mechanics stage (L3).
 - **Quarantine**: Balbaa's inputs (Table 1 properties, machining-derived J-C
@@ -585,6 +598,15 @@ DOI 10.3390/jmmp6010002 (CC BY 4.0), archived at
   content: DRS absorptivity 0.62 @ 1070 nm, as-built RT tensile
   (Ramberg-Osgood K = 1618 MPa, n = 0.243), XRD in-depth RS profiles,
   two-color pyrometer temperatures.
+- **Transcription traps found by the V1 session** (details in
+  `verification/v1-single-track/RESULTS.md`; anyone citing Balbaa must check):
+  (1) the paper's Fig. 1 powder-conductivity curve is ~2x its own Eq. 12-13 —
+  use the figure, not the formula; (2) Eq. 14 + 15 double-count porosity;
+  (3) ref. [49] cannot be the k/cp source (provenance break, see above).
+- Network note: nist.gov and ncbi unreachable all day 2026-07-29 (was
+  reachable 2026-07-28) — Lane 2020 was retrieved via the Wayback archive of
+  NIST TechPubs; comparison against the raw data.nist.gov dataset remains
+  open (deviation D-V1-13).
 
 ---
 

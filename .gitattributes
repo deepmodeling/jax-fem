@@ -28,3 +28,7 @@
 /cases/AM-Benchmark/references/**/*.sha256 text eol=lf
 /cases/AM-Benchmark/*.json text eol=lf
 /cases/AM-Benchmark/*.md text eol=lf
+/cases/AM-Benchmark/references/**/*.tdb binary
+/cases/AM-Benchmark/references/**/*.py text eol=lf
+/cases/AM-Benchmark/references/**/*.json text eol=lf
+/cases/AM-Benchmark/references/**/*.md text eol=lf

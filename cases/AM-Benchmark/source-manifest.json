@@ -12,8 +12,8 @@
   "material_source_scope": "Option A per decision D-01 (PREREQUISITES.md): AM-Bench-series extension - AMB2022-04 mechanical + Zhang 2019 powder conductivity + Keller 2017 CALPHAD recipe; Special Metals and Gen3 CSP as solid k/cp/E sources",
   "hash_algorithm": "sha256",
   "summary": {
-    "files_total": 72,
-    "payload_files": 41,
+    "files_total": 79,
+    "payload_files": 44,
     "nist_checksum_verified": 30,
     "nist_checksum_mismatch": 0
   },
@@ -799,6 +799,90 @@
       "note": "NIST-measured IN625 LPBF powder conductivity 0.65 W/mK @100C -> 1.02 @500C; obtained via Europe PMC render of PMC7448231 (author manuscript)",
       "role": "payload",
       "nist_sha256_match": null
+    },
+    {
+      "path": "references/calphad/mc_ni_v2036.tdb",
+      "bytes": 416720,
+      "sha256": "84ba813156e1f7d8bde495d74420319afec03572b981f6b56103807f305313ab",
+      "folder": "calphad",
+      "dataset": "MatCalc open thermodynamic databases (TU Wien, E. Povoden-Karadeniz)",
+      "url": "https://www.matcalc.at/images/stories/Download/Database/mc_ni_v2036.tdb",
+      "decision": "D-08 (2026-07-29): pycalphad + mc_ni_v2.036 as the CALPHAD source",
+      "source_class": "open_database",
+      "role": "payload",
+      "note": "Original download, byte-identical to matcalc.at; ODbL 1.0 license in header"
+    },
+    {
+      "path": "references/calphad/mc_ni_v2036_pycalphad.tdb",
+      "bytes": 326898,
+      "sha256": "3249a9c36a547c2a69805fe9089651bd2abbf56f71e7e6348a9902f95546f79d",
+      "folder": "calphad",
+      "dataset": "MatCalc open thermodynamic databases (TU Wien, E. Povoden-Karadeniz)",
+      "url": "https://www.matcalc.at/images/stories/Download/Database/mc_ni_v2036.tdb",
+      "decision": "D-08 (2026-07-29): pycalphad + mc_ni_v2.036 as the CALPHAD source",
+      "source_class": "derived_artifact",
+      "role": "payload",
+      "note": "pycalphad-compatible copy produced by filter_tdb.py; syntax-only changes, all 3587 thermodynamic parameters preserved"
+    },
+    {
+      "path": "references/calphad/filter_tdb.py",
+      "bytes": 3026,
+      "sha256": "8c5b2090310868a38f06df61719c2a58e146b27d8c29e9094ccca65060202520",
+      "folder": "calphad",
+      "dataset": "MatCalc open thermodynamic databases (TU Wien, E. Povoden-Karadeniz)",
+      "url": "https://www.matcalc.at/images/stories/Download/Database/mc_ni_v2036.tdb",
+      "decision": "D-08 (2026-07-29): pycalphad + mc_ni_v2.036 as the CALPHAD source",
+      "source_class": "derived_artifact",
+      "role": "tooling",
+      "note": "Adaptation script: drops MatCalc-only commands, expands CONST/PARAM, repairs 2 upstream typos"
+    },
+    {
+      "path": "references/calphad/trial.py",
+      "bytes": 5120,
+      "sha256": "1016d458b893dd90bfe9adbf4ca62976f233ac0be2aa7f368569a7ce00481f40",
+      "folder": "calphad",
+      "dataset": "MatCalc open thermodynamic databases (TU Wien, E. Povoden-Karadeniz)",
+      "url": "https://www.matcalc.at/images/stories/Download/Database/mc_ni_v2036.tdb",
+      "decision": "D-08 (2026-07-29): pycalphad + mc_ni_v2.036 as the CALPHAD source",
+      "source_class": "derived_artifact",
+      "role": "tooling",
+      "note": "Trial computation: equilibrium melting window, Scheil, cp scans"
+    },
+    {
+      "path": "references/calphad/post.py",
+      "bytes": 2526,
+      "sha256": "2ac8674ff3df162b099649dd5f98e452e321084b645fa34f88c0f99f3766dd0f",
+      "folder": "calphad",
+      "dataset": "MatCalc open thermodynamic databases (TU Wien, E. Povoden-Karadeniz)",
+      "url": "https://www.matcalc.at/images/stories/Download/Database/mc_ni_v2036.tdb",
+      "decision": "D-08 (2026-07-29): pycalphad + mc_ni_v2.036 as the CALPHAD source",
+      "source_class": "derived_artifact",
+      "role": "tooling",
+      "note": "Post-processing: Scheil milestones, gamma-frozen cp vs Gen3 CSP"
+    },
+    {
+      "path": "references/calphad/trial_results.json",
+      "bytes": 38121,
+      "sha256": "cfd1ee4a234ac71c927118e200ee0228a2744ec496129271942155781f334c02",
+      "folder": "calphad",
+      "dataset": "MatCalc open thermodynamic databases (TU Wien, E. Povoden-Karadeniz)",
+      "url": "https://www.matcalc.at/images/stories/Download/Database/mc_ni_v2036.tdb",
+      "decision": "D-08 (2026-07-29): pycalphad + mc_ni_v2.036 as the CALPHAD source",
+      "source_class": "derived_artifact",
+      "role": "payload",
+      "note": "Full numeric results at the AMB2018-01 mill-cert composition"
+    },
+    {
+      "path": "references/calphad/README.md",
+      "bytes": 4654,
+      "sha256": "8d6f8433a5dbe21fadcb094c360fae00569774d195887be7b5e956496ad16837",
+      "folder": "calphad",
+      "dataset": "MatCalc open thermodynamic databases (TU Wien, E. Povoden-Karadeniz)",
+      "url": "https://www.matcalc.at/images/stories/Download/Database/mc_ni_v2036.tdb",
+      "decision": "D-08 (2026-07-29): pycalphad + mc_ni_v2.036 as the CALPHAD source",
+      "source_class": "derived_artifact",
+      "role": "documentation",
+      "note": "Provenance, license, adaptation record, gate results, caveats"
     }
   ]
 }

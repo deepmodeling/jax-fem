@@ -29,6 +29,7 @@ doi 10.1007/s40192-019-00149-0. Archived at
 | ~~D-05~~ | ~~Single part + substrate patch, outer boundary pinned at 73.5 C at 15 mm~~ | **SUPERSEDED by D-07** — the 15 mm figure was unsound, see the retraction below | 2026-07-28 |
 | ~~D-06~~ | ~~Lateral powder margin coincides with the substrate patch (15-20 mm)~~ | **SUPERSEDED by D-07** — ceases to be an independent parameter | 2026-07-28 |
 | D-07 | **Computational domain = one 20 mm periodic cell in y (the actual part pitch), substrate to its real x extent, Dirichlet 73.9 C on the substrate underside** | **APPROVED** | 2026-07-28 |
+| D-08 | **CALPHAD source = pycalphad 0.11.2 + MatCalc open Ni database mc_ni_v2.036 (ODbL 1.0)**, replacing the Thermo-Calc-TCNI candidate (educational Thermo-Calc has no TCNI, 3-element cap, no TC-Python). Trial at mill-cert composition passed the gates: melting range 1279-1357 C vs Special Metals 1288-1349 C; latent heat 259 kJ/kg; gamma-frozen cp inside Gen3 CSP 95 % CI at 6/9 points; Ghosh delta 35 K registered in B3. Files, adaptation script and caveats in `references/calphad/` | **APPROVED** | 2026-07-29 |
 
 All design decisions are settled. Remaining open items are data gaps (section E)
 and the registered conflicts (section B), not design choices.
@@ -269,7 +270,7 @@ against. Use the same constants for consistency with the benchmark's own reducti
 |---|---|---|
 | B1 | **Layer count 624 vs 625** | JRES Table 2 says 624 (byte-verified); Phan 2019 says 625 (byte-verified). Arithmetic favours 625: 625 x 20 um = 12.500 mm, exactly the measured STL bridge height. 624 may be a thermography frame count. |
 | B2 | **Laser spot size** | Phan and Heigel IMMI: 85 um D4-sigma contour / 100 um defocused infill. JRES Table 2: a single 0.10 mm vendor figure. AMB2022-04: 80 um D4-sigma contour. State which metric is used. |
-| B3 | **Solidus** | Special Metals / Wikipedia melting range 1288-1349 C; NIST CALPHAD (Ghosh) solidus 1587 K = 1314 C. Also: Scheil (non-equilibrium, appropriate for LPBF) predicts a solidus tens to >100 K below equilibrium. Three different numbers depending on definition. |
+| B3 | **Solidus** | Special Metals / Wikipedia melting range 1288-1349 C; NIST CALPHAD (Ghosh) solidus 1587 K = 1314 C. Also: Scheil (non-equilibrium, appropriate for LPBF) predicts a solidus tens to >100 K below equilibrium. Three different numbers depending on definition. **D-08 addition (2026-07-29):** mc_ni_v2036 at the mill-cert composition (Nb 3.97 wt%, top of spec) gives equilibrium solidus 1552 K = 1279 C (35 K below Ghosh, who used a nominal composition + TCNI-family database) and Scheil fs=0.95 at 1423 K = 1150 C. The model does not pick one solidus: mushy-zone latent heat follows the Scheil fs(T) curve (convention D.6). |
 | B4 | **Ridge numbering is inverted** between prose and figures | NIST prose calls the maximum-deflection end "ridge 1"; NIST Fig. 1 and Phan Fig. 9 both label that same end "Ridge 11". **Key the model on the x coordinate, never the ridge index.** |
 | B5 | Bridge height | JRES text says 12 mm; IMMI says 12.5 mm; **STL measures 12.500 mm**. Use 12.5. |
 
@@ -448,6 +449,25 @@ thin leg needs three elements across), powder ~220 k at ~1 mm, substrate ~42 k a
   ratio; the sub-domain, the convergence metric and the acceptance threshold are
   not yet specified. Must be frozen before the full case runs.
 
+### D.6 CALPHAD-derived thermophysical conventions (decision D-08, 2026-07-29)
+
+- **Mushy-zone latent-heat release follows the Scheil fs(T) curve directly**
+  (fs=0.05 at 1354 C, 0.50 at 1328 C, 0.90 at 1202 C, 0.95 at 1150 C, terminal
+  transient to 871 C). No single "effective solidus" is chosen; conflict B3
+  becomes a definitional note rather than a value to resolve. The deep Scheil
+  tail (< fs 0.98) carries < 2 % of the latent heat and may be truncated at a
+  registered cutoff when the solver needs one.
+- **Model cp = gamma-frozen cp** (FCC_A1-only, mill-cert composition), not
+  equilibrium cp: equilibrium cp double-counts delta/carbide dissolution
+  enthalpies (833 vs Gen3-measured 469 J/(kg K) at 500 C) that the as-built
+  gamma microstructure does not exhibit on process timescales. Verified against
+  Gen3 CSP within its 95 % CI at 6/9 temperatures (<= 10 % high elsewhere).
+- Latent heat 259 kJ/kg (equilibrium enthalpy gap across the melting window).
+- Caveats registered in `references/calphad/README.md`: database
+  tested-composition window slightly exceeded (Cr 20.61 vs < 20, Mo 8.82 vs
+  < 5-8 wt%); no molar-volume parameters (rho(T) gap unchanged); isolated
+  gamma-cp bump at 260 C; 5 non-converged equilibrium points at 775-850 K.
+
 ---
 
 ## E. Data gaps — each needs a decision, not a search
@@ -466,17 +486,18 @@ independently by the earlier research agents match byte-for-byte.
 | Zhang 2019 powder-conductivity paper | `references/docs/` | **acquired** (via Europe PMC render; author manuscript) |
 | Keller 2017 CALPHAD-recipe preprint | `references/docs/` | **acquired** (arXiv PDF, 25 pp) |
 | Kaschnitz / Heugenhauser measured rho(T) through melting | — | paywalled, NOT acquired; tabulation unverified |
-| CALPHAD run (cp, latent heat, solidus/liquidus) | `derived/` (future) | **to do** — needs Thermo-Calc/JMatPro access, database version must be recorded |
+| CALPHAD run (cp, latent heat, solidus/liquidus, Scheil fs(T)) | `references/calphad/` | **done 2026-07-29** (D-08) — pycalphad 0.11.2 + mc_ni_v2036 (ODbL), database version and adaptation script archived, gates in `references/calphad/README.md` |
 
 Still open from the gap table below: sigma_y above 773 K (extrapolation +
-relaxation cutoff), emissivity (solid and powder), rho(T) above RT, layer time
-for layers 251+, and the Zhang measurement-gas check.
+relaxation cutoff), emissivity (solid and powder), rho(T) above RT, and layer
+time for layers 251+. (Zhang gas check resolved 2026-07-28; CALPHAD resolved
+2026-07-29 via D-08.)
 
 | Gap | Status | Candidate | Threat to residual stress |
 |---|---|---|---|
 | sigma_y(T), hardening, 773 K -> solidus | **nothing exists anywhere** | extrapolate MaCTO shape + stress-relaxation cutoff (Denlinger & Michaleris, doi 10.1016/j.addma.2016.06.011) | **Highest.** The cutoff temperature is a calibration parameter, not data. Sensitivity study mandatory. |
 | Emissivity — **both** solid and powder are missing | no usable value for either. Solid IN625 epsilon is strongly oxidation-dependent (Sensors 2024, 673-873 K; chamber runs ~0.5 % O2). Powder-bed effective epsilon is higher (cavity effect), never measured for IN625. Zhang 2019 used epsilon_solid = 0.12-0.16 (Kieruj 2016) for its capsule in the inverse FE and states the sensitivity there was insignificant — a value for *their* problem, not a general input. Under D-04 the top surface alternates bare-solid (post-scan) and powder-covered (post-recoat), so both enter the model. | sweep as a sensitivity bracket rather than fixing a value; radiation goes as T^4 and the surface is only briefly hot, so expect modest part-scale sensitivity | Medium (was High) |
-| Latent heat, self-consistent solidus/liquidus | CALPHAD only | Thermo-Calc TCNI + Scheil, cite database version | Medium; see conflict B3 |
+| Latent heat, self-consistent solidus/liquidus | **RESOLVED 2026-07-29 (D-08)** | pycalphad + mc_ni_v2036: latent heat 259 kJ/kg, equilibrium window 1279-1357 C, Scheil fs(T) archived in `references/calphad/trial_results.json` | Low (was Medium); see conflict B3 |
 | Layer time, layers 251+ | **never published** | only 52 s for layers 1-250 is known | Medium — this is 60 % of the build |
 | k_solid(T) | available | Special Metals (measured at Battelle, -157 -> 982 C); Gen3 CSP xlsx (260-1000 C with 95 % CI, but k is derived as alpha*cp*rho with rho fixed at 8.44, so it drifts at high T) | Low |
 | k_powder(T) | available, NIST-measured | Zhang et al. 2019, 0.65 W/(m K) @ 100 C -> 1.02 @ 500 C. **Gas check RESOLVED 2026-07-28:** the specimens were LPBF-printed hollow disks that sealed the powder *with the build-chamber gas inside* ("the powder thermal properties restore the powder-bed status, including the inert gas environment"), built on an **EOS M270** — same machine family and material as AMB2018-01. The paper does not name the sealed gas explicitly; nitrogen (standard for IN625 on EOS, and what AMB2018-01 used) is registered as an `inferred` input. The single "nitrogen or argon" sentence in the paper refers to the LFA furnace purge, which never reaches the sealed powder. Remaining caveat: extrapolation above 500 C unverified. Bonus data from the same paper: powder porosity 40.3-55.7 % over 100-500 C, temperature-dependent powder density in Fig. 17(a). | Low |

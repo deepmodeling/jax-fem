@@ -1,0 +1,108 @@
+{
+  "provenance": "NIST measurement -- Lane et al. 2020, IMMI 9:16-30, DOI 10.1007/s40192-020-00169-1 (AMB2018-02); transcribed 2026-07-29 from references/Lane2020_AMB2018-02_meltpool-geometry-cooling-rates_IMMI.pdf (Wayback copy of tsapps.nist.gov pub_id=927485, sha256 39de5e69...640)",
+  "acquisition_note": "nist.gov (www/data/tsapps/nvlpubs) and ncbi.nlm.nih.gov were unreachable from this network on 2026-07-29 (connect timeout, locally and via remote fetcher), although SPEC records NIST reachable on 2026-07-28. PDF obtained from the Internet Archive snapshot 20250425010452 of the NIST TechPubs copy. Raw AMB2018-02 datasets on data.nist.gov not yet downloaded -- re-check reachability before relying on anything beyond the paper tables.",
+
+  "experiment": {
+    "benchmark": "AMB2018-02: individual laser traces on bare IN625 plates (no powder)",
+    "substrate": {
+      "material": "IN625",
+      "dimensions_mm": [24.5, 4.5, 3.2],
+      "surface": "320 grit random-orientation polish, Sa 0.44-0.53 um, Sq 0.64-0.73 um",
+      "fixturing": "four aluminum pins, minimal-contact fixture to minimize conductive loss",
+      "preheat": "not stated in the paper (no preheat mentioned); see deviations.yaml D-V1-11"
+    },
+    "machines": {
+      "CBM": {
+        "description": "EOS M270 commercial build machine",
+        "laser_spot_D4sigma_um": 100,
+        "laser_spot_FWHM_um": 59,
+        "inert_gas": "nitrogen",
+        "oxygen_level": "~0.5%",
+        "thermography": "InSb SWIR 1350-1600 nm, 1800 fps, 40 us integration"
+      },
+      "AMMT": {
+        "description": "NIST Additive Manufacturing Metrology Testbed",
+        "laser_spot_D4sigma_um": 170,
+        "laser_spot_FWHM_um": 100,
+        "inert_gas": "argon",
+        "oxygen_level": "<0.08%",
+        "thermography": "Si CMOS 850+/-20 nm, 10000 fps, 20 or 100 us integration",
+        "power_note": "AMMT actual powers were 137.9 W (case A) and 179.2 W (cases B,C), not the nominal 150/195 W"
+      }
+    },
+    "cases": {
+      "A": { "power_W_nominal": 150, "scan_speed_mm_s": 400 },
+      "B": { "power_W_nominal": 195, "scan_speed_mm_s": 800 },
+      "C": { "power_W_nominal": 195, "scan_speed_mm_s": 1200 }
+    },
+    "measurement_definitions": {
+      "melt_pool_boundary_C": 1290,
+      "length": "in-situ thermography, front of melt pool to solidification point at 1290 C along track",
+      "width_depth": "ex-situ cross-section microscopy, N=3 sections per track",
+      "cooling_rate": "surface cooling rate at track center from thermal profile, reported for 1290->1190 C and 1290->1000 C bands"
+    }
+  },
+
+  "reference_values_table4": {
+    "provenance": "NIST measurement -- Lane2020 Table 4 'Compiled summary results' (AM-Bench reference values)",
+    "unit_note": "Table 4 header prints length/width/depth mean and umean columns as (mm); values are unambiguously um (cf. Fig 8 axes in um). Transcribed as um.",
+    "CBM": {
+      "A": {
+        "cooling_rate_1290_1190_C_per_s": { "mean": 6.20e5, "N": 129, "u_mean": 6.16e3 },
+        "length_um": { "mean": 659, "N": 129, "u_mean": 0.47, "U_expanded_k2_um": 79.84 },
+        "width_um": { "mean": 171, "N": 9, "u_mean": 0.82 },
+        "depth_um": { "mean": 151, "N": 9, "u_mean": 5.75 }
+      },
+      "B": {
+        "cooling_rate_1290_1190_C_per_s": { "mean": 9.35e5, "N": 59, "u_mean": 1.82e4 },
+        "length_um": { "mean": 780, "N": 59, "u_mean": 0.50, "U_expanded_k2_um": 87.39 },
+        "width_um": { "mean": 133, "N": 9, "u_mean": 0.50 },
+        "depth_um": { "mean": 91, "N": 9, "u_mean": 0.52 }
+      },
+      "C": {
+        "cooling_rate_1290_1190_C_per_s": { "mean": 1.28e6, "N": 52, "u_mean": 5.29e4 },
+        "length_um": { "mean": 754, "N": 52, "u_mean": 0.68, "U_expanded_k2_um": 95.85 },
+        "width_um": { "mean": 100, "N": 12, "u_mean": 0.48 },
+        "depth_um": { "mean": 60, "N": 12, "u_mean": 0.16 }
+      }
+    },
+    "AMMT": {
+      "A": {
+        "cooling_rate_1290_1190_C_per_s": { "mean": 1.16e6, "N": 19, "u_mean": 6.15e4, "flag": "paper says AMMT cooling rates are exemplar only, not recommended as reference (motion blur / calibration range)" },
+        "length_um": { "mean": 300, "N": 19, "u_mean": 0.50, "U_expanded_k2_um": 11.91, "note": "AMMT-20us only" },
+        "width_um": { "mean": 148, "N": 9, "u_mean": 1.07 },
+        "depth_um": { "mean": 42, "N": 9, "u_mean": 0.49 }
+      },
+      "B": {
+        "cooling_rate_1290_1190_C_per_s": { "mean": 1.08e6, "N": 10, "u_mean": 1.86e5, "flag": "exemplar only" },
+        "length_um": { "mean": 359, "N": 10, "u_mean": 3.69, "U_expanded_k2_um": 21.26 },
+        "width_um": { "mean": 123, "N": 9, "u_mean": 1.87 },
+        "depth_um": { "mean": 36, "N": 9, "u_mean": 0.56 }
+      },
+      "C": {
+        "cooling_rate_1290_1190_C_per_s": { "mean": 1.90e6, "N": 7, "u_mean": 2.09e5, "flag": "exemplar only" },
+        "length_um": { "mean": 370, "N": 7, "u_mean": 7.72, "U_expanded_k2_um": 32.57 },
+        "width_um": { "mean": 106, "N": 12, "u_mean": 0.37 },
+        "depth_um": { "mean": 30, "N": 12, "u_mean": 0.16 }
+      }
+    }
+  },
+
+  "per_track_data_table3": {
+    "provenance": "NIST measurement -- Lane2020 Table 3 (per-track); CBM cooling rates also given for 1290->1000 C",
+    "note": "transcribed only CBM per-track cooling-rate band 1290->1000 C means here; full table in the archived PDF",
+    "CBM_cooling_rate_1290_1000_C_per_s": {
+      "A": [5.59e5, 5.84e5, 5.35e5],
+      "B": [9.33e5, 9.57e5, 9.57e5],
+      "C": [1.38e6, 1.43e6, 1.54e6, 1.34e6]
+    }
+  },
+
+  "triangle_anchor": {
+    "note": "Balbaa2022 Fig 8/9/10 'Exp [68]' bars (width 133, depth 91, length 780 um) match CBM case B exactly; therefore Balbaa's single-track validation condition is identified as CBM-B: 195 W, 800 mm/s, bare plate, spot D4sigma 100 um, N2 atmosphere. This resolves deviations D-V1-03 (validation case) and constrains D-V1-02 (spot radius r = 50 um for the code-to-code leg).",
+    "case": "CBM-B",
+    "power_W": 195,
+    "scan_speed_mm_s": 800,
+    "spot_D4sigma_um": 100
+  }
+}

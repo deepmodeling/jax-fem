@@ -1,0 +1,167 @@
+{
+  "provenance": "Balbaa2022 (DOI 10.3390/jmmp6010002), transcribed 2026-07-29 from repo copy references/docs/Balbaa2022_multiscale-RS-LPBF-IN625_JMMP-6-2.pdf; page/table refs below are to that PDF",
+  "quarantine_note": "V1-only inputs. These values reproduce Balbaa's ABAQUS model and MUST NOT leak into the main AMB2018-01 case inputs (D-01/D-08 sources differ). See SPEC.md 'Input quarantine'.",
+  "units_policy": "SI unless stated in the field name; values transcribed as printed, unit typos in the paper are registered in deviations.yaml (D-V1-06), not corrected here",
+
+  "table1_thermophysical": {
+    "provenance": "Balbaa2022 Table 1 (p.5)",
+    "solid_thermal_conductivity_W_mK": {
+      "value_range": [10.1, 31.6],
+      "temperature_dependent": true,
+      "paper_source": "[49] Heugenhauser & Kaschnitz 2019, High Temp.-High Press. 48:381-393",
+      "note": "full T-curve NOT printed in Balbaa2022, only the range; see deviations.yaml D-V1-01"
+    },
+    "solid_density_kg_m3": {
+      "value_range": [8453, 7925],
+      "temperature_dependent": true,
+      "paper_source": "[49]",
+      "note": "range printed high-to-low (density falls with T); full curve not printed, D-V1-01"
+    },
+    "solid_specific_heat_J_kgK": {
+      "value_range": [419, 657],
+      "temperature_dependent": true,
+      "paper_source": "[49]",
+      "note": "full curve not printed, D-V1-01"
+    },
+    "liquid_thermal_conductivity_W_mK": { "value": 30.078, "paper_source": "[42] Gan et al. 2019 IMMI 8:178-193" },
+    "liquid_specific_heat_J_kgK": { "value": 709.25, "paper_source": "[42]" },
+    "solidus_K": { "value": 1563, "paper_source": "[42]", "note": "= 1290 C; used as melt-pool boundary iso-surface (Sec 3.2, p.12)" },
+    "liquidus_K": { "value": 1623, "paper_source": "[42]" },
+    "boiling_K": { "value": 3000, "paper_source": "[42]" },
+    "latent_heat_fusion": { "value": 290, "unit_as_printed": "kJ/kg.K", "paper_source": "[42]", "note": "unit as printed is dimensionally wrong for a latent heat; D-V1-06" },
+    "latent_heat_vaporization": { "value": 640, "unit_as_printed": "kJ/kg.K", "paper_source": "[28]", "note": "D-V1-06" },
+    "dynamic_viscosity_Pa_s": { "value": 7e-3, "paper_source": "[42]" },
+    "surface_tension_temperature_gradient": { "value": -1.1e-4, "unit_as_printed": "N.m/K", "paper_source": "[28]", "note": "D-V1-06" },
+    "powder_avg_diameter_um": { "value": 27, "paper_source": "[50] Balbaa et al. 2019 IJAMT 104:3511-3529" },
+    "powder_bed_porosity": { "value": 0.4, "paper_source": "assumed in paper (Sec 2.2.3: 40-60% typical; 0.4 chosen)" },
+    "emissivity": { "value": 0.4, "paper_source": "[42]" },
+    "nitrogen_thermal_conductivity_W_mK": {
+      "value_range": [0.02604, 0.0947],
+      "temperature_dependent": true,
+      "paper_source": "[51] Zimina & Fomicheva 1992",
+      "note": "full curve not printed; D-V1-08"
+    },
+    "ambient_temperature_K": { "value": 313, "note": "Table 1 value; Sec 2.2.2 text says 'assumed 300 K' and Sec 2.6.2 says 40 C -- internally inconsistent, D-V1-05" }
+  },
+
+  "table2_optical_penetration_depth": {
+    "provenance": "Balbaa2022 Table 2 (p.6), measured for pure Ni by [53] Fischer et al. 2003 Acta Mater 51:1651-1662",
+    "pure_Ni_data": [
+      { "psd_um": "-20", "opd_um": 20 },
+      { "psd_um": "-75", "opd_um": 200 }
+    ],
+    "used_value": {
+      "opd_um": 100,
+      "derivation": "linear interpolation to the IN625 PSD of -45 um used in the experiments [50]; paper justifies transfer from Ni by IN625 being 58% Ni (Sec 2.4, p.6)"
+    }
+  },
+
+  "table3_process_parameters": {
+    "provenance": "Balbaa2022 Table 3 (p.10)",
+    "power_W": [140, 220, 270],
+    "scan_speed_mm_s": [500, 650, 800],
+    "hatch_spacing_mm": [0.08, 0.1, 0.12],
+    "single_track_study_subset": {
+      "provenance": "Balbaa2022 Sec 2.6.1 (p.9)",
+      "power_W": [140, 220],
+      "scan_speed_mm_s": [500, 650]
+    }
+  },
+
+  "laser": {
+    "wavelength_nm": { "value": 1070, "provenance": "Balbaa2022 Sec 3.1 (p.12), Yb-fiber laser of EOS M280" },
+    "absorptivity": {
+      "value": 0.62,
+      "provenance": "Balbaa2022 Sec 3.1 (p.12): DRS / Kubelka-Munk measurement on the IN625 powder at 1070 nm"
+    },
+    "spot_radius": {
+      "value": null,
+      "provenance": "NOT GIVEN anywhere in Balbaa2022 (r appears symbolically in Eq 17-18)",
+      "note": "blocking parameter for reproducing Eq 18; see deviations.yaml D-V1-02"
+    },
+    "machine": { "value": "EOS M280", "provenance": "Balbaa2022 Sec 2.2.2 (p.3-4) and Sec 3.1" }
+  },
+
+  "heat_source_models": {
+    "provenance": "Balbaa2022 Sec 2.4 (p.6-7), Eq 16-18",
+    "goldak_eq16": "Qv = (6*sqrt(3)*Ac*P) / (a*b*c*pi*sqrt(pi)) * exp(-[3(x-vt)^2/a^2 + 3(y-h)^2/b^2 + 3z^2/c^2]); a=b=laser spot radius, c=experimental melt pool depth",
+    "linear_decay_eq17": "Qv = (2*Ac*P)/(pi*r^2) * exp(-2((x-vt)^2+(y-h)^2)/r^2) * (2/d)*(1 - z/d)",
+    "exponential_decay_eq18": "Qv = (2*Ac*P)/(pi*r^2*d) * exp(-2((x-vt)^2+(y-h)^2)/r^2) * exp(-|z|/d)",
+    "symbols": { "P": "laser power W", "Ac": "absorptivity 0.62", "r": "spot radius (NOT GIVEN, D-V1-02)", "d": "OPD = 100 um", "v": "scan speed", "h": "hatch spacing (0 for single track on symmetry plane)" },
+    "selected_by_paper": "exponential (Eq 18), chosen after the Fig 8-10 comparison"
+  },
+
+  "powder_bed_model": {
+    "provenance": "Balbaa2022 Sec 2.2.3-2.3 (p.4-5), Eq 9-15",
+    "conductivity": "Sih-Barlow (Eq 12) with radiation term kr = 4*eps*sigma*T^3*Dp / (1 - 0.132*eps) (Eq 13); stagnant N2 in voids",
+    "emissivity": "powder-bed emissivity from Eq 9-11: e = AH*eH + (1-AH)*es, AH = 0.908*phi^2/(1.908*phi^2 - 2*phi + 1)",
+    "specific_heat": "Cp_pb = (1-phi)*Cp_s (Eq 14)",
+    "density": "rho_pb = (1-phi)*rho_s (Eq 15)",
+    "phi": 0.4
+  },
+
+  "melt_pool_effective_conductivity": {
+    "provenance": "Balbaa2022 Sec 2.5 (p.7-8), Eq 19-24",
+    "model": "keff = kl + h*L (Eq 19); h from Nu = 1.6129*ln(Ma) - 10.183 (Eq 21); Ma per Eq 22 with dT from Eq 23; L = half melt pool width; dt = L/v (Eq 24)",
+    "note": "anisotropic detail: paper says Marangoni approximated 'based only on the outward flow in the melt pool width direction' (p.14); exact implementation direction ambiguous, D-V1-10"
+  },
+
+  "single_track_model": {
+    "provenance": "Balbaa2022 Sec 2.6.1 (p.8-9), Fig 2",
+    "domain_mm": [1.0, 0.24, 0.30],
+    "powder_layer_um": 40,
+    "validation_variant_powder_layer_um": {
+      "value": 20,
+      "provenance": "Balbaa2022 Sec 3.2 (p.12): geometry modified to 20 um layer to match NIST [68] / Dilip [69] experiments"
+    },
+    "element_type": "ABAQUS DC3D8 (8-node linear heat-transfer hex)",
+    "min_element_size_um": 10,
+    "min_element_region": "powder layer",
+    "symmetry": "XZ plane (track centerline), halves the domain",
+    "heat_input": "volumetric body flux on powder layer via DFLUX",
+    "state_switching": "USDFLD: SV 0=powder (T<Tmelt), 1=liquid (T>Tmelt), 2=solid (T<Tmelt after Tmax>Tmelt); 'Tmelt' not defined as solidus or liquidus in the paper, D-V1-04",
+    "melt_pool_extraction": "at steady state (constant peak T); boundary = 1290 C solidus contour",
+    "initial_condition_C": { "value": 80, "provenance": "Balbaa2022 Sec 2.1 (p.3), Eq 2 preheat; not re-stated for the single-track model specifically, D-V1-05" },
+    "convection_bc": "forced N2 over flat plate, Eq 4-7; U_inf = 3 m/s (p.3); W = 250 mm (EOS M280 bed width); gas properties at film temperature (Pr, nu curves not tabulated, D-V1-10)",
+    "radiation_bc": "Eq 8 with powder-bed emissivity from Eq 9-11"
+  },
+
+  "reported_validation_results": {
+    "provenance": "Balbaa2022 Sec 4.1, Figs 8-10 (p.14-15); text-stated values exact, bar-chart values digitized from 200 dpi render, see deviations.yaml D-V1-09",
+    "melt_pool_boundary_C": 1290,
+    "validation_case_process_parameters": {
+      "value": null,
+      "note": "P and v of the 20-um-layer validation runs are NOT stated in the paper; D-V1-03. NIST AMB2018-02 cases were A:150W/400mm/s, B:195W/800mm/s, C:195W/1200mm/s."
+    },
+    "width_um": {
+      "exp_dilip_69": { "value": 128, "read_from": "Fig 8 bar" },
+      "exp_nist_68": { "value": 133, "read_from": "Fig 8 bar" },
+      "linear": { "value": 142, "read_from": "Fig 8 bar" },
+      "exponential": { "value": 131, "read_from": "text p.14 (exact)" },
+      "goldak": { "value": 137, "read_from": "Fig 8 bar" }
+    },
+    "depth_um": {
+      "exp_dilip_69": { "value": 60, "read_from": "Fig 9 bar" },
+      "exp_nist_68": { "value": 91, "read_from": "Fig 9 bar" },
+      "linear": { "value": 48, "read_from": "Fig 9 bar" },
+      "exponential": { "value": 44, "read_from": "Fig 9 bar" },
+      "goldak": { "value": 51, "read_from": "Fig 9 bar" }
+    },
+    "length_um": {
+      "exp_nist_68": { "value": 780, "read_from": "Fig 10 bar (small error bar visible)" },
+      "linear": { "value": 380, "read_from": "Fig 10 bar" },
+      "exponential": { "value": 378, "read_from": "Fig 10 bar" },
+      "goldak": { "value": 340, "read_from": "Fig 10 bar" }
+    },
+    "paper_interpretation_notes": [
+      "depth underestimated by all three sources; paper attributes NIST's deeper pools to bare-substrate printing (no powder layer) while the model kept a 20 um powder layer (p.14), D-V1-07",
+      "length underestimated ~2x; paper attributes it to the width-direction-only Marangoni approximation (p.14)",
+      "cooling rate ~1e5 K/s order, Figs 12-13, reported for the 140-270 W parameter study, not per NIST case"
+    ]
+  },
+
+  "external_experiment_references": {
+    "nist_68": "Lane et al. 2020, IMMI 9:16-30, DOI 10.1007/s40192-020-00169-1 (AMB2018-02, bare IN625 plates)",
+    "dilip_69": "Dilip et al. 2016, Solid Freeform Fabrication Symposium, Austin TX ('A short study on the fabrication of single track deposits in SLM and characterization'); note SPEC.md cites this as 'Dilip et al. 2017' -- the Balbaa reference list says 2016"
+  }
+}

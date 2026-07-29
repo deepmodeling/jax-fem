@@ -1,0 +1,98 @@
+# V1 single-track deviation registry (Kaess discipline: register, don't silently fill)
+# Scope: reproducing Balbaa2022 (DOI 10.3390/jmmp6010002) single-track model and
+# comparing against NIST AMB2018-02 (Lane2020, DOI 10.1007/s40192-020-00169-1).
+# Status values: open | resolved | accepted-gap
+# "adopted" fields state what WE will use when a run cannot proceed otherwise;
+# every adopted value must be visible in RESULTS.md, never tuned to match outputs.
+
+- id: D-V1-01
+  what: full temperature-dependent curves for ks, rho_s, cp_s of bulk IN625
+  paper_says: "Table 1 prints only ranges (ks 10.1-31.6 W/mK, rho 8453-7925 kg/m3, cp 419-657 J/kgK); curves are in ref [49] Heugenhauser & Kaschnitz 2019, which is paywalled and not archived in this repo"
+  status: open
+  adopted: null
+  resolution_path: "acquire [49], or use [42] Gan2019 IMMI property table (same values Balbaa cites for liquid props) with the printed ranges as a consistency check; decision to be recorded here before any run"
+
+- id: D-V1-02
+  what: laser spot radius r in heat-source Eq 17/18
+  paper_says: "nowhere stated numerically; r appears only symbolically"
+  status: resolved
+  adopted: "r = 50 um (D4sigma diameter 100 um) for the CBM-B validation leg"
+  justification: "Balbaa's Exp[68] bars match NIST CBM case B exactly (width 133 / depth 91 / length 780 um); CBM laser spot D4sigma = 100 um per Lane2020 Table 1. Balbaa's own EOS M280 spot is nominally ~100 um as well. NOT tuned: value comes from the NIST machine spec, provenance 'NIST measurement'."
+
+- id: D-V1-03
+  what: process condition (P, v) of Balbaa's 20-um-layer validation runs (Figs 8-10)
+  paper_says: "not stated in Sec 3.2 or Sec 4.1"
+  status: resolved
+  adopted: "195 W, 800 mm/s (= AMB2018-02 case B)"
+  justification: "Exp[68] bar values match CBM-B compiled reference values exactly (133/91/780 um); see inputs/nist-meltpool.json triangle_anchor"
+
+- id: D-V1-04
+  what: which temperature 'Tmelt' triggers the USDFLD powder->liquid state switch
+  paper_says: "Sec 2.6.1 uses the symbol Tmelt without defining it; Table 1 has solidus 1563 K and liquidus 1623 K; melt-pool DIMENSIONS are extracted at the 1290 C solidus contour (Sec 3.2)"
+  status: open
+  adopted: null
+  resolution_path: "run both interpretations (switch at solidus vs liquidus) if cheap, report sensitivity; melt-pool extraction is unaffected (always 1290 C contour)"
+
+- id: D-V1-05
+  what: ambient temperature and initial temperature are internally inconsistent in the paper
+  paper_says: "Sec 2.2.2: T_inf assumed 300 K; Table 1: T_inf = 313 K; Sec 2.6.2 (multi-track): ambient 40 C with 80 C preheat; Sec 2.1 Eq 2: initial condition = preheat 80 C (stated once, generically); single-track section states neither"
+  status: open
+  adopted: null
+  resolution_path: "baseline: initial T 80 C + T_inf 313 K (Table 1); sensitivity check with 300 K if convection/radiation terms matter at melt-pool scale (expected negligible)"
+
+- id: D-V1-06
+  what: unit typos in Table 1 as printed
+  paper_says: "latent heats printed as kJ/kg.K (dimensionally wrong for latent heat -> kJ/kg intended); dsigma/dT printed as N.m/K (surface tension gradient -> N/(m.K) intended)"
+  status: accepted-gap
+  adopted: "kJ/kg for Lf/Lv; N/(m.K) for dsigma/dT"
+  justification: "standard units for these quantities; values (290, 640, -1.1e-4) are consistent with IN625 literature in those units"
+
+- id: D-V1-07
+  what: powder layer in the validation model vs bare-plate experiment
+  paper_says: "NIST AMB2018-02 tracks are on BARE plates; Balbaa still modeled a 20 um powder layer (Sec 3.2) and attributes his depth underestimate partly to this (p.14)"
+  status: accepted-gap
+  adopted: "code-to-code leg reproduces Balbaa as-published (20 um powder layer); code-to-experiment leg additionally runs a bare-plate variant with the same Balbaa bulk properties (no powder-model contribution). Both reported."
+  justification: "the triangle requires Balbaa's setup for his leg and the physical setup for the NIST leg; mixing them silently would hide the known geometry mismatch"
+
+- id: D-V1-08
+  what: temperature-dependent nitrogen conductivity kg(T) curve
+  paper_says: "Table 1 prints only the range 0.02604-0.0947 W/mK, citing [51] (Zimina & Fomicheva 1992, Russian-language journal, not accessible)"
+  status: open
+  adopted: null
+  resolution_path: "affects only Sih-Barlow powder conductivity and convection film properties; if [51] unavailable use standard NIST N2 correlations and register the swap here"
+
+- id: D-V1-09
+  what: Balbaa's predicted/measured values in Figs 8-10 are bar charts without printed numbers
+  paper_says: "only the exponential-source width (131 um) is stated in text"
+  status: accepted-gap
+  adopted: "digitized from 200 dpi render: width 128/133/142/131/137, depth 60/91/48/44/51 (Exp69/Exp68/Linear/Exponential/Goldak), length 780/380/378/340 (Exp68/Linear/Exponential/Goldak); estimated read-off error +/-2 um (width/depth), +/-10 um (length)"
+  justification: "text value 131 um and the exact match of Exp[68] bars to Lane Table 4 confirm digitization accuracy"
+
+- id: D-V1-10
+  what: implementation details of the effective-conductivity (Marangoni) model
+  paper_says: "keff = kl + h*L with L = half melt pool width (chicken-and-egg: L is an output); paper says Marangoni approximated 'based only on the outward flow in the melt pool width direction' without giving the update scheme, iteration, or directionality of keff"
+  says_also: "convection film properties (Pr, nu of N2) not tabulated"
+  status: open
+  adopted: null
+  resolution_path: "decide whether our leg applies an equivalent keff enhancement or none; if none, expect shorter/narrower pools -- report as physics difference, do not tune"
+
+- id: D-V1-11
+  what: NIST experiment preheat / plate initial temperature
+  paper_says: "Lane2020 does not state a preheat; fixture designed to minimize conductive loss; no heated build plate mentioned"
+  status: open
+  adopted: null
+  resolution_path: "assume room temperature (~293 K) for the bare-plate leg unless the AMB2018-02 description page (currently unreachable) states otherwise; register the assumption before running"
+
+- id: D-V1-12
+  what: SPEC.md citation nit
+  paper_says: "SPEC cites '[69] Dilip et al. 2017'; Balbaa's reference list has Dilip et al. 2016 SFF Symposium proceedings"
+  status: accepted-gap
+  adopted: "2016"
+  justification: "transcribed from the Balbaa reference list as printed (p.41); SPEC not edited since it is a shared-history document -- noted here and to be flagged in RESULTS.md"
+
+- id: D-V1-13
+  what: raw AMB2018-02 datasets from data.nist.gov
+  paper_says: "SPEC asks for 'the Lane et al. paper and/or the AMB2018-02 measurement tables from the NIST portal'; all *.nist.gov hosts unreachable on 2026-07-29 (connect timeout local + remote)"
+  status: open
+  adopted: "paper Tables 3/4 (authoritative compiled reference values) transcribed from the Wayback copy of the NIST TechPubs PDF"
+  resolution_path: "re-try data.nist.gov for CHAL-AMB2018-02-MP/CR records when network allows; diff against transcription"

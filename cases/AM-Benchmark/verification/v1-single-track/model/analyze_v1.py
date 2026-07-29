@@ -44,10 +44,12 @@ if not vtus:
 # exact per-step times from the solver's own record (the scan dt is set by
 # the path-row spacing, NOT by --dt; discovered on the first CBM-B run)
 step_time = {}
+step_laser_on = {}
 with open(os.path.join(args.run_dir, "path_used.csv")) as f:
     import csv as _csv
     for row in _csv.DictReader(f):
         step_time[int(row["step"])] = float(row["time"])
+        step_laser_on[int(row["step"])] = float(row["laser_on"]) > 0.5
 
 def step_of(path):
     m = re.findall(r"(\d+)", os.path.basename(path))
@@ -162,7 +164,8 @@ if depths:
 
 # --- pool length: median over frames with pool front in the steady window ---
 lens = [r["pool_len"] for r in records
-        if r["pool_x_max"] is not None and 0.5e-3 <= r["pool_x_max"] <= 0.9e-3]
+        if r["pool_x_max"] is not None and 0.5e-3 <= r["pool_x_max"] <= 0.9e-3
+        and step_laser_on.get(r["step"], False)]
 length_um = float(np.median(lens) * 1e6) if lens else 0.0
 
 # --- steadiness: Tmax over laser-on frames ---

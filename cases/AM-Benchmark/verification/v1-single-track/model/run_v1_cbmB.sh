@@ -28,8 +28,8 @@ RHO_SOLID="${RHO_SOLID:-}"          # optional override for D-V1-18 bounding run
 THERMAL_OUT_EVERY="${THERMAL_OUT_EVERY:-2}"
 OUT_ROOT="${OUT_ROOT:-${WORK_ROOT}/output/v1_${CASE_TAG}_P${POWER}_${RUN_ID}}"
 
-MESH="${SCRIPT_DIR}/v1_single_track_c3d8.inp"
-CONFIG="${SCRIPT_DIR}/v1_material_config.json"
+MESH="${MESH:-${SCRIPT_DIR}/v1_single_track_c3d8.inp}"
+CONFIG="${CONFIG:-${SCRIPT_DIR}/v1_material_config.json}"
 PATH_FILE="${OUT_ROOT}/v1_path_${CASE_TAG}.csv"
 
 for f in "${MESH}" "${CONFIG}"; do

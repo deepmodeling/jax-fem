@@ -78,3 +78,16 @@ finding about the solver, exactly what V1 exists to expose.
 
 - 2026-07-29: workspace created, Balbaa PDF archived, spec written (main
   session). Transcription not started. NIST melt-pool data not yet acquired.
+- 2026-07-29 (V1 session): transcription done (inputs/balbaa-model.json,
+  inputs/nist-meltpool.json, deviations.yaml D-V1-01..20). Lane2020 acquired
+  via Wayback copy of NIST TechPubs (nist.gov unreachable today, D-V1-13).
+  Balbaa validation condition identified as AMB2018-02 CBM case B
+  (195 W / 800 mm/s, spot D4sigma 100 um): his Exp[68] bars match Lane
+  Table 4 CBM-B exactly. Solver needs NO shared-code change: source_model
+  =legacy is Eq-18-identical (energy-ledger verified). One shared-code bug
+  found and worked around, NOT fixed here (stepper.py:966 crashes with
+  --mechanics-every 0 + thermal-only surrogate; flag
+  --no-xla-thermal-only-mechanics-surrogate avoids it) -- main session to fix.
+  Transcription finding: printed Sih-Barlow (Eq 12-13) is ~2x below the
+  paper's own Fig 1 powder curve; Fig 1 digitization used (D-V1-20).
+  CBM-B thermal run in progress.

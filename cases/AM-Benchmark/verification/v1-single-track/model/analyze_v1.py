@@ -34,13 +34,20 @@ PROBE = np.array([0.5e-3, 0.24e-3, LAYER_TOP])
 
 ap = argparse.ArgumentParser()
 ap.add_argument("run_dir")
-ap.add_argument("--dt", type=float, default=1.0e-5)
 ap.add_argument("--out", default=None)
 args = ap.parse_args()
 
 vtus = sorted(glob.glob(os.path.join(args.run_dir, "*.vtu")))
 if not vtus:
     raise SystemExit(f"no VTU files in {args.run_dir}")
+
+# exact per-step times from the solver's own record (the scan dt is set by
+# the path-row spacing, NOT by --dt; discovered on the first CBM-B run)
+step_time = {}
+with open(os.path.join(args.run_dir, "path_used.csv")) as f:
+    import csv as _csv
+    for row in _csv.DictReader(f):
+        step_time[int(row["step"])] = float(row["time"])
 
 def step_of(path):
     m = re.findall(r"(\d+)", os.path.basename(path))
@@ -55,10 +62,18 @@ cell_centers = pts[cells].mean(axis=1)
 probe_node = int(np.argmin(np.linalg.norm(pts - PROBE, axis=1)))
 probe_err = float(np.linalg.norm(pts[probe_node] - PROBE))
 
+# structured-grid shape (make_v1_mesh.py: i fastest, then j, then k)
+NX, NY, NZ = 100, 48, 30
+XS = np.arange(NX + 1) * 10.0e-6
+YS = np.arange(NY + 1) * 10.0e-6
+ZS = np.arange(NZ + 1) * 10.0e-6
+
 records = []
+Tmax_nodal = None
 for step, path in frames:
     m = meshio.read(path)
     T = np.asarray(m.point_data["T"]).reshape(-1)
+    Tmax_nodal = T.copy() if Tmax_nodal is None else np.maximum(Tmax_nodal, T)
     maxTh = None
     for key in ("max_temperature_history",):
         if key in m.cell_data_dict and "hexahedron" in m.cell_data_dict[key]:
@@ -66,7 +81,7 @@ for step, path in frames:
     molten = T >= SOLIDUS
     rec = {
         "step": step,
-        "time": step * args.dt,
+        "time": step_time.get(step, float("nan")),
         "Tmax": float(T.max()),
         "T_probe": float(T[probe_node]),
         "pool_len": 0.0,
@@ -102,6 +117,48 @@ if "_maxTh" in last:
             "depth_from_substrate_top_um": (SUBSTRATE_TOP - float(fc[steady, 2].min() - 5.0e-6)) * 1e6 if steady.any() else 0.0,
             "fusion_x_extent_mm": [float(fc[:, 0].min()) * 1e3, float(fc[:, 0].max()) * 1e3],
         }
+
+# --- sub-cell fusion geometry from nodal max-T over output frames ---
+# (frames sample every 2nd step, so nodal peaks can be slightly missed;
+#  the cell max_temperature_history numbers above are the exact-but-
+#  quantized companion. Report both.)
+grid = Tmax_nodal.reshape(NZ + 1, NY + 1, NX + 1)
+
+def extent_interp(vals, coords):
+    """max extent of vals >= SOLIDUS along coords with linear interpolation"""
+    above = vals >= SOLIDUS
+    if not above.any():
+        return None, None
+    i = np.where(above)[0]
+    lo, hi = i[0], i[-1]
+    x_lo = coords[lo]
+    if lo > 0:
+        f = (SOLIDUS - vals[lo - 1]) / (vals[lo] - vals[lo - 1])
+        x_lo = coords[lo - 1] + f * (coords[lo] - coords[lo - 1])
+    x_hi = coords[hi]
+    if hi < len(vals) - 1:
+        f = (vals[hi] - SOLIDUS) / (vals[hi] - vals[hi + 1])
+        x_hi = coords[hi] + f * (coords[hi + 1] - coords[hi])
+    return x_lo, x_hi
+
+interp = {}
+mid_ix = [i for i, x in enumerate(XS) if 0.45e-3 <= x <= 0.55e-3]
+widths, depths = [], []
+for ix in mid_ix:
+    for iz in range(NZ + 1):
+        lo, hi = extent_interp(grid[iz, :, ix], YS)
+        if lo is not None:
+            widths.append(hi - lo)
+    for iy in range(NY + 1):
+        zlo, _ = extent_interp(grid[:, iy, ix], ZS)
+        if zlo is not None:
+            depths.append(zlo)
+if widths:
+    interp["width_interp_um"] = float(max(widths)) * 1e6
+if depths:
+    zmin = float(min(depths))
+    interp["depth_interp_from_layer_top_um"] = (LAYER_TOP - zmin) * 1e6
+    interp["depth_interp_from_substrate_top_um"] = (SUBSTRATE_TOP - zmin) * 1e6
 
 # --- pool length: median over frames with pool front in the steady window ---
 lens = [r["pool_len"] for r in records
@@ -142,6 +199,7 @@ result = {
     "pool_length_median_um": length_um,
     "pool_length_frames_used": len(lens),
     **geom,
+    **interp,
     **cr,
     "definitions": "solidus 1563 K boundary; see module docstring",
 }

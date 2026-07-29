@@ -2328,6 +2328,11 @@ class _ThermalOnlyMechanicsProblem:
             num_nodes = int(getattr(thermal_fe, "num_total_nodes", 0) or 0)
         self.num_total_dofs_all_vars = int(num_nodes) * int(vec)
 
+    def set_flow_curve_active_mask(self, selector):
+        """No-op: thermal-only runs never assemble mechanics, so the
+        flow-curve selector the stepper binds each step has nothing to bind to."""
+        del selector
+
 
 def _mechanics_dirichlet_node_inds_from_thermal_fe(
     thermal_fe: Any,

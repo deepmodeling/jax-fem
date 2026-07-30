@@ -12,8 +12,8 @@
   "material_source_scope": "Option A per decision D-01 (PREREQUISITES.md): AM-Bench-series extension - AMB2022-04 mechanical + Zhang 2019 powder conductivity + Keller 2017 CALPHAD recipe; Special Metals and Gen3 CSP as solid k/cp/E sources",
   "hash_algorithm": "sha256",
   "summary": {
-    "files_total": 84,
-    "payload_files": 47,
+    "files_total": 86,
+    "payload_files": 48,
     "nist_checksum_verified": 30,
     "nist_checksum_mismatch": 0
   },
@@ -942,6 +942,28 @@
       "source_class": "derived_artifact",
       "role": "tooling",
       "note": "auditable PDF-to-JSON transcription script with embedded spot checks"
+    },
+    {
+      "path": "tools/layer_schedule_generator.py",
+      "folder": "tools",
+      "dataset": "D-10 layer-clock reconstruction (this repository, case-local sample tooling)",
+      "source_class": "derived_artifact",
+      "role": "tooling",
+      "decision": "D-10 (2026-07-30, sample scope)",
+      "note": "bottom-up per-layer clock from inputs/scan-timing.json; inferred elements I1-I3 documented in module docstring",
+      "bytes": 12516,
+      "sha256": "1e16785f4c5f9e8b4913cb02851c6657172e833da0657705e1fc00ff7ea05e74"
+    },
+    {
+      "path": "derived/layer-schedule.json",
+      "folder": "derived",
+      "dataset": "D-10 layer-clock reconstruction (this repository)",
+      "source_class": "derived_artifact",
+      "role": "payload",
+      "decision": "D-10 (2026-07-30, sample scope)",
+      "note": "per-layer clock, 624 layers + N=10 aggregation; closed-loop residual -32 % vs published ~26 s plate scan REPORTED UNRESOLVED (reading A adopted, reading B bracketed in E-table)",
+      "bytes": 137136,
+      "sha256": "934930c3d8df09ad52eecb7c51ae495427e9012e41a04b34d5c43fc896b1c91b"
     }
   ]
 }

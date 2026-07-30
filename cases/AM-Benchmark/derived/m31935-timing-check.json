@@ -1,0 +1,166 @@
+{
+ "schema_version": "ambench.m31935-timing/1",
+ "decision": "user approval 2026-07-30: M31935 admitted as the TIME-DIMENSION reference only; temperature-calibration use remains rejected",
+ "source": {
+  "doi": "10.18434/M31935",
+  "bundle": "Build1 layers 001-010 (legs band)",
+  "note": "mat files not in repo; hashed below"
+ },
+ "layer_cycle_increments_s": [
+  51.751,
+  52.818,
+  51.559,
+  52.839,
+  51.637,
+  52.727,
+  51.622,
+  52.767,
+  51.662
+ ],
+ "layer_cycle_mean_s": 52.154,
+ "layer_cycle_std_s": 0.57,
+ "published_layer_time_s": 52,
+ "parity_alternation": "odd-layer cycles ~51.7 s, even ~52.8 s (opposite sign to computed active-time parity; suggests parity-adjusted dwell; +-0.6 s)",
+ "odd_layer_recorded_spans_s": [
+  3.979,
+  3.996,
+  3.998,
+  3.993
+ ],
+ "computed_part_active_odd_s": 4.505,
+ "reading_B_predicted_span_s": 6.657,
+ "verdict": "reading A supported: measured odd spans ~3.98-4.00 s are consistent with computed part active (4.5 s incl. out-of-ROI contour/edge rows) and exclude the ~1.48x scaling reading B would require (~6.6 s -> span ~5.7 s). The published \"~26 s\" plate-scan figure is judged loose; the -32 % D-10 residual is closed as a source-side approximation, not a reconstruction error.",
+ "anomalies": "layer 9: 0.735 s internal recording gap (dropped frames or skip); excluded from span statistics",
+ "layers": [
+  {
+   "file": "AMBench_625_Build1_Layer01.mat",
+   "sha256": "738cc83cee343abc881c5fb5544cd3e030cd365cf7d90bdb6bd4227c99750f28",
+   "n_frames_stored": 2497,
+   "raw_frame_range": [
+    941,
+    8012
+   ],
+   "t_first_s": 0.0,
+   "t_last_s": 3.979,
+   "recorded_span_s": 3.979,
+   "max_internal_gap_s": 0.073
+  },
+  {
+   "file": "AMBench_625_Build1_Layer02.mat",
+   "sha256": "5e1d387fd62dfa5e2e5ca72703640aab967bf6b97ad2520dcafb40151765aec1",
+   "n_frames_stored": 1030,
+   "raw_frame_range": [
+    2482,
+    3870
+   ],
+   "t_first_s": 51.751,
+   "t_last_s": 52.528,
+   "recorded_span_s": 0.777,
+   "max_internal_gap_s": 0.104
+  },
+  {
+   "file": "AMBench_625_Build1_Layer03.mat",
+   "sha256": "3780028ed1af5eb309ff6ad4191c60b5744eedd3b3dadabab22294e56c4a2803",
+   "n_frames_stored": 3167,
+   "raw_frame_range": [
+    742,
+    7889
+   ],
+   "t_first_s": 104.569,
+   "t_last_s": 108.565,
+   "recorded_span_s": 3.996,
+   "max_internal_gap_s": 0.071
+  },
+  {
+   "file": "AMBench_625_Build1_Layer04.mat",
+   "sha256": "d06512a22b33c0722cb57673a426dfe1e2a2839e9647dc673bf5111f1b325fa1",
+   "n_frames_stored": 1181,
+   "raw_frame_range": [
+    2316,
+    4179
+   ],
+   "t_first_s": 156.128,
+   "t_last_s": 157.165,
+   "recorded_span_s": 1.038,
+   "max_internal_gap_s": 0.057
+  },
+  {
+   "file": "AMBench_625_Build1_Layer05.mat",
+   "sha256": "bda8d4e10c6fc74167706d2dc7f44042d0f4ae98cb39ef8a80c8ab4e8b77dfe5",
+   "n_frames_stored": 3333,
+   "raw_frame_range": [
+    894,
+    8022
+   ],
+   "t_first_s": 208.967,
+   "t_last_s": 212.966,
+   "recorded_span_s": 3.998,
+   "max_internal_gap_s": 0.066
+  },
+  {
+   "file": "AMBench_625_Build1_Layer06.mat",
+   "sha256": "15c92b56f79be665bd448b2cfd0660424c1054a8414a98cb183575b919afe63a",
+   "n_frames_stored": 1176,
+   "raw_frame_range": [
+    2340,
+    4100
+   ],
+   "t_first_s": 260.604,
+   "t_last_s": 261.586,
+   "recorded_span_s": 0.982,
+   "max_internal_gap_s": 0.064
+  },
+  {
+   "file": "AMBench_625_Build1_Layer07.mat",
+   "sha256": "15e682115c630bb3cc56437aba0f76390b02b5c7a0df5398ae87b6cc6663a3b0",
+   "n_frames_stored": 3373,
+   "raw_frame_range": [
+    863,
+    8002
+   ],
+   "t_first_s": 313.331,
+   "t_last_s": 317.324,
+   "recorded_span_s": 3.993,
+   "max_internal_gap_s": 0.068
+  },
+  {
+   "file": "AMBench_625_Build1_Layer08.mat",
+   "sha256": "89bbf41ea1627822d6a206102f730e222b42f9ac88486122938a8552c8ccee18",
+   "n_frames_stored": 1269,
+   "raw_frame_range": [
+    2542,
+    4252
+   ],
+   "t_first_s": 364.953,
+   "t_last_s": 365.917,
+   "recorded_span_s": 0.964,
+   "max_internal_gap_s": 0.052
+  },
+  {
+   "file": "AMBench_625_Build1_Layer09.mat",
+   "sha256": "04e7050bd90b1527251f7a37da9369da8b1edd1b6d6cd3fd27746447ff42d45b",
+   "n_frames_stored": 2066,
+   "raw_frame_range": [
+    824,
+    5120
+   ],
+   "t_first_s": 417.72,
+   "t_last_s": 420.815,
+   "recorded_span_s": 3.096,
+   "max_internal_gap_s": 0.735
+  },
+  {
+   "file": "AMBench_625_Build1_Layer10.mat",
+   "sha256": "31eb2307be61be35995a4d759e47fa99c6b59815e38209588f89919e1dad6084",
+   "n_frames_stored": 1332,
+   "raw_frame_range": [
+    1681,
+    4053
+   ],
+   "t_first_s": 469.382,
+   "t_last_s": 470.719,
+   "recorded_span_s": 1.337,
+   "max_internal_gap_s": 0.205
+  }
+ ]
+}

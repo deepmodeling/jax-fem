@@ -12,8 +12,8 @@
   "material_source_scope": "Option A per decision D-01 (PREREQUISITES.md): AM-Bench-series extension - AMB2022-04 mechanical + Zhang 2019 powder conductivity + Keller 2017 CALPHAD recipe; Special Metals and Gen3 CSP as solid k/cp/E sources",
   "hash_algorithm": "sha256",
   "summary": {
-    "files_total": 86,
-    "payload_files": 48,
+    "files_total": 88,
+    "payload_files": 49,
     "nist_checksum_verified": 30,
     "nist_checksum_mismatch": 0
   },
@@ -964,6 +964,30 @@
       "note": "per-layer clock, 624 layers + N=10 aggregation; closed-loop residual -32 % vs published ~26 s plate scan REPORTED UNRESOLVED (reading A adopted, reading B bracketed in E-table)",
       "bytes": 137136,
       "sha256": "934930c3d8df09ad52eecb7c51ae495427e9012e41a04b34d5c43fc896b1c91b"
+    },
+    {
+      "path": "tools/m31935_timing_check.py",
+      "folder": "tools",
+      "dataset": "NIST AM-Bench 2018 in-situ thermography (time dimension only)",
+      "doi": "10.18434/M31935",
+      "source_class": "derived_artifact",
+      "role": "tooling",
+      "decision": "user approval 2026-07-30: M31935 time-dimension use; temperature-calibration use remains rejected",
+      "note": "reads Layer.BuildTime/RawFrameNumber only; .mat sources not in repo (104 MB+), hashed inside the results JSON",
+      "bytes": 5128,
+      "sha256": "ac250f97a8137c03d3c14662ce12c942f6bdea0904e3432367c18537e6b4280e"
+    },
+    {
+      "path": "derived/m31935-timing-check.json",
+      "folder": "derived",
+      "dataset": "NIST AM-Bench 2018 in-situ thermography (time dimension only)",
+      "doi": "10.18434/M31935",
+      "source_class": "derived_artifact",
+      "role": "payload",
+      "decision": "user approval 2026-07-30 (same as tool)",
+      "note": "layer cycle 52.15+-0.57 s (9 increments); odd-layer ROI spans 3.98-4.00 s support D-10 reading A; includes sha256 of the 10 source .mat files",
+      "bytes": 4557,
+      "sha256": "00102d23841170d70cfb0a75c3f04377a5a10fb9e19a0fb3111d8bd7b99e5188"
     }
   ]
 }

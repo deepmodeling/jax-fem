@@ -15,15 +15,16 @@
 - id: D-V2-02
   what: J-C -> flow_curve mapping (our solver is J2 with T-dependent tables, no strain-rate term)
   paper_says: "J-C rate coefficient C = 2.09e-4 at edot0 = 1670/s"
-  status: open
-  adopted: null
-  resolution_path: "tabulate sigma(eps_p, T) from the modified J-C at a fixed registered reference strain rate; C is tiny (2e-4 per ln-decade), so dropping the rate term changes flow stress <0.5% over 3 decades -- to be quantified in the run config and registered here"
+  status: resolved
+  adopted: "omit the rate term, i.e. evaluate the modified J-C at the reference rate 1670/s; tabulate sigma(eps_p, T) into flow_curve.csv"
+  justification: "QUANTIFIED 2026-07-30 (model/make_v2_mech_tables.py --quantify): the rate factor spans 0.99701 (1e-3 /s) to 1.00086 (1e5 /s) -- under 0.3 % across EIGHT decades of strain rate, because C is tiny and the reference rate sits mid-range. Two orders of magnitude below any RS acceptance criterion, so the omission is immaterial rather than merely convenient"
 
 - id: D-V2-03
   what: E(T) curve (Fig 41) not printed as numbers
-  paper_says: "measured 171 GPa at RT; literature curve offset by the RT difference"
-  status: open
-  resolution_path: "digitize Fig 41 (V1 digitization workflow); record read-off uncertainty"
+  paper_says: "measured 171 GPa at RT; literature curve offset by the RT difference (p.33)"
+  status: resolved
+  adopted: "arithmetic reconstruction, NO digitization needed: E(T) = E_SpecialMetals_annealed(T) - 36.5 GPa, from his own cited [63] datasheet Table 4 (9 rows 21-871 C, transcribed in specialmetals-in625-tables.json); offset closes exactly on his measured 171 GPa at RT"
+  justification: "his sentence defines the construction uniquely once the literature source is identified as [63]; reconstruction is exact where digitization would carry read-off error. Cross-check against a Fig 41 digitization remains a nice-to-have, not a blocker"
 
 - id: D-V2-04
   what: Kaschnitz IJT 2019 tables (main-case commit f0ca038) vs V-track quarantine
@@ -93,15 +94,33 @@
 
 - id: D-V2-14
   what: Poisson ratio
-  paper_says: "not stated anywhere"
-  status: open
-  adopted: "default 0.3 (standard practice; same registered assumption as the kaess case)"
+  paper_says: "not stated by Balbaa; his cited [63] Special Metals Table 4 DOES print it, temperature-dependent: 0.278 (21 C) -> 0.336 (871 C), annealed"
+  status: resolved
+  adopted: "temperature-dependent poisson from [63] annealed column (transcribed in specialmetals-in625-tables.json)"
+  justification: "a cited-source value beats the 0.3 convention; sits within 8 % of 0.3 across the whole range so the choice is low-stakes either way, but it is now sourced rather than assumed"
 
 - id: D-V2-15
   what: thermal-expansion alpha(T) and the literature E(T) base curve
   paper_says: "cited to [49,63]; [63] identified 2026-07-30 = Special Metals INCONEL alloy 625 datasheet (public download, cited by Balbaa -> legitimate V2 source); [49] = Heugenhauser & Kaschnitz HTHP 2019 (paywalled)"
+  status: resolved
+  adopted: "alpha(T) and the E(T) base curve taken from [63], which was ALREADY archived in the repo (cases/AM-Benchmark/references/material/SpecialMetals_INCONEL-alloy-625_bulletin.pdf); transcribed 2026-07-30 into specialmetals-in625-tables.json (alpha 9 rows 93-927 C; E + poisson 9 rows 21-871 C)"
+  justification: "Balbaa-cited source -> no quarantine question, no approval needed. [49] is not required for the mechanical chain (it is a density/expansion paper); it stays unacquired and non-blocking"
+
+- id: D-V2-17
+  what: E(T), poisson(T), alpha(T) from [63] all stop at 871-927 C, but the model runs to the solidus (1290 C)
+  paper_says: "nothing -- Balbaa does not state how he treated the mechanical properties above the datasheet range"
   status: open
-  resolution_path: "acquire the Special Metals datasheet into references/; take alpha(T) and the E(T) base curve from it; cross-check the offset-E(T) against Fig 41 digitization (D-V2-03); [49] remains optional for density/expansion cross-check only if acquired"
+  adopted: null
+  resolution_path: "this is the V2 twin of the main case's sigma_y>773 K gap (D-11). Options: (a) linear extrapolation of the [63] trend, (b) hold-last-value, (c) stiffness collapsing toward the solidus (physically motivated, and what our mushy/liquid mechanics factors already do). Decide WITH the main session so both cases treat high-T extrapolation consistently; register the choice and run it as a bracket if the RS profile turns out sensitive"
+
+- id: D-V2-18
+  what: the [63] alpha is a MEAN (secant) coefficient referenced to 21 C, not an instantaneous coefficient
+  paper_says: "Table 3 footnote a: 'From 70 F to temperature shown'"
+  status: open
+  adopted: "conversion to instantaneous alpha is REQUIRED (not optional); make_v2_mech_tables.py emits alpha.csv already converted"
+  quantified: "2026-07-30 (--quantify): alpha_inst = alpha_mean + (T-21)*d(alpha_mean)/dT exceeds alpha_mean by 1.5 % at 204 C, 7.8 % at 427-538 C, and 18-37 % above 649 C. NOT a negligible mismatch -- using the datasheet secant values directly in an incremental solver whose T_ref is re-anchored at solidification would under-predict high-temperature thermal-strain increments by up to a third, exactly where LPBF residual stress is generated."
+  open_sub_issue: "the source table prints alpha_mean to 3 significant digits (0.1e-6 resolution); differencing amplifies that round-off, which is why the derived instantaneous values are non-monotonic (25.2 % at 649 C vs 18.5 % at 760 C). Before the RS gate, fit a smooth alpha_mean(T) (or take alpha(T) from a higher-resolution source and cross-check) rather than shipping the raw differenced values; the differenced table is adequate for scoping, not for the final gate."
+  note: "Balbaa's own treatment is unstated, so this is OUR modeling decision. Worth raising with the main session -- the main case consumes alpha(T) too and may have the same secant/instantaneous trap."
 
 - id: D-V2-16
   what: XRD in-depth profiles exist only as figures

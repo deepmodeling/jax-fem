@@ -31,8 +31,8 @@ laser state (time/x/y/z/power/dt) identical in path_used.csv.
 | step-0 T field | max 8590.6 K | max 8047.2 K; 30 nodes differ > 100 K, all under the laser spot | consequence of #1 |
 | step-200 T field | — | 5686 nodes differ > 100 K (divergence has spread) | consequence of #1 |
 | step-217 (first cooling) energy balance | **violated** (5.0e-4 J) | clean (1.4e-10 J) | **behavior change #2 — improvement** |
-| release u vs golden | — | max diff 4.3e-4 | ≈ documented same-code noise band (4.2e-4); not separable |
-| ST-vs-ST determinism (rerun b) | — | PENDING (rerun in progress) | new-baseline candidate if bitwise |
+| release u vs golden | — | max diff 4.3e-4 | ≈ documented same-code MT noise band (4.2e-4); **not attributable** — see determinism section: under ST the same field is bitwise stable, so this difference is golden-side noise and/or the thermal change, not new nondeterminism |
+| ST-vs-ST determinism (rerun b) | — | **bitwise identical**: T, u and max_temperature_history all max_abs = 0.0 at steps 0/200 AND at release; ledger digit-identical | **determinism PASS** → new-baseline candidate |
 
 ### Root causes (both intentional, both post-date the golden)
 
@@ -50,6 +50,34 @@ laser state (time/x/y/z/power/dt) identical in path_used.csv.
    (5.0e-4 J, `balance_within_solver_tolerance: false` recorded in the golden
    ledger); the new linear ramp fixes it (1.4e-10 J, gate true).
 
+### Determinism of the current code (the protocol the 2026-07-22 verdict asked for)
+
+Two independent full runs (a and b) of the identical command under
+`MKL_NUM_THREADS=1`:
+
+- **field level: exactly zero difference** — `T`, `u` and
+  `max_temperature_history` all report `max_abs = 0.0` at step 0, step 200
+  **and at release**. The release displacement field is the observable that
+  carried the ±100 % reproducibility band in the 2026-07-22 multithreaded
+  investigation; under the single-thread protocol it is bitwise stable even
+  on the locked TET4 mesh;
+- whole-run ledger summary maxima identical to all 16 significant digits
+  (`maximum_absolute_balance_error_j` 4.698363942367591e-07,
+  `maximum_assembly_identity_error_j` 6.661338147750939e-16,
+  `maximum_relative_balance_error` 7.204132100383321e-05);
+- the complete step-0 ledger row (every floating-point field, e.g.
+  `laser_deposited_j` 0.0034113922427965408, `balance_error_j`
+  8.430730682258865e-18, `storage_j` 0.003409958738609663) matches
+  character-for-character;
+- both runs report all four gate booleans true and 247/247 steps.
+
+Because these summary values are aggregates over the entire 247-step
+floating-point history, digit-for-digit agreement means the arithmetic path
+was reproduced exactly. **The deterministic single-thread protocol therefore
+holds for the current code**, which is what makes a re-baseline meaningful:
+future gate runs can be judged bitwise instead of against a ±100 % noise
+band.
+
 Remaining used_config diffs are new keys with behavior-preserving defaults
 (`mechanics_acceptance: legacy`, `phase_history_model: legacy_reset`,
 `source_model: legacy`, `xla_pardiso_mode: None`).
@@ -63,8 +91,14 @@ Remaining used_config diffs are new keys with behavior-preserving defaults
   the step-0 capture change is EXACTLY the strict-domain fix and nothing
   else) needs a code-level A/B with the strict-domain path disabled, which is
   solver-side work outside V-session scope.
-- Mechanics-side: benchmarks 5/5; the kaess u difference cannot be separated
-  from the thermal-driven change plus the documented TET4 noise band. The
+- **Determinism restored and proven**: the current code reproduces bitwise
+  under `MKL_NUM_THREADS=1`, including the release displacement field that
+  previously had a ±100 % band. The 2026-07-22 recommendation is hereby
+  validated in practice, and a re-baseline turns the golden gate from a
+  noise-limited comparison into a bitwise one.
+- Mechanics-side: benchmarks 5/5; the kaess u difference vs the golden cannot
+  be separated from the thermal-driven change plus the golden's own
+  multithreaded noise band (but is NOT new nondeterminism — see above). The
   HEX8+B-bar production path is not exercised by this gate (golden was c3d4);
   consider adding a c3d8 golden at re-baseline time.
 
@@ -87,7 +121,11 @@ Remaining used_config diffs are new keys with behavior-preserving defaults
 |---|---|---|
 | golden reference (stale) | 2026-07-22 baseline, old entry point, multithreaded | kaess_p2_T150C_P250_c3d4_golden1L_tet4b |
 | regression run | new entry, MKL 1 thread | kaess_golden_regression_20260730 |
-| determinism rerun | ST-vs-ST bitwise + re-baseline candidate | kaess_golden_regression_20260730_b |
+| determinism rerun | ST-vs-ST reproducibility + re-baseline candidate | kaess_golden_regression_20260730_b |
+
+Both regression runs: 247/247 steps, ledger `complete: true`, all four gate
+booleans true. Golden (2026-07-22) ledger records
+`balance_within_solver_tolerance: false` at step 217.
 
 Comparator: field-level VTU + ledger-numerics script (excluded metadata),
 archived at `compare_golden.py` in this directory.

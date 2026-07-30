@@ -1,0 +1,103 @@
+{
+  "provenance": "Balbaa2022 (DOI 10.3390/jmmp6010002), transcribed 2026-07-30 from repo copy references/docs/Balbaa2022_multiscale-RS-LPBF-IN625_JMMP-6-2.pdf; thermal Table 1/2 inputs identical to V1 (see ../v1-single-track/inputs/balbaa-model.json) and are NOT repeated here",
+  "quarantine_note": "V-track only; never enters main-case inputs and vice versa. See SPEC.md for the Kaschnitz-tables edge case (D-V2-04).",
+
+  "multitrack_model": {
+    "provenance": "Balbaa2022 Sec 2.6.2 (p.9), Fig 3",
+    "type": "sequentially coupled: pure heat transfer, then static stress with imported temperature fields",
+    "powder_layer_mm": [4.0, 4.0, 0.04],
+    "substrate": {
+      "thickness_mm": 0.4,
+      "thickness_rule": "10x powder layer, as printed",
+      "footprint": "flush with layer per Fig 3 (in-plane size not stated in text, D-V2-05)",
+      "coupling_as_printed": "tie constraint",
+      "mesh_as_printed": "coarser, element size biased 40 um (top) -> 140 um (bottom); grading law unstated, D-V2-06"
+    },
+    "layer_mesh": "DC3D8, uniform 40 um",
+    "scan_strategy": "stripe scan, serpentine motion [50]; stripe width unstated (D-V2-09)",
+    "step_time_as_printed": "total time to expose a 10 mm x 10 mm layer cross-section, 'same size as the experiments' -- although the modeled layer is 4 x 4 mm (paradox, D-V2-08)",
+    "process_parameters": "Table 3: P in {140,220,270} W, v in {500,650,800} mm/s, hatch in {0.08,0.10,0.12} mm",
+    "thermal_bc": {
+      "preheat_C": 80,
+      "preheat_scope": "whole model + fixed at substrate bottom",
+      "top_losses": "convection + radiation, ambient 40 C"
+    },
+    "stress_model": {
+      "same_mesh": true,
+      "activation": "quiet/inactive elements activated inside a circle with diameter = melt-pool width from the thermal model (UEPACTIVATIONVOL); a spot-diameter element set pre-activated to avoid convergence issues",
+      "numerics_as_printed": "unsymmetric stiffness storage; strain-state extrapolation off",
+      "mechanical_bc": "not stated for the multi-track stress model (D-V2-13)"
+    },
+    "extraction": "temperature history at the powder-layer center point"
+  },
+
+  "multilayer_cube_model": {
+    "provenance": "Balbaa2022 Sec 2.6.3 (p.10-11), Fig 4-5",
+    "part_mm": [10.0, 10.0, 10.0],
+    "part_mesh": "DC3D8 200 um; one element = lump of 5 x 40 um physical layers",
+    "physical_layer_um": 40,
+    "n_physical_layers": 250,
+    "substrate": {
+      "mesh_as_printed": "coarser, ~2 mm elements",
+      "extent": "NOT stated; figure-derived ~30 x 30 x 6 mm (D-V2-07)",
+      "coupling_as_printed": "tie constraint"
+    },
+    "heat_source": "point source via event series + toolpath-mesh intersection (UMDFLUX); acceptable because spot << element (D-V2-10 for our volumetric mapping)",
+    "event_series": "MATLAB-generated: time, coordinates, power, spot diameter; recoat events with recoat time 5 s",
+    "scan_strategy": "stripe + serpentine in-layer; 0-90 deg alternating between layers (Fig 5)",
+    "layer_lumping_semantics": "whether the event series scans all 250 physical layers or 50 mesh layers is not stated (D-V2-11)",
+    "cooldown_s": 600,
+    "stress_model": {
+      "stress_free_initial_C": 1000,
+      "note": "'thermal strains and stresses were calculated by imposing an initial temperature of 1000 C, above which thermal stress is negligible' (p.11); precedent registered into main-case T_cut design per D-09",
+      "mechanical_bc": "total fixation of substrate bottom surface (p.12)",
+      "release": "substrate removed by ABAQUS model change after build + cooldown; RS in part remains"
+    },
+    "preheat": "not restated for this model (D-V2-12)"
+  },
+
+  "constitutive_actually_used": {
+    "provenance": "Balbaa2022 p.33 (Sec 4, Fig 40-41) OVERRIDING Table 4 (p.12)",
+    "warning": "Table 4 as printed (A=558 MPa, B=2201.3 MPa, n=0.8, from [65], machining study, ref strain rate 1670/s) was NOT what the RS predictions used. p.33: A, B, n were replaced by the measured as-built tensile values below; C and m kept; same set for all process parameters.",
+    "johnson_cook_used": {
+      "A_MPa": 650,
+      "A_source": "measured 0.2% yield, as-built LPBF IN625, RT (Fig 40)",
+      "B_MPa": 1618,
+      "B_source": "Ramberg-Osgood strength coefficient K from the same test",
+      "n": 0.243,
+      "n_source": "Ramberg-Osgood hardening exponent from the same test",
+      "C": 0.000209,
+      "m": 1.146,
+      "Tm_C": 1290,
+      "Tr_C": 20,
+      "edot0_per_s": 1670,
+      "C_m_source": "Table 4 [65], retained"
+    },
+    "tensile_test_context": "ASTM E8 sub-size flat specimen, gauge 25 x 6 x 5 mm; UTS 1191 MPa; E 171 GPa (RT)",
+    "elastic_modulus": {
+      "E_RT_GPa": 171,
+      "E_T_rule": "literature E(T) offset by (measured - literature) at RT; curve in Fig 41, digitization pending (D-V2-03)"
+    },
+    "poisson": "not stated (D-V2-14)",
+    "thermal_expansion": "temperature-dependent, cited to [49,63]; curves not printed (D-V2-15)"
+  },
+
+  "validation_targets": {
+    "pyrometer": {
+      "provenance": "Balbaa2022 Sec 3.3 (p.12-13), Fig 6",
+      "condition": "220 W, 650 mm/s, hatch 0.12 mm, layer 0.04 mm",
+      "instrument": "Fluke Endurance two-color pyrometer, Si/Si ~1 um, slope 0.96, range 1000-3000 C, 10 ms response, 2 mm spot at 85 mm, Omnitek L-PBF machine",
+      "model_comparison_rule": "average element temperatures above 1000 C within a 2 mm circle, sampled at 10 ms increments"
+    },
+    "xrd_in_depth": {
+      "provenance": "Balbaa2022 Sec 3.4 (p.13)",
+      "samples": [
+        { "power_W": 140, "speed_mm_s": 650, "hatch_mm": 0.12 },
+        { "power_W": 220, "speed_mm_s": 650, "hatch_mm": 0.12 }
+      ],
+      "protocol": "XRD + electropolishing, 0.1 mm increments to 1 mm depth; scan- and hatch-direction stresses; values averaged over a 2 mm diameter spot; profile data in figures only, digitization pending",
+      "penetration_depth_um": 5
+    },
+    "surface_rs": "Balbaa's [50] (Balbaa et al. 2019 IJAMT) surface RS at various parameters, secondary target"
+  }
+}

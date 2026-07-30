@@ -1,0 +1,108 @@
+# V2 cube-RS deviation registry (Kaess discipline: register, don't silently fill)
+# Scope: reproducing Balbaa2022 multi-track + multi-layer models for the
+# thermo-mechanical code-to-code comparison. Thermal-property deviations
+# D-V1-01..20 are inherited from ../v1-single-track/inputs/deviations.yaml
+# and not repeated.
+# Status values: open | resolved | accepted-gap | blocked-on-L3
+
+- id: D-V2-01
+  what: Table 4 J-C parameters are NOT what the paper's RS predictions used
+  paper_says: "p.33: A, B, n replaced by measured as-built tensile values (650 / 1618 MPa / 0.243); C, m retained from Table 4; same set for all process parameters"
+  status: resolved
+  adopted: "modified set (650/1618/0.243/2.09e-4/1.146), transcribed in balbaa-v2-model.json constitutive_actually_used"
+  justification: "transcription trap of the same class as V1's D-V1-20 (figure vs printed equation); the text on p.33 is explicit"
+
+- id: D-V2-02
+  what: J-C -> flow_curve mapping (our solver is J2 with T-dependent tables, no strain-rate term)
+  paper_says: "J-C rate coefficient C = 2.09e-4 at edot0 = 1670/s"
+  status: open
+  adopted: null
+  resolution_path: "tabulate sigma(eps_p, T) from the modified J-C at a fixed registered reference strain rate; C is tiny (2e-4 per ln-decade), so dropping the rate term changes flow stress <0.5% over 3 decades -- to be quantified in the run config and registered here"
+
+- id: D-V2-03
+  what: E(T) curve (Fig 41) not printed as numbers
+  paper_says: "measured 171 GPa at RT; literature curve offset by the RT difference"
+  status: open
+  resolution_path: "digitize Fig 41 (V1 digitization workflow); record read-off uncertainty"
+
+- id: D-V2-04
+  what: Kaschnitz IJT 2019 tables (main-case commit f0ca038) vs V-track quarantine
+  paper_says: "Balbaa cites the Kaschnitz family as his [49] for k/rho/cp, but prints only ranges"
+  status: open
+  adopted: "DEFAULT: V1's as-printed linear reconstruction stays; the repo's Kaschnitz tables are NOT consumed by V2"
+  resolution_path: "user decision required: allowing them would improve parity with Balbaa's claimed source but crosses the quarantine as written in D-09. Do not proceed without explicit approval recorded here"
+
+- id: D-V2-05
+  what: multi-track substrate in-plane mesh + tie constraint
+  paper_says: "substrate 'coarser mesh biased 40->140 um' + tie constraint to the layer; in-plane size unstated; Fig 3 shows a flush footprint"
+  status: resolved
+  adopted: "conforming single mesh, substrate in-plane 40 um (finer-or-equal), no tie; footprint flush 4 x 4 mm"
+  justification: "our runner requires a conforming mesh; a finer substrate cannot degrade code-to-code parity in a stress-validation direction, and removes the tie-constraint approximation entirely"
+
+- id: D-V2-06
+  what: substrate vertical grading law (multi-track)
+  paper_says: "starts at 40 um and increases to 140 um; law and layer count unstated (Fig 3 zoom suggests ~5-6 rows)"
+  status: resolved
+  adopted: "geometric 5-sublayer ladder scaled to exactly 400 um: 38.8 / 53.1 / 72.7 / 99.4 / 136.0 um top->bottom"
+  justification: "ratio r = 3.5^(1/4) = 1.368 hits both printed endpoints after scaling (136 vs 140 um within read-off precision); registered, not fitted to any output"
+
+- id: D-V2-07
+  what: cube-model substrate extent, thickness, and mesh
+  paper_says: "'substrate has a coarser mesh of 2 mm'; extent/thickness not stated; Fig 4 shows footprint ~3x cube width, thickness ~0.6 x cube height"
+  status: blocked-on-L3
+  adopted: "generator default: 30 x 30 x 6 mm, conforming 200 um everywhere (~800k cells total)"
+  resolution_path: "800k-cell PARDISO memory check before L3 runs; alternatives (truncated substrate + fixed-T bottom, or coarse-conforming graded variant) to be decided with the main session and registered"
+
+- id: D-V2-08
+  what: multi-track step time is the 10x10 mm exposure time but the modeled layer is 4x4 mm
+  paper_says: "'step time was set as the total time required to expose a layer with a cross-section of 10 mm x 10 mm, the same size as the experiments' (p.9)"
+  status: open
+  resolution_path: "two readings: (a) laser scans 4x4 and stays off for the remaining step time (domain cools as if the laser worked elsewhere on the real part); (b) path replays only 4x4 worth of time. Reading (a) matches the pyrometer trace duration; MUST be decided and registered before the thermal gate"
+
+- id: D-V2-09
+  what: stripe width / start corner / serpentine phase
+  paper_says: "stripe scan with serpentine motion [50]; no stripe width, start position, or first-track direction"
+  status: open
+  resolution_path: "4 mm domain < typical EOS stripe (5-10 mm) -> plain serpentine likely; check [50] (Balbaa 2019 IJAMT, archived?) for the machine stripe setting; register the adopted convention like kaess start-angle"
+
+- id: D-V2-10
+  what: point source (event series, UMDFLUX) vs our volumetric source
+  paper_says: "cube model uses a point heat source, acceptable when spot << element (200 um)"
+  status: open
+  resolution_path: "adopt source_model=legacy with the physical r=50 um and OPD 100 um (V1-verified); at 200 um elements the difference from a point source is sub-element -- quantify on one layer before the RS gate"
+
+- id: D-V2-11
+  what: event-series granularity vs 5:1 layer lumping
+  paper_says: "200 um element = lump of 5 x 40 um layers; whether the event series exposes 250 physical layers or 50 lumped layers is not stated"
+  status: open
+  resolution_path: "AM-module practice exposes the real toolpath (250 layers) while elements activate in 200 um slabs; adopt that reading unless the step count is computationally prohibitive; register final choice. Interacts with the main case's N-lumping semantics (that is WHY V2 waits for L3)"
+
+- id: D-V2-12
+  what: cube-model preheat / initial temperature
+  paper_says: "80 C preheat stated for the multi-track model only; not restated for the cube model"
+  status: open
+  adopted: "default 80 C pending"
+
+- id: D-V2-13
+  what: multi-track STRESS model mechanical boundary conditions
+  paper_says: "not stated (fixation is stated only for the cube model's substrate bottom)"
+  status: open
+  adopted: "default: substrate bottom fixed (same as cube model)"
+
+- id: D-V2-14
+  what: Poisson ratio
+  paper_says: "not stated anywhere"
+  status: open
+  adopted: "default 0.3 (standard practice; same registered assumption as the kaess case)"
+
+- id: D-V2-15
+  what: thermal-expansion alpha(T)
+  paper_says: "cited to [49,63], curves not printed"
+  status: open
+  resolution_path: "identify [63] in the reference list; if unavailable, options are (a) digitize any alpha figure in the paper, (b) D-V2-04 decision; do not silently substitute"
+
+- id: D-V2-16
+  what: XRD in-depth profiles exist only as figures
+  paper_says: "Sec 4 figures for 140 W and 220 W, scan/hatch directions"
+  status: open
+  resolution_path: "digitize with the V1 workflow at RS-gate time; record read-off uncertainty per point"

@@ -18,6 +18,17 @@ convention). Solver command + used config archived in each run directory;
 thermal energy ledger complete for every run (max relative balance error
 <= 2e-8, absorbed power == 0.62 x P exactly).
 
+## Figures
+
+- `figures/v1_triangle_absolute.png` — absolute width / depth / length, all
+  three cases, three sources side by side (NIST error bars: u_mean for
+  width/depth, U(k=2) for length — the only quantity with a full published
+  uncertainty budget, Lane2020 Table 5).
+- `figures/v1_triangle_relative_caseB.png` — signed relative error vs the NIST
+  measurement at case B, ours vs Balbaa.
+- Regenerate: `python model/plot_v1_triangle.py` (values hard-coded from the
+  tables below; the script plots, it does not compute).
+
 ## The triangle at CBM case B (195 W, 800 mm/s)
 
 Balbaa's validation condition is not stated in his paper; it was identified

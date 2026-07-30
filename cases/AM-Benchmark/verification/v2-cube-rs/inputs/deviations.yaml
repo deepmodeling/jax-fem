@@ -27,10 +27,10 @@
 
 - id: D-V2-04
   what: Kaschnitz IJT 2019 tables (main-case commit f0ca038) vs V-track quarantine
-  paper_says: "Balbaa cites the Kaschnitz family as his [49] for k/rho/cp, but prints only ranges"
-  status: open
-  adopted: "DEFAULT: V1's as-printed linear reconstruction stays; the repo's Kaschnitz tables are NOT consumed by V2"
-  resolution_path: "user decision required: allowing them would improve parity with Balbaa's claimed source but crosses the quarantine as written in D-09. Do not proceed without explicit approval recorded here"
+  paper_says: "Balbaa's reference list cites ONLY Heugenhauser & Kaschnitz HTHP 2019 (his [49], density/expansion); the IJT 2019 sister paper is NOT cited anywhere in Balbaa2022 (checked 2026-07-30, full reference list)"
+  status: resolved
+  adopted: "REJECTED -- V2 does not consume the IJT tables"
+  justification: "user directive 2026-07-30: if Balbaa does not cite it, V2 does not reference it. V1's as-printed reconstruction remains the thermal-property basis; quarantine intact"
 
 - id: D-V2-05
   what: multi-track substrate in-plane mesh + tie constraint
@@ -57,7 +57,9 @@
   what: multi-track step time is the 10x10 mm exposure time but the modeled layer is 4x4 mm
   paper_says: "'step time was set as the total time required to expose a layer with a cross-section of 10 mm x 10 mm, the same size as the experiments' (p.9)"
   status: open
-  resolution_path: "two readings: (a) laser scans 4x4 and stays off for the remaining step time (domain cools as if the laser worked elsewhere on the real part); (b) path replays only 4x4 worth of time. Reading (a) matches the pyrometer trace duration; MUST be decided and registered before the thermal gate"
+  adopted: null
+  leading_reading: "(c) windowed model of the REAL part: the DFLUX laser position follows the full 10x10 mm serpentine toolpath over the full exposure time (~83 tracks at hatch 0.12); the 4x4 mesh is just a spatial window -- whenever the laser is outside it, the Gaussian tail deposits nothing in-domain. This single reading explains the sentence with no extra assumption, reproduces the pyrometer trace duration AND the neighbor-track reheating cycles, and is directly expressible in our path-file (generate the full 10x10 path verbatim; out-of-window rows deposit ~0; energy ledger reports per-step capture honestly)"
+  resolution_path: "adopt (c) unless the pyrometer-trace timing contradicts it at the thermal gate; alternatives (a) laser-off padding / (b) truncated time are recorded for completeness"
 
 - id: D-V2-09
   what: stripe width / start corner / serpentine phase
@@ -96,10 +98,10 @@
   adopted: "default 0.3 (standard practice; same registered assumption as the kaess case)"
 
 - id: D-V2-15
-  what: thermal-expansion alpha(T)
-  paper_says: "cited to [49,63], curves not printed"
+  what: thermal-expansion alpha(T) and the literature E(T) base curve
+  paper_says: "cited to [49,63]; [63] identified 2026-07-30 = Special Metals INCONEL alloy 625 datasheet (public download, cited by Balbaa -> legitimate V2 source); [49] = Heugenhauser & Kaschnitz HTHP 2019 (paywalled)"
   status: open
-  resolution_path: "identify [63] in the reference list; if unavailable, options are (a) digitize any alpha figure in the paper, (b) D-V2-04 decision; do not silently substitute"
+  resolution_path: "acquire the Special Metals datasheet into references/; take alpha(T) and the E(T) base curve from it; cross-check the offset-E(T) against Fig 41 digitization (D-V2-03); [49] remains optional for density/expansion cross-check only if acquired"
 
 - id: D-V2-16
   what: XRD in-depth profiles exist only as figures

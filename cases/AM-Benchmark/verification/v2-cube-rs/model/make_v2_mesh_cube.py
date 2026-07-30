@@ -18,20 +18,38 @@ ap.add_argument("--part-xy", type=float, default=10.0e-3)
 ap.add_argument("--part-z", type=float, default=10.0e-3)
 ap.add_argument("--sub-xy", type=float, default=30.0e-3, help="substrate footprint (D-V2-07)")
 ap.add_argument("--sub-z", type=float, default=6.0e-3, help="substrate thickness (D-V2-07)")
+ap.add_argument("--sub-grading", type=float, default=None, metavar="R",
+                help="geometric z-grading ratio for the substrate (e.g. 1.4): "
+                     "cells start at --res under the part and grow toward the "
+                     "bottom until --sub-z is filled; bottom cells reach the "
+                     "~2 mm scale of Balbaa's substrate mesh while staying "
+                     "conforming in-plane. None = uniform --res.")
 ap.add_argument("--count-only", action="store_true")
 ap.add_argument("--output", type=Path, default=Path(__file__).parent / "v2_cube_c3d8.inp")
 args = ap.parse_args()
 
 r = args.res
 nsx = round(args.sub_xy / r)
-nsz = round(args.sub_z / r)
 npx = round(args.part_xy / r)
 npz = round(args.part_z / r)
 off = (nsx - npx) // 2  # part centered on the substrate footprint
 
+# substrate z ladder, bottom->top (top cell = --res, conforming to the part)
+if args.sub_grading:
+    ladder = [r]
+    while sum(ladder) < args.sub_z - 1e-12:
+        ladder.append(min(ladder[-1] * args.sub_grading, args.sub_z - sum(ladder)))
+    sub_dz = sorted(ladder, reverse=True)               # coarse at bottom
+    scale = args.sub_z / sum(sub_dz)
+    sub_dz = [d * scale for d in sub_dz]
+else:
+    sub_dz = [r] * round(args.sub_z / r)
+nsz = len(sub_dz)
+
 n_sub = nsx * nsx * nsz
 n_part = npx * npx * npz
-print(f"substrate: {nsx} x {nsx} x {nsz} = {n_sub:,} cells")
+print(f"substrate: {nsx} x {nsx} x {nsz} = {n_sub:,} cells"
+      + (f" (z ladder um: {[round(d*1e6) for d in sub_dz]})" if args.sub_grading else ""))
 print(f"part:      {npx} x {npx} x {npz} = {n_part:,} cells (columns offset {off})")
 print(f"total:     {n_sub + n_part:,} cells @ {r*1e6:.0f} um")
 print(f"runner hint: --support-thickness {args.sub_z:.1e} --layer-thickness 2.0e-4 "
@@ -45,6 +63,11 @@ if args.count_only:
 # the part above the substrate (orphan nodes are dropped by a compaction pass).
 NXY = nsx + 1
 NLEV = nsz + npz + 1
+Z_LEVELS = [0.0]
+for dz in sub_dz:
+    Z_LEVELS.append(Z_LEVELS[-1] + dz)
+for _ in range(npz):
+    Z_LEVELS.append(Z_LEVELS[-1] + r)
 
 def nid(i, j, k):
     return 1 + i + j * NXY + k * NXY * NXY
@@ -81,7 +104,7 @@ with open(args.output, "w") as f:
         rem = old - 1
         k, rem = divmod(rem, NXY * NXY)
         j, i = divmod(rem, NXY)
-        f.write(f"{used[old]}, {i*r:.10e}, {j*r:.10e}, {k*r:.10e}\n")
+        f.write(f"{used[old]}, {i*r:.10e}, {j*r:.10e}, {Z_LEVELS[k]:.10e}\n")
     f.write("*ELEMENT, TYPE=C3D8\n")
     for eid, n in enumerate(elements, start=1):
         f.write(f"{eid}, " + ", ".join(str(used[x]) for x in n) + "\n")

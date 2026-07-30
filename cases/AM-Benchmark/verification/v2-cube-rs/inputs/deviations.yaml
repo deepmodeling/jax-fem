@@ -50,8 +50,8 @@
   what: cube-model substrate extent, thickness, and mesh
   paper_says: "'substrate has a coarser mesh of 2 mm'; extent/thickness not stated; Fig 4 shows footprint ~3x cube width, thickness ~0.6 x cube height"
   status: blocked-on-L3
-  adopted: "generator default: 30 x 30 x 6 mm, conforming 200 um everywhere (~800k cells total)"
-  resolution_path: "800k-cell PARDISO memory check before L3 runs; alternatives (truncated substrate + fixed-T bottom, or coarse-conforming graded variant) to be decided with the main session and registered"
+  adopted: "generator default: 30 x 30 x 6 mm; two conforming variants sized 2026-07-30: uniform 200 um (~800k cells) and z-graded --sub-grading 1.4 (~305k cells, substrate ladder 200 um at the interface growing to ~1.5 mm at the bottom, matching the scale of Balbaa's 2 mm substrate mesh in the far field while staying conforming in-plane)"
+  resolution_path: "z-graded variant is the working default for L3 planning; PARDISO memory check on the chosen variant before runs; substrate-resolution sensitivity run to demonstrate insensitivity. A solver tie/MPC upgrade (jax_fem core already has P_mat reduced-space machinery) would allow Balbaa's literal 2 mm substrate but is main-session shared-code work -- see SPEC note"
 
 - id: D-V2-08
   what: multi-track step time is the 10x10 mm exposure time but the modeled layer is 4x4 mm

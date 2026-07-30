@@ -271,7 +271,7 @@ against. Use the same constants for consistency with the benchmark's own reducti
 |---|---|---|
 | B1 | **Layer count 624 vs 625** | JRES Table 2 says 624 (byte-verified); Phan 2019 says 625 (byte-verified). Arithmetic favours 625: 625 x 20 um = 12.500 mm, exactly the measured STL bridge height. 624 may be a thermography frame count. |
 | B2 | **Laser spot size** | Phan and Heigel IMMI: 85 um D4-sigma contour / 100 um defocused infill. JRES Table 2: a single 0.10 mm vendor figure. AMB2022-04: 80 um D4-sigma contour. State which metric is used. |
-| B3 | **Solidus** | Special Metals / Wikipedia melting range 1288-1349 C; NIST CALPHAD (Ghosh) solidus 1587 K = 1314 C. Also: Scheil (non-equilibrium, appropriate for LPBF) predicts a solidus tens to >100 K below equilibrium. Three different numbers depending on definition. **D-08 addition (2026-07-29):** mc_ni_v2036 at the mill-cert composition (Nb 3.97 wt%, top of spec) gives equilibrium solidus 1552 K = 1279 C (35 K below Ghosh, who used a nominal composition + TCNI-family database) and Scheil fs=0.95 at 1423 K = 1150 C. The model does not pick one solidus: mushy-zone latent heat follows the Scheil fs(T) curve (convention D.6). |
+| B3 | **Solidus** | Special Metals / Wikipedia melting range 1288-1349 C; NIST CALPHAD (Ghosh) solidus 1587 K = 1314 C. Also: Scheil (non-equilibrium, appropriate for LPBF) predicts a solidus tens to >100 K below equilibrium. Three different numbers depending on definition. **D-08 addition (2026-07-29):** mc_ni_v2036 at the mill-cert composition (Nb 3.97 wt%, top of spec) gives equilibrium solidus 1552 K = 1279 C (35 K below Ghosh, who used a nominal composition + TCNI-family database) and Scheil fs=0.95 at 1423 K = 1150 C. The model does not pick one solidus: mushy-zone latent heat follows the Scheil fs(T) curve (convention D.6). **Kaschnitz IJT 2019 addition (2026-07-30):** a fourth datum, 1295 C — the dilatometry range endpoint their paper quotes as the solidus. |
 | B4 | **Ridge numbering is inverted** between prose and figures | NIST prose calls the maximum-deflection end "ridge 1"; NIST Fig. 1 and Phan Fig. 9 both label that same end "Ridge 11". **Key the model on the x coordinate, never the ridge index.** |
 | B5 | Bridge height | JRES text says 12 mm; IMMI says 12.5 mm; **STL measures 12.500 mm**. Use 12.5. |
 
@@ -486,13 +486,14 @@ independently by the earlier research agents match byte-for-byte.
 | Gen3 CSP k/cp/alpha spreadsheet | `references/material/` | **acquired** |
 | Zhang 2019 powder-conductivity paper | `references/docs/` | **acquired** (via Europe PMC render; author manuscript) |
 | Keller 2017 CALPHAD-recipe preprint | `references/docs/` | **acquired** (arXiv PDF, 25 pp) |
-| Kaschnitz / Heugenhauser measured rho(T) through melting | — | paywalled, NOT acquired; tabulation unverified |
+| Kaschnitz IJT 2019 (companion paper: cp, rho, alpha, k, resistivity, -170 to 1290 C) | `references/docs/` + tables transcribed to `references/material/Kaschnitz2019_IJT_tables2-3_thermophysical.json` | **acquired** (user-supplied 2026-07-30; doi 10.1007/s10765-019-2490-8) |
+| Heugenhauser & Kaschnitz HTHP 48 (density through melting: mushy + liquid) | — | paywalled, NOT acquired — no longer blocking (solid-range rho covered by the IJT companion); only needed if liquid density ever matters |
 | CALPHAD run (cp, latent heat, solidus/liquidus, Scheil fs(T)) | `references/calphad/` | **done 2026-07-29** (D-08) — pycalphad 0.11.2 + mc_ni_v2036 (ODbL), database version and adaptation script archived, gates in `references/calphad/README.md` |
 
 Still open from the gap table below: sigma_y above 773 K (extrapolation +
-relaxation cutoff), emissivity (solid and powder), rho(T) above RT, and layer
-time for layers 251+. (Zhang gas check resolved 2026-07-28; CALPHAD resolved
-2026-07-29 via D-08.)
+relaxation cutoff), emissivity (solid and powder), and layer time for layers
+251+. (Zhang gas check resolved 2026-07-28; CALPHAD resolved 2026-07-29 via
+D-08; rho(T) resolved 2026-07-30 via Kaschnitz IJT 2019.)
 
 | Gap | Status | Candidate | Threat to residual stress |
 |---|---|---|---|
@@ -502,8 +503,8 @@ time for layers 251+. (Zhang gas check resolved 2026-07-28; CALPHAD resolved
 | Layer time, layers 251+ | **never published** | only 52 s for layers 1-250 is known | Medium — this is 60 % of the build |
 | k_solid(T) | available | Special Metals (measured at Battelle, -157 -> 982 C); Gen3 CSP xlsx (260-1000 C with 95 % CI, but k is derived as alpha*cp*rho with rho fixed at 8.44, so it drifts at high T) | Low |
 | k_powder(T) | available, NIST-measured | Zhang et al. 2019, 0.65 W/(m K) @ 100 C -> 1.02 @ 500 C. **Gas check RESOLVED 2026-07-28:** the specimens were LPBF-printed hollow disks that sealed the powder *with the build-chamber gas inside* ("the powder thermal properties restore the powder-bed status, including the inert gas environment"), built on an **EOS M270** — same machine family and material as AMB2018-01. The paper does not name the sealed gas explicitly; nitrogen (standard for IN625 on EOS, and what AMB2018-01 used) is registered as an `inferred` input. The single "nitrogen or argon" sentence in the paper refers to the LFA furnace purge, which never reaches the sealed powder. Remaining caveat: extrapolation above 500 C unverified. Bonus data from the same paper: powder porosity 40.3-55.7 % over 100-500 C, temperature-dependent powder density in Fig. 17(a). | Low |
-| cp(T) | available | Special Metals 12 points (footnoted "Calculated", not measured); Gen3 CSP; Kaschnitz DSC | Low |
-| rho(T) | RT only in datasheets | Heugenhauser & Kaschnitz doi 10.32908/hthp.v48.726, 150-1400 C solid + mushy + liquid (paywalled, tabulation unverified) | Low |
+| cp(T) | available | Special Metals 12 points (footnoted "Calculated", not measured); Gen3 CSP; **Kaschnitz DSC now acquired** (IJT 2019, -170 to 1250 C, +-3/5 %; its 500-620 C precipitation kink on heating AND cooling independently confirms the Gen3 CSP jump at 580-620 C); D.6 gamma-frozen CALPHAD cp gains a third cross-check | Low |
+| rho(T) | **RESOLVED 2026-07-30** (solid range) | Kaschnitz IJT 2019 Table 2/3: measured rho0 (Archimedean) + dilatometry, -150 to 1290 C, 8501 -> 7914 kg/m3 (transcribed with spot-checked extractor). Liquid/mushy density remains only in HTHP 48 (not acquired, not blocking); Balbaa's transcribed endpoints agree | Low |
 | 15-5 PH deflection uncertainties | never published | Phan is IN625-only; the promised 15-5 paper does not appear to exist | Low (only if 15-5 is modelled) |
 
 ### In-situ thermography (DOI 10.18434/M31935) — EVALUATED AND REJECTED
@@ -602,7 +603,10 @@ DOI 10.3390/jmmp6010002 (CC BY 4.0), archived at
   `verification/v1-single-track/RESULTS.md`; anyone citing Balbaa must check):
   (1) the paper's Fig. 1 powder-conductivity curve is ~2x its own Eq. 12-13 —
   use the figure, not the formula; (2) Eq. 14 + 15 double-count porosity;
-  (3) ref. [49] cannot be the k/cp source (provenance break, see above).
+  (3) ref. [49] cannot be the k/cp source — **provenance break RESOLVED
+  2026-07-30**: Balbaa's Table 1 ranges (k 10.1-31.6, cp 0.419-0.657, rho
+  8453->~7925) match Kaschnitz IJT 2019 Table 3 exactly; he cited the density
+  companion paper instead of the IJT paper the numbers actually come from.
 - Network note: nist.gov and ncbi unreachable all day 2026-07-29 (was
   reachable 2026-07-28) — Lane 2020 was retrieved via the Wayback archive of
   NIST TechPubs; comparison against the raw data.nist.gov dataset remains

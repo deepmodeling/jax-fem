@@ -12,8 +12,8 @@
   "material_source_scope": "Option A per decision D-01 (PREREQUISITES.md): AM-Bench-series extension - AMB2022-04 mechanical + Zhang 2019 powder conductivity + Keller 2017 CALPHAD recipe; Special Metals and Gen3 CSP as solid k/cp/E sources",
   "hash_algorithm": "sha256",
   "summary": {
-    "files_total": 81,
-    "payload_files": 45,
+    "files_total": 84,
+    "payload_files": 47,
     "nist_checksum_verified": 30,
     "nist_checksum_mismatch": 0
   },
@@ -906,6 +906,42 @@
       "note": "handoff spec for the separate V1 session",
       "bytes": 4501,
       "sha256": "b4706f5d0c249f1271ce9a2162e2a78acd43aeb2870be27fe5964755a2167689"
+    },
+    {
+      "path": "references/docs/Kaschnitz2019_IN625-resistivity-conductivity_IJT-40-27.pdf",
+      "bytes": 1392106,
+      "sha256": "4aa278750f3ac20e4f91f61e40872b80deed343717b9fb4a19e19f323ff53592",
+      "folder": "docs",
+      "dataset": "Kaschnitz, Kaschnitz & Heugenhauser 2019, Int. J. Thermophys. 40:27",
+      "doi": "10.1007/s10765-019-2490-8",
+      "decision": "E-table rho(T) gap resolution, user-acquired 2026-07-30 (long-registered candidate source, Kaschnitz group)",
+      "source_class": "paper_text",
+      "role": "payload",
+      "note": "user-supplied PDF (Springer paywalled; no OA copy exists per Unpaywall)"
+    },
+    {
+      "path": "references/material/Kaschnitz2019_IJT_tables2-3_thermophysical.json",
+      "bytes": 8965,
+      "sha256": "089949fb7796c1935732ee4934e280de87e69d30e2e6ef2713aae2909e3fbef7",
+      "folder": "material",
+      "dataset": "Kaschnitz, Kaschnitz & Heugenhauser 2019, Int. J. Thermophys. 40:27",
+      "doi": "10.1007/s10765-019-2490-8",
+      "decision": "E-table rho(T) gap resolution, user-acquired 2026-07-30 (long-registered candidate source, Kaschnitz group)",
+      "source_class": "paper_table",
+      "role": "payload",
+      "note": "Tables 2-3 transcribed by extract_kaschnitz_ijt_tables.py: cp/rho/alpha/k (-170 to 1290 C) + resistivity (20 to 1290 C), spot-checked"
+    },
+    {
+      "path": "references/material/extract_kaschnitz_ijt_tables.py",
+      "bytes": 6466,
+      "sha256": "3eee979b1ab1c2da433457af63cab68d3e655a6e66131fb757a4a64c2bd42518",
+      "folder": "material",
+      "dataset": "Kaschnitz, Kaschnitz & Heugenhauser 2019, Int. J. Thermophys. 40:27",
+      "doi": "10.1007/s10765-019-2490-8",
+      "decision": "E-table rho(T) gap resolution, user-acquired 2026-07-30 (long-registered candidate source, Kaschnitz group)",
+      "source_class": "derived_artifact",
+      "role": "tooling",
+      "note": "auditable PDF-to-JSON transcription script with embedded spot checks"
     }
   ]
 }

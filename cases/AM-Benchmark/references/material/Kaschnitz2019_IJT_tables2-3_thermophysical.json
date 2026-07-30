@@ -1,0 +1,423 @@
+{
+ "source": {
+  "citation": "E. Kaschnitz, L. Kaschnitz, S. Heugenhauser, Int. J. Thermophys. 40:27 (2019)",
+  "doi": "10.1007/s10765-019-2490-8",
+  "pdf": "Kaschnitz2019_IN625-resistivity-conductivity_IJT-40-27.pdf",
+  "pdf_sha256": "4aa278750f3ac20e4f91f61e40872b80deed343717b9fb4a19e19f323ff53592",
+  "acquired": "user-supplied 2026-07-30"
+ },
+ "material": "IN625 (wrought, see paper Sec. 2.1 for specimen provenance)",
+ "methods": {
+  "cp": "DSC (2x NETZSCH DSC 404), EN 821-3, 10 K/min, argon; expanded uncertainty +-3 % (low/medium T), +-5 % above 1100 C",
+  "density": "rho0 by Archimedean balance at RT; rho(T) = rho0/(1+dl/l0)^3 with dilatometry per DIN 51045-1 (details in Heugenhauser & Kaschnitz, HTHP 48, the companion density paper)",
+  "diffusivity": "laser flash (2x NETZSCH LFA 427), EN 821-2, corrected for thermal expansion; +-4 % up to 1000 C, +-5 % above",
+  "k": "calculated: k = a0*rho0*cp/(1+dl/l0)",
+  "resistivity": "millisecond pulse heating, corrected for thermal expansion (true geometry)"
+ },
+ "notes": [
+  "cp kink 500-620 C on heating AND cooling: precipitate formation/dissolution (matches the Gen3 CSP cp jump 580-620 C)",
+  "values flagged _interextrapolated are printed with superscript a (\"Inter/extrapolated\") in the paper",
+  "solidus quoted by the paper: 1295 C (dilatometry range endpoint)",
+  "liquid/mushy density is NOT in this paper - only in HTHP 48 (ref [12], still not acquired)"
+ ],
+ "table2_low_temperature": [
+  {
+   "T_C": -170,
+   "cp_J_gK": 0.244
+  },
+  {
+   "T_C": -160,
+   "cp_J_gK": 0.266
+  },
+  {
+   "T_C": -150,
+   "cp_J_gK": 0.286,
+   "density_kg_m3": 8501.0
+  },
+  {
+   "T_C": -140,
+   "cp_J_gK": 0.303,
+   "density_kg_m3": 8499.0
+  },
+  {
+   "T_C": -130,
+   "cp_J_gK": 0.318,
+   "density_kg_m3": 8497.0
+  },
+  {
+   "T_C": -120,
+   "cp_J_gK": 0.331,
+   "density_kg_m3": 8494.0,
+   "diffusivity_mm2_s": 2.62,
+   "k_W_mK": 7.37
+  },
+  {
+   "T_C": -110,
+   "cp_J_gK": 0.343,
+   "density_kg_m3": 8491.0,
+   "diffusivity_mm2_s": 2.62,
+   "k_W_mK": 7.62
+  },
+  {
+   "T_C": -100,
+   "cp_J_gK": 0.353,
+   "density_kg_m3": 8489.0,
+   "diffusivity_mm2_s": 2.62,
+   "k_W_mK": 7.85
+  },
+  {
+   "T_C": -90,
+   "cp_J_gK": 0.362,
+   "density_kg_m3": 8486.0,
+   "diffusivity_mm2_s": 2.63,
+   "k_W_mK": 8.07
+  },
+  {
+   "T_C": -80,
+   "cp_J_gK": 0.37,
+   "density_kg_m3": 8483.0,
+   "diffusivity_mm2_s": 2.63,
+   "k_W_mK": 8.27
+  },
+  {
+   "T_C": -70,
+   "cp_J_gK": 0.378,
+   "density_kg_m3": 8480.0,
+   "diffusivity_mm2_s": 2.64,
+   "k_W_mK": 8.46
+  },
+  {
+   "T_C": -60,
+   "cp_J_gK": 0.384,
+   "density_kg_m3": 8477.0,
+   "diffusivity_mm2_s": 2.66,
+   "k_W_mK": 8.64
+  },
+  {
+   "T_C": -50,
+   "cp_J_gK": 0.39,
+   "density_kg_m3": 8474.0,
+   "diffusivity_mm2_s": 2.67,
+   "k_W_mK": 8.83
+  },
+  {
+   "T_C": -40,
+   "cp_J_gK": 0.395,
+   "density_kg_m3": 8471.0,
+   "diffusivity_mm2_s": 2.69,
+   "k_W_mK": 9.01
+  },
+  {
+   "T_C": -30,
+   "cp_J_gK": 0.4,
+   "density_kg_m3": 8468.0,
+   "diffusivity_mm2_s": 2.71,
+   "k_W_mK": 9.19
+  },
+  {
+   "T_C": -20,
+   "cp_J_gK": 0.405,
+   "density_kg_m3": 8465.0,
+   "diffusivity_mm2_s": 2.74,
+   "k_W_mK": 9.37
+  },
+  {
+   "T_C": -10,
+   "cp_J_gK": 0.409,
+   "density_kg_m3": 8462.0,
+   "diffusivity_mm2_s": 2.77,
+   "k_W_mK": 9.56
+  },
+  {
+   "T_C": 0,
+   "cp_J_gK": 0.412,
+   "density_kg_m3": 8459.0,
+   "diffusivity_mm2_s": 2.8,
+   "k_W_mK": 9.75
+  },
+  {
+   "T_C": 10,
+   "cp_J_gK": 0.416,
+   "density_kg_m3": 8456.0,
+   "diffusivity_mm2_s": 2.83,
+   "k_W_mK": 9.95
+  }
+ ],
+ "table3_high_temperature": [
+  {
+   "T_C": 20,
+   "cp_J_gK": 0.419,
+   "density_kg_m3": 8453.0,
+   "diffusivity_mm2_s": 2.86,
+   "k_W_mK": 10.1,
+   "resistivity_uOhm_m": 1.265
+  },
+  {
+   "T_C": 50,
+   "cp_J_gK": 0.427,
+   "density_kg_m3": 8444.0,
+   "diffusivity_mm2_s": 2.97,
+   "k_W_mK": 10.7,
+   "resistivity_uOhm_m": 1.268
+  },
+  {
+   "T_C": 100,
+   "cp_J_gK": 0.439,
+   "density_kg_m3": 8429.0,
+   "diffusivity_mm2_s": 3.13,
+   "k_W_mK": 11.6,
+   "resistivity_uOhm_m": 1.274
+  },
+  {
+   "T_C": 150,
+   "cp_J_gK": 0.448,
+   "density_kg_m3": 8413.0,
+   "diffusivity_mm2_s": 3.3,
+   "k_W_mK": 12.4,
+   "resistivity_uOhm_m": 1.28
+  },
+  {
+   "T_C": 200,
+   "cp_J_gK": 0.457,
+   "density_kg_m3": 8397.0,
+   "diffusivity_mm2_s": 3.47,
+   "k_W_mK": 13.3,
+   "resistivity_uOhm_m": 1.285
+  },
+  {
+   "T_C": 250,
+   "cp_J_gK": 0.465,
+   "density_kg_m3": 8380.0,
+   "diffusivity_mm2_s": 3.63,
+   "k_W_mK": 14.1,
+   "resistivity_uOhm_m": 1.29
+  },
+  {
+   "T_C": 300,
+   "cp_J_gK": 0.472,
+   "density_kg_m3": 8363.0,
+   "diffusivity_mm2_s": 3.79,
+   "k_W_mK": 15.0,
+   "resistivity_uOhm_m": 1.296
+  },
+  {
+   "T_C": 350,
+   "cp_J_gK": 0.48,
+   "density_kg_m3": 8345.0,
+   "diffusivity_mm2_s": 3.96,
+   "k_W_mK": 15.8,
+   "resistivity_uOhm_m": 1.301
+  },
+  {
+   "T_C": 400,
+   "cp_J_gK": 0.487,
+   "density_kg_m3": 8326.0,
+   "diffusivity_mm2_s": 4.12,
+   "k_W_mK": 16.7,
+   "resistivity_uOhm_m": 1.306
+  },
+  {
+   "T_C": 450,
+   "cp_J_gK": 0.494,
+   "density_kg_m3": 8307.0,
+   "diffusivity_mm2_s": 4.28,
+   "k_W_mK": 17.6,
+   "resistivity_uOhm_m": 1.311
+  },
+  {
+   "T_C": 500,
+   "cp_J_gK": 0.501,
+   "density_kg_m3": 8288.0,
+   "diffusivity_mm2_s": 4.44,
+   "k_W_mK": 18.4,
+   "resistivity_uOhm_m": 1.315
+  },
+  {
+   "T_C": 540,
+   "cp_J_gK": 0.507,
+   "density_kg_m3": 8272.0,
+   "diffusivity_mm2_s": 4.56,
+   "k_W_mK": 19.1,
+   "resistivity_uOhm_m": 1.319
+  },
+  {
+   "T_C": 550,
+   "cp_J_gK": 0.518,
+   "density_kg_m3": 8268.0,
+   "diffusivity_mm2_s": 4.59,
+   "k_W_mK": 19.4,
+   "k_W_mK_interextrapolated": true,
+   "resistivity_uOhm_m": 1.32
+  },
+  {
+   "T_C": 600,
+   "cp_J_gK": 0.575,
+   "density_kg_m3": 8247.0,
+   "diffusivity_mm2_s": 4.75,
+   "k_W_mK": 20.3,
+   "k_W_mK_interextrapolated": true,
+   "resistivity_uOhm_m": 1.324
+  },
+  {
+   "T_C": 610,
+   "cp_J_gK": 0.586,
+   "density_kg_m3": 8243.0,
+   "diffusivity_mm2_s": 4.78,
+   "k_W_mK": 20.5,
+   "k_W_mK_interextrapolated": true,
+   "resistivity_uOhm_m": 1.325
+  },
+  {
+   "T_C": 650,
+   "cp_J_gK": 0.589,
+   "density_kg_m3": 8226.0,
+   "diffusivity_mm2_s": 4.91,
+   "k_W_mK": 21.2,
+   "k_W_mK_interextrapolated": true,
+   "resistivity_uOhm_m": 1.329
+  },
+  {
+   "T_C": 700,
+   "cp_J_gK": 0.594,
+   "density_kg_m3": 8204.0,
+   "diffusivity_mm2_s": 5.06,
+   "k_W_mK": 22.0,
+   "k_W_mK_interextrapolated": true,
+   "resistivity_uOhm_m": 1.333
+  },
+  {
+   "T_C": 720,
+   "cp_J_gK": 0.596,
+   "density_kg_m3": 8195.0,
+   "diffusivity_mm2_s": 5.12,
+   "k_W_mK": 22.4,
+   "k_W_mK_interextrapolated": true,
+   "resistivity_uOhm_m": 1.334
+  },
+  {
+   "T_C": 740,
+   "cp_J_gK": 0.598,
+   "density_kg_m3": 8187.0,
+   "diffusivity_mm2_s": 4.99,
+   "k_W_mK": 22.7,
+   "k_W_mK_interextrapolated": true,
+   "resistivity_uOhm_m": 1.336
+  },
+  {
+   "T_C": 750,
+   "cp_J_gK": 0.599,
+   "density_kg_m3": 8182.0,
+   "diffusivity_mm2_s": 4.92,
+   "k_W_mK": 22.9,
+   "k_W_mK_interextrapolated": true,
+   "resistivity_uOhm_m": 1.333
+  },
+  {
+   "T_C": 770,
+   "cp_J_gK": 0.601,
+   "density_kg_m3": 8173.0,
+   "diffusivity_mm2_s": 4.79,
+   "k_W_mK": 23.5,
+   "resistivity_uOhm_m": 1.327
+  },
+  {
+   "T_C": 800,
+   "cp_J_gK": 0.604,
+   "density_kg_m3": 8160.0,
+   "diffusivity_mm2_s": 4.86,
+   "k_W_mK": 24.0,
+   "resistivity_uOhm_m": 1.318
+  },
+  {
+   "T_C": 840,
+   "cp_J_gK": 0.608,
+   "density_kg_m3": 8141.0,
+   "diffusivity_mm2_s": 4.97,
+   "k_W_mK": 24.6,
+   "resistivity_uOhm_m": 1.306
+  },
+  {
+   "T_C": 850,
+   "cp_J_gK": 0.609,
+   "density_kg_m3": 8137.0,
+   "diffusivity_mm2_s": 4.99,
+   "k_W_mK": 24.7,
+   "resistivity_uOhm_m": 1.306
+  },
+  {
+   "T_C": 900,
+   "cp_J_gK": 0.614,
+   "density_kg_m3": 8113.0,
+   "diffusivity_mm2_s": 5.12,
+   "k_W_mK": 25.5,
+   "resistivity_uOhm_m": 1.304
+  },
+  {
+   "T_C": 950,
+   "cp_J_gK": 0.62,
+   "density_kg_m3": 8089.0,
+   "diffusivity_mm2_s": 5.25,
+   "k_W_mK": 26.3,
+   "resistivity_uOhm_m": 1.303
+  },
+  {
+   "T_C": 1000,
+   "cp_J_gK": 0.625,
+   "density_kg_m3": 8065.0,
+   "diffusivity_mm2_s": 5.39,
+   "k_W_mK": 27.2,
+   "resistivity_uOhm_m": 1.302
+  },
+  {
+   "T_C": 1050,
+   "cp_J_gK": 0.631,
+   "density_kg_m3": 8040.0,
+   "diffusivity_mm2_s": 5.52,
+   "k_W_mK": 28.0,
+   "resistivity_uOhm_m": 1.303
+  },
+  {
+   "T_C": 1100,
+   "cp_J_gK": 0.638,
+   "density_kg_m3": 8014.0,
+   "diffusivity_mm2_s": 5.65,
+   "k_W_mK": 28.9,
+   "resistivity_uOhm_m": 1.304
+  },
+  {
+   "T_C": 1150,
+   "cp_J_gK": 0.644,
+   "density_kg_m3": 7988.0,
+   "diffusivity_mm2_s": 5.78,
+   "k_W_mK": 29.8,
+   "resistivity_uOhm_m": 1.305
+  },
+  {
+   "T_C": 1200,
+   "cp_J_gK": 0.651,
+   "density_kg_m3": 7962.0,
+   "diffusivity_mm2_s": 5.92,
+   "k_W_mK": 30.7,
+   "resistivity_uOhm_m": 1.307
+  },
+  {
+   "T_C": 1250,
+   "cp_J_gK": 0.657,
+   "density_kg_m3": 7935.0,
+   "diffusivity_mm2_s": 6.05,
+   "k_W_mK": 31.6,
+   "resistivity_uOhm_m": 1.31
+  },
+  {
+   "T_C": 1290,
+   "cp_J_gK": 0.663,
+   "cp_J_gK_interextrapolated": true,
+   "density_kg_m3": 7914.0,
+   "diffusivity_mm2_s": 6.16,
+   "diffusivity_mm2_s_interextrapolated": true,
+   "k_W_mK": 32.3,
+   "k_W_mK_interextrapolated": true,
+   "resistivity_uOhm_m": 1.313
+  }
+ ]
+}

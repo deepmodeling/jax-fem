@@ -1,0 +1,39 @@
+{
+ "level": "L2",
+ "N": 10,
+ "dx_part_mm": 0.25,
+ "dy_part_mm": 0.25,
+ "grid": [
+  331,
+  40,
+  74
+ ],
+ "nodes": 1020900,
+ "elements": 979760,
+ "sets": {
+  "SUBSTRATE": 145640,
+  "PART": 300000,
+  "POWDER": 534120
+ },
+ "computational_layers": 63,
+ "domain_mm": {
+  "x": [
+   -20.34,
+   79.66
+  ],
+  "y": [
+   -10.0,
+   10.0
+  ],
+  "z": [
+   -12.7,
+   12.48
+  ]
+ },
+ "notes": [
+  "B1: 624-layer basis (z_build 12.48 mm)",
+  "45-degree tip stair-stepped at dx_part",
+  "thin 0.5 mm legs: 2 elements across at dx_part=0.25",
+  "PART/POWDER classified per computational-layer centroid via layer_schedule_generator plan geometry"
+ ]
+}

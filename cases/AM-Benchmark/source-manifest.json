@@ -12,8 +12,8 @@
   "material_source_scope": "Option A per decision D-01 (PREREQUISITES.md): AM-Bench-series extension - AMB2022-04 mechanical + Zhang 2019 powder conductivity + Keller 2017 CALPHAD recipe; Special Metals and Gen3 CSP as solid k/cp/E sources",
   "hash_algorithm": "sha256",
   "summary": {
-    "files_total": 91,
-    "payload_files": 51,
+    "files_total": 95,
+    "payload_files": 53,
     "nist_checksum_verified": 30,
     "nist_checksum_mismatch": 0
   },
@@ -1022,6 +1022,50 @@
       "note": "corners eps_powder 0.244/0.256/0.616/0.676 -> interval [0.24, 0.68]; inputs eps_s [0.12,0.50] x phi_void [0.403,0.557]",
       "bytes": 1774,
       "sha256": "dd15b44a55b8f30a369728b905d65db040f250803147bf3e32c105699f5c3754"
+    },
+    {
+      "path": "tools/make_d07_mesh.py",
+      "bytes": 7649,
+      "sha256": "433823a00ae09176d617f1c92ce72010e4505d9798a0198640278cfcd607a865",
+      "folder": "tools",
+      "dataset": "D-07 domain mesh (this repository)",
+      "source_class": "derived_artifact",
+      "role": "tooling",
+      "decision": "D-07 (domain) + D-02 (N presets); generator per the D-10 sample-scope pattern",
+      "note": "D-07 tensor-graded C3D8 mesh generator; PART/POWDER classified via the layer_schedule_generator plan geometry (single source of truth); L0/L1/L2 presets"
+    },
+    {
+      "path": "derived/meshes/amb_d07_L0_summary.json",
+      "bytes": 623,
+      "sha256": "d6c8c66a44f771523163591fb3582d3c6b9d75272f5b6d7a57abd851439999d9",
+      "folder": "derived",
+      "dataset": "D-07 domain mesh (this repository)",
+      "source_class": "derived_artifact",
+      "role": "payload",
+      "decision": "D-07 (domain) + D-02 (N presets); generator per the D-10 sample-scope pattern",
+      "note": "L0 (N=50, dx 0.5): 109,200 elements, 13 computational layers; part-set volume 3835 mm3 vs geometric ~3860 (stair-step tolerance)"
+    },
+    {
+      "path": "derived/meshes/amb_d07_L2_summary.json",
+      "bytes": 630,
+      "sha256": "01659dd74658d9f4f130d5644ff0ea2af313ed6afc3a9ae1097ee5fa48efbe45",
+      "folder": "derived",
+      "dataset": "D-07 domain mesh (this repository)",
+      "source_class": "derived_artifact",
+      "role": "payload",
+      "decision": "D-07 (domain) + D-02 (N presets); generator per the D-10 sample-scope pattern",
+      "note": "L2 (N=10, dx 0.25): 979,760 elements (inside the D.4 0.6-1.0 M window), 63 computational layers; .inp files regenerable, not committed"
+    },
+    {
+      "path": "derived/meshes/.gitignore",
+      "bytes": 6,
+      "sha256": "ffae2524dd05a7f1966ecbe5212ebbf4a265f1a48decd0c53a25f05ef04cefbc",
+      "folder": "derived",
+      "dataset": "D-07 domain mesh (this repository)",
+      "source_class": "derived_artifact",
+      "role": "tooling",
+      "decision": "D-07 (domain) + D-02 (N presets); generator per the D-10 sample-scope pattern",
+      "note": "keeps the regenerable .inp mesh files out of git"
     }
   ]
 }

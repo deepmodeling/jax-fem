@@ -1,0 +1,5 @@
+T,value,source
+293.15,630000000.0,mill cert M421601 laser-processed Rp0.2; anchor
+1046.15,300000000.0,linear decay; PROVISIONAL-L0 (D-11 MaCTO tables replace this)
+1273.15,50000000.0,PROVISIONAL-L0
+1552.0,5000000.0,floor at solidus; PROVISIONAL-L0

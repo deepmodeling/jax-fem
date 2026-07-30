@@ -1,0 +1,4 @@
+T,value,source
+373.15,0.65,Zhang2019 measured (100 C)
+773.15,1.02,Zhang2019 measured (500 C)
+1552.0,1.02,flat extrapolation above 500 C; PROVISIONAL-L0 (registered E-table caveat)

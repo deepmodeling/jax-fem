@@ -123,28 +123,49 @@ def write(name, rows, unit):
 write("E.csv", extend([(r[0], (r[1] + E_OFFSET) * 1e9) for r in E_ROWS],
                       args.hight_mode), "Pa")
 write("poisson.csv", extend([(r[0], r[5]) for r in E_ROWS], "hold"), "-")
-# alpha:瞬时值(D-V2-18)
-inst = []
-prev_T, prev_a = ALPHA_TREF, ALPHA_ROWS[0][1]
-for T_C, a_mean in ALPHA_ROWS:
-    if T_C == ALPHA_ROWS[0][0]:
-        a_inst = a_mean
-    else:
-        a_inst = (a_mean * (T_C - ALPHA_TREF) - prev_a * (prev_T - ALPHA_TREF)) / (T_C - prev_T)
-    inst.append((T_C, a_inst * 1e-6))
-    prev_T, prev_a = T_C, a_mean
-write("alpha.csv", extend(inst, args.hight_mode), "1/K")
+
+# alpha:割线 -> 瞬时,经平滑拟合(D-V2-18 子问题)。
+# 源表只印到 0.1e-6 精度,逐点差分会放大舍入噪声(非单调,且线性外推到固相线
+# 会给出 42.6e-6/K 这种非物理值)。因此先对 alpha_mean(T) 做一次线性最小二乘
+# 拟合(最少假设、外推最稳),再解析求导:
+#   alpha_inst(T) = d/dT[ alpha_mean(T)*(T - Tref) ] = alpha_mean(T) + (T - Tref)*slope
+Ts = [r[0] for r in ALPHA_ROWS]
+As = [r[1] for r in ALPHA_ROWS]
+n = len(Ts)
+mT, mA = sum(Ts) / n, sum(As) / n
+slope = sum((t - mT) * (a - mA) for t, a in zip(Ts, As)) / sum((t - mT) ** 2 for t in Ts)
+icept = mA - slope * mT
+resid = max(abs(a - (icept + slope * t)) for t, a in zip(Ts, As))
+print(f"\nalpha_mean 线性拟合: {icept:.4f} + {slope:.6f}*T  (最大残差 {resid:.3f}e-6,"
+      f" 源表分辨率 0.1e-6)")
+
+
+def alpha_inst(T_C):
+    a_mean = icept + slope * T_C
+    return (a_mean + (T_C - ALPHA_TREF) * slope) * 1e-6
+
+
+# alpha 的高温延伸用同一解析式(拟合本身已是线性外推),不再叠加 extend()
+alpha_rows = [(T_C, alpha_inst(T_C)) for T_C in Ts + [SOLIDUS_C]]
+write("alpha.csv", alpha_rows, "1/K")
+print(f"  alpha_inst: {alpha_inst(93)*1e6:.2f}e-6 (93 C) -> "
+      f"{alpha_inst(927)*1e6:.2f}e-6 (927 C, 数据末端) -> "
+      f"{alpha_inst(SOLIDUS_C)*1e6:.2f}e-6 (固相线,外推)")
 
 # J-C 流动曲线(省略速率项,D-V2-02)
 eps_grid = [0.0, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2]
 T_grid = [r[0] for r in E_ROWS] + [1000, 1150, SOLIDUS_C]
 p = OUT / "flow_curve.csv"
+jc_src = (f"modified J-C (Balbaa2022 p.33) A={A} B={B} n={N} C={C} m={M} "
+          f"Tm={TM}C Tr={TR}C; rate term omitted (D-V2-02, <0.3%)")
 with open(p, "w", newline="") as f:
     w = csv.writer(f)
-    w.writerow(["T", "eps_p", "sigma_Pa", "source"])
+    w.writerow(["temperature_K", "equivalent_plastic_strain", "flow_stress_Pa", "source"])
     for T_C in T_grid:
         for e in eps_grid:
-            w.writerow([f"{T_C + K:.2f}", f"{e:g}", f"{jc_flow(e, T_C)*1e6:.6g}",
-                        f"modified J-C (Balbaa p.33) A={A} B={B} n={N} m={M}; rate term omitted (D-V2-02)"])
+            # 固相线处 J-C 软化项给出 0 -> 施加一个极小的正屈服地板,
+            # 避免退化的零屈服面(与 mushy/liquid 力学因子分工,见 HIGH-T 备忘 §3)
+            sigma = max(jc_flow(e, T_C), 1.0e-3)  # MPa
+            w.writerow([f"{T_C + K:.2f}", f"{e:g}", f"{sigma*1e6:.6g}", jc_src])
 print(f"{p.name}: {len(T_grid)*len(eps_grid)} rows, "
       f"sigma(0,21C)={jc_flow(0,21):.0f} MPa .. sigma(0,{SOLIDUS_C:.0f}C)={jc_flow(0,SOLIDUS_C):.1f} MPa")

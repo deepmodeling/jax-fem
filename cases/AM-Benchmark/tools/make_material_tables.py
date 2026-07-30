@@ -30,7 +30,7 @@ TRIAL = json.load(open(os.path.join(
 def write_csv(name, rows):
     path = os.path.join(OUT, name)
     with open(path, 'w', newline='') as f:
-        w = csv.writer(f)
+        w = csv.writer(f, lineterminator='\n')
         w.writerow(['T', 'value', 'source'])
         w.writerows(rows)
     print(f'{name}: {len(rows)} rows')

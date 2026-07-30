@@ -32,3 +32,6 @@
 /cases/AM-Benchmark/references/**/*.py text eol=lf
 /cases/AM-Benchmark/references/**/*.json text eol=lf
 /cases/AM-Benchmark/references/**/*.md text eol=lf
+/cases/AM-Benchmark/derived/** text eol=lf
+/cases/AM-Benchmark/derived/**/*.inp binary
+/cases/AM-Benchmark/tools/** text eol=lf

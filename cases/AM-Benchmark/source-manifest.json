@@ -12,8 +12,8 @@
   "material_source_scope": "Option A per decision D-01 (PREREQUISITES.md): AM-Bench-series extension - AMB2022-04 mechanical + Zhang 2019 powder conductivity + Keller 2017 CALPHAD recipe; Special Metals and Gen3 CSP as solid k/cp/E sources",
   "hash_algorithm": "sha256",
   "summary": {
-    "files_total": 88,
-    "payload_files": 49,
+    "files_total": 91,
+    "payload_files": 51,
     "nist_checksum_verified": 30,
     "nist_checksum_mismatch": 0
   },
@@ -988,6 +988,40 @@
       "note": "layer cycle 52.15+-0.57 s (9 increments); odd-layer ROI spans 3.98-4.00 s support D-10 reading A; includes sha256 of the 10 source .mat files",
       "bytes": 4557,
       "sha256": "00102d23841170d70cfb0a75c3f04377a5a10fb9e19a0fb3111d8bd7b99e5188"
+    },
+    {
+      "path": "references/docs/SihBarlow1995_emissivity_SFF.pdf",
+      "folder": "docs",
+      "dataset": "Sih & Barlow, Emissivity of Powder Beds, SFF Symposium 1995 (UT Austin open archive, handle 2152/69888)",
+      "url": "https://repositories.lib.utexas.edu/server/api/core/bitstreams/cf95915c-530e-4ee2-8d39-30bfeb282377/content",
+      "source_class": "paper_text",
+      "role": "payload",
+      "decision": "D-12 (2026-07-30): emissivity-bracket model source, verified original",
+      "note": "settles the Balbaa Eq-11 sign question: eps_H denominator is +1; phi = fractional porosity",
+      "bytes": 331636,
+      "sha256": "e978641ed8e45f7941345f6a9a6bf7c693b74e1ad89413b02d3c7d4406be2965"
+    },
+    {
+      "path": "tools/emissivity_bracket.py",
+      "folder": "tools",
+      "dataset": "D-12 emissivity bracket generator (this repository)",
+      "source_class": "derived_artifact",
+      "role": "tooling",
+      "decision": "D-12 (2026-07-30)",
+      "note": "Sih-Barlow chain transcribed from the archived original and re-derived; phi_void notation",
+      "bytes": 3743,
+      "sha256": "26fd6a7b46baa82d241fe3c06ba5facb965fa77b7d879f9547c5f4e75c4d0291"
+    },
+    {
+      "path": "derived/emissivity-bracket.json",
+      "folder": "derived",
+      "dataset": "D-12 emissivity bracket (this repository)",
+      "source_class": "derived_artifact",
+      "role": "payload",
+      "decision": "D-12 (2026-07-30)",
+      "note": "corners eps_powder 0.244/0.256/0.616/0.676 -> interval [0.24, 0.68]; inputs eps_s [0.12,0.50] x phi_void [0.403,0.557]",
+      "bytes": 1774,
+      "sha256": "dd15b44a55b8f30a369728b905d65db040f250803147bf3e32c105699f5c3754"
     }
   ]
 }

@@ -32,6 +32,8 @@ doi 10.1007/s40192-019-00149-0. Archived at
 | D-08 | **CALPHAD source = pycalphad 0.11.2 + MatCalc open Ni database mc_ni_v2.036 (ODbL 1.0)**, replacing the Thermo-Calc-TCNI candidate (educational Thermo-Calc has no TCNI, 3-element cap, no TC-Python). Trial at mill-cert composition passed the gates: melting range 1279-1357 C vs Special Metals 1288-1349 C; latent heat 259 kJ/kg; gamma-frozen cp inside Gen3 CSP 95 % CI at 6/9 points; Ghosh delta 35 K registered in B3. Files, adaptation script and caveats in `references/calphad/` | **APPROVED** | 2026-07-29 |
 | D-09 | **Verification track added (section V): Balbaa & Elbestawi 2022 (JMMP 6:2, CC BY) as code-to-code comparison source.** V1 = single-track melt-pool triangle (our solver vs NIST bare-plate measurement vs Balbaa ABAQUS), runs ahead of the L-ladder in a separate session; V2 = cube-RS code-to-code, deferred to the mechanics stage. Balbaa inputs are quarantined from main-case inputs. Side registrations: stress-free-T 1000 C precedent into the T_cut sweep design; DRS-measured A = 0.62 into the C.2 absorptivity genealogy; Sih-Barlow model as the powder-emissivity bracket generator | **APPROVED (V1 first)** | 2026-07-29 |
 | D-10 | **Layer-clock reconstruction + scan-schedule generator, CASE-LOCAL sample tooling** (`tools/`, outputs in `derived/`; explicitly NOT part of the jax_fem_am package). Per-layer laser active time computed bottom-up from the JRES tables (scan-timing.json) + verified geometry; the ONLY inferred elements: (a) machine dead time (dwell+recoat+overhead) = 52 s − computed legs-band active time, assumed layer-invariant; (b) ridge band 601-624 follows the same infill/contour rules (its timing was never published). Closed loop: computed legs-band plate scan time reported against the published ~26 s; residual is REPORTED, never scaled away. Line counts derived as ceil(width/hatch) per the Table-5 misprint verdict | **APPROVED (sample scope)** | 2026-07-30 |
+| D-11 | **sigma_y high-T closure + T_cut x N joint sweep (section D.7)**: MaCTO-anchored J-C softening above 773 K; T_cut with complete history-variable reset; two-cycle gate test before the matrix; full 15-run sweep (5 T_cut x 3 N) on a one-leg-period sub-domain; dual computable convergence metrics (M1 field L2 + M2 root bending moment, both < 5 %); freeze-or-publish-band exit; merged with the D.5 lump-ratio study; zero contact with measured deflection | **APPROVED (with user additions)** | 2026-07-30 |
+| D-12 | **Emissivity bracket (section D.8)**: Sih-Barlow 1995 formula route verified against the archived original (Balbaa's Eq-11 sign error corrected); phi confirmed as porosity (notation split phi_void/phi_pack registered); eps_solid [0.12, 0.50] x phi_void [0.403, 0.557] -> generated eps_powder **[0.24, 0.68]** (draft [0.4, 0.8] withdrawn on user review); two L1 extreme runs, 2 K interpass criterion, freeze-or-band exit | **APPROVED (ranges revised)** | 2026-07-30 |
 
 All design decisions are settled. Remaining open items are data gaps (section E)
 and the registered conflicts (section B), not design choices.
@@ -470,6 +472,73 @@ thin leg needs three elements across), powder ~220 k at ~1 mm, substrate ~42 k a
   < 5-8 wt%); no molar-volume parameters (rho(T) gap unchanged); isolated
   gamma-cp bump at 260 C; 5 non-converged equilibrium points at 775-850 K.
 
+### D.7 sigma_y high-temperature closure + T_cut x N joint sweep (decision D-11)
+
+- **sigma_y(T) model (single form, not part of the sweep space):** below
+  773 K, MaCTO three-temperature curves (298/523/773 K) interpolated as-is,
+  BD/TD anisotropy kept, hardening modulus scaled proportionally to yield.
+  Above 773 K, J-C-type power softening
+  `sigma_y(T) = sigma_y(773K) * [1 - ((T-773)/(T_zero-773))^m]` with m fitted
+  to the MaCTO three-point trend (no new free parameter), T_zero = solidus
+  1552 K. Form risk is covered by the T_cut sweep upper range.
+- **T_cut semantics — COMPLETE history-variable reset** (user addition 1):
+  while T > T_cut an element carries no mechanical history; on the cooling
+  crossing of T_cut: `eqp := 0`, stress-free reference `T_ref := T_cut`,
+  hardening state reset (implicit — hardening is eqp-driven), flow-curve
+  active mask re-initialized from the current phase. NOT reset: phase state,
+  activation/solidification records, max-temperature diagnostics (physical
+  state and bookkeeping, not mechanical history).
+- **Two-cycle gate test** (user addition 2, must pass BEFORE the matrix):
+  fully-constrained small patch driven through two identical thermal cycles
+  T0 -> T_cut+100 K -> T0. Pass = (i) just above T_cut the stress magnitude
+  is below the yield-tolerance floor; (ii) the residual stress at T0 after
+  cycle 2 equals cycle 1 within 1e-10 relative (memory fully wiped);
+  (iii) the returned stress matches the analytic constrained-cooling
+  estimate min(sigma_y(T0), E*alpha*(T_cut-T0)/(1-nu)) within 2 %.
+- **Sweep matrix (full 15 runs, user choice):** T_cut in {800, 900, 1000
+  (Balbaa precedent), 1100 C, none} x N in {50, 25, 10}. Sub-domain: D-07
+  periodic cell truncated to one leg-group period (x = 0-14 mm incl.
+  substrate), built to the overhang-band top; ~30-60k elements per run.
+  This matrix IS the D.5 lump-ratio convergence study (merged).
+- **Dual computable convergence metrics** (user addition 3), both required:
+  `M1 = ||sigmax_Ni(z) - sigmax_Ni+1(z)||_2 / ||sigmax_Ni+1(z)||_2` on the
+  leg mid-plane vertical line, fields interpolated to a common z-grid;
+  `M2 = |Mroot_Ni - Mroot_Ni+1| / |Mroot_Ni+1|` with
+  `Mroot = integral of sigmax*(z - zbar) dA` over the leg-root cross
+  section. Converged when M1 < 5 % AND M2 < 5 %.
+- **Freeze rule:** N frozen by the dual metric. On the frozen N, report the
+  T_cut sensitivity band; if small (below the propagated MaCTO yield
+  uncertainty) freeze T_cut = 1000 C and close the gap; if large, T_cut is
+  NOT frozen — L3 runs the sweep endpoints and the final deflection is
+  published as a prediction band with the sensitivity as open model
+  uncertainty. No run in this matrix sees any measured deflection/strain.
+
+### D.8 Emissivity bracket (decision D-12)
+
+- **Model (verified against the ORIGINAL Sih & Barlow 1995, archived
+  `references/docs/SihBarlow1995_emissivity_SFF.pdf`; also re-derived from
+  its Eqs 5-11, 3.082 = 4*0.514*3/2):**
+  `eps_pb = A_H*eps_H + (1-A_H)*eps_s`;
+  `A_H = 0.908 phi^2 / (1.908 phi^2 - 2 phi + 1)`;
+  `eps_H = eps_s (2+3.082x) / (eps_s (1+3.082x) + 1)`, `x = ((1-phi)/phi)^2`.
+- **phi definition CONFIRMED** (user requirement): phi = fractional POROSITY
+  ("phi = 1 - p" verbatim in the original) — same quantity Zhang 2019
+  measured (40.3-55.7 %). **Notation guard:** the D-03 compaction phi is the
+  PACKING fraction; ledger convention from here on: `phi_void` (Sih-Barlow,
+  Zhang) vs `phi_pack = 1 - phi_void` (D-03).
+- **Brackets:** eps_solid in [0.12 (Kieruj polished, Zhang's value), 0.50
+  (oxidized envelope, Sensors 2024)]; phi_void in [0.403, 0.557] (Zhang
+  measured). Generated corners (`tools/emissivity_bracket.py` ->
+  `derived/emissivity-bracket.json`): eps_powder 0.244 / 0.256 / 0.616 /
+  0.676 -> **interval [0.24, 0.68]** (dominated by eps_solid; phi_void moves
+  it only 0.01-0.06). The earlier draft interval [0.4, 0.8] was wrong and
+  was withdrawn on user review.
+- **Sensitivity design:** two L1 thermal runs at the all-low / all-high
+  extremes (no 4-corner runs — radiation is monotone in eps). Freeze
+  mid-values and close the gap if interpass delta-T < 2 K; otherwise
+  propagate as an uncertainty band alongside the T_cut band. Convection h
+  is outside this decision.
+
 ---
 
 ## E. Data gaps — each needs a decision, not a search
@@ -498,8 +567,8 @@ D-08; rho(T) resolved 2026-07-30 via Kaschnitz IJT 2019.)
 
 | Gap | Status | Candidate | Threat to residual stress |
 |---|---|---|---|
-| sigma_y(T), hardening, 773 K -> solidus | **nothing exists anywhere** | extrapolate MaCTO shape + stress-relaxation cutoff (Denlinger & Michaleris, doi 10.1016/j.addma.2016.06.011) | **Highest.** The cutoff temperature is a calibration parameter, not data. Sensitivity study mandatory. |
-| Emissivity — **both** solid and powder are missing | no usable value for either. Solid IN625 epsilon is strongly oxidation-dependent (Sensors 2024, 673-873 K; chamber runs ~0.5 % O2). Powder-bed effective epsilon is higher (cavity effect), never measured for IN625. Zhang 2019 used epsilon_solid = 0.12-0.16 (Kieruj 2016) for its capsule in the inverse FE and states the sensitivity there was insignificant — a value for *their* problem, not a general input. Under D-04 the top surface alternates bare-solid (post-scan) and powder-covered (post-recoat), so both enter the model. | sweep as a sensitivity bracket rather than fixing a value; radiation goes as T^4 and the surface is only briefly hot, so expect modest part-scale sensitivity | Medium (was High) |
+| sigma_y(T), hardening, 773 K -> solidus | **D-11 APPROVED 2026-07-30 (section D.7)** — data still does not exist; the treatment is now frozen | MaCTO-anchored J-C softening + T_cut with complete history reset; two-cycle gate test, then the 15-run T_cut x N sweep with dual convergence metrics; freeze-or-publish-band exit (Denlinger & Michaleris, doi 10.1016/j.addma.2016.06.011, remains the method precedent; its IN625 stance still unverified — full text not acquired) | **Highest** until the sweep reports; then either closed or an explicit prediction band |
+| Emissivity — **both** solid and powder are missing | no usable value for either. Solid IN625 epsilon is strongly oxidation-dependent (Sensors 2024, 673-873 K; chamber runs ~0.5 % O2). Powder-bed effective epsilon is higher (cavity effect), never measured for IN625. Zhang 2019 used epsilon_solid = 0.12-0.16 (Kieruj 2016) for its capsule in the inverse FE and states the sensitivity there was insignificant — a value for *their* problem, not a general input. Under D-04 the top surface alternates bare-solid (post-scan) and powder-covered (post-recoat), so both enter the model. | **D-12 APPROVED 2026-07-30 (section D.8)**: bracket generated from the verified Sih-Barlow 1995 original — eps_solid [0.12, 0.50], eps_powder [0.24, 0.68] (`derived/emissivity-bracket.json`); decision by two L1 extreme runs, 2 K interpass criterion, freeze-or-band exit | Medium (was High); closes after the L1 runs |
 | Latent heat, self-consistent solidus/liquidus | **RESOLVED 2026-07-29 (D-08)** | pycalphad + mc_ni_v2036: latent heat 259 kJ/kg, equilibrium window 1279-1357 C, Scheil fs(T) archived in `references/calphad/trial_results.json` | Low (was Medium); see conflict B3 |
 | Layer time, layers 251+ | **RESOLVED 2026-07-30 (D-10 + measured timing closure)** | `derived/layer-schedule.json`: per-layer clock from the JRES tables (dead time 34.4 s = 52 − computed legs active, I1; ridge band rules inferred, I2; reading A = constant absolute dead time). **Measured closure via M31935 timestamps** (user-approved time-dimension use, `tools/m31935_timing_check.py` → `derived/m31935-timing-check.json`): layer cycle 52.15 ± 0.57 s over 9 increments (confirms the published 52 s, with a ±0.6 s parity alternation suggesting parity-adjusted dwell); odd-layer in-ROI spans 3.98-4.00 s match the computed 4.5 s part active and EXCLUDE the 1.48x scaling reading B would need (~5.7 s span) — the D-10 closed-loop −32 % residual vs the published "~26 s" plate scan is closed as a source-side approximation, not a reconstruction error. Result: bridge ≈ 54-56 s/layer, build total 9.23 h. NOTE: the "9.4 h build" quoted in earlier ledger arguments is an internal estimate, not a published number — those arguments are order-of-magnitude and unaffected. Direct 251+ verification (bridge-band M31935 bundles) optional when nist.gov is reachable | Low (was Medium) |
 | k_solid(T) | available | Special Metals (measured at Battelle, -157 -> 982 C); Gen3 CSP xlsx (260-1000 C with 95 % CI, but k is derived as alpha*cp*rho with rho fixed at 8.44, so it drifts at high T) | Low |
@@ -618,7 +687,9 @@ DOI 10.3390/jmmp6010002 (CC BY 4.0), archived at
   (3) ref. [49] cannot be the k/cp source — **provenance break RESOLVED
   2026-07-30**: Balbaa's Table 1 ranges (k 10.1-31.6, cp 0.419-0.657, rho
   8453->~7925) match Kaschnitz IJT 2019 Table 3 exactly; he cited the density
-  companion paper instead of the IJT paper the numbers actually come from.
+  companion paper instead of the IJT paper the numbers actually come from;
+  (4) his Eq 11 (Sih-Barlow hole emissivity) prints the denominator's "+1"
+  as "-1" — unphysical (eps_H > 1); the archived 1995 original has "+1".
 - Network note: nist.gov and ncbi unreachable all day 2026-07-29 (was
   reachable 2026-07-28) — Lane 2020 was retrieved via the Wayback archive of
   NIST TechPubs; comparison against the raw data.nist.gov dataset remains

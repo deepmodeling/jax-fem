@@ -1,0 +1,58 @@
+{
+ "schema_version": "ambench.emissivity-bracket/1",
+ "decision": "D-12 (2026-07-30): formula route approved; ranges revised per user review (phi definition confirmed = porosity; Balbaa Eq-11 sign error corrected against the original)",
+ "model_source": {
+  "citation": "Sih & Barlow, Emissivity of Powder Beds, SFF 1995",
+  "archive": "references/docs/SihBarlow1995_emissivity_SFF.pdf",
+  "verification": "formulas transcribed from the original and re-derived from its Eqs 5-11 (3.082 = 4*0.514*3/2)"
+ },
+ "inputs": {
+  "eps_solid_bracket": [
+   0.12,
+   0.5
+  ],
+  "eps_solid_provenance": "lower: Kieruj 2016 polished (Zhang 2019 adopted); upper: oxidized envelope (Sensors 2024, chamber ~0.5 % O2)",
+  "phi_void_bracket": [
+   0.403,
+   0.557
+  ],
+  "phi_void_provenance": "Zhang 2019 measured powder porosity 40.3-55.7 % (100-500 C)",
+  "notation": "phi_void = porosity (Sih-Barlow phi); the D-03 packing fraction is phi_pack = 1 - phi_void"
+ },
+ "corners": [
+  {
+   "eps_solid": 0.12,
+   "phi_void": 0.403,
+   "A_H": 0.2927,
+   "eps_hole": 0.5444,
+   "eps_powder": 0.2442
+  },
+  {
+   "eps_solid": 0.12,
+   "phi_void": 0.557,
+   "A_H": 0.5894,
+   "eps_hole": 0.35,
+   "eps_powder": 0.2556
+  },
+  {
+   "eps_solid": 0.5,
+   "phi_void": 0.403,
+   "A_H": 0.2927,
+   "eps_hole": 0.8976,
+   "eps_powder": 0.6164
+  },
+  {
+   "eps_solid": 0.5,
+   "phi_void": 0.557,
+   "A_H": 0.5894,
+   "eps_hole": 0.798,
+   "eps_powder": 0.6756
+  }
+ ],
+ "eps_powder_interval": [
+  0.244,
+  0.676
+ ],
+ "observation": "the interval is dominated by eps_solid; phi_void moves eps_powder by only 0.01-0.06 at fixed eps_solid",
+ "sensitivity_plan": "two L1 thermal runs at the all-low and all-high extremes (D-12); freeze mid-values if interpass delta-T < 2 K, else propagate as uncertainty band"
+}

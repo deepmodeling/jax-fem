@@ -123,10 +123,15 @@ production mesh** (`kaess_cantilever_c3d8_powder_margin.inp`, 29,568 cells,
 paper-minimal release, phase23), same deterministic protocol
 (`MKL_NUM_THREADS=1`).
 
-Run a completed 247/247 (`solver_completed: true`, release.vtu present).
-Run b (determinism pair) was killed by a session disconnect at step 5 and
-was relaunched detached (`setsid`) on 2026-07-31; the pair verdict is
-pending.
+Both runs completed 247/247. **Determinism verdict: bitwise identical** —
+`T`, `u` and `max_temperature_history` all report `max_abs = 0.0` at step 0,
+step 200 **and at release**, exactly as on the c3d4 arm. phase23 behaved:
+2645 solves, 2 symbolic analyses, `pattern_rebuilds: 0`.
+
+**The production element path (HEX8+B-bar) now has a deterministic golden
+baseline**, which the c3d4-only golden never provided. Both directories are
+offered to the main session as the c3d8 reference:
+`kaess_c3d8_golden_20260730_a` / `_b`.
 
 **Finding — activation undershoot survives on HEX8.** Run a's ledger reports
 `all_temperature_invariants_valid: false`: exactly **one node at step 1**
@@ -159,6 +164,8 @@ undershoot fix.)
 | golden reference (stale) | 2026-07-22 baseline, old entry point, multithreaded | kaess_p2_T150C_P250_c3d4_golden1L_tet4b |
 | regression run | new entry, MKL 1 thread | kaess_golden_regression_20260730 |
 | determinism rerun | ST-vs-ST reproducibility + re-baseline candidate | kaess_golden_regression_20260730_b |
+| c3d8 golden a | production element path (HEX8+B-bar), deterministic | kaess_c3d8_golden_20260730_a |
+| c3d8 golden b | determinism pair — bitwise identical to a | kaess_c3d8_golden_20260730_b |
 
 Both regression runs: 247/247 steps, ledger `complete: true`, all four gate
 booleans true. Golden (2026-07-22) ledger records

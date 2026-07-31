@@ -115,6 +115,43 @@ Remaining used_config diffs are new keys with behavior-preserving defaults
    thermal chain (its cooling step violates the ledger gate that current code
    enforces).
 
+## Addendum 2026-07-31 — c3d8 (HEX8+B-bar) golden, the production element path
+
+The gate above runs on the c3d4 legacy arm because that is what the 2026-07-22
+golden used. The V session therefore established a **c3d8 golden on the
+production mesh** (`kaess_cantilever_c3d8_powder_margin.inp`, 29,568 cells,
+paper-minimal release, phase23), same deterministic protocol
+(`MKL_NUM_THREADS=1`).
+
+Run a completed 247/247 (`solver_completed: true`, release.vtu present).
+Run b (determinism pair) was killed by a session disconnect at step 5 and
+was relaunched detached (`setsid`) on 2026-07-31; the pair verdict is
+pending.
+
+**Finding — activation undershoot survives on HEX8.** Run a's ledger reports
+`all_temperature_invariants_valid: false`: exactly **one node at step 1**
+falls below the plate temperature 423.15 K by more than the 1 mK ledger
+tolerance. The same protocol on the TET4 mesh reports **zero** violations at
+the same step. This matters because `--thermal-mass-lumping` was introduced
+(G1 fix, 664d675) with the claim that it kills activation undershoot exactly
+— "T_min == plate temperature bitwise" — and that claim was verified on TET4.
+On HEX8 the lumping is a vertex-collocation permutation of the Gauss points
+rather than a true row-sum lump, which is the likely reason it is not
+exactly conservative here.
+
+Scope of the finding: 1 node / 32,683, 1 step / 247, and the run's energy
+ledger still passes every balance and assembly-identity gate
+(max relative balance error 1.9e-4, dominated by other steps). It is a
+diagnostic-gate failure, not a demonstrated physics error. Magnitude not yet
+quantified — the run wrote fields only every 200 steps, so step 1 was not
+saved; a targeted short run with `--thermal-output-every 1` will pin it down.
+
+Consequence for the main line: the D-07 meshes are C3D8, so the production
+path is the HEX8 one. (Noted in passing: the L0 command observed running on
+2026-07-31 does not pass `--thermal-mass-lumping` at all, so it is not
+exposed to this specific interaction — but it is also not getting the G1
+undershoot fix.)
+
 ## Run inventory
 
 | run | purpose | dir (under /home/user/work/159/output/) |

@@ -105,7 +105,7 @@ solver changes.
 <p align="center">
   <img src="assets/beam2d.png" width="700" />
   <br />
-  <em>2D beam buckling with and without the small branch-selecting load.</em>
+  <em>Displacement-controlled buckling of the 2D hyperelastic beam.</em>
 </p>
 
 <p align="center">
@@ -117,7 +117,7 @@ solver changes.
 <p align="center">
   <img src="assets/cellular_solid.png" width="300" />
   <br />
-  <em>Cellular solid before and after vertical compression.</em>
+  <em>Cellular solid under vertical compression.</em>
 </p>
 
 ## Main parameters

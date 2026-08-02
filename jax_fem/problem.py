@@ -448,14 +448,30 @@ class Problem:
         logger.debug(f"Computing cell Jacobian and cell residual...")
         cells_sol_list = [sol[cells] for cells, sol in zip(self.cells_list, sol_list)] # [(num_cells, num_nodes, vec), ...]
         cells_sol_flat = jax.vmap(lambda *x: jax.flatten_util.ravel_pytree(x)[0])(*cells_sol_list) # (num_cells, num_nodes*vec + ...)
-        # (num_cells, num_nodes*vec + ...),  (num_cells, num_nodes*vec + ..., num_nodes*vec + ...)
-        weak_form_flat, cells_jac_flat = self.split_and_compute_cell(cells_sol_flat, onp, True, internal_vars)
-        self.V = onp.array(cells_jac_flat.reshape(-1))
 
-        # [(num_selected_faces, num_nodes*vec + ...,), ...], [(num_selected_faces, num_nodes*vec + ..., num_nodes*vec + ...,), ...]
-        weak_form_face_flat, cells_jac_face_flat = self.compute_face(cells_sol_flat, onp, True, internal_vars_surfaces)
-        for cells_jac_f_flat in cells_jac_face_flat:
-            self.V = onp.hstack((self.V, onp.array(cells_jac_f_flat.reshape(-1))))
+        # The default remains the long-standing host tangent path.  The private
+        # flag is enabled only around an explicitly requested petsc_gpu_solver
+        # Newton update, so existing callers and subclasses keep CPU semantics.
+        device_jacobian = getattr(self, '_jax_fem_device_jacobian', False)
+        jac_np = np if device_jacobian else onp
+
+        # (num_cells, num_nodes*vec + ...),  (num_cells, num_nodes*vec + ..., num_nodes*vec + ...)
+        weak_form_flat, cells_jac_flat = self.split_and_compute_cell(cells_sol_flat, jac_np, True, internal_vars)
+
+        if device_jacobian:
+            # [(num_selected_faces, num_nodes*vec + ...,), ...], [(num_selected_faces, num_nodes*vec + ..., num_nodes*vec + ...,), ...]
+            weak_form_face_flat, cells_jac_face_flat = self.compute_face(cells_sol_flat, np, True, internal_vars_surfaces)
+            jac_parts = [cells_jac_flat.reshape(-1)]
+            jac_parts.extend(cells_jac_f_flat.reshape(-1) for cells_jac_f_flat in cells_jac_face_flat)
+            self.V = np.concatenate(jac_parts) if len(jac_parts) > 1 else jac_parts[0]
+        else:
+            # Preserve the original host path and assignment order exactly.
+            self.V = onp.array(cells_jac_flat.reshape(-1))
+
+            # [(num_selected_faces, num_nodes*vec + ...,), ...], [(num_selected_faces, num_nodes*vec + ..., num_nodes*vec + ...,), ...]
+            weak_form_face_flat, cells_jac_face_flat = self.compute_face(cells_sol_flat, onp, True, internal_vars_surfaces)
+            for cells_jac_f_flat in cells_jac_face_flat:
+                self.V = onp.hstack((self.V, onp.array(cells_jac_f_flat.reshape(-1))))
 
         return self.compute_residual_vars_helper(weak_form_flat, weak_form_face_flat)
 

@@ -258,12 +258,26 @@ def AMGX_solve(A, b, x0, cfg_path):
         b
     )
 
-def linear_solver(A, b, x0, linear_options):
+def linear_solver(A, b, x0, linear_options, problem=None):
     # If user does not specify any solver, set jax_solver as the default one.
-    if len(linear_options.keys() & {'jax_solver', 'amgx_solver', 'spsolve_solver', 'petsc_solver', 'custom_solver'}) == 0:
+    if len(linear_options.keys() & {'jax_solver', 'amgx_solver', 'spsolve_solver', 'petsc_solver',
+                                    'petsc_gpu_solver', 'custom_solver'}) == 0:
         linear_options['jax_solver'] = {}
 
-    if 'jax_solver' in linear_options:
+    if 'petsc_gpu_solver' in linear_options:
+        if problem is None:
+            raise NotImplementedError(
+                "petsc_gpu_solver is currently supported only by the forward Newton solver."
+            )
+        from jax_fem.petsc_gpu_bridge import solve_petsc_gpu
+        x = solve_petsc_gpu(
+            problem,
+            A,
+            b,
+            x0,
+            linear_options['petsc_gpu_solver'],
+        )
+    elif 'jax_solver' in linear_options:
         precond = linear_options['jax_solver']['precond'] if 'precond' in linear_options['jax_solver'] else True
         x = jax_solve(A, b, x0, precond)
     elif 'amgx_solver' in linear_options:
@@ -409,7 +423,11 @@ def newton_step(problem, res_vec, A, dofs, newton_cfg, timing):
         x0 = x0_1 - x0_2
 
     t0 = time.perf_counter()
-    inc = linear_solver(A, b, x0, newton_cfg.get('linear', {}))
+    linear_options = newton_cfg.get('linear', {})
+    if 'petsc_gpu_solver' in linear_options:
+        inc = linear_solver(A, b, x0, linear_options, problem=problem)
+    else:
+        inc = linear_solver(A, b, x0, linear_options)
     linear_s = time.perf_counter() - t0
     _timing_record(timing, 'linear', linear_s)
 
@@ -499,7 +517,11 @@ def _get_petsc_tangent_cache(problem):
     return cache
 
 
-def get_A(problem):
+def get_A(problem, use_petsc_gpu=False):
+    if use_petsc_gpu:
+        from jax_fem.petsc_gpu_bridge import get_petsc_gpu_tangent
+        return get_petsc_gpu_tangent(problem)
+
     logger.debug("Updating cached PETSc tangent from COO values...")
     A = _get_petsc_tangent_cache(problem).update(problem)
 
@@ -1040,7 +1062,8 @@ def dynamic_relax_solve(problem, tol=1e-6, nKMat=1000, nPrint=500, info=True, in
 
 _METHOD_KEYS = frozenset({'newton', 'arc_length', 'dynamic_relax'})
 _LINEAR_OPTION_KEYS = frozenset({
-    'jax_solver', 'amgx_solver', 'spsolve_solver', 'petsc_solver', 'custom_solver',
+    'jax_solver', 'amgx_solver', 'spsolve_solver', 'petsc_solver', 'petsc_gpu_solver',
+    'custom_solver',
 })
 _NEWTON_OPTION_KEYS = frozenset({'tol', 'rel_tol', 'line_search_flag', 'initial_guess'})
 
@@ -1170,6 +1193,16 @@ def solver(problem, solver_options={}):
 
             solver_options = {'newton': {'linear': {'amgx_solver': {'cfg_path': 'path/to/amgx.json'}}}}
 
+            solver_options = {
+                'newton': {
+                    'linear': {
+                        'petsc_gpu_solver': {
+                            'backend': 'native_amgx',
+                        },
+                    },
+                },
+            }
+
         **Defaults.** Omitted keys are filled in as follows.
 
         Newton (inside a ``newton`` block, or implied when no method key is
@@ -1190,6 +1223,12 @@ def solver(problem, solver_options={}):
         - ``{'jax_solver': {}}`` → ``precond`` → ``True``
         - ``{'petsc_solver': {}}`` → ``ksp_type`` → ``'bcgsl'``; ``pc_type`` → ``'ilu'``
         - ``{'amgx_solver': {}}`` → ``cfg_path`` → ``None`` (built-in BICGSTAB + AMG)
+        - ``{'petsc_gpu_solver': {}}`` → ``backend`` → ``'native_amgx'``;
+          ``rtol`` → ``1e-10``; ``max_it`` → ``10000``. This strict
+          opt-in path feeds PETSc's device CSR to native AMGX BICGSTAB + AMG.
+          It requires a CUDA-enabled PETSc/petsc4py build and currently
+          supports one GPU, one MPI rank, and forward Newton solves without
+          ``P_mat``.
 
         **Arc-length** (Crisfeld; ``control`` is required; set
         ``return_info`` to obtain continuation metadata)::
@@ -1256,6 +1295,17 @@ def solver(problem, solver_options={}):
 
     rel_tol = cfg.get('rel_tol', 1e-8)
     tol = cfg.get('tol', 1e-6)
+    use_petsc_gpu = 'petsc_gpu_solver' in cfg.get('linear', {})
+    if use_petsc_gpu and hasattr(problem, 'P_mat'):
+        raise NotImplementedError(
+            "petsc_gpu_solver does not yet support problem.P_mat "
+            "(periodic or multipoint constraints)."
+        )
+    if use_petsc_gpu:
+        from jax_fem.petsc_gpu_bridge import validate_petsc_gpu_environment
+        validate_petsc_gpu_environment(
+            cfg['linear']['petsc_gpu_solver']
+        )
 
     def newton_update_helper(dofs):
         if hasattr(problem, 'P_mat'):
@@ -1263,7 +1313,25 @@ def solver(problem, solver_options={}):
 
         sol_list = problem.unflatten_fn_sol_list(dofs)
         t0 = time.perf_counter()
-        res_list = problem.newton_update(sol_list)
+        if use_petsc_gpu:
+            sentinel = object()
+            previous = getattr(problem, '_jax_fem_device_jacobian', sentinel)
+            problem._jax_fem_device_jacobian = True
+            try:
+                res_list = problem.newton_update(sol_list)
+                # Make the opt-in GPU timing boundaries meaningful before
+                # handing the coefficient buffer to PETSc/AMGX.
+                problem.V.block_until_ready()
+                jax.tree_util.tree_map(
+                    lambda value: value.block_until_ready(), res_list
+                )
+            finally:
+                if previous is sentinel:
+                    del problem._jax_fem_device_jacobian
+                else:
+                    problem._jax_fem_device_jacobian = previous
+        else:
+            res_list = problem.newton_update(sol_list)
         local_s = time.perf_counter() - t0
         _timing_record(timing, 'local_assembly', local_s)
         res_vec = jax.flatten_util.ravel_pytree(res_list)[0]
@@ -1273,7 +1341,7 @@ def solver(problem, solver_options={}):
             res_vec = problem.P_mat.T @ res_vec
 
         t0 = time.perf_counter()
-        A = get_A(problem)
+        A = get_A(problem, use_petsc_gpu=use_petsc_gpu)
         global_s = time.perf_counter() - t0
         _timing_record(timing, 'global_matrix', global_s)
         return res_vec, A, local_s, global_s

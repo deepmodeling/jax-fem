@@ -448,14 +448,21 @@ class Problem:
         logger.debug(f"Computing cell Jacobian and cell residual...")
         cells_sol_list = [sol[cells] for cells, sol in zip(self.cells_list, sol_list)] # [(num_cells, num_nodes, vec), ...]
         cells_sol_flat = jax.vmap(lambda *x: jax.flatten_util.ravel_pytree(x)[0])(*cells_sol_list) # (num_cells, num_nodes*vec + ...)
+        # The legacy PETSc/SciPy paths assemble on the host.  The opt-in PETSc
+        # GPU pipeline keeps these bulk arrays on the JAX device instead.
+        device_assembly = getattr(self, '_jax_fem_device_assembly', False)
+        array_module = np if device_assembly else onp
         # (num_cells, num_nodes*vec + ...),  (num_cells, num_nodes*vec + ..., num_nodes*vec + ...)
-        weak_form_flat, cells_jac_flat = self.split_and_compute_cell(cells_sol_flat, onp, True, internal_vars)
-        self.V = onp.array(cells_jac_flat.reshape(-1))
+        weak_form_flat, cells_jac_flat = self.split_and_compute_cell(cells_sol_flat, array_module, True, internal_vars)
+        tangent_values = cells_jac_flat.reshape(-1)
+        # Preserve the legacy host path exactly.  The opt-in GPU path can share
+        # the immutable flattened JAX buffer instead of forcing a device copy.
+        self.V = np.asarray(tangent_values) if device_assembly else onp.array(tangent_values)
 
         # [(num_selected_faces, num_nodes*vec + ...,), ...], [(num_selected_faces, num_nodes*vec + ..., num_nodes*vec + ...,), ...]
-        weak_form_face_flat, cells_jac_face_flat = self.compute_face(cells_sol_flat, onp, True, internal_vars_surfaces)
+        weak_form_face_flat, cells_jac_face_flat = self.compute_face(cells_sol_flat, array_module, True, internal_vars_surfaces)
         for cells_jac_f_flat in cells_jac_face_flat:
-            self.V = onp.hstack((self.V, onp.array(cells_jac_f_flat.reshape(-1))))
+            self.V = array_module.hstack((self.V, array_module.array(cells_jac_f_flat.reshape(-1))))
 
         return self.compute_residual_vars_helper(weak_form_flat, weak_form_face_flat)
 

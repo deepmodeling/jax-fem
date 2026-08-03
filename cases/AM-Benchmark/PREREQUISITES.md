@@ -772,11 +772,13 @@ Environment `jax-fem-gpu` = clone of `jax-fem-env` + `jax[cuda12]==0.10.2`
 (CUDA 12.9 wheels, cuDNN 9.24, RTX 5080 16 GB). Architecture: GPU assembly
 + CPU pardiso direct solve (v04 design). Evidence: runs 7/8 bitwise-equal
 step lines over 4 layers; branch-line ablation (`CPU_GPU_ABLATION.txt`,
-untracked) independently measured assembly 3.5x. **GATE: the FEniCSx gold
-benchmarks (5/5) have NOT been run in the GPU environment — GPU results are
-pipeline-grade only until that regression passes.** `run_l0.sh` platform
-is parameterized (`XLA_PLATFORM=gpu PYTHON_BIN=<gpu env python>`); default
-remains the validated CPU configuration.
+untracked) independently measured assembly 3.5x. **GATE PASSED 2026-08-03**:
+FEniCSx gold benchmarks 5/5 OK in the GPU environment (21 s) — deviations
+2.4e-8 / 3.0e-8 / 6.0e-8 / 5.6e-8, hyperelasticity 1.9e-4, same magnitudes
+as the CPU-environment gate of 2026-07-30. The GPU environment is cleared
+for results-bearing use. `run_l0.sh` platform is parameterized
+(`XLA_PLATFORM=gpu PYTHON_BIN=<gpu env python>`); default remains the
+CPU configuration.
 
 ---
 
@@ -794,7 +796,7 @@ GPU environment (2026-07-31, decision D-13):
 `/home/user/miniconda3/envs/jax-fem-gpu/bin/python` — full clone of
 jax-fem-env + `jax[cuda12]==0.10.2` (CUDA 12.9 runtime wheels, cuDNN 9.24;
 RTX 5080 16 GB; WSL uses the Windows driver, no in-distro toolkit). Gold-gate
-regression in this environment is still owed (section L.4).
+regression PASSED in this environment 2026-08-03, 5/5 (section L.4).
 
 Branch `test`; rollback point `backup/test-before-merge` at `79d416a`.
 Gold gate: `tests/benchmarks/` 5/5 vs FEniCSx passed post-merge in the CPU

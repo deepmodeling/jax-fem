@@ -135,7 +135,18 @@
   status: resolved
   adopted: "probe power 50 W (peak T ~1400 K, below solidus; scaling from the 220 W probes' ~4700 K rise). Identical load across all three substrate variants."
   justification: "the probe question is whether IN-PART stress depends on substrate z-discretization; that requires the same load on all variants, not a physically faithful melt pool. Sub-solidus load keeps every cell in the well-posed solid regime (no molten-cell mechanics at all) so the discretization signal is not polluted by melt-front numerics. Plasticity still occurs (E*alpha*dT >> sigma_y). The Balbaa-parity 220 W condition remains reserved for the thermal gate, where the missing-keff question must be addressed head-on."
+- id: D-V2-16
   what: XRD in-depth profiles exist only as figures
   paper_says: "Sec 4 figures for 140 W and 220 W, scan/hatch directions"
   status: open
   resolution_path: "digitize with the V1 workflow at RS-gate time; record read-off uncertainty per point"
+
+- id: D-V2-21
+  what: Balbaa's melt-pool effective conductivity (keff = kl + h*L, his Eq 19-24) is NOT implemented on our side
+  paper_says: "Sec 2.5: an FE code cannot carry Marangoni flow, so the quiescent liquid conductivity is artificially raised by keff = kl + h*L with h from Nu = 1.6129 ln(Ma) - 10.183 and L = half melt-pool width. This is an integral part of HIS thermal model, not an optional refinement."
+  status: open
+  adopted: null
+  evidence: "V1 ran without keff and registered the consequence (D-V1-10): pool length -20..-26 %, near-solidus cooling rate ~2.3x fast. V2 substrate probes at Balbaa-parity 220 W show a steady peak of ~5000 K without keff, against Balbaa's own Fig 7 contour max of ~2835 K -- the gap the artificial conductivity is there to close. (An earlier '2882 K agrees with Balbaa' note was retracted in 95f9c58: it was a first-step value under sparse logging.)"
+  why_it_blocks: "the V2 THERMAL gate compares against two-colour pyrometer temperatures. Peak temperature is exactly the quantity keff controls, so the gate cannot be interpreted without deciding this. Unlike V1 (where the missing keff only degraded two secondary metrics), here it sits on the primary observable."
+  options: "(a) implement an effective-conductivity model in the solver -- SHARED CODE, requires main-session coordination before any edit; (b) run the gate without keff and report the peak-temperature gap as the headline finding (zero-calibration-clean, and arguably the more honest code-to-code statement: 'his agreement depends on an artificial conductivity we do not use'); (c) pre-compute a fixed keff multiplier from his Eq 19-24 at the gate condition and feed it as a liquid-conductivity table value -- no solver change, but it freezes L (half pool width) which is itself an output (chicken-and-egg, cf. D-V1-10)."
+  resolution_path: "decide (a)/(b)/(c) BEFORE the thermal gate. Recommendation: (c) as the parity arm plus (b) as the as-is arm -- two runs bracket the question without touching shared code; (a) only if the main case independently needs melt-pool flow surrogacy."

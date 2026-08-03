@@ -35,6 +35,7 @@ class _StateRegistry:
         self.eqp = None
         self.eps_ref = None
         self.pending_reference = None
+        self.pending_cold_reset = None
         self.relaxation_mask = None
         self.relaxation_hot = None
         self.args = None
@@ -133,6 +134,32 @@ def install_phase_lifecycle_wrapper(base_module):
                     dtype=bool,
                 )
             became_relaxation_hot = relaxation_hot & (~previous_hot)
+            # D-11 complete history reset (PREREQUISITES.md D.7, user
+            # addition 1): on the cooling crossing of T_cut the point's
+            # mechanical history is wiped -- eqp := 0 here; the plastic
+            # strain tensor and the stress-free reference are handled at
+            # the next mechanics call via pending_cold_reset.
+            became_relaxation_cold = previous_hot & (~relaxation_hot)
+            if bool(np.any(became_relaxation_cold)):
+                eqp_wiped = np.where(
+                    became_relaxation_cold,
+                    np.zeros_like(result[2]),
+                    result[2],
+                )
+                result = (
+                    result[0],
+                    result[1],
+                    eqp_wiped,
+                    result[3],
+                    result[4],
+                )
+                REGISTRY.eqp = eqp_wiped
+                if REGISTRY.pending_cold_reset is None:
+                    REGISTRY.pending_cold_reset = became_relaxation_cold
+                else:
+                    REGISTRY.pending_cold_reset = (
+                        REGISTRY.pending_cold_reset | became_relaxation_cold
+                    )
             REGISTRY.relaxation_hot = relaxation_hot
 
             entered_melted = result[4]
@@ -671,6 +698,34 @@ def install_v06_adapter(base_module, profiler=None):
             mechanics._relaxation_mask = REGISTRY.relaxation_mask
 
         build_problem = REGISTRY.build_problem
+        cold_reset = REGISTRY.pending_cold_reset
+        if (
+            is_state_safe
+            and cold_reset is not None
+            and bool(np.any(cold_reset))
+        ):
+            # D-11 complete history reset, tensor side: wipe the plastic
+            # strain of points that cooled through T_cut by folding it into
+            # the stress-free reference (stress = C : (total - thermal -
+            # eps_p - eps_ref) is unchanged by eps_p -> 0, eps_ref +=
+            # eps_p), so the anchor stays at the last above-T_cut capture
+            # while the plastic memory is erased. eqp was already zeroed in
+            # the lifecycle wrapper.
+            cold_cell_mask = np.asarray(cold_reset, dtype=bool)[..., 0]
+            fold = cold_cell_mask[..., None, None]
+            mechanics._eps_ref_state = np.where(
+                fold,
+                mechanics._eps_ref_state + mechanics._eps_p_state,
+                mechanics._eps_ref_state,
+            )
+            mechanics._eps_p_state = np.where(
+                fold, 0.0, mechanics._eps_p_state
+            )
+            REGISTRY.eps_p = mechanics._eps_p_state
+            REGISTRY.eps_ref = mechanics._eps_ref_state
+            REGISTRY.pending_cold_reset = np.zeros_like(
+                cold_reset, dtype=bool
+            )
         reference_mask = None
         for name, event_mask in (
             ("pending_reference", REGISTRY.pending_reference),
@@ -699,6 +754,10 @@ def install_v06_adapter(base_module, profiler=None):
             if REGISTRY.pending_reference is not None:
                 REGISTRY.pending_reference = np.zeros_like(
                     REGISTRY.pending_reference, dtype=bool
+                )
+            if REGISTRY.pending_cold_reset is not None:
+                REGISTRY.pending_cold_reset = np.zeros_like(
+                    REGISTRY.pending_cold_reset, dtype=bool
                 )
 
         adopted = False

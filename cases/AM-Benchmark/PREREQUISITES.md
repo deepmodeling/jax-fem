@@ -512,6 +512,21 @@ thin leg needs three elements across), powder ~220 k at ~1 mm, substrate ~42 k a
   NOT frozen — L3 runs the sweep endpoints and the final deflection is
   published as a prediction band with the sensitivity as open model
   uncertainty. No run in this matrix sees any measured deflection/strain.
+- **Gate test EXECUTED AND PASSED 2026-08-03**
+  (`tools/d11_two_cycle_gate.py`, evidence `derived/d11/gate-test.json`;
+  biaxial one-element patch — the registered E*alpha*dT/(1-nu) estimate is
+  the biaxial formula; a fully-clamped patch is hydrostatic and cannot
+  yield in J2). First run FAILED criterion (ii): cycle drift 8.4 % with
+  L0-like hardening — production code wiped the plastic-strain TENSOR via
+  reference capture but let the scalar eqp survive the cooling crossing.
+  Fixed in the v06 lifecycle layer (runner.py): eqp := 0 on the crossing,
+  eps_p folded into eps_ref (stress-exact; anchor stays at the last
+  above-T_cut capture). Post-fix: (i) 0 MPa above T_cut, (ii) 2.6e-12 and
+  1.8e-12 (<= 1e-10), (iii) 630.19 vs 630.00 MPa (0.03 %, perfect-plastic
+  instrument; the hardening variant exceeds min() by exactly H*eqp = 38
+  MPa, physically consistent). paper_irreversible and relax-disabled paths
+  untouched by construction; tests/unit 164 passed post-change. The 15-run
+  matrix is UNBLOCKED.
 
 ### D.8 Emissivity bracket (decision D-12)
 

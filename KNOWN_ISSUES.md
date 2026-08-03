@@ -6,6 +6,27 @@ bottom section with the fixing commit.
 
 ## Open
 
+### --scan-steps-per-layer is per hatch line, not per layer (reported 2026-07-31, main session)
+
+In hatch-raster mode (`--hatch-lines-per-layer N`), `--scan-steps-per-layer S`
+produces N x S scan steps per layer (S steps along EACH line), not S total.
+With per-step energy fixed by `--dt` and laser power, adding hatch lines
+multiplies the deposited layer energy. L0 run 5 deposited 4x the intended
+energy this way and diverged. Either rename the flag (`--scan-steps-per-line`)
+or divide S across lines. Until then, scale power or steps to conserve the
+per-layer energy budget (see `cases/AM-Benchmark/tools/run_l0.sh` rev 3 note).
+
+### Macro consolidation without --powder-elset fuses powder into solid (reported 2026-07-31, main session)
+
+With `liquidus == solidus` (macro consolidation-on-activation) and
+`--layer-activation-mode layer_on_scan` + centroid geometry, activation covers
+the entire layer plane, and the macro branch solidifies every activated
+non-fixture cell — including cells that are physically permanent powder (gap
+and margin regions). L0 run 6 fused 43810 powder cells into a slab this way.
+`--powder-elset <SET>` prevents it (permanent-powder cells are excluded from
+activation each step). Wanted: a startup warning when macro mode is active,
+a powder-mode mesh has unprinted regions, and no `--powder-elset` is given.
+
 ### run_audit cannot audit thermal-only runs (reported 2026-07-29, V1 session)
 
 `run_audit` assumes mechanics outputs exist; a run with `--mechanics-every 0`

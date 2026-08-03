@@ -697,6 +697,89 @@ DOI 10.3390/jmmp6010002 (CC BY 4.0), archived at
 
 ---
 
+## L. Compute ladder — L0 pipeline shakedown (runs 5-8, 2026-07-31, verified 2026-08-03)
+
+**Verdict: the L0 pipeline is WIRED AND VERIFIED.** Run 8 (GPU) completed all
+1748 steps and passed all six criteria (`derived/l0/run8-verify.json`; full log
+`derived/l0/run8-run.log`; resolved flags `derived/l0/run8-used-config.json`;
+output archive `/home/user/work/output/amb_l0_20260731T092534Z`). L0 numbers
+are MECHANISM evidence, not physics conclusions — the registered deviations
+below stand until L1/L2 close them.
+
+### L.1 Real-condition wiring convention (rev 4, `tools/run_l0.sh`)
+
+- **Deposition**: macro consolidation-on-activation — `liquidus == solidus
+  == 1552` disables melt detection (untriggerable at dt = 20 s lumping);
+  activated material solidifies immediately. Material is born at plate
+  temperature 347.05 K and heated by real laser energy (no flash initial
+  condition — the D-02 flash convention is retired for the main case).
+- **T_ref anchor**: `--phase-history-model legacy_reset` +
+  `--stress-relaxation-temperature 1273.15` assigns T_ref := 1273.15 K once
+  at consolidation (Denlinger stress-free-above-T_cut semantics == D-11
+  T_cut; the D-11 sweep varies this value). In macro mode nothing remelts,
+  so T_ref is never rewritten and eqp is never erased.
+- **Energy**: 48.75 W x 0.62 absorptivity over a 640 s scan phase
+  = 19.34 kJ per computational layer == 195 W x 0.62 x the D-10 aggregate
+  laser-on time. Power is scaled /4 because `--scan-steps-per-layer` is
+  PER HATCH LINE (4 lines x 8 steps x 20 s); instantaneous power is an
+  aggregation construct at part scale — the conserved invariants are
+  per-layer energy and the layer clock.
+- **Clock**: 640 s scan + 2020 s dwell (101 steps) = 2660 s per
+  computational layer == D-10 N=50 aggregate (legs 2608 s, bridge 2740 s).
+- **Powder**: `--powder-elset POWDER` is MANDATORY — permanent-powder cells
+  (43810: leg gaps + margin) are excluded from activation every step, stay
+  STATE_POWDER, and participate thermally with powder conductivity. Weak-solid
+  mechanics regularization (E 10 GPa / yield 1 MPa / hardening 10 MPa) is the
+  Kaess-golden numerical treatment, not material data.
+- **Mechanics acceptance**: rel-tol 5e-5 / abaqus acceptance / max-iter 50 /
+  line search (Kaess-golden quartet; the default 1e-9/1e-11 tolerances hit
+  the known j2 stagnation floor and diverged under the run-5 overfeed).
+
+### L.2 Run record and lessons
+
+| run | platform | outcome |
+|---|---|---|
+| 5 | CPU | KILLED ITSELF — `--scan-steps-per-layer` per-line semantics deposited 4x the intended energy (77.4 kJ/layer); mechanics Newton diverged at step ~10 under default tolerances |
+| 6 | CPU | completed; mechanism criteria passed BUT all 59150 build cells consolidated — without `--powder-elset` the layer-plane activation + macro consolidation fused leg gaps and margin into a slab |
+| 7 | CPU | rev-4 wiring correct (state ledger ties out cell-exact); interrupted at layer 4 during environment work; ~32 min/layer |
+| 8 | GPU | COMPLETE, six criteria passed; bitwise-identical to run 7 over the full comparable range (4 layers); ~17 min/layer (1.75x) |
+
+Six criteria (C1-C6): build-region state counts == mesh sets exactly
+(POWDER 43810 / PART 15340); T_ref uniform 1273.1500 K; eqp max 1.9e-2;
+part von Mises max 643.9 MPa (mill-cert yield + hardening) persisting
+unchanged through the 120-step cooldown; final field at 347.05 K; CPU/GPU
+step equivalence. Interpass dwell tails return to plate temperature —
+the real layer clock leaves no heat accumulation at L0 aggregation.
+
+### L.3 Registered L0 deviations (fixed at L1 unless noted)
+
+1. Uniform layer clock under-feeds the bridge band ~-29 % and gives
+   computational layer 13 (24 ridge layers) the same clock — needs the
+   per-layer schedule runner extension.
+2. Total absorbed 251 kJ vs ~289 kJ real (-13 %) — same fix.
+3. PROVISIONAL-L0 material tables (constant alpha, linear yield decay,
+   flat powder-k extrapolation, linear mushy release, constant h,
+   single mid-value emissivity) — replaced per D-11/D-12/D.6 at L1.
+4. Scan raster is 4 uniform serpentine lines over the part footprint, not
+   the real per-layer part cross-section path.
+5. Peak temperatures are sub-grid at dt = 20 s (scan peaks ~1600-2200 K,
+   no resolved melt pool) — inherent to part-scale lumping, verified
+   separately by V1.
+
+### L.4 GPU platform supplement (decision D-13, user-ordered 2026-07-31)
+
+Environment `jax-fem-gpu` = clone of `jax-fem-env` + `jax[cuda12]==0.10.2`
+(CUDA 12.9 wheels, cuDNN 9.24, RTX 5080 16 GB). Architecture: GPU assembly
++ CPU pardiso direct solve (v04 design). Evidence: runs 7/8 bitwise-equal
+step lines over 4 layers; branch-line ablation (`CPU_GPU_ABLATION.txt`,
+untracked) independently measured assembly 3.5x. **GATE: the FEniCSx gold
+benchmarks (5/5) have NOT been run in the GPU environment — GPU results are
+pipeline-grade only until that regression passes.** `run_l0.sh` platform
+is parameterized (`XLA_PLATFORM=gpu PYTHON_BIN=<gpu env python>`); default
+remains the validated CPU configuration.
+
+---
+
 ## F. Environment
 
 ```
@@ -705,10 +788,19 @@ DOI 10.3390/jmmp6010002 (CC BY 4.0), archived at
 
 jax 0.10.2 (CPU, x64), petsc4py 3.25.1, fenics-basix 0.10.0, pypardiso 0.4.7 +
 MKL 2026.1.0 (verified: residual 0 on a 2x2 solve), gmsh 4.15.2, meshio 5.3.5,
-pymupdf 1.28.0. jaxlib is CPU-only; the RTX 5080 is unused until `jax[cuda12]`
-is installed.
+pymupdf 1.28.0.
 
-Branch `test` at `bdd1671` (merge of `codex/r3-optimization`); rollback point
-`backup/test-before-merge` at `79d416a`. The solver has **not** been run since the
-merge — `tests/benchmarks/` (four cases with FEniCSx reference solutions) has not
-been executed.
+GPU environment (2026-07-31, decision D-13):
+`/home/user/miniconda3/envs/jax-fem-gpu/bin/python` — full clone of
+jax-fem-env + `jax[cuda12]==0.10.2` (CUDA 12.9 runtime wheels, cuDNN 9.24;
+RTX 5080 16 GB; WSL uses the Windows driver, no in-distro toolkit). Gold-gate
+regression in this environment is still owed (section L.4).
+
+Branch `test`; rollback point `backup/test-before-merge` at `79d416a`.
+Gold gate: `tests/benchmarks/` 5/5 vs FEniCSx passed post-merge in the CPU
+environment (2026-07-30, four cases ~1e-8, hyperelasticity 1.9e-4).
+
+Operational notes (2026-07-31): Windows recycles the WSL distro when the last
+client disconnects — long detached runs need a persistent client attached
+(nohup alone does not survive); process cleanup must target exact PIDs, never
+broad `pkill -f` patterns (two sessions share this distro).

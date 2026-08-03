@@ -7,7 +7,7 @@ the two fields returned by `example_2vars.py`,
 
 $$
 \boldsymbol{u}_h^{\mathrm{1var}}
-=\operatorname{concat}\!\left(u_h^{(1)},\boldsymbol{u}_h^{(2)}\right)
+=\left[u_h^{(1)},\boldsymbol{u}_h^{(2)}\right]
 =\boldsymbol{u}_h^{\mathrm{2vars}},
 \qquad
 \left\|\boldsymbol{u}_h^{\mathrm{1var}}

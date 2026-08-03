@@ -163,9 +163,13 @@ with open(p, "w", newline="") as f:
     w.writerow(["temperature_K", "equivalent_plastic_strain", "flow_stress_Pa", "source"])
     for T_C in T_grid:
         for e in eps_grid:
-            # 固相线处 J-C 软化项给出 0 -> 施加一个极小的正屈服地板,
-            # 避免退化的零屈服面(与 mushy/liquid 力学因子分工,见 HIGH-T 备忘 §3)
-            sigma = max(jc_flow(e, T_C), 1.0e-3)  # MPa
-            w.writerow([f"{T_C + K:.2f}", f"{e:g}", f"{sigma*1e6:.6g}", jc_src])
+            # D-V2-19:固相线处 J-C 软化为 0,原 1e-3 MPa 平地板复现了仓库
+            # c475f7e 记录的病理(sigma_y 小 + H=0 -> 切线 PSD -> Newton 停滞/
+            # 发散,首跑 u_max 炸至 1e11)。按 kaess 同一先例正则化:
+            # 地板 1 MPa(= kaess powder-solid-yield)+ 全曲线附加
+            # H_reg = 1e7 Pa 硬化斜率(= kaess powder-solid-hardening,
+            # 消除一切零斜率段)。对低温段影响 <0.2%(1e7*0.2/650e6)。
+            sigma_pa = max(jc_flow(e, T_C) * 1e6, 1.0e6) + 1.0e7 * e
+            w.writerow([f"{T_C + K:.2f}", f"{e:g}", f"{sigma_pa:.6g}", jc_src])
 print(f"{p.name}: {len(T_grid)*len(eps_grid)} rows, "
       f"sigma(0,21C)={jc_flow(0,21):.0f} MPa .. sigma(0,{SOLIDUS_C:.0f}C)={jc_flow(0,SOLIDUS_C):.1f} MPa")

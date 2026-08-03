@@ -122,7 +122,19 @@
   open_sub_issue: "the source table prints alpha_mean to 3 significant digits (0.1e-6 resolution); differencing amplifies that round-off, which is why the derived instantaneous values are non-monotonic (25.2 % at 649 C vs 18.5 % at 760 C). Before the RS gate, fit a smooth alpha_mean(T) (or take alpha(T) from a higher-resolution source and cross-check) rather than shipping the raw differenced values; the differenced table is adequate for scoping, not for the final gate."
   note: "Balbaa's own treatment is unstated, so this is OUR modeling decision. Worth raising with the main session -- the main case consumes alpha(T) too and may have the same secant/instantaneous trap."
 
-- id: D-V2-16
+- id: D-V2-19
+  what: flow-curve regularization at and above the solidus
+  paper_says: "nothing -- Balbaa's J-C softening reaches exactly 0 at Tm = 1290 C and his ABAQUS treatment of molten-cell plasticity is unstated"
+  status: resolved
+  adopted: "flow stress floored at 1 MPa and a uniform H_reg = 1e7 Pa hardening slope added to every row (make_v2_mech_tables.py)"
+  justification: "first substrate-study run (2026-07-31) diverged (u_max -> 1e11) with the unregularized 1e-3 MPa flat floor: thousands of molten cells with near-zero flat yield + liquid_mechanics_factor 1e-4 reproduce exactly the PSD-tangent Newton pathology the repo documented in c475f7e; the adopted values are the SAME regularization pair kaess uses for weak-solid powder (powder-solid-yield 1e6 / powder-solid-hardening 1e7). Effect on the sub-solidus curve < 0.2%."
+
+- id: D-V2-20
+  what: substrate-discretization probe (D-V2-07) runs at reduced power, NOT at Balbaa parity power
+  paper_says: "n/a -- this is a numerics probe, not a Balbaa-comparison run"
+  status: resolved
+  adopted: "probe power 50 W (peak T ~1400 K, below solidus; scaling from the 220 W probes' ~4700 K rise). Identical load across all three substrate variants."
+  justification: "the probe question is whether IN-PART stress depends on substrate z-discretization; that requires the same load on all variants, not a physically faithful melt pool. Sub-solidus load keeps every cell in the well-posed solid regime (no molten-cell mechanics at all) so the discretization signal is not polluted by melt-front numerics. Plasticity still occurs (E*alpha*dT >> sigma_y). The Balbaa-parity 220 W condition remains reserved for the thermal gate, where the missing-keff question must be addressed head-on."
   what: XRD in-depth profiles exist only as figures
   paper_says: "Sec 4 figures for 140 W and 220 W, scan/hatch directions"
   status: open

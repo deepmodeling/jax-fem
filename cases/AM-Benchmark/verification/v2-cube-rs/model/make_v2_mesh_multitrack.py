@@ -27,18 +27,38 @@ SUB_LADDERS = {
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--substrate-mode", choices=sorted(SUB_LADDERS), default="graded")
+# 以下三项仅用于网格收敛探针,默认保持 Balbaa 奇偶性(4x4 mm @40 um)
+ap.add_argument("--res", type=float, default=None,
+                help="均匀单元尺寸(米);给出即覆盖 40 um 奇偶设置,粉层与基板同步细化")
+ap.add_argument("--extent-x", type=float, default=4.0e-3)
+ap.add_argument("--extent-y", type=float, default=4.0e-3)
+ap.add_argument("--tag", default=None, help="输出文件名后缀")
 args = ap.parse_args()
 
-sub = SUB_LADDERS[args.substrate_mode]
-assert abs(sum(sub) - SUB_TOTAL) < 1e-12, f"{args.substrate_mode} 基板厚度不闭合"
-DZ_LADDER = sub + [40.0e-6]  # 顶部 40 um 粉层
+if args.res is None:
+    sub = SUB_LADDERS[args.substrate_mode]
+    assert abs(sum(sub) - SUB_TOTAL) < 1e-12, f"{args.substrate_mode} 基板厚度不闭合"
+    DZ_LADDER = sub + [40.0e-6]  # 顶部 40 um 粉层
+else:
+    # 收敛探针:全域均匀 res,基板 400 um + 粉层 40 um 按 res 细分
+    DXY = args.res
+    NX = int(round(args.extent_x / DXY))
+    NY = int(round(args.extent_y / DXY))
+    n_sub = int(round(SUB_TOTAL / DXY))
+    n_lay = max(int(round(40.0e-6 / DXY)), 1)
+    DZ_LADDER = [DXY] * n_sub + [DXY] * n_lay
 
 Z_LEVELS = [0.0]
 for dz in DZ_LADDER:
     Z_LEVELS.append(Z_LEVELS[-1] + dz)
 NZ = len(DZ_LADDER)
 
-suffix = "" if args.substrate_mode == "graded" else f"_{args.substrate_mode}"
+if args.tag:
+    suffix = f"_{args.tag}"
+elif args.substrate_mode == "graded":
+    suffix = ""
+else:
+    suffix = f"_{args.substrate_mode}"
 out = Path(__file__).parent / f"v2_multitrack_c3d8{suffix}.inp"
 
 def nid(i, j, k):

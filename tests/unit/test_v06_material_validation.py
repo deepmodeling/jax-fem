@@ -1,5 +1,6 @@
 import sys
 import unittest
+import warnings
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -152,6 +153,99 @@ class MaterialValidationTest(unittest.TestCase):
                             [300.0, 1200.0],
                             [0.0, 0.1],
                             [[900.0e6, 800.0e6], [100.0e6, 120.0e6]],
+                        ),
+                        "yield": None,
+                        "hardening": None,
+                    }
+                ),
+            )
+
+    def test_short_flow_curve_warns_about_silent_tangent_clamping(self):
+        """Past the last knot the tabulated tangent is exactly zero, silently."""
+        with self.assertWarnsRegex(RuntimeWarning, "clamped to exactly zero"):
+            validate_material_inputs(
+                valid_args(),
+                valid_tables(
+                    **{
+                        "flow_curve": FlowCurve(
+                            [300.0, 1200.0],
+                            [0.0, 0.2],
+                            [[900.0e6, 1.2e9], [100.0e6, 200.0e6]],
+                        ),
+                        "yield": None,
+                        "hardening": None,
+                    }
+                ),
+            )
+
+    def test_long_enough_flow_curve_does_not_warn_about_clamping(self):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            validate_material_inputs(
+                valid_args(),
+                valid_tables(
+                    **{
+                        "flow_curve": FlowCurve(
+                            [300.0, 1200.0],
+                            [0.0, 2.0],
+                            [[900.0e6, 3.0e9], [100.0e6, 400.0e6]],
+                        ),
+                        "yield": None,
+                        "hardening": None,
+                    }
+                ),
+            )
+        self.assertEqual(
+            [w for w in caught if "clamped to exactly zero" in str(w.message)], []
+        )
+
+    def test_row_that_is_effectively_perfectly_plastic_warns(self):
+        """The V2 D-V2-19 failure, with its real numbers.
+
+        Hot row: yield floored at 1 MPa with a fixed 1e7 Pa regularizing
+        hardening, against E = 61.6 GPa at the solidus -- H/E = 1.6e-4. That is
+        the shape that stalled every V2 mechanics arm at the same step, and the
+        reason the regularizer had to be tied to E(T) instead of fixed.
+        """
+        with self.assertWarnsRegex(RuntimeWarning, "perfect plasticity"):
+            validate_material_inputs(
+                valid_args(),
+                valid_tables(
+                    **{
+                        "E": Table([300.0, 1563.0], [171.0e9, 61.6e9]),
+                        "flow_curve": FlowCurve(
+                            [300.0, 1563.0],
+                            [0.0, 5.0e-4, 2.0],
+                            [
+                                [650.0e6, 670.0e6, 3.0e9],
+                                [1.0e6, 1.005e6, 21.0e6],
+                            ],
+                        ),
+                        "yield": None,
+                        "hardening": None,
+                    }
+                ),
+            )
+
+    def test_first_segment_stiffer_than_elastic_modulus_warns(self):
+        """The V2 D-V2-22 shape: J-C tabulated as printed near eps_p -> 0.
+
+        650 -> 1007 MPa across eps_p 0 -> 0.002 is H = 178.7 GPa against
+        E = 171 GPa, i.e. a plastic branch stiffer than the elastic one.
+        """
+        with self.assertWarnsRegex(RuntimeWarning, "at or above"):
+            validate_material_inputs(
+                valid_args(),
+                valid_tables(
+                    **{
+                        "E": Table([300.0, 1563.0], [171.0e9, 61.6e9]),
+                        "flow_curve": FlowCurve(
+                            [300.0, 1563.0],
+                            [0.0, 0.002, 2.0],
+                            [
+                                [650.0e6, 1007.4e6, 3.0e9],
+                                [200.0e6, 260.0e6, 900.0e6],
+                            ],
                         ),
                         "yield": None,
                         "hardening": None,

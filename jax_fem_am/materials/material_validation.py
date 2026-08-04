@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 
 
@@ -84,6 +86,90 @@ def _validate_flow_curve(table):
         raise ValueError(
             "flow curve stress must be nondecreasing with plastic strain"
         )
+    _warn_on_silent_clamp_risk(plastic_strains)
+
+
+# Beyond the last plastic-strain knot, j2.flow_stress_from_curve clamps and
+# _plastic_increment_from_curve takes its beyond_root branch, i.e. the plastic
+# tangent becomes EXACTLY zero. That is silent: no error, no failed step, just
+# ideal plasticity that quietly invalidates the run's stresses. These two checks
+# make the two known ways of walking into a degenerate tangent visible at load
+# time instead of at Newton stagnation (V2 D-V2-19-R1 / D-V2-22, 2026-08-04).
+#
+# Deliberately warnings and not hard errors: cases/kaess_2023 carries a pending
+# candidate flow curve, and a raise here would reject it on a threshold that is
+# a heuristic rather than a physical law. Promoting either to an error is a
+# reviewer's call, not this function's.
+_MIN_LAST_PLASTIC_STRAIN = 1.0
+_MIN_TANGENT_RATIO = 1.0e-3
+
+
+def _warn_on_silent_clamp_risk(plastic_strains):
+    last = float(plastic_strains[-1])
+    if last < _MIN_LAST_PLASTIC_STRAIN:
+        warnings.warn(
+            f"flow curve ends at equivalent plastic strain {last:g}; beyond it "
+            "the tabulated plastic tangent is clamped to exactly zero (ideal "
+            "plasticity) with no error raised. Check that the run's peak "
+            "eq_plastic_strain stays below this, or extend the table.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+
+
+def _warn_on_tangent_vs_stiffness(flow_curve, young_table, young_fallback):
+    """Compare each row's first-segment plastic tangent H against E(T).
+
+    H/E is the quantity that decides whether the consistent tangent is well
+    posed, so both failure modes below are ratios against stiffness, not
+    against the row's own stress -- a slope compared to a yield stress has
+    units of 1/strain and cannot be thresholded meaningfully.
+
+      H >= E      the segment is stiffer than the elastic response, which is
+                  indefensible for any real material (V2 D-V2-22).
+      H/E -> 0    the row is effectively perfectly plastic; where many
+                  quadrature points sit on such rows at once the global tangent
+                  goes near-singular and Newton stalls with a large force ratio
+                  and a collapsing displacement correction (V2 D-V2-19-R1).
+    """
+    temperatures = np.asarray(flow_curve.temperatures, dtype=np.float64).reshape(-1)
+    plastic_strains = np.asarray(
+        flow_curve.plastic_strains, dtype=np.float64
+    ).reshape(-1)
+    stresses = np.asarray(flow_curve.stresses, dtype=np.float64)
+    first_slope = np.diff(stresses, axis=1)[:, 0] / np.diff(plastic_strains)[0]
+
+    if young_table is not None:
+        grid = np.asarray(young_table.T, dtype=np.float64).reshape(-1)
+        values = np.asarray(young_table.values, dtype=np.float64).reshape(-1)
+        young = np.interp(temperatures, grid, values)
+    else:
+        young = np.full(temperatures.shape, float(young_fallback))
+
+    ratio = first_slope / young
+    stiffest = int(np.argmax(ratio))
+    if ratio[stiffest] >= 1.0:
+        warnings.warn(
+            f"flow curve at T={temperatures[stiffest]:g} has a first-segment "
+            f"hardening modulus {first_slope[stiffest]:.3e} Pa at or above "
+            f"E={young[stiffest]:.3e} Pa (H/E={ratio[stiffest]:.2f}). A plastic "
+            "branch stiffer than the elastic one is nonphysical and makes the "
+            "Newton tangent ill-conditioned.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+    softest = int(np.argmin(ratio))
+    if ratio[softest] < _MIN_TANGENT_RATIO:
+        warnings.warn(
+            f"flow curve at T={temperatures[softest]:g} has H/E="
+            f"{ratio[softest]:.2e} over its first segment, i.e. effectively "
+            "perfect plasticity. Where many quadrature points sit near this "
+            "temperature the consistent tangent goes near-singular. Consider "
+            "tying the regularizing hardening to E(T) rather than fixing it "
+            "as an absolute modulus.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
 
 
 def validate_material_inputs(args, tables):
@@ -137,6 +223,9 @@ def validate_material_inputs(args, tables):
                 "flow curve requires mechanics_model=j2_plastic"
             )
         _validate_flow_curve(flow_curve)
+        _warn_on_tangent_vs_stiffness(
+            flow_curve, tables["E"], getattr(args, "young")
+        )
     else:
         if (
             getattr(args, "mechanics_model", None) == "j2_plastic"

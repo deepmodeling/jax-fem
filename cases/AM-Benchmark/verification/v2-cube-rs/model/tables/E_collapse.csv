@@ -1,0 +1,12 @@
+T,value,source
+294.15,1.71e+11,"SpecialMetals [63] annealed, Balbaa offset -36.5 GPa; hight-mode=linear (D-V2-17)"
+366.15,1.676e+11,"SpecialMetals [63] annealed, Balbaa offset -36.5 GPa; hight-mode=linear (D-V2-17)"
+477.15,1.614e+11,"SpecialMetals [63] annealed, Balbaa offset -36.5 GPa; hight-mode=linear (D-V2-17)"
+589.15,1.552e+11,"SpecialMetals [63] annealed, Balbaa offset -36.5 GPa; hight-mode=linear (D-V2-17)"
+700.15,1.49e+11,"SpecialMetals [63] annealed, Balbaa offset -36.5 GPa; hight-mode=linear (D-V2-17)"
+811.15,1.421e+11,"SpecialMetals [63] annealed, Balbaa offset -36.5 GPa; hight-mode=linear (D-V2-17)"
+922.15,1.338e+11,"SpecialMetals [63] annealed, Balbaa offset -36.5 GPa; hight-mode=linear (D-V2-17)"
+1033.15,1.241e+11,"SpecialMetals [63] annealed, Balbaa offset -36.5 GPa; hight-mode=linear (D-V2-17)"
+1144.15,1.11e+11,"SpecialMetals [63] annealed, Balbaa offset -36.5 GPa; hight-mode=linear (D-V2-17)"
+1250.52,9.84464e+10,"D-V2-17 option (c): stiffness collapse toward the solidus with a finite floor. Sheet rows (<=1144.15 K) unchanged from [63]; linear sheet-slope extension to T_c=1250.52 K (=0.8*T_sol); linear collapse T_c->solidus to a floor of 0.01*E(RT)=1.71e+09 Pa (NOT zero -- a zero floor trades a degenerate tangent for a singular matrix). Declarative numerical convention, nothing calibrated to measurement."
+1563.15,1.71e+09,"D-V2-17 option (c): stiffness collapse toward the solidus with a finite floor. Sheet rows (<=1144.15 K) unchanged from [63]; linear sheet-slope extension to T_c=1250.52 K (=0.8*T_sol); linear collapse T_c->solidus to a floor of 0.01*E(RT)=1.71e+09 Pa (NOT zero -- a zero floor trades a degenerate tangent for a singular matrix). Declarative numerical convention, nothing calibrated to measurement."

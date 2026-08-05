@@ -94,12 +94,27 @@ EPS_GRID = [0.0, 5.0e-4, 1.0e-3, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2,
             0.5, 1.0, 2.0]
 EPS_GRID_PRE_P1 = [0.0, 5.0e-4, 1.0e-3, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2]
 
-# E(T) 表(cap 臂需要)
+# E(T) 表(cap 臂与最小切线都要用)。可由 --e-table 换成 D-V2-17 方案 (c) 的
+# 坍塌表 E_collapse.csv:那样最小切线仍是 0.01*E(T)(适定性判据不变),但固相线
+# 附近 E 从 61.6 GPa 掉到 1.71 GPa,同一个 H/E 的**绝对补偿应力**随之塌掉一个多
+# 量级,正则化对本构的扰动也就跟着塌掉——这正是 P0 暴露的"扰动在应变上无界"的解药。
 E_TAB = []
-with open(TABLES / "E.csv") as f:
-    for r in csv.DictReader(f):
-        E_TAB.append((float(r["T"]), float(r["value"])))
-E_TAB.sort()
+
+
+def load_E(path):
+    # 只换 E_TAB。T_GRID_K 在模块级由**原始** E.csv 一次算定,换表不重算,
+    # 这样各臂的温度网格逐点相同,才谈得上单变量比较。
+    global E_TAB
+    tab = []
+    with open(path) as f:
+        for r in csv.DictReader(f):
+            tab.append((float(r["T"]), float(r["value"])))
+    tab.sort()
+    E_TAB = tab
+    return tab
+
+
+load_E(TABLES / "E.csv")
 
 
 def E_at(T_K):
@@ -153,7 +168,7 @@ ARMS = ("asis", "offset", "cap")
 T_GRID_K = sorted(set([t for t, _ in E_TAB] + [1000.0 + K, 1150.0 + K]))
 
 
-def build(arm, floor_pa=FLOOR_PA, h_reg_pa=H_REG_PA, mt_frac=0.0):
+def build(arm, floor_pa=FLOOR_PA, h_reg_pa=H_REG_PA, mt_frac=0.0, t_cut_K=None):
     """mt_frac > 0 时,逐段强制**最小塑性切线** H >= mt_frac * E(T)。
 
     这是 D-V2-19 的生产形态修订(2026-08-04):把正则化硬化从"固定绝对值
@@ -173,9 +188,13 @@ def build(arm, floor_pa=FLOOR_PA, h_reg_pa=H_REG_PA, mt_frac=0.0):
     """
     rows = []
     for T_K in T_GRID_K:
-        T_C = T_K - K
+        # 截断温度(计算焊接力学的教科书做法,Lindgren):T_cut 之上把本构钳制在
+        # T_cut 处的值,不再让屈服一路塌到地板。论证是超过 T_cut 的材料几乎不承载,
+        # 对最终残余应力贡献可忽略 —— 这一点要用 T_cut 敏感度测试验证,不是信仰。
+        T_eff_K = min(T_K, t_cut_K) if t_cut_K else T_K
+        T_C = T_eff_K - K
         sf = soft(T_C)
-        Ev = E_at(T_K)
+        Ev = E_at(T_eff_K)
         prev_e = None
         prev_s = None
         for e in EPS_GRID:
@@ -184,7 +203,7 @@ def build(arm, floor_pa=FLOOR_PA, h_reg_pa=H_REG_PA, mt_frac=0.0):
             elif arm == "offset":
                 h = hard_offset(e)
             else:
-                h = hard_cap(e, T_K)
+                h = hard_cap(e, T_eff_K)
             sigma = max(h * sf * 1e6, floor_pa) + h_reg_pa * e
             if mt_frac > 0.0 and prev_s is not None:
                 sigma = max(sigma, prev_s + mt_frac * Ev * (e - prev_e))
@@ -214,7 +233,8 @@ def diagnose(arm, rows):
     return worst
 
 
-def write(arm, rows, name=None, floor_pa=FLOOR_PA, h_reg_pa=H_REG_PA, mt_frac=0.0):
+def write(arm, rows, name=None, floor_pa=FLOOR_PA, h_reg_pa=H_REG_PA, mt_frac=0.0,
+          e_table=None, t_cut_K=None):
     label = name or arm
     src = (f"modified J-C (Balbaa2022 p.33) A={A} B={B} n={N} m={M} Tm={TM}C Tr={TR}C; "
            f"rate term omitted (D-V2-02); floor {floor_pa:.0e} Pa + H_reg {h_reg_pa:.0e} Pa "
@@ -223,6 +243,10 @@ def write(arm, rows, name=None, floor_pa=FLOOR_PA, h_reg_pa=H_REG_PA, mt_frac=0.
            + (f", cap={CAP_FRAC}*E" if arm == "cap" else "") + ")")
     if mt_frac > 0.0:
         src += (f"; D-V2-19-R1 minimum plastic tangent H >= {mt_frac:g}*E(T)")
+    if e_table and Path(e_table).name != "E.csv":
+        src += f"; E(T) from {Path(e_table).name} (D-V2-17 option (c))"
+    if t_cut_K:
+        src += f"; cut-off temperature {t_cut_K:g} K (properties held above it)"
     if label != arm:
         src += (f"; D-V2-19 single-variable ladder arm '{label}' "
                 f"(floor={floor_pa:.0e} Pa, H_reg={h_reg_pa:.0e} Pa)")
@@ -256,18 +280,25 @@ def main():
                     help=f"D-V2-19 附加硬化模量,默认 {H_REG_PA:.0e} Pa")
     ap.add_argument("--min-tangent-frac", type=float, default=0.0,
                     help="D-V2-19-R1:逐段最小塑性切线 H >= frac*E(T)。0 = 关闭。")
+    ap.add_argument("--e-table", default=str(TABLES / "E.csv"),
+                    help="E(T) 表。换成 E_collapse.csv 即 D-V2-17 方案 (c)。")
+    ap.add_argument("--t-cut-K", type=float, default=None,
+                    help="截断温度 (K):其上把本构钳制在 T_cut 处的值。")
     args = ap.parse_args()
+
+    load_E(args.e_table)
 
     if args.name and args.arm == "all":
         ap.error("--name 只能与单个 --arm 一起用")
 
     targets = ARMS if args.arm == "all" else (args.arm,)
     for arm in targets:
-        rows = build(arm, args.floor_pa, args.h_reg_pa, args.min_tangent_frac)
+        rows = build(arm, args.floor_pa, args.h_reg_pa, args.min_tangent_frac,
+                     args.t_cut_K)
         diagnose(args.name or arm, rows)
         if not args.quantify:
             write(arm, rows, args.name, args.floor_pa, args.h_reg_pa,
-                  args.min_tangent_frac)
+                  args.min_tangent_frac, args.e_table, args.t_cut_K)
 
 
 if __name__ == "__main__":

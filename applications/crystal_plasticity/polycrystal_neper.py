@@ -4,12 +4,10 @@ import numpy as onp
 import os
 import glob
 import meshio
-import matplotlib.pyplot as plt
 
 from jax_fem.solver import solver
-from jax_fem.generate_mesh import Mesh, box_mesh_gmsh, get_meshio_cell_type
+from jax_fem.generate_mesh import Mesh
 from jax_fem.utils import save_sol
-
 
 from applications.crystal_plasticity.models import CrystalPlasticity
 
@@ -17,20 +15,18 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 case_name = 'polycrystal_neper'
 
-data_dir = os.path.join(os.path.dirname(__file__), 'data')
-numpy_dir = os.path.join(data_dir, f'numpy/{case_name}')
-vtk_dir = os.path.join(data_dir, f'vtk/{case_name}')
-csv_dir = os.path.join(data_dir, f'csv/{case_name}')
-neper_folder = os.path.join(data_dir, f'neper/{case_name}')
+base_dir = os.path.dirname(__file__)
+input_dir = os.path.join(base_dir, 'input', case_name)
+output_dir = os.path.join(base_dir, 'output', case_name)
+vtk_dir = os.path.join(output_dir, 'vtk')
+neper_output_dir = os.path.join(output_dir, 'neper')
 
 
-
-def pre_processing(pf_args, neper_path='neper'):
+def pre_processing(pf_args, neper_path):
     """We use Neper to generate polycrystal structure.
     Neper has two major functions: generate a polycrystal structure, and mesh it.
     See https://neper.info/ for more information.
     """
-    neper_path = os.path.join(pf_args['data_dir'], neper_path)
     os.makedirs(neper_path, exist_ok=True)
 
     if not os.path.exists(os.path.join(neper_path, 'domain.msh')):
@@ -47,18 +43,19 @@ def pre_processing(pf_args, neper_path='neper'):
 
 def problem():
     pf_args = {}
-    pf_args['data_dir'] = data_dir
     pf_args['num_grains'] = 100
     pf_args['id'] = 0
     pf_args['domain_x'] = 0.1
     pf_args['domain_y'] = 0.1
     pf_args['domain_z'] = 0.1
     pf_args['num_oris'] = 10
-    pre_processing(pf_args, neper_path=f'neper/{case_name}')
 
     ele_type = 'HEX8'
-    cell_type = get_meshio_cell_type(ele_type)
-    meshio_mesh = meshio.read(os.path.join(neper_folder, f"domain.msh"))
+    mesh_file = os.path.join(input_dir, 'domain.msh')
+    if not os.path.isfile(mesh_file):
+        pre_processing(pf_args, neper_output_dir)
+        mesh_file = os.path.join(neper_output_dir, 'domain.msh')
+    meshio_mesh = meshio.read(mesh_file)
  
     cell_grain_inds = meshio_mesh.cell_data['gmsh:physical'][0] - 1
     grain_oris_inds = onp.random.randint(pf_args['num_oris'], size=pf_args['num_grains'])
@@ -66,14 +63,14 @@ def problem():
 
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict['hexahedron'])
 
-    quat_file = os.path.join(csv_dir, f"quat.txt")
+    quat_file = os.path.join(input_dir, 'quaternions.txt')
     quat = onp.loadtxt(quat_file)[:pf_args['num_oris'], 1:]
 
     Lx = np.max(mesh.points[:, 0])
     Ly = np.max(mesh.points[:, 1])
     Lz = np.max(mesh.points[:, 2])
 
-    files = glob.glob(os.path.join(vtk_dir, f'*'))
+    files = glob.glob(os.path.join(vtk_dir, '*.vtu'))
     for f in files:
         os.remove(f)
 
@@ -139,7 +136,6 @@ def problem():
     problem = CrystalPlasticity(mesh, vec=3, dim=3, ele_type=ele_type, 
                                 dirichlet_bc_info=dirichlet_bc_info, additional_info=(quat, cell_ori_inds))
 
-    results_to_save = []
     sol_list = [np.zeros((problem.fes[0].num_total_nodes, problem.fes[0].vec))]
     params = problem.internal_vars
 

@@ -464,7 +464,7 @@ def line_search(problem, dofs, inc):
 # Tangent stiffness matrix (PETSc cache)
 
 class _PetscTangentCache:
-    """Reusable full-space PETSc tangent built from fixed ``problem.I/J`` COO pattern."""
+    """Reusable PETSc tangent with fixed COO pattern and dynamic BC rows."""
 
     def __init__(self, problem):
         n = problem.num_total_dofs_all_vars
@@ -474,15 +474,50 @@ class _PetscTangentCache:
         self.mat.setOption(PETSc.Mat.Option.KEEP_NONZERO_PATTERN, True)
         self.mat.setPreallocationCOO(coo_i, coo_j)
         self.bc_row_inds_list = []
+        self._bc_index_sources = ()
+        self._refresh_bc_rows_if_needed(problem)
+
+    @staticmethod
+    def _get_bc_index_sources(problem):
+        sources = []
+        for fe in problem.fes:
+            for i in range(len(fe.node_inds_list)):
+                sources.append((
+                    fe.node_inds_list[i],
+                    fe.vec_inds_list[i],
+                ))
+        return tuple(sources)
+
+    def _refresh_bc_rows_if_needed(self, problem):
+        sources = self._get_bc_index_sources(problem)
+        sources_unchanged = (
+            len(sources) == len(self._bc_index_sources)
+            and all(
+                node_inds is old_node_inds
+                and vec_inds is old_vec_inds
+                for (node_inds, vec_inds), (old_node_inds, old_vec_inds)
+                in zip(sources, self._bc_index_sources)
+            )
+        )
+        if sources_unchanged:
+            return
+
+        self.bc_row_inds_list = []
         for ind, fe in enumerate(problem.fes):
             for i in range(len(fe.node_inds_list)):
-                row_inds = onp.array(
-                    fe.node_inds_list[i] * fe.vec + fe.vec_inds_list[i] + problem.offset[ind],
-                    dtype=onp.int32,
+                row_inds = onp.asarray(
+                    fe.node_inds_list[i] * fe.vec
+                    + fe.vec_inds_list[i]
+                    + problem.offset[ind],
+                    dtype=PETSc.IntType,
                 )
                 self.bc_row_inds_list.append(row_inds)
+        # Keep references, rather than only object ids, so a released array's
+        # id cannot be reused and mistaken for an unchanged BC index array.
+        self._bc_index_sources = sources
 
     def update(self, problem):
+        self._refresh_bc_rows_if_needed(problem)
         values = onp.asarray(problem.V, dtype=onp.float64)
         self.mat.setValuesCOO(values)
         self.mat.assemble()

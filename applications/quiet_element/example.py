@@ -120,7 +120,15 @@ def hash_map_for_faces(active_cell_truth_tab, cells_face, hash_map, inner_faces,
         e.g., [(cell_id, face_id),...]
         faces NOT shared by two cells, i.e., external faces
     """
-    for i, cell_id in enumerate(cell_inds):
+    # Face hashing is Python/NumPy bookkeeping and is intentionally kept on the
+    # host.  Mesh data itself is stored as JAX arrays to support differentiable
+    # meshes, so normalize all inputs before using them as indices/hash keys.
+    active_cell_truth_tab = onp.asarray(active_cell_truth_tab, dtype=bool)
+    cells_face = onp.asarray(cells_face)
+    cell_inds = onp.asarray(cell_inds)
+
+    for cell_id in cell_inds:
+        cell_id = int(cell_id)
         if active_cell_truth_tab[cell_id]:
             for face_id in range(len(cells_face[cell_id])):
                 key = tuple(cells_face[cell_id, face_id].tolist())
@@ -131,7 +139,7 @@ def hash_map_for_faces(active_cell_truth_tab, cells_face, hash_map, inner_faces,
                     hash_map[key] = (cell_id, face_id)
                 all_faces.append((cell_id, face_id))
 
-    external_faces = onp.array(list((set(all_faces) - set(inner_faces))))
+    external_faces = onp.asarray(list(set(all_faces) - set(inner_faces)), dtype=onp.int32).reshape(-1, 2)
     return external_faces
 
 
@@ -144,8 +152,9 @@ def initialize_hash_map(problem, active_cell_truth_tab):
     active_cell_truth_tab : onp.ndarray
     """
     print(f"Initializing hash map for external faces...")
-    face_inds = problem.fe.face_inds
-    cells_face = problem.fe.cells[:, face_inds] # (num_cells, num_faces, num_face_vertices)
+    face_inds = onp.asarray(problem.fe.face_inds)
+    cells = onp.asarray(problem.fe.cells)
+    cells_face = cells[:, face_inds] # (num_cells, num_faces, num_face_vertices)
     cells_face = onp.sort(cells_face)
     hash_map = {}
     inner_faces = []
@@ -160,6 +169,8 @@ def update_hash_map(active_cell_truth_tab_old, active_cell_truth_tab_new, cells_
 
     """    
     print(f"Updating hash map for external faces...")
+    active_cell_truth_tab_old = onp.asarray(active_cell_truth_tab_old, dtype=bool)
+    active_cell_truth_tab_new = onp.asarray(active_cell_truth_tab_new, dtype=bool)
     assert onp.sum(active_cell_truth_tab_new) >= onp.sum(active_cell_truth_tab_old), "Number of new born cells must be non-negative!"
     new_born_cell_inds = onp.argwhere(active_cell_truth_tab_old != active_cell_truth_tab_new).reshape(-1)
     external_faces = hash_map_for_faces(active_cell_truth_tab_new, cells_face, hash_map, inner_faces, all_faces, new_born_cell_inds)
@@ -179,9 +190,13 @@ def get_active_face_truth_tab(problem, external_faces, laser_center_z):
     active_face_truth_tab: onp.ndarray
         (num_selected_faces, 2)
     """
-    cell_points = onp.take(problem.fe.points, problem.fe.cells, axis=0)  # (num_cells, num_nodes, dim)
-    cell_face_points = onp.take(cell_points, problem.fe.face_inds, axis=1)  # (num_cells, num_faces, num_face_vertices, dim)
-    all_boundary_faces = problem.boundary_inds_list[0]
+    points = onp.asarray(problem.fe.points)
+    cells = onp.asarray(problem.fe.cells)
+    face_inds = onp.asarray(problem.fe.face_inds)
+    cell_points = onp.take(points, cells, axis=0)  # (num_cells, num_nodes, dim)
+    cell_face_points = onp.take(cell_points, face_inds, axis=1)  # (num_cells, num_faces, num_face_vertices, dim)
+    all_boundary_faces = onp.asarray(problem.boundary_inds_list[0])
+    laser_center_z = float(onp.asarray(laser_center_z))
 
     all_boundary_faces_dict = {}
     for index, face in enumerate(all_boundary_faces):
@@ -196,7 +211,7 @@ def get_active_face_truth_tab(problem, external_faces, laser_center_z):
             active_face_truth_tab_external[index] = True
 
             face_points = cell_face_points[face[0], face[1]]
-            if np.all(np.isclose(face_points[:, 2], laser_center_z, atol=1e-5)):
+            if onp.all(onp.isclose(face_points[:, 2], laser_center_z, atol=1e-5)):
                 active_face_truth_tab_top[index] = True
         else:
             raise ValueError(f"An external face should always be in the set of all faces")
@@ -220,7 +235,9 @@ def get_quiet_point_inds_set(problem, active_cell_truth_tab):
         (num_active_points,)
         a collection of quiet point indices; Dirichlet B.C. will be applied to these points so that they are quiet
     """
-    active_point_inds = set(problem.fe.cells[active_cell_truth_tab].reshape(-1))
+    cells = onp.asarray(problem.fe.cells)
+    active_cell_truth_tab = onp.asarray(active_cell_truth_tab, dtype=bool)
+    active_point_inds = set(cells[active_cell_truth_tab].reshape(-1).tolist())
     all_points_inds = set(onp.arange(len(problem.fe.points)))
     quiet_point_inds_set = onp.array(list(all_points_inds - active_point_inds), dtype=onp.int32)
     return quiet_point_inds_set
@@ -268,7 +285,9 @@ def quiet_element_simulation():
     problem = Thermal(mesh, vec=1, dim=3, dirichlet_bc_info=dirichlet_bc_info, location_fns=location_fns)
 
     active_cell_truth_tab = onp.zeros(len(problem.fe.cells), dtype=bool)
-    centroids = onp.mean(problem.fe.points[problem.fe.cells], axis=1)
+    points = onp.asarray(problem.fe.points)
+    cells = onp.asarray(problem.fe.cells)
+    centroids = onp.mean(points[cells], axis=1)
     active_cell_truth_tab[centroids[:, 2] <= base_plate_height] = True
     external_faces, cells_face, hash_map, inner_faces, all_faces = initialize_hash_map(problem, active_cell_truth_tab)
 
@@ -279,7 +298,7 @@ def quiet_element_simulation():
         switch = toolpath[i, 4]
         if switch:
             direction = toolpath[i, 1:4] - toolpath[i - 1 , 1:4]
-            d = np.linalg.norm(direction)
+            d = onp.linalg.norm(direction)
             num_dt_laser_on = round(d/path_resolution)
             t = onp.linspace(toolpath[i - 1, 0], toolpath[i, 0], num_dt_laser_on + 1)
             X = onp.interp(t, [toolpath[i - 1, 0], toolpath[i, 0]], [toolpath[i - 1, 1], toolpath[i, 1]])
@@ -289,7 +308,7 @@ def quiet_element_simulation():
                 dt = t[j + 1] - t[j]
                 print(f"\n############################################################")
                 print(f"Laser on: i = {i} in {toolpath.shape[0]} , j = {j} in {num_dt_laser_on}")
-                laser_center = np.array([X[j], Y[j], toolpath[i, 3] + base_plate_height])
+                laser_center = onp.array([X[j], Y[j], toolpath[i, 3] + base_plate_height])
                 print(f"laser center = {laser_center}, dt = {dt}")
                 flag_1 = centroids[:, 2] < laser_center[2]
                 flag_2 = (centroids[:, 0] - laser_center[0])**2 + (centroids[:, 1] - laser_center[1])**2 <= rb**2

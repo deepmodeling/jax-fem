@@ -18,8 +18,8 @@ model contact with tools or carry a workpiece through a forming process.
 The model uses the multiplicative decomposition
 $\boldsymbol{F}=\boldsymbol{F}_e\boldsymbol{F}_p$ with isochoric plastic
 flow. Its quadrature-point history is the previous total deformation gradient
-$\boldsymbol{F}_n$, the isochoric elastic left Cauchy--Green tensor
-$\bar{\boldsymbol{b}}_{e,n}$, and the accumulated plastic strain $\alpha_n$
+$`\boldsymbol{F}_n`$, the isochoric elastic left Cauchy--Green tensor
+$`\bar{\boldsymbol{b}}_{e,n}`$, and the accumulated plastic strain $\alpha_n$
 [1,2].
 
 For a new total deformation gradient $\boldsymbol{F}_{n+1}$, the elastic

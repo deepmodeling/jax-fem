@@ -32,7 +32,7 @@ quantities control the convergence path rather than a physical transient
 response.
 
 The artificial mass is estimated from the absolute row sums of the tangent
-matrix $\boldsymbol{K}$:
+matrix $\boldsymbol{K}$ [1]:
 
 ```math
 M_i=\frac{\tilde{h}^2}{4}\sum_j\lvert K_{ij}\rvert,
@@ -157,9 +157,9 @@ The tangent matrix and artificial mass are refreshed when the stiffness-change
 indicator `eps` exceeds its threshold and more than `nKMat` iterations have
 elapsed since the previous refresh.
 
-## Reference
+## References
 
-1. D. J. Luet, *Bounding Volume Hierarchy and Non-Uniform Rational B-Splines
-   for Contact Enforcement in Large Deformation Finite Element Analysis of
-   Sheet Metal Forming*, Ph.D. dissertation, Princeton University, 2016,
-   Chapter 4.3, “Nonlinear System Solution.”
+[1] Luet, D. J. *Bounding Volume Hierarchy and Non-Uniform Rational B-Splines
+for Contact Enforcement in Large Deformation Finite Element Analysis of Sheet
+Metal Forming*. Ph.D. dissertation, Princeton University, 2016, Chapter 4.3,
+“Nonlinear System Solution.”

@@ -4,7 +4,7 @@
 
 The Crisfield arc-length method treats the load factor $\lambda$ as an
 additional unknown, allowing nonlinear equilibrium paths to be traced through
-limit points and buckling instabilities.
+limit points and buckling instabilities [1,2].
 
 | File | Control | Purpose |
 | --- | --- | --- |
@@ -73,7 +73,7 @@ exactly $\lambda=1$.
 
 Run from the `jax-fem/` directory.
 
-The one-degree-of-freedom example solves
+The one-degree-of-freedom example follows the demonstration in [3] and solves
 $f_{\mathrm{int}}(u)=-u^2+u=\lambda$:
 
 ```bash
@@ -143,11 +143,14 @@ returned `sol_list` and terminal `final solution` are the polished solution by t
 
 ## References
 
-1. M. A. Crisfield, “A fast incremental/iterative solution procedure that
-   handles ‘snap-through’,” *Computers & Structures*, 13(1–3), 55–62, 1981.
-   [doi:10.1016/0045-7949(81)90108-5](https://doi.org/10.1016/0045-7949(81)90108-5)
-2. N. Vasios, [“Nonlinear Analysis of Structures: The Arc Length Method —
-   Formulation, Implementation and Applications,”](https://vasios.me/the-arc-length-method)
-   2015.
-3. The analytical script follows the MATLAB example
-   [Demonstrations of Newton-Raphson Method and Arc-Length Method](https://www.mathworks.com/matlabcentral/fileexchange/48643-demonstrations-of-newton-raphson-method-and-arc-length-method).
+[1] Crisfield, M. A. “A fast incremental/iterative solution procedure that
+handles ‘snap-through’.” *Computers & Structures* 13.1–3 (1981): 55–62.
+[doi:10.1016/0045-7949(81)90108-5](https://doi.org/10.1016/0045-7949(81)90108-5)
+
+[2] Vasios, N. “Nonlinear Analysis of Structures: The Arc Length Method —
+Formulation, Implementation and Applications.” 2015.
+[Online notes](https://vasios.me/the-arc-length-method)
+
+[3] “Demonstrations of Newton-Raphson Method and Arc-Length Method.” *MATLAB
+Central File Exchange*.
+[Source code](https://www.mathworks.com/matlabcentral/fileexchange/48643-demonstrations-of-newton-raphson-method-and-arc-length-method)

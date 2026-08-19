@@ -10,7 +10,7 @@ multipoint constraint matrix `P_mat`.
 | File | Purpose |
 | --- | --- |
 | `example.py` | Builds a quadratic triangular mesh, constructs `P_mat`, solves the periodic Poisson problem, writes a VTU file, and checks implicit differentiation. |
-| `fenics.py` | Reference FEniCS implementation of the same periodic-boundary setup. |
+| `fenics.py` | Reference FEniCS implementation following the periodic demo in [2]. |
 
 The forward solution is saved to
 
@@ -91,7 +91,8 @@ The nonlinear residual and tangent are then assembled in reduced coordinates:
 =\boldsymbol{P}^{T}\boldsymbol{K}_{\mathrm{full}}\boldsymbol{P}.
 ```
 
-Dirichlet rows are eliminated before applying the periodic projection.
+Dirichlet rows are eliminated before applying the periodic projection. This
+prolongation/reduction construction follows the linear MPC formulation in [1].
 
 ## Toy problem
 
@@ -465,6 +466,10 @@ finite-difference gradient check.
 
 ## References
 
-1. J. S. Dokken, [Periodic boundary conditions and multipoint constraints](https://fenics2021.com/slides/dokken.pdf).
-2. The reference script follows the FEniCS periodic Poisson demo:
-   [Periodic homogenization](https://olddocs.fenicsproject.org/dolfin/2016.2.0/python/demo/documented/periodic/python/documentation.html).
+[1] Dokken, Jørgen S., Garth N. Wells, and Chris Richardson. “Linear multipoint
+constraints in FEniCSx.” *FEniCS 2021* (2021).
+[Slides](https://fenics2021.com/slides/dokken.pdf)
+
+[2] The FEniCS Project. “Periodic homogenization.” *DOLFIN 2016.2.0
+documentation*.
+[Demo](https://olddocs.fenicsproject.org/dolfin/2016.2.0/python/demo/documented/periodic/python/documentation.html)

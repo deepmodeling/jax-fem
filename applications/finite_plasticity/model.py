@@ -6,11 +6,13 @@ from jax_fem.problem import Problem
 
 class Plasticity(Problem):
     def custom_init(self):
+        if self.dim != 3:
+            raise ValueError("Plasticity implements a three-dimensional finite-strain J2 model.")
         self.fe = self.fes[0]
         self.F_old = np.repeat(np.repeat(np.eye(self.dim)[None, None, :, :], len(self.fe.cells), axis=0), self.fe.num_quads, axis=1)
-        self.Be_old = np.array(self.F_old)
+        self.be_bar_old = np.array(self.F_old)
         self.alpha_old = np.zeros((len(self.fe.cells), self.fe.num_quads))
-        self.internal_vars = [self.F_old, self.Be_old, self.alpha_old]
+        self.internal_vars = [self.F_old, self.be_bar_old, self.alpha_old]
 
     def get_tensor_map(self):
         tensor_map, _, _ = self.get_maps()
@@ -51,11 +53,13 @@ class Plasticity(Problem):
 
             def return_map(u_grad):
                 F = u_grad + np.eye(self.dim)
-                F_inv = np.linalg.inv(F)
                 F_old_inv = np.linalg.inv(F_old)
                 f = F @ F_old_inv
-                f_bar =  np.linalg.det(f)**(-1./3.)*f
-                # be_bar_trial = f @ be_bar_old @ f.T # Seems that there is a bug here, discovered by Jiachen; should be f_bar @ be_bar_old @ f_bar.T 
+                # Jiachen Guo identified that be_bar_old is isochoric, so its
+                # trial push-forward must use the isochoric part of the
+                # relative deformation gradient rather than f itself. 
+                # The error has been corrected.
+                f_bar = np.linalg.det(f)**(-1./3.)*f
                 be_bar_trial = f_bar @ be_bar_old @ f_bar.T
                 s_trial = G*deviatoric(be_bar_trial)
                 yield_f_trial = np.linalg.norm(s_trial) - np.sqrt(2./3.)*(sig0 + H1*alpha_old)
@@ -81,16 +85,16 @@ class Plasticity(Problem):
 
             return first_PK_stress, update_int_vars, compute_cauchy_stress
 
-        def tensor_map(u_grad, F_old, Be_old, alpha_old):
-            first_PK_stress, _, _ = get_partial_tensor_map(F_old, Be_old, alpha_old)
+        def tensor_map(u_grad, F_old, be_bar_old, alpha_old):
+            first_PK_stress, _, _ = get_partial_tensor_map(F_old, be_bar_old, alpha_old)
             return first_PK_stress(u_grad)
 
-        def update_int_vars_map(u_grad, F_old, Be_old, alpha_old):
-            _, update_int_vars, _ = get_partial_tensor_map(F_old, Be_old, alpha_old)
+        def update_int_vars_map(u_grad, F_old, be_bar_old, alpha_old):
+            _, update_int_vars, _ = get_partial_tensor_map(F_old, be_bar_old, alpha_old)
             return update_int_vars(u_grad)
 
-        def compute_cauchy_stress_map(u_grad, F_old, Be_old, alpha_old):
-            _, _, compute_cauchy_stress = get_partial_tensor_map(F_old, Be_old, alpha_old)
+        def compute_cauchy_stress_map(u_grad, F_old, be_bar_old, alpha_old):
+            _, _, compute_cauchy_stress = get_partial_tensor_map(F_old, be_bar_old, alpha_old)
             return compute_cauchy_stress(u_grad)
 
         return tensor_map, update_int_vars_map, compute_cauchy_stress_map

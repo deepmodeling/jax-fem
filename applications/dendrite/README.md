@@ -24,6 +24,7 @@ This example implements both **implicit finite element method** and **explicit f
 
 ## References
 
-[1] https://drzgan.github.io/Python_CFD/Konayashi_1993-main/jax_version/kobayashi_aniso_jax_ZGAN-2.html
+[1] Gan, Zhengtao. “Step 18: Phase-field Method.” *CFD with Python*, 2022.
+[Online code](https://drzgan.github.io/Python_CFD/Konayashi_1993-main/jax_version/kobayashi_aniso_jax_ZGAN-2.html)
 
 [2] Kobayashi, Ryo. "Modeling and numerical simulations of dendritic crystal growth." Physica D: Nonlinear Phenomena 63, no. 3-4 (1993): 410-423.

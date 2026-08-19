@@ -1,22 +1,19 @@
 """Reference
-Simo, Juan C., and Thomas JR Hughes. Computational inelasticity. Vol. 7. Springer Science & Business Media, 2006.
+Simo, Juan C., and Thomas JR Hughes. Computational inelasticity. Vol. 7. Springer, 1998.
 Chapter 9: Phenomenological Plasticity Models
 
 Line search method is required!
 """
-import jax
-import jax.numpy as np
-import jax.flatten_util
-import os
 import glob
-import matplotlib.pyplot as plt
+import os
 
-from jax_fem.problem import Problem
+import jax.numpy as np
+
+from jax_fem.generate_mesh import box_mesh_gmsh, get_meshio_cell_type, Mesh
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
-from jax_fem.generate_mesh import box_mesh_gmsh, get_meshio_cell_type, Mesh
 
-from applications.forming.model import Plasticity
+from applications.finite_plasticity.model import Plasticity
 
 
 def simulation():
@@ -30,15 +27,16 @@ def simulation():
 
     ele_type = 'HEX8'
     cell_type = get_meshio_cell_type(ele_type)
-    data_dir = os.path.join(os.path.dirname(__file__), 'data')
-    vtk_dir = os.path.join(data_dir, 'vtk')
+    output_dir = os.path.join(os.path.dirname(__file__), 'output', 'thin_plate')
+    vtk_dir = os.path.join(output_dir, 'vtk')
+    os.makedirs(vtk_dir, exist_ok=True)
 
     files = glob.glob(os.path.join(vtk_dir, f'*'))
     for f in files:
         os.remove(f)
 
     Lx, Ly, Lz = 10., 10., 0.25
-    meshio_mesh = box_mesh_gmsh(Nx=40, Ny=40, Nz=1, domain_x=Lx, domain_y=Ly, domain_z=Lz, data_dir=data_dir, ele_type=ele_type)
+    meshio_mesh = box_mesh_gmsh(Nx=40, Ny=40, Nz=1, domain_x=Lx, domain_y=Ly, domain_z=Lz, data_dir=output_dir, ele_type=ele_type)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
     def walls(point):
@@ -59,7 +57,6 @@ def simulation():
             x, y = point[0], point[1]
             sdf = np.min(np.array([np.abs(x), np.abs(Lx - x), np.abs(y), np.abs(Ly - y)]))
             scaled_sdf = sdf/(0.5*np.minimum(Lx, Ly))
-            alpha = 3.
             EPS = 1e-10
             z_disp = -scale*Lx*(1./(1. + (1./(scaled_sdf + EPS) - 1.)))
             return z_disp

@@ -232,11 +232,12 @@ associated npj Computational Materials article [2].
 
 ## References
 
-1. S. R. Kalidindi, C. A. Bronkhorst, and L. Anand, “Crystallographic texture
-   evolution in bulk deformation processing of FCC metals,” *Journal of the
-   Mechanics and Physics of Solids*, 40(3), 537–569, 1992.
-   [doi:10.1016/0022-5096(92)80003-9](https://doi.org/10.1016/0022-5096(92)80003-9)
-2. F. Hu, S. Niezgoda, T. Xue, and J. Cao, “Efficient GPU-computing simulation
-   platform JAX-CPFEM for differentiable crystal plasticity finite element
-   method,” *npj Computational Materials*, 11, 46, 2025.
-   [doi:10.1038/s41524-025-01528-2](https://doi.org/10.1038/s41524-025-01528-2)
+[1] Kalidindi, S. R., C. A. Bronkhorst, and L. Anand. “Crystallographic texture
+evolution in bulk deformation processing of FCC metals.” *Journal of the
+Mechanics and Physics of Solids* 40.3 (1992): 537–569.
+[doi:10.1016/0022-5096(92)80003-9](https://doi.org/10.1016/0022-5096(92)80003-9)
+
+[2] Hu, F., S. Niezgoda, T. Xue, and J. Cao. “Efficient GPU-computing
+simulation platform JAX-CPFEM for differentiable crystal plasticity finite
+element method.” *npj Computational Materials* 11 (2025): 46.
+[doi:10.1038/s41524-025-01528-2](https://doi.org/10.1038/s41524-025-01528-2)

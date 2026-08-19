@@ -100,4 +100,6 @@ Results can be visualized with *ParaWiew*.
 
 ## References
 
-[1] https://comet-fenics.readthedocs.io/en/latest/demo/thermoelasticity/thermoelasticity_transient.html
+[1] “Thermo-elastic evolution problem (full coupling).” *Numerical tours of
+continuum mechanics using FEniCS*.
+[Online tutorial](https://comet-fenics.readthedocs.io/en/latest/demo/thermoelasticity/thermoelasticity_transient.html)

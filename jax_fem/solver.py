@@ -451,7 +451,10 @@ def line_search(problem, dofs, inc):
     for i in range(3):
         alpha *= 0.5
         res_norm_half = res_norm_fn(alpha)
-        logger.debug(f"i = {i}, res_norm = {res_norm}, res_norm_half = {res_norm_half}")
+        logger.debug(
+            f"Line search (step halving): i = {i}, alpha = {alpha}, "
+            f"res_norm = {res_norm}, res_norm_half = {res_norm_half}"
+        )
         if res_norm_half > res_norm:
             alpha *= 2.
             break

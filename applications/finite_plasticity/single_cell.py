@@ -1,20 +1,17 @@
 """Reference
-Simo, Juan C., and Thomas JR Hughes. Computational inelasticity. Vol. 7. Springer Science & Business Media, 2006.
+Simo, Juan C., and Thomas JR Hughes. Computational inelasticity. Vol. 7. Springer, 1998.
 Chapter 9: Phenomenological Plasticity Models
 """
-import jax
-import jax.numpy as np
-import jax.flatten_util
-import os
 import glob
-import matplotlib.pyplot as plt
+import os
 
-from jax_fem.problem import Problem
+import jax.numpy as np
+
+from jax_fem.generate_mesh import box_mesh_gmsh, get_meshio_cell_type, Mesh
 from jax_fem.solver import solver
 from jax_fem.utils import save_sol
-from jax_fem.generate_mesh import box_mesh_gmsh, get_meshio_cell_type, Mesh
 
-from applications.forming.model import Plasticity
+from applications.finite_plasticity.model import Plasticity
 
 def simulation():
 
@@ -27,15 +24,16 @@ def simulation():
 
     ele_type = 'HEX8'
     cell_type = get_meshio_cell_type(ele_type)
-    data_dir = os.path.join(os.path.dirname(__file__), 'data')
-    vtk_dir = os.path.join(data_dir, 'vtk')
+    output_dir = os.path.join(os.path.dirname(__file__), 'output', 'single_cell')
+    vtk_dir = os.path.join(output_dir, 'vtk')
+    os.makedirs(vtk_dir, exist_ok=True)
 
     files = glob.glob(os.path.join(vtk_dir, f'*'))
     for f in files:
         os.remove(f)
 
     Lx, Ly, Lz = 1., 1., 1.
-    meshio_mesh = box_mesh_gmsh(Nx=1, Ny=1, Nz=1, domain_x=Lx,domain_y=Ly, domain_z=Lz, data_dir=data_dir, ele_type=ele_type)
+    meshio_mesh = box_mesh_gmsh(Nx=1, Ny=1, Nz=1, domain_x=Lx,domain_y=Ly, domain_z=Lz, data_dir=output_dir, ele_type=ele_type)
     mesh = Mesh(meshio_mesh.points, meshio_mesh.cells_dict[cell_type])
 
     def top(point):
@@ -43,6 +41,13 @@ def simulation():
 
     def bottom(point):
         return np.isclose(point[2], 0., atol=1e-5)
+
+    def origin(point):
+        return np.all(np.isclose(point, np.zeros(3), atol=1e-5))
+
+    def x_corner(point):
+        corner = np.array([Lx, 0., 0.])
+        return np.all(np.isclose(point, corner, atol=1e-5))
 
     def get_dirichlet_top(scale):
         def val_fn(point):
@@ -55,9 +60,11 @@ def simulation():
 
     scales = 0.01*np.hstack((np.linspace(0., 1., 11), np.linspace(1, 0., 11)))
 
-    location_fns = [bottom, top]
-    vecs = [2, 2]
-    value_fns = [dirichlet_val_bottom, get_dirichlet_top(0.)]
+    # Point constraints remove the three in-plane rigid-body modes while
+    # leaving the lateral faces traction-free.
+    location_fns = [origin, origin, x_corner, bottom, top]
+    vecs = [0, 1, 1, 2, 2]
+    value_fns = [dirichlet_val_bottom]*4 + [get_dirichlet_top(0.)]
     dirichlet_bc_info = [location_fns, vecs, value_fns]
 
     problem = SingleCell(mesh, ele_type=ele_type, vec=3, dim=3, dirichlet_bc_info=dirichlet_bc_info)

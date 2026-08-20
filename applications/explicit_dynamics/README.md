@@ -144,7 +144,7 @@ mass-weighted modal displacement. It is therefore measured from the numerical
 history rather than copied from the analytical value.
 
 <p align="center">
-  <img src="output/assets/displacement_comparison.png" width="700" />
+  <img src="assets/displacement_comparison.png" width="700" />
   <br />
   <em>Longitudinal displacement at the center of the free end.</em>
 </p>
@@ -167,13 +167,13 @@ With no external force or damping, their sum should remain nearly constant as
 the kinetic and strain energies exchange during the vibration.
 
 <p align="center">
-  <img src="output/assets/energy_history.png" width="700" />
+  <img src="assets/energy_history.png" width="700" />
   <br />
   <em>Exchange of kinetic and strain energy; their sum remains nearly constant.</em>
 </p>
 
 <p align="center">
-  <video src="output/assets/test.mp4" controls width="700"></video>
+  <video src="assets/test.mp4" controls width="700"></video>
   <br />
   <em>One period of the longitudinal free vibration.</em>
 </p>

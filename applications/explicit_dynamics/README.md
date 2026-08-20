@@ -173,7 +173,7 @@ the kinetic and strain energies exchange during the vibration.
 </p>
 
 <p align="center">
-  <video src="assets/test.mp4" controls width="700"></video>
+  <img src="assets/deformation.gif" width="700" />
   <br />
   <em>One period of the longitudinal free vibration.</em>
 </p>

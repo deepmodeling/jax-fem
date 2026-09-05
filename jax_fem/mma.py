@@ -21,9 +21,6 @@ from jax_fem import logger
 from jax import config
 config.update("jax_enable_x64", True)
 
-density_filtering = False
-sensitivity_filtering = True
-
 def compute_filter_kd_tree(fe):
     """This function is created by Tianju. Not from the original code.
     We use k-d tree algorithm to compute the filter.
@@ -56,13 +53,21 @@ def compute_filter_kd_tree(fe):
     Hs = H.sum(1).todense()
     return H, Hs
 
-def applySensitivityFilter(ft, rho, dJ, dvc):
-    dJ = ft['H'] @ (rho*dJ/np.maximum(1e-3, rho)/ft['Hs'][:, None])
-    dvc = ft['H'][None, :, :] @ (rho[None, :, :]*dvc/np.maximum(1e-3, rho[None, :, :])/ft['Hs'][None, :, None])
+def applySensitivityFilter(ft, rho, dJ, dvc, filter_constraint_sensitivities=False):
+    denominator = ft['Hs'][:, None]*np.maximum(1e-3, rho)
+    dJ = (ft['H'] @ (rho*dJ))/denominator
+    if filter_constraint_sensitivities:
+        dvc = jax.vmap(lambda grad: (ft['H'] @ (rho*grad))/denominator)(dvc)
     return dJ, dvc
 
 def applyDensityFilter(ft, rho):
     return ft['H'] @ rho / ft['Hs'][:, None]
+
+def applyDensityFilterGradient(ft, dJ, dvc):
+    H_transpose = ft['H'].T
+    dJ = H_transpose @ (dJ/ft['Hs'][:, None])
+    dvc = jax.vmap(lambda grad: H_transpose @ (grad/ft['Hs'][:, None]))(dvc)
+    return dJ, dvc
 
 #%% Optimizer
 class MMA:
@@ -428,13 +433,19 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
 
         - 'movelimit': Move limit for design variables (float)
         - 'maxIters': Maximum number of iterations (int)
+        - 'filter_type': One of 'none', 'sensitivity', or 'density'.
+          Defaults to 'sensitivity'.
+        - 'filter_constraint_sensitivities': Whether to apply the heuristic
+          sensitivity filter to constraint gradients (bool). Defaults to
+          False. This option only applies when 'filter_type' is 'sensitivity'.
     objectiveHandle : callable
         Function that computes the objective value and its gradient.
         Signature: ``J, dJ = objectiveHandle(rho_physical)``
 
         - ``rho_physical``: Physical density field (filtered if enabled). Same shape as ``rho_ini``.
         - ``J``: Objective value (scalar).
-        - ``dJ``: Objective gradient (NumpyArray, same shape as ``rho_ini``).
+        - ``dJ``: Objective gradient with respect to ``rho_physical``
+          (NumpyArray, same shape as ``rho_ini``).
     consHandle : callable
         Function that computes constraint values and their gradients.
         Signature: ``vc, dvc = consHandle(rho_physical, iter)``
@@ -442,7 +453,9 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
         - ``rho_physical``: Physical density field (filtered if enabled). Same shape as ``rho_ini``.
         - ``iter``: Current optimization iteration (int).
         - ``vc``: Constraint values. Shape is (num_constraints,).
-        - ``dvc``: Constraint gradients. Shape is (num_constraints, ...), where ... shares the same shape with ``rho_ini``.
+        - ``dvc``: Constraint gradients with respect to ``rho_physical``.
+          Shape is (num_constraints, ...), where ... shares the same shape
+          with ``rho_ini``.
     numConstraints : int
         Number of constraints in the optimization problem.
 
@@ -458,8 +471,22 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
     (`ref <https://doi.org/10.1016/j.compstruc.2018.01.008>`_).
     """
 
-    H, Hs = compute_filter_kd_tree(fe)
-    ft = {'H':H, 'Hs':Hs}
+    filter_type = optimizationParams.get('filter_type', 'sensitivity')
+    valid_filter_types = ('none', 'sensitivity', 'density')
+    if filter_type not in valid_filter_types:
+        raise ValueError(
+            f"Unknown filter_type {filter_type!r}. Expected one of {valid_filter_types}."
+        )
+
+    filter_constraint_sensitivities = optimizationParams.get(
+        'filter_constraint_sensitivities', False
+    )
+
+    if filter_type == 'none':
+        ft = None
+    else:
+        H, Hs = compute_filter_kd_tree(fe)
+        ft = {'H':H, 'Hs':Hs}
 
     rho = rho_ini
 
@@ -487,7 +514,7 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
 
         logger.info(f"MMA solver...")
         
-        if density_filtering:
+        if filter_type == 'density':
             rho_physical = applyDensityFilter(ft, rho)
         else:
             rho_physical = rho
@@ -495,8 +522,12 @@ def optimize(fe, rho_ini, optimizationParams, objectiveHandle, consHandle, numCo
         J, dJ = objectiveHandle(rho_physical)
         vc, dvc = consHandle(rho_physical, loop)
 
-        if sensitivity_filtering:
-            dJ, dvc = applySensitivityFilter(ft, rho, dJ, dvc)
+        if filter_type == 'sensitivity':
+            dJ, dvc = applySensitivityFilter(
+                ft, rho, dJ, dvc, filter_constraint_sensitivities
+            )
+        elif filter_type == 'density':
+            dJ, dvc = applyDensityFilterGradient(ft, dJ, dvc)
 
         J, dJ = J, dJ.reshape(-1)[:, None]
         vc, dvc = vc[:, None], dvc.reshape(dvc.shape[0], -1)

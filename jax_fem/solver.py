@@ -24,37 +24,32 @@ def _timing_record(timing, name, dt):
 
 
 def _log_newton_iter_start(iter_num):
-    print()
-    logger.info("  iter %d", iter_num)
+    logger.debug("Newton iteration %d started", iter_num)
 
 
 def _log_newton_iter_summary(iter_num, local_s, global_s, res_val, rel_res_val, linear_s=None):
-    logger.info("           nonlinear residual: L2 norm = %.3g (relative to initial = %.3g)",
-                res_val, rel_res_val)
-    if linear_s is None:
-        logger.info("           timing: local assembly %6.3f s, global matrix %6.3f s",
-                    local_s, global_s)
-    else:
-        logger.info("           timing: linear solve %6.3f s, local assembly %6.3f s, global matrix %6.3f s",
-                    linear_s, local_s, global_s)
+    linear_time = "n/a" if linear_s is None else f"{linear_s:.3f} s"
+    logger.info(
+        "Newton iter %3d | residual %.3e | relative %.3e | "
+        "timing: local %.3f s | matrix %.3f s | linear %7s",
+        iter_num, res_val, rel_res_val, local_s, global_s, linear_time)
 
 
 def _log_timing_table(n_iters, parts, wall_s):
     rows = (
         ('local_assembly', 'local'),
-        ('global_matrix', 'global'),
+        ('global_matrix', 'matrix'),
         ('linear', 'linear'),
     )
-    print()
-    logger.info("Timing summary — %d Newton iter, %.3f s wall", n_iters, wall_s)
+    logger.info("Newton solve complete | %d iterations | %.3f s total", n_iters, wall_s)
     for key, label in rows:
         dt = parts[key]
         pct = 100. * dt / wall_s if wall_s > 0 else 0.
-        logger.info("  %-8s %7.3f s  %5.1f%%", label, dt, pct)
+        logger.info("%-6s %7.3f s  %5.1f%%", label, dt, pct)
     other = wall_s - sum(parts.values())
     if other >= 0.01:
         pct = 100. * other / wall_s if wall_s > 0 else 0.
-        logger.info("  %-8s %7.3f s  %5.1f%%", "other", other, pct)
+        logger.info("%-6s %7.3f s  %5.1f%%", "other", other, pct)
 
 
 ################################################################################
@@ -119,7 +114,7 @@ def petsc_solve(A, b, ksp_type, pc_type):
     if ksp_type == 'tfqmr':
         ksp.pc.setFactorSolverType('mumps')
 
-    logger.debug(f'PETSc Solver - Solving linear system with ksp_type = {ksp.getType()}, pc = {ksp.pc.getType()}')
+    logger.debug("PETSc solve started | KSP %s | PC %s", ksp.getType(), ksp.pc.getType())
     x = PETSc.Vec().createSeq(len(b))
     ksp.solve(rhs, x)
 
@@ -128,7 +123,9 @@ def petsc_solve(A, b, ksp_type, pc_type):
     A.mult(x, y)
 
     err = np.linalg.norm(y.getArray() - rhs.getArray())
-    logger.debug("PETSc Solver - Finished solving, linear solve res = %.3g", err)
+    logger.debug(
+        "PETSc solve complete | iterations %d | reason %s | residual %.3e",
+        ksp.getIterationNumber(), ksp.getConvergedReason(), err)
     assert err < 0.1, f"PETSc linear solver failed to converge, err = {err}"
 
     return x.getArray()
@@ -1277,8 +1274,7 @@ def solver(problem, solver_options={}):
     if method == 'dynamic_relax':
         return _solve_dynamic_relax(problem, cfg)
 
-    print()
-    logger.info("Solving the nonlinear problem...")
+    logger.info("Starting Newton solve")
     timing = {'local_assembly': 0., 'global_matrix': 0., 'linear': 0.}
     wall_start = time.perf_counter()
 
@@ -1349,9 +1345,7 @@ def solver(problem, solver_options={}):
 
     _log_timing_table(n_iters, timing, time.perf_counter() - wall_start)
 
-    print()
-    logger.info(f"max of dofs = {np.max(dofs)}")
-    logger.info(f"min of dofs = {np.min(dofs)}")
+    logger.info("Solution DOF range | min %.3e | max %.3e", np.min(dofs), np.max(dofs))
 
     return sol_list
 
@@ -1445,7 +1439,6 @@ def ad_wrapper(problem, solver_options={}, adjoint_solver_options={}):
         return sol_list, (params, sol_list)
 
     def f_bwd(res, v):
-        print()
         logger.info("Running backward and solving the adjoint problem...")
         params, sol_list = res
         vjp_result = implicit_vjp(problem, sol_list, params, v, adjoint_solver_options)

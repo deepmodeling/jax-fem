@@ -1,0 +1,18 @@
+Advanced examples
+=================
+
+| Example                                                      | Highlight                                                    |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [Arc-length methods](https://github.com/deepmodeling/jax-fem/tree/main/applications/arc_length) | ${\color{green}Advanced\ solvers:}$ Arc-length continuation for tracing nonlinear equilibrium paths through limit points and buckling instabilities. |
+| [Dynamic relaxation](https://github.com/deepmodeling/jax-fem/tree/main/applications/dynamic_relaxation) | ${\color{green}Advanced\ solvers:}$ Fictitious inertia and adaptive damping for nonlinear static equilibrium and buckling problems. |
+| [Explicit dynamics](https://github.com/deepmodeling/jax-fem/tree/main/applications/explicit_dynamics) | ${\color{green}Time\ integration:}$ Lumped-mass central-difference integration of a 3D elastic waveguide, verified against the analytical P-wave solution and conservation of total energy. |
+| [Periodic boundary conditions](https://github.com/deepmodeling/jax-fem/tree/main/applications/periodic_bc) | ${\color{brown}Boundary\ conditions:}$ Periodic constraints enforced through a linear multipoint constraint. |
+| [Nonlinear Robin boundary conditions](https://github.com/deepmodeling/jax-fem/tree/main/applications/robin_bc) | ${\color{brown}Boundary\ conditions:}$ Nonlinear Robin boundary terms implemented with surface residual kernels. |
+| [Quiet-element method](https://github.com/deepmodeling/jax-fem/tree/main/applications/quiet_element) | ${\color{orange}Domain\ control:}$ Progressive element activation for a transient directed energy deposition (DED) thermal simulation. |
+| [Stokes flow](https://github.com/deepmodeling/jax-fem/tree/main/applications/stokes) | ${\color{red}Mixed\ formulations:}$ Multiple finite-element variables and a mixed velocity-pressure formulation for incompressible Stokes flow. |
+| [Phase-field fracture](https://github.com/deepmodeling/jax-fem/tree/main/applications/phase_field_fracture) | ${\color{red}Multiphysics:}$ Brittle fracture simulation with staggered displacement-phase-field solves, an irreversible history field, and custom derivatives for repeated eigenvalues. |
+| [Dendrite growth](https://github.com/deepmodeling/jax-fem/tree/main/applications/dendrite) | ${\color{red}Multiphysics:}$ Coupled phase-field and thermal-diffusion simulation of dendritic solidification with implicit and explicit finite-element schemes. |
+| [Finite-strain plasticity](https://github.com/deepmodeling/jax-fem/tree/main/applications/finite_plasticity) | ${\color{blue}Constitutive\ models:}$ Finite-strain $J_2$ plasticity with linear isotropic hardening. |
+| [Crystal plasticity](https://github.com/deepmodeling/jax-fem/tree/main/applications/crystal_plasticity) | ${\color{blue}Constitutive\ models:}$ Finite-strain FCC crystal plasticity with sensitivity examples and a 100-grain polycrystal simulation. |
+| [Differentiable mesh](https://github.com/deepmodeling/jax-fem/tree/main/applications/differentiable_mesh) | ${\color{teal}Differentiability:}$ Implicit-adjoint differentiation of a finite-element objective with respect to nodal coordinates, verified by central finite differences. |
+| [Neural-network surrogate model](https://github.com/deepmodeling/jax-fem/tree/main/applications/surrogate_model) | ${\color{purple}Machine\ learning:}$ An energy-based constitutive surrogate for a cellular metamaterial, trained on RVE data and deployed in a macroscale simulation. |

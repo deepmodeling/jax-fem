@@ -101,7 +101,7 @@ def scipy_spsolve(A, b):
                  np.linalg.norm(Asp @ x - b))
     return x
 
-def petsc_solve(A, b, ksp_type, pc_type):
+def petsc_solve(A, b, ksp_type, pc_type, factor_solver_type=None):
     rhs = PETSc.Vec().createSeq(len(b))
     rhs.setValues(range(len(b)), onp.array(b))
     ksp = PETSc.KSP().create()
@@ -109,10 +109,8 @@ def petsc_solve(A, b, ksp_type, pc_type):
     ksp.setFromOptions()
     ksp.setType(ksp_type)
     ksp.pc.setType(pc_type)
-
-    # TODO: This works better. Do we need to generalize the code a little bit?
-    if ksp_type == 'tfqmr':
-        ksp.pc.setFactorSolverType('mumps')
+    if factor_solver_type is not None:
+        ksp.pc.setFactorSolverType(factor_solver_type)
 
     logger.debug("PETSc solve started | KSP %s | PC %s", ksp.getType(), ksp.pc.getType())
     x = PETSc.Vec().createSeq(len(b))
@@ -269,9 +267,17 @@ def linear_solver(A, b, x0, linear_options):
     elif 'spsolve_solver' in linear_options:
         x = scipy_spsolve(A, b)
     elif 'petsc_solver' in linear_options:
-        ksp_type = linear_options['petsc_solver']['ksp_type'] if 'ksp_type' in linear_options['petsc_solver'] else 'bcgsl'
-        pc_type = linear_options['petsc_solver']['pc_type'] if 'pc_type' in linear_options['petsc_solver'] else 'ilu'
-        x = petsc_solve(A, b, ksp_type, pc_type)
+        petsc_options = linear_options['petsc_solver']
+        ksp_type = petsc_options.get('ksp_type', 'bcgsl')
+        pc_type = petsc_options.get('pc_type', 'ilu')
+        factor_solver_type = petsc_options.get('factor_solver_type')
+        x = petsc_solve(
+            A,
+            b,
+            ksp_type,
+            pc_type,
+            factor_solver_type,
+        )
     elif 'custom_solver' in linear_options:
         custom_solver = linear_options['custom_solver']
         x = custom_solver(A, b, x0, linear_options)
@@ -1196,8 +1202,9 @@ def solver(problem, solver_options={}):
                 'newton': {
                     'linear': {
                         'petsc_solver': {
-                            'ksp_type': 'bcgsl',  # e.g. 'minres', 'gmres', 'tfqmr'
-                            'pc_type': 'ilu',     # e.g. 'jacobi'
+                            'ksp_type': 'preonly',           # e.g. 'minres', 'gmres', 'tfqmr'
+                            'pc_type': 'lu',                 # e.g. 'ilu', 'jacobi'
+                            'factor_solver_type': 'mumps',   # optional
                         },
                     },
                 },
@@ -1223,7 +1230,7 @@ def solver(problem, solver_options={}):
             solver_options = {'newton': {'linear': {'jax_solver': {'precond': True}}}}
 
         - ``{'jax_solver': {}}`` → ``precond`` → ``True``
-        - ``{'petsc_solver': {}}`` → ``ksp_type`` → ``'bcgsl'``; ``pc_type`` → ``'ilu'``
+        - ``{'petsc_solver': {}}`` → ``ksp_type`` → ``'bcgsl'``; ``pc_type`` → ``'ilu'``; ``factor_solver_type`` → ``None``
         - ``{'amgx_solver': {}}`` → ``cfg_path`` → ``None`` (built-in BICGSTAB + AMG)
 
         **Arc-length** (Crisfeld; ``control`` is required; set

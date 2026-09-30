@@ -17,7 +17,7 @@ from jax_fem.solver import solver
 from jax_fem.problem import Problem
 from jax_fem.utils import save_sol
 
-from applications.phase_field_fracture.eigen import get_eigen_f_custom
+from applications.phase_field_fracture.model import PhaseField, get_elasticity_maps
 
 # If you have multiple GPUs, set the one to use.
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -33,97 +33,14 @@ os.makedirs(output_dir, exist_ok=True)
 os.makedirs(vtk_dir, exist_ok=True)
 
 
-# The bracket operator
-# One may define something like 'lambda x: np.maximum(x, 0.)' 
-# and 'lambda x: np.minimum(x, 0.)', but it turns out that they may lead to 
-# unexpected behaviors. See more discussions and tests in the file 'eigen.py'.
-safe_plus = lambda x: 0.5*(x + np.abs(x))
-safe_minus = lambda x: 0.5*(x - np.abs(x))
-
-
-# Define the phase field variable class. 
-class PhaseField(Problem):
-    # Note how 'get_tensor_map' and 'get_mass_map' specify the corresponding terms 
-    # in the weak form. Since the displacement variable u affects the phase field 
-    # variable d through the history variable H, we need to set this using 'set_params'.
-    def get_tensor_map(self):
-        def fn(d_grad, history):
-            return G_c*l*d_grad
-        return fn
-
-    def get_mass_map(self):
-        def fn(d, x, history):
-            return G_c/l*d - 2.*(1 - d)*history
-        return fn
-    
-    def set_params(self, history):
-        # Override base class method.
-        self.internal_vars = [history]
-
-
 # Define the displacement variable class. 
 class Elasticity(Problem):
-    # As we previously discussed, native JAX AD may return NaN in the cases 
-    # with repeated eigenvalues. We provide two workarounds and users can choose 
-    # either one to use. The first option adds a small noise to the strain tensor, 
-    # while the second option defines custom derivative rules to properly handle 
-    # repeated eigenvalues.
     def get_tensor_map(self):
         _, stress_fn = self.get_maps()
         return stress_fn
 
     def get_maps(self):
-        def strain(u_grad):
-            epsilon = 0.5*(u_grad + u_grad.T)
-            return epsilon
-    
-        def psi_plus(epsilon):
-            eigen_vals, eigen_evecs = np.linalg.eigh(epsilon)
-            tr_epsilon_plus = safe_plus(np.trace(epsilon))
-            return lmbda/2.*tr_epsilon_plus**2 + mu*np.sum(safe_plus(eigen_vals)**2)
-    
-        def psi_minus(epsilon):
-            eigen_vals, eigen_evecs = np.linalg.eigh(epsilon)
-            tr_epsilon_minus = safe_minus(np.trace(epsilon))
-            return lmbda/2.*tr_epsilon_minus**2 + mu*np.sum(safe_minus(eigen_vals)**2) 
-    
-        def g(d):
-            return (1 - d[0])**2
-    
-        key = jax.random.PRNGKey(0)
-        noise = jax.random.uniform(key, shape=(self.dim, self.dim), minval=-1e-8, maxval=1e-8)
-        noise = np.diag(np.diag(noise))
-    
-        def stress_fn_opt1(u_grad, d):
-            epsilon = strain(u_grad)
-            epsilon += noise
-            sigma = g(d)*jax.grad(psi_plus)(epsilon) + jax.grad(psi_minus)(epsilon) 
-            return sigma
-    
-        def stress_fn_opt2(u_grad, d):
-            epsilon = strain(u_grad)
-    
-            def fn(x):
-                return 2*mu*(g(d) * safe_plus(x) + safe_minus(x))
-            eigen_f = get_eigen_f_custom(fn)
-    
-            tr_epsilon_plus = safe_plus(np.trace(epsilon))
-            tr_epsilon_minus = safe_minus(np.trace(epsilon))
-            sigma1 = lmbda*(g(d)*tr_epsilon_plus + tr_epsilon_minus)*np.eye(self.dim) 
-    
-            sigma2 = eigen_f(epsilon)
-            sigma = sigma1 + sigma2
-    
-            return sigma  
-
-        # Replace stress_fn_opt1 with stress_fn_opt2 will use the second option 
-        stress_fn = stress_fn_opt1
-    
-        def psi_plus_fn(u_grad):
-            epsilon = strain(u_grad)
-            return psi_plus(epsilon)
-    
-        return psi_plus_fn, stress_fn
+        return get_elasticity_maps(lmbda, mu)
     
     def compute_history(self, sol_u, history_old):
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
@@ -218,7 +135,7 @@ dirichlet_bc_info = [[bot_left, bot, top], [0, 1, 1],
 
 
 # Create an instance of the phase field problem.
-problem_d = PhaseField(mesh, vec=1, dim=2, ele_type=ele_type)
+problem_d = PhaseField(mesh, vec=1, dim=2, ele_type=ele_type, additional_info=(G_c, l))
 sol_d_list = [onp.zeros((len(mesh.points), 1))]
 sol_d_old = onp.array(sol_d_list[0])
 
@@ -257,24 +174,28 @@ if simulation_flag:
         print(f"\nStep {i} in {len(disps)-1}, disp = {disp:.4e}")
         err = 1.
         tol = 1e-5
-        while err > tol:
+        for stagger_iter in range(500):
             logger.debug(f"####### max history = {np.max(history)}")
             # solve for u
             problem_u.set_params([sol_d_list[0], disp])
-            sol_u_list = solver(problem_u, solver_options={'spsolve_solver':{}})
+            sol_u_list = solver(problem_u, solver_options={'spsolve_solver':{}, 'initial_guess': sol_u_list})
             # history
             history = problem_u.compute_history(sol_u_list[0], history_old)
             # solve for d
             problem_d.set_params(history)
-            sol_d_list = solver(problem_d, solver_options={'spsolve_solver':{}})
+            sol_d_list = solver(problem_d, solver_options={'spsolve_solver':{}, 'initial_guess': sol_d_list, 'tol': 1e-12})
             # error
-            err_u = onp.linalg.norm(sol_u_list[0] - sol_u_old)/onp.linalg.norm(sol_u_list[0])
-            err_d = onp.linalg.norm(sol_d_list[0] - sol_d_old)/onp.linalg.norm(sol_d_list[0])
+            err_u = onp.linalg.norm(sol_u_list[0] - sol_u_old)/max(onp.linalg.norm(sol_u_list[0]), 1e-16)
+            err_d = onp.linalg.norm(sol_d_list[0] - sol_d_old)/max(onp.linalg.norm(sol_d_list[0]), 1e-16)
             err = onp.maximum(err_u, err_d)
             # update previous state
             sol_u_old = onp.array(sol_u_list[0])
             sol_d_old = onp.array(sol_d_list[0])
             logger.debug(f"####### err = {err:.4e}, tol = {tol}")
+            if err <= tol:
+                break
+        else:
+            raise RuntimeError(f"Staggered solve did not converge at displacement {disp}: error = {err}")
         # update history
         history_old = onp.array(history)
         # compute tractions

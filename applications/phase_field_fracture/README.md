@@ -99,9 +99,7 @@ There are two common schemes to solve this coupled nonlinear problem: monolithic
 
 Before we move to the implementation section, caveats on computing the derivative of eigenvalues and eigenvectors (especially with **degenerate** eigenvalues) are briefly discussed here. One may tend to fully rely on _JAX_ automatic differentiation to compute the derivative of eigenvalues and eigenvectors. However, when repeated eigenvalues occur, _JAX_ native `jax.grad` may fail and return `np.nan`, as discussed in this [post](https://github.com/google/jax/issues/669). The issue has its own complexity, and is not resolved yet. 
 
-One workaround is to add a small random noise to the matrix so that it always has distinct eigenvalues. This approach proves to be effective in our implementation of the phase field method. 
-
-The second approach is to define [custom derivative rules](https://jax.readthedocs.io/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html) with knowledge to handle repeated eigenvalues. In our example, _JAX-FEM_ needs to computes $\frac{\partial \boldsymbol{\sigma}}{\partial \boldsymbol{\varepsilon}}$, which further requires to compute $\frac{\partial \boldsymbol{\varepsilon}^+}{\partial \boldsymbol{\varepsilon}}$ and $\frac{\partial \boldsymbol{\varepsilon}^-}{\partial \boldsymbol{\varepsilon}}$. More generally, if a second order tensor $\boldsymbol{A}$ decompose as $`\boldsymbol{A} =\Sigma_{a=1}^n \lambda_a  \boldsymbol{n}_a \otimes \boldsymbol{n}_a`$ and we define tensor map  $`\boldsymbol{F}(\boldsymbol{A}):=\Sigma_{a=1}^n f(\lambda_a)  \boldsymbol{n}_a \otimes \boldsymbol{n}_a`$, then we are interested in computing $\frac{\partial \boldsymbol{F}}{\partial \boldsymbol{A}}$. The procedures are well presented in Miehe's paper [3], in particular, Eq. (19) is what we are concerned about. We implemented the algorithms in the file  [`eigen.py`](https://github.com/deepmodeling/jax-fem/blob/main/applications/phase_field_fracture/eigen.py). In this file, you will see how native AD of _JAX_ fails on repeated eigenvalues, but once custom derivative rules are specified, the issues is resolved.
+The constitutive maps in [`model.py`](model.py) use the custom spectral derivative in [`eigen.py`](eigen.py), based on Eq. (19) of [3], to evaluate the positive and negative strain tensors and their tangents at repeated eigenvalues. The stress is computed directly as $\boldsymbol{\sigma}=g(d)\boldsymbol{\sigma}^{+}+\boldsymbol{\sigma}^{-}$, including near full damage. This gives exactly zero stress at zero strain. Damage is applied outside the custom spectral maps so that both strain and damage derivatives can be traced by *JAX*.
 
 Finally, make sure your _JAX_ version is up-to-date, since we have observed some possible unexpected behavior of the function `np.linalg.eigh` in older versions of _JAX_, e.g., 0.3.x version.
 
@@ -113,9 +111,9 @@ python -m applications.phase_field_fracture.example
 ```
 from the `jax-fem/` directory.
 
-
 ## Results
 The comparison of the load-displacement curve with the reference solution from [4] is shown below. 
+
 <p align="middle">
   <img src="output/ForceVsDisp.png" width="400" /> 
 </p>

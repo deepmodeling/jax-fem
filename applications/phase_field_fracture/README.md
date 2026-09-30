@@ -99,9 +99,9 @@ There are two common schemes to solve this coupled nonlinear problem: monolithic
 
 Before we move to the implementation section, caveats on computing the derivative of eigenvalues and eigenvectors (especially with **degenerate** eigenvalues) are briefly discussed here. One may tend to fully rely on _JAX_ automatic differentiation to compute the derivative of eigenvalues and eigenvectors. However, when repeated eigenvalues occur, _JAX_ native `jax.grad` may fail and return `np.nan`, as discussed in this [post](https://github.com/google/jax/issues/669). The issue has its own complexity, and is not resolved yet. 
 
-One workaround is to add a small random noise to the matrix so that it always has distinct eigenvalues. This approach proves to be effective in our implementation of the phase field method. 
+The constitutive maps in [`model.py`](model.py) use the custom spectral derivative in [`eigen.py`](eigen.py), based on Eq. (19) of [3], to evaluate the positive and negative strain tensors and their tangents at repeated eigenvalues. The stress is computed directly as $\boldsymbol{\sigma}=g(d)\boldsymbol{\sigma}^{+}+\boldsymbol{\sigma}^{-}$, including near full damage. This gives exactly zero stress at zero strain. Damage is applied outside the custom spectral maps so that both strain and damage derivatives can be traced by JAX.
 
-The second approach is to define [custom derivative rules](https://jax.readthedocs.io/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html) with knowledge to handle repeated eigenvalues. In our example, _JAX-FEM_ needs to computes $\frac{\partial \boldsymbol{\sigma}}{\partial \boldsymbol{\varepsilon}}$, which further requires to compute $\frac{\partial \boldsymbol{\varepsilon}^+}{\partial \boldsymbol{\varepsilon}}$ and $\frac{\partial \boldsymbol{\varepsilon}^-}{\partial \boldsymbol{\varepsilon}}$. More generally, if a second order tensor $\boldsymbol{A}$ decompose as $`\boldsymbol{A} =\Sigma_{a=1}^n \lambda_a  \boldsymbol{n}_a \otimes \boldsymbol{n}_a`$ and we define tensor map  $`\boldsymbol{F}(\boldsymbol{A}):=\Sigma_{a=1}^n f(\lambda_a)  \boldsymbol{n}_a \otimes \boldsymbol{n}_a`$, then we are interested in computing $\frac{\partial \boldsymbol{F}}{\partial \boldsymbol{A}}$. The procedures are well presented in Miehe's paper [3], in particular, Eq. (19) is what we are concerned about. We implemented the algorithms in the file  [`eigen.py`](https://github.com/deepmodeling/jax-fem/blob/main/applications/phase_field_fracture/eigen.py). In this file, you will see how native AD of _JAX_ fails on repeated eigenvalues, but once custom derivative rules are specified, the issues is resolved.
+The tension/compression split is nonsmooth at zero principal strain. The custom derivative uses the branch convention of the bracket operator there; finite-difference tangent checks are performed away from that kink.
 
 Finally, make sure your _JAX_ version is up-to-date, since we have observed some possible unexpected behavior of the function `np.linalg.eigh` in older versions of _JAX_, e.g., 0.3.x version.
 
@@ -113,9 +113,22 @@ python -m applications.phase_field_fracture.example
 ```
 from the `jax-fem/` directory.
 
+The example uses the classical AT2 crack density and Miehe spectral split in small-strain plane strain. The shared phase-field weak form and constitutive maps are in `model.py`; the history-field formulation is also described in [5].
+
+Each staggered solve starts from the previous displacement and phase-field solutions. A load increment must meet the relative update tolerance of `1e-5` within 500 staggered iterations, otherwise the example raises an error.
+The phase-field subproblem uses an absolute residual tolerance of `1e-12`: its initial residual at the first nonzero load is below the solver's default tolerance of `1e-6` in this example's units.
+
+To run the small regression tests:
+```bash
+python -m unittest tests.test_phase_field
+```
+They check zero-strain stress, compression, repeated-eigenvalue tangents, forward and reverse damage derivatives, and the homogeneous AT2 solution $d=2\mathcal{H}/(g_c/l+2\mathcal{H})$ with its adjoint sensitivity. The notched-tension example retains the reference force-displacement comparison below.
+
 
 ## Results
 The comparison of the load-displacement curve with the reference solution from [4] is shown below. 
+
+With the supplied 5,600-element mesh and 80 load increments, the deterministic spectral split gives a peak force of 0.73383 kN at 0.0057 mm, compared with 0.72579 kN in `input/sol_ref.npz` (1.11% peak error; 0.714% relative L2 error over the curve). The history field is nondecreasing. This unconstrained Galerkin/history-field formulation does not enforce nodal damage bounds or nodal irreversibility: the observed nodal damage range is approximately [-0.00402, 1.00999]. These small overshoots are not clipped.
 <p align="middle">
   <img src="output/ForceVsDisp.png" width="400" /> 
 </p>
@@ -151,3 +164,5 @@ The evolution history and final distribution of the phase field variable can be 
 [3] Miehe, Christian, and Matthias Lambrecht. "Algorithms for computation of stresses and elasticity moduli in terms of Seth–Hill's family of generalized strain tensors." *Communications in numerical methods in engineering* 17.5 (2001): 337-353.
 
 [4] Shauer, Nathan. "Less than 500 lines self-contained Python finite element implementation of the phase-field method for fracture mechanics." Advances in Engineering Software 210 (2025): 104013.
+
+[5] Navidtehrani, Yousef, Covadonga Betegón, and Emilio Martínez-Pañeda. "A general framework for decomposing the phase field fracture driving force, particularised to a Drucker–Prager failure surface." *Theoretical and Applied Fracture Mechanics* 121 (2022): 103555. See the classical AT2 formulation and history field in Sections 2 and 4. [doi:10.1016/j.tafmec.2022.103555](https://doi.org/10.1016/j.tafmec.2022.103555).

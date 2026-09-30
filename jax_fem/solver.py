@@ -1083,7 +1083,7 @@ _METHOD_KEYS = frozenset({'newton', 'arc_length', 'dynamic_relax'})
 _LINEAR_OPTION_KEYS = frozenset({
     'jax_solver', 'amgx_solver', 'spsolve_solver', 'petsc_solver', 'custom_solver',
 })
-_NEWTON_OPTION_KEYS = frozenset({'tol', 'rel_tol', 'line_search_flag', 'initial_guess'})
+_NEWTON_OPTION_KEYS = frozenset({'tol', 'rel_tol', 'max_iters', 'line_search_flag', 'initial_guess'})
 
 _LAMBDA_TARGET = 1.
 
@@ -1178,6 +1178,7 @@ def solver(problem, solver_options={}):
                 'newton': {
                     'tol': 1e-5,
                     'rel_tol': 1e-8,
+                    'max_iters': 100,
                     'line_search_flag': False,
                     'initial_guess': initial_guess,
                     'linear': {'petsc_solver': {}},
@@ -1219,6 +1220,8 @@ def solver(problem, solver_options={}):
 
         - ``tol`` → ``1e-6`` (absolute residual :math:`\ell_2` norm)
         - ``rel_tol`` → ``1e-8`` (relative to the initial residual)
+        - ``max_iters`` → ``100`` (non-negative integer; raises ``RuntimeError``
+          if the residual tolerances are not met within this many Newton steps)
         - ``line_search_flag`` → ``False``
         - ``initial_guess`` → zero displacement vector
         - ``linear``: The following are all equivalent for the linear solve::
@@ -1297,6 +1300,9 @@ def solver(problem, solver_options={}):
 
     rel_tol = cfg.get('rel_tol', 1e-8)
     tol = cfg.get('tol', 1e-6)
+    max_iters = cfg.get('max_iters', 100)
+    if not isinstance(max_iters, (int, onp.integer)) or max_iters < 0:
+        raise ValueError("max_iters must be a non-negative integer")
 
     def newton_update_helper(dofs):
         if hasattr(problem, 'P_mat'):
@@ -1327,6 +1333,10 @@ def solver(problem, solver_options={}):
     _log_newton_iter_summary(0, local_s, global_s, res_val, rel_res_val)
     n_iters = 0
     while (rel_res_val > rel_tol) and (res_val > tol):
+        if n_iters >= max_iters:
+            raise RuntimeError(
+                f"Newton solver did not converge in {max_iters} iterations: "
+                f"residual = {res_val}, relative residual = {rel_res_val}")
         n_iters += 1
         _log_newton_iter_start(n_iters)
         dofs, linear_s = newton_step(problem, res_vec, A, dofs, cfg, timing)

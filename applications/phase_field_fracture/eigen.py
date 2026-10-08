@@ -1,10 +1,7 @@
 import jax
 import jax.numpy as np
-import os
 
 jax.config.update("jax_enable_x64", True)
-
-np.set_printoptions(precision=10, suppress=True)
 
 
 def get_eigen_f_jax(fn):
@@ -99,17 +96,28 @@ def test_eigen_f():
 
     fn = lambda x: x
 
-    input_vars = [a, b, c]
+    input_vars = [
+        ('fixed 3x3', a),
+        ('random symmetric 5x5', b),
+        ('repeated zero 3x3', c),
+    ]
 
     eigen_f_jax = get_eigen_f_jax(fn)
     eigen_f_custom = get_eigen_f_custom(fn)
 
-    for x in input_vars:
+    print("\nEigenfunction derivative check")
+    print(f"{'Case':<24} {'Native JAX':<12} {'Custom':<12} {'Max difference'}")
+    for name, x in input_vars:
         jax_result = jax.jacfwd(eigen_f_jax)(x)
-        custom_results = jax.jacfwd(eigen_f_custom)(x)
-        print(f"\nJAX:\n{jax_result}")
-        print(f"\nCustom:\n{custom_results}")
-        print(f"\nDiff:\n{jax_result - custom_results}")
+        custom_result = jax.jacfwd(eigen_f_custom)(x)
+        jax_finite = bool(np.all(np.isfinite(jax_result)))
+        custom_finite = bool(np.all(np.isfinite(custom_result)))
+        if jax_finite and custom_finite:
+            max_diff = f"{float(np.max(np.abs(jax_result - custom_result))):.3e}"
+        else:
+            max_diff = "n/a"
+        print(f"{name:<24} {str(jax_finite):<12} "
+              f"{str(custom_finite):<12} {max_diff}")
 
 
 def f1(x):
@@ -133,17 +141,29 @@ def f_gold(x):
 def test_bracket_operator():
     # Different behaviors observed when derivative is taken at x=0.
     # The "abs" way of implemetation is preferred
-    print(f"{jax.grad(lambda x: np.maximum(x, 0.))(0.)}")
-    print(f"{jax.grad(lambda x: 0.5*(x + np.abs(x)))(0.)}")
+    unsafe_grad = jax.grad(lambda x: np.maximum(x, 0.))(0.)
+    safe_grad = jax.grad(lambda x: 0.5*(x + np.abs(x)))(0.)
 
     # Further tests
     a = np.zeros((3, 3))
-    # f1 gives wrong answer
-    print(f"\nUnsafe:\n{jax.jacfwd(jax.grad(f1))(a)}")
-    # f2 gieves correct answer
-    print(f"\nSafe:\n{jax.jacfwd(jax.grad(f2))(a)}")
-    # f_gold is the ground truth
-    print(f"\nGround truth:\n{jax.jacfwd(jax.grad(f_gold))(a)}")
+    unsafe_hessian = jax.jacfwd(jax.grad(f1))(a)
+    safe_hessian = jax.jacfwd(jax.grad(f2))(a)
+    exact_hessian = jax.jacfwd(jax.grad(f_gold))(a)
+
+    indices = np.arange(a.shape[0])
+    unsafe_block = unsafe_hessian[indices[:, None], indices[:, None],
+                                    indices[None, :], indices[None, :]]
+    safe_block = safe_hessian[indices[:, None], indices[:, None],
+                              indices[None, :], indices[None, :]]
+    exact_block = exact_hessian[indices[:, None], indices[:, None],
+                                indices[None, :], indices[None, :]]
+
+    print("\nBracket operator check at zero")
+    print(f"Derivative of np.maximum(x, 0): {float(unsafe_grad):.1f}")
+    print(f"Derivative of 0.5*(x + abs(x)): {float(safe_grad):.1f}")
+    print(f"\nHessian block H[ii,jj] using np.maximum/minimum:\n{unsafe_block}")
+    print(f"\nHessian block H[ii,jj] using abs-based brackets:\n{safe_block}")
+    print(f"\nGround-truth Hessian block H[ii,jj]:\n{exact_block}")
 
 
 if __name__ == "__main__":

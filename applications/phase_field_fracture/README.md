@@ -99,7 +99,11 @@ There are two common schemes to solve this coupled nonlinear problem: monolithic
 
 Before we move to the implementation section, caveats on computing the derivative of eigenvalues and eigenvectors (especially with **degenerate** eigenvalues) are briefly discussed here. One may tend to fully rely on _JAX_ automatic differentiation to compute the derivative of eigenvalues and eigenvectors. However, when repeated eigenvalues occur, _JAX_ native `jax.grad` may fail and return `np.nan`, as discussed in this [post](https://github.com/google/jax/issues/669). The issue has its own complexity, and is not resolved yet. 
 
-The constitutive maps in [`model.py`](model.py) use the custom spectral derivative in [`eigen.py`](eigen.py), based on Eq. (19) of [3], to evaluate the positive and negative strain tensors and their tangents at repeated eigenvalues. The stress is computed directly as $\boldsymbol{\sigma}=g(d)\boldsymbol{\sigma}^{+}+\boldsymbol{\sigma}^{-}$, including near full damage. This gives exactly zero stress at zero strain. Damage is applied outside the custom spectral maps so that both strain and damage derivatives can be traced by *JAX*.
+The constitutive maps in [`model.py`](model.py) provide two options, selected by `spectral_method` in [`example.py`](example.py). The default option, `'custom'`, uses the custom spectral derivative in [`eigen.py`](eigen.py), based on Eq. (19) of [3], to evaluate the positive and negative strain tensors and their tangents at repeated eigenvalues.
+
+Alternatively, the `'noise'` option adds a small noise to the strain tensor to avoid repeated eigenvalues and uses the native _JAX_ derivative of the spectral maps. Since the strain tensor is perturbed, the computed stress may be slightly nonzero at zero strain.
+
+For both options, the stress is computed as $\boldsymbol{\sigma}=g(d)\boldsymbol{\sigma}^{+}+\boldsymbol{\sigma}^{-}$, with the damage function applied outside the spectral maps so that _JAX_ can trace derivatives with respect to both strain and damage.
 
 Finally, make sure your _JAX_ version is up-to-date, since we have observed some possible unexpected behavior of the function `np.linalg.eigh` in older versions of _JAX_, e.g., 0.3.x version.
 

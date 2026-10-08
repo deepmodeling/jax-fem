@@ -40,7 +40,7 @@ class Elasticity(Problem):
         return stress_fn
 
     def get_maps(self):
-        return get_elasticity_maps(lmbda, mu)
+        return get_elasticity_maps(lmbda, mu, spectral_method)
     
     def compute_history(self, sol_u, history_old):
         # (num_cells, 1, num_nodes, vec, 1) * (num_cells, num_quads, num_nodes, 1, dim) -> (num_cells, num_quads, num_nodes, vec, dim) 
@@ -100,6 +100,7 @@ nu = 0.3 # Poisson's ratio
 l = 0.0075 # Length-scale parameter [mm]
 mu = E/(2.*(1. + nu)) # First Lamé parameter
 lmbda = E*nu/((1+nu)*(1-2*nu)) # Second Lamé parameter
+spectral_method = 'custom' # 'custom' or 'noise'
 
 
 # Specify mesh-related information (bilinear quadrilateral element)
